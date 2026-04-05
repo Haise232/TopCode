@@ -99,7 +99,7 @@ export default function Profile() {
   const promedio = usuario?.promedio ?? 0
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in h-full overflow-y-auto">
       {/* Header */}
       <div className="relative px-4 md:px-6 py-5 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-[1100px] mx-auto flex items-center gap-3 relative">

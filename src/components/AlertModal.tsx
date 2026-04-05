@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
 
 interface AlertModalProps {
@@ -65,8 +66,8 @@ export default function AlertModal({
   const defaultBtnBg = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
   const defaultBtnShadow = '0 4px 14px rgba(99,102,241,0.3)'
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in">
       {/* Backdrop */}
       <div
         className="absolute inset-0"
@@ -173,6 +174,7 @@ export default function AlertModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

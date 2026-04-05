@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Trash2, RefreshCw, CalendarDays } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -136,7 +137,7 @@ export default function CalendarPage() {
   if (loading) return <CalendarSkeleton />
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in h-full overflow-y-auto">
       {/* Header */}
       <div className="relative px-4 md:px-6 py-5 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-[1100px] mx-auto flex justify-between items-center relative">
@@ -204,8 +205,8 @@ export default function CalendarPage() {
       </div>
 
       {/* Modal crear evento */}
-      {modalVisible && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {modalVisible && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
             className="absolute inset-0"
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
@@ -266,7 +267,8 @@ export default function CalendarPage() {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <AlertModal

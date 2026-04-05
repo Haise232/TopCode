@@ -6,11 +6,9 @@ interface SkeletonBoxProps {
 export function SkeletonBox({ className = '', style }: SkeletonBoxProps) {
   return (
     <div
-      className={`overflow-hidden ${className}`}
+      className={`shimmer ${className}`}
       style={{ borderRadius: '8px', ...style }}
-    >
-      <div className="w-full h-full shimmer" style={{ minHeight: 'inherit' }} />
-    </div>
+    />
   )
 }
 
