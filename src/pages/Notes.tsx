@@ -327,7 +327,7 @@ export default function Notes() {
 
       {/* Add note modal */}
       {modalVisible && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[200]">
           {/* Backdrop */}
           <div
             className="absolute inset-0"
