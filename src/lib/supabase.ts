@@ -12,9 +12,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Forzar localStorage explícitamente para garantizar persistencia
+    // entre sesiones del navegador (no se borra al cerrar pestaña).
+    storage: window.localStorage,
+    storageKey: 'topcode-session',
     // Bypasa navigator.locks para evitar bloqueos de 5s en HMR / dev
     // y cuando hay locks huérfanos de tabs/instancias anteriores.
-    // En producción es seguro: la intranet no necesita sincronización multi-tab.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lock: (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => fn(),
   },
