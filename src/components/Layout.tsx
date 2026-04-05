@@ -45,15 +45,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Logo */}
           <NavLink to="/" className="flex items-center gap-2.5 mr-2 shrink-0 group">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                boxShadow: '0 4px 12px rgba(99,102,241,0.35)',
-              }}
-            >
-              <GraduationCap size={15} className="text-white" />
-            </div>
+            <img
+              src="/logo.svg"
+              alt="TopCode"
+              className="w-8 h-8 transition-all duration-200 group-hover:scale-105"
+              style={{ borderRadius: '10px', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}
+            />
             <span className="hidden md:block font-bold text-sm" style={{ color: '#f1f5f9' }}>
               Top<span style={{ color: '#818cf8' }}>Code</span>
             </span>
