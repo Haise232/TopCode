@@ -24,6 +24,25 @@ export default {
           light:   '#34d399',
           subtle:  'rgba(16,185,129,0.12)',
         },
+        teal: {
+          DEFAULT: '#14b8a6',
+          dark:    '#0d9488',
+          light:   '#2dd4bf',
+          subtle:  'rgba(20,184,166,0.12)',
+          glow:    'rgba(20,184,166,0.25)',
+        },
+        rose: {
+          DEFAULT: '#f43f5e',
+          dark:    '#e11d48',
+          light:   '#fb7185',
+          subtle:  'rgba(244,63,94,0.12)',
+        },
+        amber: {
+          DEFAULT: '#f59e0b',
+          dark:    '#d97706',
+          light:   '#fbbf24',
+          subtle:  'rgba(245,158,11,0.12)',
+        },
         success:  '#10b981',
         error:    '#f43f5e',
         warning:  '#f59e0b',
@@ -48,6 +67,10 @@ export default {
         'card-hover':     '0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
         'primary':        '0 4px 16px rgba(99,102,241,0.3)',
         'primary-sm':     '0 2px 8px rgba(99,102,241,0.2)',
+        'teal':           '0 4px 16px rgba(20,184,166,0.3)',
+        'teal-sm':        '0 2px 8px rgba(20,184,166,0.2)',
+        'rose':           '0 4px 16px rgba(244,63,94,0.3)',
+        'amber':          '0 4px 16px rgba(245,158,11,0.3)',
         'modal':          '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)',
         'success':        '0 4px 12px rgba(16,185,129,0.25)',
         'error':          '0 4px 12px rgba(244,63,94,0.25)',
@@ -65,6 +88,11 @@ export default {
         'gradient-error':        'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
         'gradient-warning':      'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
         'gradient-info':         'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+        'gradient-teal':         'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+        'gradient-rose':         'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+        'gradient-amber':        'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        'gradient-sunset':       'linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%)',
+        'gradient-ocean':        'linear-gradient(135deg, #14b8a6 0%, #6366f1 100%)',
       },
       animation: {
         'fade-in':         'fade-in 0.2s ease-out',
@@ -75,6 +103,8 @@ export default {
         'shimmer':         'shimmer 1.8s ease-in-out infinite',
         'spin-smooth':     'spin-smooth 0.8s linear infinite',
         'pulse-soft':      'pulse-soft 2s ease-in-out infinite',
+        'float':           'float 3s ease-in-out infinite',
+        'count-up':        'count-up 0.6s ease-out forwards',
       },
       keyframes: {
         'fade-in': {
@@ -108,6 +138,14 @@ export default {
         'pulse-soft': {
           '0%, 100%': { opacity: '1' },
           '50%':       { opacity: '0.6' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%':       { transform: 'translateY(-6px)' },
+        },
+        'count-up': {
+          from: { opacity: '0', transform: 'translateY(8px) scale(0.9)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
       },
       transitionTimingFunction: {
