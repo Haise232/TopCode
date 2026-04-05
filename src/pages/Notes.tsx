@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Trash2, RefreshCw, ClipboardList, BookOpen } from 'lucide-react'
 import { supabase, actualizarPromedio } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -325,19 +326,19 @@ export default function Notes() {
         )}
       </div>
 
-      {/* Add note modal */}
-      {modalVisible && (
-        <div className="fixed inset-0 z-[200]">
+      {/* Add note modal — rendered via portal to escape stacking context of <main> */}
+      {modalVisible && createPortal(
+        <>
           {/* Backdrop */}
           <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+            className="fixed inset-0 z-[9999]"
+            style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
             onClick={() => { setModalVisible(false); resetForm() }}
           />
-          {/* Modal wrapper — centers on desktop, sticks to bottom on mobile */}
-          <div className="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
+          {/* Modal — pegado abajo en móvil, centrado en escritorio */}
+          <div className="fixed inset-x-0 bottom-0 z-[9999] sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-6">
           <div
-            className="relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto animate-scale-in-modal rounded-t-2xl sm:rounded-2xl shadow-modal pointer-events-auto"
+            className="w-full sm:max-w-md max-h-[85vh] overflow-y-auto animate-scale-in-modal rounded-t-2xl sm:rounded-2xl shadow-modal"
             style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <div className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
@@ -470,7 +471,8 @@ export default function Notes() {
             </div>
           </div>
           </div>
-        </div>
+        </>,
+        document.body
       )}
 
       <AlertModal
