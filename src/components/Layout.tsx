@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import AnuncioModal from './AnuncioModal'
 
 const NAV_ITEMS = [
   { to: '/',         label: 'Inicio',   Icon: Home          },
@@ -206,6 +207,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-h-0 overflow-hidden bg-bg">
         {children}
       </main>
+
+      {/* Modal de anuncios — se muestra hasta que el usuario pulse "He leído" */}
+      <AnuncioModal />
     </div>
   )
 }

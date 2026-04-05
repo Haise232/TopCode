@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Users, RefreshCw, Settings, GraduationCap, TrendingUp } from 'lucide-react'
+import { Shield, Users, RefreshCw, Settings, GraduationCap, TrendingUp, Megaphone, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Usuario } from '../lib/types'
+import { Usuario, Anuncio } from '../lib/types'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
@@ -70,6 +70,62 @@ export default function Admin() {
   const [updating, setUpdating] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
 
+  // ── Anuncios ──
+  const [anuncios, setAnuncios] = useState<Anuncio[]>([])
+  const [nuevoTitulo, setNuevoTitulo] = useState('')
+  const [nuevoContenido, setNuevoContenido] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [toggling, setToggling] = useState<string | null>(null)
+
+  const cargarAnuncios = useCallback(async () => {
+    const { data } = await supabase
+      .from('anuncios')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10)
+    if (data) setAnuncios(data as Anuncio[])
+  }, [])
+
+  async function handlePublicar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!nuevoTitulo.trim() || !nuevoContenido.trim()) return
+    setGuardando(true)
+    const { error } = await supabase.from('anuncios').insert({
+      titulo: nuevoTitulo.trim(),
+      contenido: nuevoContenido.trim(),
+      activo: true,
+      created_by: usuario!.id,
+    })
+    setGuardando(false)
+    if (error) {
+      setAlert({ type: 'error', title: 'Error', message: 'No se pudo publicar: ' + error.message })
+      return
+    }
+    setNuevoTitulo('')
+    setNuevoContenido('')
+    await cargarAnuncios()
+  }
+
+  async function handleToggleActivo(a: Anuncio) {
+    setToggling(a.id)
+    await supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id)
+    setToggling(null)
+    await cargarAnuncios()
+  }
+
+  function handleEliminarAnuncio(a: Anuncio) {
+    setAlert({
+      title: 'Eliminar anuncio',
+      message: `¿Eliminar "${a.titulo}"? Los usuarios que no lo hayan leído dejarán de verlo.`,
+      confirmLabel: 'Eliminar',
+      confirmDestructive: true,
+      onConfirm: async () => {
+        await supabase.from('anuncios').delete().eq('id', a.id)
+        await cargarAnuncios()
+      },
+    })
+  }
+
   const cargar = useCallback(async () => {
     const { data } = await supabase
       .from('usuarios')
@@ -85,7 +141,8 @@ export default function Admin() {
       return
     }
     cargar()
-  }, [cargar, usuario, navigate])
+    cargarAnuncios()
+  }, [cargar, cargarAnuncios, usuario, navigate])
 
   function toggleRol(u: Usuario) {
     const newRol: 'alumno' | 'admin' = u.rol === 'admin' ? 'alumno' : 'admin'
@@ -374,6 +431,165 @@ export default function Admin() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ── Anuncios ── */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 flex items-center justify-center rounded-xl"
+              style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}
+            >
+              <Megaphone size={14} style={{ color: '#f59e0b' }} />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm" style={{ color: '#f1f5f9' }}>Anuncios</h2>
+              <p className="text-xs" style={{ color: '#4b5563' }}>
+                El último anuncio activo aparece como modal a todos los usuarios hasta que lo lean
+              </p>
+            </div>
+          </div>
+
+          {/* Formulario nuevo anuncio */}
+          <form
+            onSubmit={handlePublicar}
+            className="rounded-2xl p-5 flex flex-col gap-3"
+            style={{
+              background: 'linear-gradient(145deg, #1a1d27, #141720)',
+              border: '1px solid rgba(245,158,11,0.15)',
+            }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+              Nuevo anuncio
+            </p>
+            <input
+              type="text"
+              value={nuevoTitulo}
+              onChange={e => setNuevoTitulo(e.target.value)}
+              placeholder="Título del anuncio..."
+              className="input-base"
+              maxLength={100}
+            />
+            <textarea
+              value={nuevoContenido}
+              onChange={e => setNuevoContenido(e.target.value)}
+              placeholder="Escribe aquí el mensaje completo para los alumnos..."
+              rows={4}
+              className="input-base resize-none"
+              maxLength={1000}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs" style={{ color: '#4b5563' }}>
+                {nuevoContenido.length}/1000
+              </span>
+              <button
+                type="submit"
+                disabled={guardando || !nuevoTitulo.trim() || !nuevoContenido.trim()}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40"
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  color: 'white',
+                  boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
+                }}
+              >
+                {guardando ? (
+                  <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+                ) : (
+                  <Plus size={14} />
+                )}
+                Publicar anuncio
+              </button>
+            </div>
+          </form>
+
+          {/* Lista de anuncios existentes */}
+          {anuncios.length > 0 && (
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{
+                background: 'linear-gradient(145deg, #1a1d27, #141720)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
+            >
+              <div className="px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                  Historial
+                </p>
+              </div>
+              {anuncios.map((a, idx) => (
+                <div
+                  key={a.id}
+                  className="flex items-start gap-3 px-5 py-4"
+                  style={{ borderBottom: idx < anuncios.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                >
+                  {/* Indicador activo */}
+                  <div className="mt-1 shrink-0">
+                    {a.activo ? (
+                      <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#10b981' }} />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full" style={{ background: '#374151' }} />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate" style={{ color: a.activo ? '#f1f5f9' : '#4b5563' }}>
+                      {a.titulo}
+                    </p>
+                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#4b5563' }}>
+                      {a.contenido}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: '#374151' }}>
+                      {new Date(a.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Toggle activo */}
+                    <button
+                      onClick={() => handleToggleActivo(a)}
+                      disabled={toggling === a.id}
+                      title={a.activo ? 'Desactivar' : 'Activar'}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
+                      style={{
+                        background: a.activo ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
+                        border: a.activo ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                        color: a.activo ? '#10b981' : '#4b5563',
+                      }}
+                    >
+                      {toggling === a.id ? (
+                        <div className="w-3.5 h-3.5 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'currentColor' }} />
+                      ) : a.activo ? (
+                        <Eye size={13} />
+                      ) : (
+                        <EyeOff size={13} />
+                      )}
+                    </button>
+                    {/* Eliminar */}
+                    <button
+                      onClick={() => handleEliminarAnuncio(a)}
+                      title="Eliminar"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
+                      style={{ color: '#4b5563', border: '1px solid transparent' }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.color = '#f43f5e'
+                        el.style.background = 'rgba(244,63,94,0.1)'
+                        el.style.borderColor = 'rgba(244,63,94,0.2)'
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.color = '#4b5563'
+                        el.style.background = 'transparent'
+                        el.style.borderColor = 'transparent'
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

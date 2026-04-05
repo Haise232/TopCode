@@ -53,3 +53,12 @@ export interface EventoCalendario {
   created_by: string
   created_at: string
 }
+
+export interface Anuncio {
+  id: string
+  titulo: string
+  contenido: string
+  activo: boolean
+  created_at: string
+  created_by: string
+}
