@@ -31,60 +31,99 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col h-screen bg-bg">
+
       {/* ── Top navbar ── */}
       <nav
         className="z-50 shrink-0"
         style={{
-          background: 'rgba(15, 17, 23, 0.96)',
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(13, 15, 22, 0.97)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.03), 0 4px 20px rgba(0,0,0,0.4)',
+          boxShadow: '0 1px 0 rgba(255,255,255,0.025), 0 4px 24px rgba(0,0,0,0.5)',
         }}
       >
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-[58px] flex items-center gap-4">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-[56px] flex items-center gap-3">
 
           {/* Logo */}
-          <NavLink to="/" className="flex items-center gap-2.5 mr-2 shrink-0 group">
-            <img
-              src="/logo.svg"
-              alt="TopCode"
-              className="w-8 h-8 transition-all duration-200 group-hover:scale-105"
-              style={{ borderRadius: '10px', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}
-            />
-            <span className="hidden md:block font-bold text-sm" style={{ color: '#f1f5f9' }}>
+          <NavLink
+            to="/"
+            className="flex items-center gap-2.5 mr-1 shrink-0 group"
+            aria-label="TopCode — Inicio"
+          >
+            <div
+              className="relative w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 2px 10px rgba(99,102,241,0.4)',
+              }}
+            >
+              <img
+                src="/logo.svg"
+                alt=""
+                className="w-7 h-7"
+                style={{ borderRadius: '8px' }}
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+              {/* Fallback icon inside gradient box */}
+              <GraduationCap
+                size={14}
+                className="text-white absolute"
+                style={{ display: 'none' }}
+                aria-hidden
+              />
+            </div>
+            <span className="hidden md:block font-bold text-sm tracking-tight" style={{ color: '#f1f5f9' }}>
               Top<span style={{ color: '#818cf8' }}>Code</span>
             </span>
           </NavLink>
 
-          {/* Divider */}
-          <div className="hidden md:block w-px h-4" style={{ background: 'rgba(255,255,255,0.08)' }} />
+          {/* Separator */}
+          <div className="hidden md:block w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />
 
           {/* Nav links */}
-          <div className="flex items-center gap-0.5 flex-1">
+          <div className="flex items-center gap-0.5 flex-1 min-w-0">
             {items.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-all duration-200 rounded-lg ${
+                  `relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
                     isActive
                       ? 'text-primary-light'
-                      : 'text-text-muted hover:text-slate-300 hover:bg-white/[0.04]'
+                      : 'text-text-muted hover:text-slate-300'
                   }`
                 }
                 style={({ isActive }) => isActive ? {
-                  background: 'rgba(99,102,241,0.1)',
+                  background: 'rgba(99,102,241,0.12)',
+                  boxShadow: 'inset 0 1px 0 rgba(99,102,241,0.1)',
                 } : {}}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement
+                  if (!el.classList.contains('text-primary-light')) {
+                    el.style.background = 'rgba(255,255,255,0.04)'
+                  }
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement
+                  if (!el.classList.contains('text-primary-light')) {
+                    el.style.background = 'transparent'
+                  }
+                }}
               >
                 {({ isActive }) => (
                   <>
                     <Icon size={14} />
                     <span className="hidden sm:block">{label}</span>
+                    {/* Active underline indicator */}
                     {isActive && (
                       <span
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-4/5 rounded-full"
-                        style={{ background: 'linear-gradient(90deg, transparent, #6366f1, transparent)' }}
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full"
+                        style={{
+                          width: '60%',
+                          background: 'linear-gradient(90deg, transparent, #818cf8, transparent)',
+                        }}
                       />
                     )}
                   </>
@@ -94,26 +133,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Right: profile + logout */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <NavLink
               to="/profile"
-              className="flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all duration-200 hover:bg-white/[0.04]"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all duration-200 ${
+                  isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+                }`
+              }
+              aria-label="Perfil"
             >
               {/* Avatar */}
-              <div className="relative">
+              <div className="relative shrink-0">
                 {usuario?.avatar_url ? (
                   <img
                     src={usuario.avatar_url}
                     alt={usuario.nombre}
                     className="w-7 h-7 rounded-lg object-cover"
-                    style={{ border: '1.5px solid rgba(99,102,241,0.35)' }}
+                    style={{ border: '1.5px solid rgba(99,102,241,0.3)' }}
                   />
                 ) : (
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
-                      border: '1.5px solid rgba(99,102,241,0.35)',
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.2))',
+                      border: '1.5px solid rgba(99,102,241,0.3)',
                       color: '#818cf8',
                     }}
                   >
@@ -123,22 +167,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {/* Online dot */}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-                  style={{
-                    background: '#10b981',
-                    border: '1.5px solid #0f1117',
-                  }}
+                  style={{ background: '#10b981', border: '1.5px solid #0d0f16' }}
                 />
               </div>
-              <span className="hidden md:block text-xs font-medium max-w-[110px] truncate" style={{ color: '#94a3b8' }}>
+              <span
+                className="hidden md:block text-xs font-medium max-w-[100px] truncate"
+                style={{ color: '#94a3b8' }}
+              >
                 {usuario?.nombre}
               </span>
             </NavLink>
 
+            {/* Logout */}
             <button
               onClick={handleLogout}
               title="Cerrar sesión"
               className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
-              style={{ color: '#64748b' }}
+              style={{ color: '#4b5563' }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement
                 el.style.color = '#f43f5e'
@@ -146,9 +191,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement
-                el.style.color = '#64748b'
+                el.style.color = '#4b5563'
                 el.style.background = 'transparent'
               }}
+              aria-label="Cerrar sesión"
             >
               <LogOut size={14} />
             </button>

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap } from 'lucide-react'
+import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays } from 'lucide-react'
 import { supabase, subirAvatar } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
@@ -19,6 +19,14 @@ function gradeColor(n: number) {
   if (n >= 8) return '#10b981'
   if (n >= 6) return '#f59e0b'
   return '#f43f5e'
+}
+
+function gradeLabel(n: number) {
+  if (n >= 9) return 'Excelente'
+  if (n >= 8) return 'Notable'
+  if (n >= 6) return 'Bien'
+  if (n >= 5) return 'Suficiente'
+  return 'Insuficiente'
 }
 
 export default function Profile() {
@@ -97,12 +105,17 @@ export default function Profile() {
 
   const avatarSrc = preview ?? usuario?.avatar_url ?? null
   const promedio = usuario?.promedio ?? 0
+  const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
-      {/* Header */}
-      <div className="relative px-4 md:px-6 py-5 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="max-w-[1100px] mx-auto flex items-center gap-3 relative">
+
+      {/* ── Page header ── */}
+      <div
+        className="relative px-4 md:px-6 py-5 overflow-hidden"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="max-w-[700px] mx-auto flex items-center gap-3 relative">
           <button
             onClick={() => navigate(-1)}
             className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
@@ -114,94 +127,174 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="max-w-[600px] mx-auto p-4 md:p-6 flex flex-col gap-4">
-        {/* Avatar card */}
-        <div className="p-6 flex flex-col items-center gap-4 rounded-2xl" style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <div className="relative">
+      <div className="max-w-[700px] mx-auto p-4 md:p-6 flex flex-col gap-4">
+
+        {/* ── Hero avatar card ── */}
+        <div
+          className="relative overflow-hidden rounded-2xl"
+          style={{
+            background: 'linear-gradient(145deg, #1a1d27 0%, #141720 100%)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          {/* Background gradient accent */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.12) 0%, transparent 70%)',
+            }}
+          />
+
+          {/* Top gradient strip */}
+          <div
+            className="h-24 w-full"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 50%, rgba(99,102,241,0.05) 100%)',
+              borderBottom: '1px solid rgba(99,102,241,0.1)',
+            }}
+          />
+
+          <div className="relative px-6 pb-6">
+            {/* Avatar — overlaps strip */}
+            <div className="relative -mt-10 mb-4 w-fit">
+              <div
+                className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl"
+                style={{
+                  background: 'rgba(99,102,241,0.15)',
+                  border: '3px solid #1a1d27',
+                  boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
+                }}
+              >
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt={usuario?.nombre} className="w-20 h-20 object-cover" />
+                ) : (
+                  <span className="font-extrabold text-3xl" style={{ color: '#818cf8' }}>
+                    {initial}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute -bottom-1.5 -right-1.5 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-60 shadow-primary"
+                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                aria-label="Cambiar foto"
+              >
+                {uploading ? (
+                  <div
+                    className="w-4 h-4 rounded-full animate-spin"
+                    style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }}
+                  />
+                ) : (
+                  <Camera size={13} className="text-white" />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col gap-1 mb-5">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="font-bold text-xl" style={{ color: '#f1f5f9' }}>{usuario?.nombre}</h2>
+                {usuario?.rol === 'admin' ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(99,102,241,0.15)',
+                      border: '1px solid rgba(99,102,241,0.3)',
+                      color: '#818cf8',
+                    }}
+                  >
+                    <Shield size={10} />
+                    Administrador
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#64748b',
+                    }}
+                  >
+                    <GraduationCap size={10} />
+                    Alumno
+                  </span>
+                )}
+              </div>
+              <p className="text-sm" style={{ color: '#64748b' }}>{usuario?.email}</p>
+            </div>
+
+            {/* Stats chips row */}
+            <div className="flex flex-wrap gap-2">
+              <div
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
+                style={{
+                  background: `${gradeColor(promedio)}12`,
+                  border: `1px solid ${gradeColor(promedio)}28`,
+                }}
+              >
+                <TrendingUp size={13} style={{ color: gradeColor(promedio) }} />
+                <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(promedio) }}>
+                  {promedio.toFixed(2)}
+                </span>
+                <span className="text-xs" style={{ color: '#64748b' }}>promedio</span>
+              </div>
+
+              <div
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                <CalendarDays size={13} style={{ color: '#818cf8' }} />
+                <span className="text-xs" style={{ color: '#94a3b8' }}>
+                  Desde {new Date(usuario?.created_at ?? '').toLocaleDateString('es', { month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+
+              {promedio > 0 && (
+                <div
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
+                  style={{
+                    background: `${gradeColor(promedio)}08`,
+                    border: `1px solid ${gradeColor(promedio)}18`,
+                  }}
+                >
+                  <span className="text-xs font-semibold" style={{ color: `${gradeColor(promedio)}cc` }}>
+                    {gradeLabel(promedio)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Edit name ── */}
+        <div
+          className="p-5 rounded-2xl"
+          style={{
+            background: 'linear-gradient(145deg, #1a1d27, #141720)',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-4">
             <div
-              className="w-24 h-24 overflow-hidden flex items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(99,102,241,0.12)', border: '2px solid rgba(99,102,241,0.3)' }}
-            >
-              {avatarSrc ? (
-                <img src={avatarSrc} alt={usuario?.nombre} className="w-24 h-24 object-cover" />
-              ) : (
-                <span className="font-extrabold text-4xl" style={{ color: '#818cf8' }}>
-                  {(usuario?.nombre?.[0] ?? 'U').toUpperCase()}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="absolute -bottom-2 -right-2 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 disabled:opacity-60 shadow-primary"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
-            >
-              {uploading ? (
-                <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }} />
-              ) : (
-                <Camera size={13} className="text-white" />
-              )}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
+              className="w-1.5 h-5 rounded-full"
+              style={{ background: 'linear-gradient(180deg, #6366f1, #8b5cf6)' }}
             />
+            <h2 className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Editar nombre</h2>
           </div>
-
-          <div className="text-center">
-            <p className="font-bold text-lg" style={{ color: '#f1f5f9' }}>{usuario?.nombre}</p>
-            <p className="text-sm" style={{ color: '#64748b' }}>{usuario?.email}</p>
-            <div className="flex justify-center mt-2">
-              {usuario?.rol === 'admin' ? (
-                <span
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full"
-                  style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#818cf8' }}
-                >
-                  <Shield size={11} />
-                  Administrador
-                </span>
-              ) : (
-                <span
-                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
-                >
-                  <GraduationCap size={11} />
-                  Alumno
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-4 text-center rounded-2xl" style={{ background: '#1a1d27', border: `1px solid ${gradeColor(promedio)}20` }}>
-            <p className="text-2xl font-extrabold" style={{ color: gradeColor(promedio) }}>
-              {promedio.toFixed(2)}
-            </p>
-            <p className="text-xs font-medium uppercase tracking-wider mt-1" style={{ color: '#64748b' }}>
-              Promedio general
-            </p>
-          </div>
-          <div className="p-4 text-center rounded-2xl" style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <p className="text-xl font-extrabold" style={{ color: '#f1f5f9' }}>
-              {new Date(usuario?.created_at ?? '').toLocaleDateString('es', { month: 'short', year: 'numeric' })}
-            </p>
-            <p className="text-xs font-medium uppercase tracking-wider mt-1" style={{ color: '#64748b' }}>
-              Miembro desde
-            </p>
-          </div>
-        </div>
-
-        {/* Edit name */}
-        <div className="p-5 rounded-2xl" style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 className="font-semibold text-base mb-4" style={{ color: '#f1f5f9' }}>Editar nombre</h2>
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Nombre</label>
+              <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Nombre visible</label>
               <input
                 type="text"
                 value={nombre}
@@ -213,35 +306,55 @@ export default function Profile() {
             <button
               type="submit"
               disabled={saving || nombre.trim() === usuario?.nombre}
-              className="btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="btn-primary py-2.5 flex items-center justify-center gap-2 text-sm"
             >
-              <Save size={15} />
+              <Save size={14} />
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </form>
         </div>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center justify-center gap-2 py-3 font-semibold rounded-2xl transition-all duration-150"
-          style={{ border: '1px solid rgba(244,63,94,0.15)', color: '#64748b', background: 'transparent' }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.color = '#f43f5e'
-            el.style.borderColor = 'rgba(244,63,94,0.35)'
-            el.style.background = 'rgba(244,63,94,0.06)'
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.color = '#64748b'
-            el.style.borderColor = 'rgba(244,63,94,0.15)'
-            el.style.background = 'transparent'
+        {/* ── Danger zone ── */}
+        <div
+          className="p-5 rounded-2xl"
+          style={{
+            background: 'linear-gradient(145deg, #1a1d27, #141720)',
+            border: '1px solid rgba(255,255,255,0.07)',
           }}
         >
-          <LogOut size={15} />
-          Cerrar sesión
-        </button>
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="w-1.5 h-5 rounded-full"
+              style={{ background: 'linear-gradient(180deg, #f43f5e, #e11d48)' }}
+            />
+            <h2 className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Sesión</h2>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 group"
+            style={{
+              background: 'rgba(244,63,94,0.06)',
+              border: '1px solid rgba(244,63,94,0.15)',
+              color: '#94a3b8',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = '#f43f5e'
+              el.style.borderColor = 'rgba(244,63,94,0.35)'
+              el.style.background = 'rgba(244,63,94,0.1)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = '#94a3b8'
+              el.style.borderColor = 'rgba(244,63,94,0.15)'
+              el.style.background = 'rgba(244,63,94,0.06)'
+            }}
+          >
+            <LogOut size={14} />
+            Cerrar sesión
+          </button>
+        </div>
+
       </div>
 
       <AlertModal
