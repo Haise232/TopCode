@@ -327,14 +327,17 @@ export default function Notes() {
 
       {/* Add note modal */}
       {modalVisible && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop */}
           <div
             className="absolute inset-0"
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
             onClick={() => { setModalVisible(false); resetForm() }}
           />
+          {/* Modal wrapper — centers on desktop, sticks to bottom on mobile */}
+          <div className="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
           <div
-            className="relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto animate-slide-in-bottom sm:animate-scale-in-modal rounded-t-2xl sm:rounded-2xl shadow-modal"
+            className="relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto animate-scale-in-modal rounded-t-2xl sm:rounded-2xl shadow-modal pointer-events-auto"
             style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <div className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
@@ -465,6 +468,7 @@ export default function Notes() {
                 </div>
               </form>
             </div>
+          </div>
           </div>
         </div>
       )}
