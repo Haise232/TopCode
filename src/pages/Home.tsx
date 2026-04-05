@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, BookOpen, FileText, Plus, Calendar, MessageCircle,
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
-  Flame, GraduationCap, Shield, Zap,
+  Flame, GraduationCap, Shield, Zap, Camera, X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -172,7 +172,7 @@ const QUICK_ACTIONS = [
     glow: 'rgba(20,184,166,0.2)',
     gradFrom: 'rgba(20,184,166,0.06)',
     gradTo: 'rgba(20,184,166,0.02)',
-    badge: '3',
+    badge: null,
   },
   {
     label: 'Apuntes',
@@ -199,6 +199,30 @@ export default function Home() {
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const bannerKey = usuario ? `topcode-banner-${usuario.id}` : null
+  const [bannerUrl, setBannerUrl] = useState<string | null>(() =>
+    bannerKey ? localStorage.getItem(bannerKey) : null
+  )
+  const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !bannerKey) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const url = ev.target?.result as string
+      localStorage.setItem(bannerKey, url)
+      setBannerUrl(url)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  function handleBannerRemove() {
+    if (!bannerKey) return
+    localStorage.removeItem(bannerKey)
+    setBannerUrl(null)
+  }
 
   const cargarDatos = useCallback(async () => {
     if (!usuario) return
@@ -261,33 +285,71 @@ export default function Home() {
 
       {/* ── Hero header ───────────────────────────────────────────────────── */}
       <div
-        className="relative px-4 md:px-6 py-8 overflow-hidden"
+        className="group relative px-4 md:px-6 py-8 overflow-hidden"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
-        {/* Fondo con gradiente animado */}
-        <div
-          className="absolute inset-0 pointer-events-none animate-gradient-shift"
-          style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.07) 0%, rgba(20,184,166,0.05) 50%, rgba(139,92,246,0.06) 100%)',
-            backgroundSize: '200% 200%',
-          }}
-        />
+        {/* Fondo: banner de usuario o gradiente por defecto */}
+        {bannerUrl ? (
+          <>
+            <img
+              src={bannerUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            />
+            {/* Overlay oscuro para legibilidad */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'linear-gradient(135deg, rgba(15,17,23,0.72) 0%, rgba(15,17,23,0.55) 100%)' }}
+            />
+          </>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 pointer-events-none animate-gradient-shift"
+              style={{
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.07) 0%, rgba(20,184,166,0.05) 50%, rgba(139,92,246,0.06) 100%)',
+                backgroundSize: '200% 200%',
+              }}
+            />
+            <div
+              className="absolute -top-8 -right-8 w-48 h-48 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, transparent 70%)', filter: 'blur(24px)' }}
+            />
+            <div
+              className="absolute -bottom-6 -left-6 w-40 h-40 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', filter: 'blur(20px)' }}
+            />
+          </>
+        )}
 
-        {/* Orbe difuso esquina superior derecha */}
-        <div
-          className="absolute -top-8 -right-8 w-48 h-48 rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, transparent 70%)',
-            filter: 'blur(24px)',
-          }}
-        />
-        {/* Orbe difuso esquina inferior izquierda */}
-        <div
-          className="absolute -bottom-6 -left-6 w-40 h-40 rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)',
-            filter: 'blur(20px)',
-          }}
+        {/* Botones de banner — visibles al hacer hover sobre el hero */}
+        <div className="absolute top-3 left-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+          <button
+            onClick={() => bannerInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm transition-all duration-150 hover:scale-105"
+            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: '#f1f5f9' }}
+            title="Cambiar banner"
+          >
+            <Camera size={12} />
+            {bannerUrl ? 'Cambiar' : 'Añadir banner'}
+          </button>
+          {bannerUrl && (
+            <button
+              onClick={handleBannerRemove}
+              className="w-7 h-7 flex items-center justify-center rounded-lg backdrop-blur-sm transition-all duration-150 hover:scale-105"
+              style={{ background: 'rgba(244,63,94,0.3)', border: '1px solid rgba(244,63,94,0.4)', color: '#fda4af' }}
+              title="Quitar banner"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleBannerChange}
         />
 
         <div className="max-w-[1100px] mx-auto flex justify-between items-start relative">
