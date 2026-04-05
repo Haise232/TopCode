@@ -1,0 +1,55 @@
+export interface Usuario {
+  id: string
+  nombre: string
+  email: string
+  promedio: number
+  avatar_url: string | null
+  rol: 'alumno' | 'admin'
+  created_at: string
+}
+
+export interface Nota {
+  id: string
+  usuario_id: string
+  materia: string
+  tema: string
+  teorica: number
+  practica: number
+  media: number
+  created_at: string
+}
+
+export interface Mensaje {
+  id: string
+  usuario_id: string
+  autor: string
+  texto: string
+  created_at: string
+}
+
+export interface MensajePrivado {
+  id: string
+  de_id: string
+  de_nombre: string
+  para_id: string
+  texto: string
+  created_at: string
+}
+
+export interface Apunte {
+  id: string
+  usuario_id: string
+  nombre: string
+  url: string
+  tipo: 'pdf' | 'imagen' | 'otro'
+  created_at: string
+}
+
+export interface EventoCalendario {
+  id: string
+  titulo: string
+  descripcion: string | null
+  fecha: string
+  created_by: string
+  created_at: string
+}
