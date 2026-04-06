@@ -280,32 +280,42 @@ export default function Home() {
   const [actividadesPendientes, setActividadesPendientes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [bannerUrl, setBannerUrl] = useState<string | null>(usuario?.banner_url ?? null)
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  // Sincronizar con el perfil cuando carga el usuario
+  useEffect(() => {
+    setBannerUrl(usuario?.banner_url ?? null)
+  }, [usuario?.banner_url])
 
   async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !usuario) return
     e.target.value = ''
     setUploadingBanner(true)
+    // Siempre el mismo nombre para que upsert sobreescriba el anterior
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const url = await subirAvatar(file, `banner_${usuario.id}.${ext}`)
+    const path = `banner_${usuario.id}.${ext}`
+    const url = await subirAvatar(file, path)
     if (url) {
       await supabase.from('usuarios').update({ banner_url: url }).eq('id', usuario.id)
       setBannerUrl(url)
-      await refreshUsuario()
+      refreshUsuario()
     }
     setUploadingBanner(false)
   }
 
   async function handleBannerRemove() {
-    if (!usuario) return
-    const ext = bannerUrl?.split('.').pop()?.split('?')[0] ?? 'jpg'
-    await eliminarArchivoStorage('avatars', `banner_${usuario.id}.${ext}`)
+    if (!usuario || !bannerUrl) return
+    // Extraer la ruta real del storage desde la URL pública
+    try {
+      const storagePath = new URL(bannerUrl).pathname.split('/object/public/avatars/')[1]
+      if (storagePath) await eliminarArchivoStorage('avatars', decodeURIComponent(storagePath))
+    } catch { /* si falla el borrado del archivo, seguimos igual */ }
     await supabase.from('usuarios').update({ banner_url: null }).eq('id', usuario.id)
     setBannerUrl(null)
-    await refreshUsuario()
+    refreshUsuario()
   }
 
   const cargarDatos = useCallback(async () => {
