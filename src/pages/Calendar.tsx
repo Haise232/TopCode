@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Plus, Trash2, RefreshCw, CalendarDays, Clock,
-  ChevronDown, ChevronUp, Zap, BookOpen, FileText, Star,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Zap, BookOpen, FileText, Star,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -145,24 +145,31 @@ function MiniCalendario({
   eventos,
   onDiaClick,
   diaHighlight,
+  viewYear,
+  viewMonth,
+  onPrevMonth,
+  onNextMonth,
 }: {
   eventos: EventoCalendario[]
   onDiaClick: (fecha: string) => void
   diaHighlight: string | null
+  viewYear: number
+  viewMonth: number
+  onPrevMonth: () => void
+  onNextMonth: () => void
 }) {
   const hoy = new Date()
-  const year = hoy.getFullYear()
-  const month = hoy.getMonth()
   const todayDay = hoy.getDate()
+  const isCurrentMonth = hoy.getFullYear() === viewYear && hoy.getMonth() === viewMonth
 
-  const offset = primerDiaMes(year, month)
-  const totalDias = diasEnMes(year, month)
+  const offset = primerDiaMes(viewYear, viewMonth)
+  const totalDias = diasEnMes(viewYear, viewMonth)
 
-  // Set de días del mes actual que tienen eventos
+  // Set de días del mes visualizado que tienen eventos
   const diasConEvento = new Set<number>()
   eventos.forEach(ev => {
     const [y, m, d] = ev.fecha.split('-').map(Number)
-    if (y === year && m - 1 === month) diasConEvento.add(d)
+    if (y === viewYear && m - 1 === viewMonth) diasConEvento.add(d)
   })
 
   const cells: (number | null)[] = []
@@ -170,7 +177,7 @@ function MiniCalendario({
   for (let d = 1; d <= totalDias; d++) cells.push(d)
 
   function fechaStr(d: number) {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    return `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   }
 
   return (
@@ -183,9 +190,27 @@ function MiniCalendario({
     >
       {/* Month title */}
       <div className="flex items-center justify-between mb-4">
-        <span className="font-bold text-sm capitalize" style={{ color: '#f1f5f9' }}>
-          {MESES[month]} {year}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onPrevMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 hover:bg-white/[0.06]"
+            style={{ color: '#64748b', border: '1px solid rgba(255,255,255,0.07)' }}
+            aria-label="Mes anterior"
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <span className="font-bold text-sm capitalize" style={{ color: '#f1f5f9', minWidth: '120px', textAlign: 'center' }}>
+            {MESES[viewMonth]} {viewYear}
+          </span>
+          <button
+            onClick={onNextMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 hover:bg-white/[0.06]"
+            style={{ color: '#64748b', border: '1px solid rgba(255,255,255,0.07)' }}
+            aria-label="Mes siguiente"
+          >
+            <ChevronRight size={13} />
+          </button>
+        </div>
         <div className="flex items-center gap-3 text-xs" style={{ color: '#4b5563' }}>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#6366f1' }} />
@@ -211,7 +236,7 @@ function MiniCalendario({
       <div className="grid grid-cols-7 gap-y-0.5">
         {cells.map((dia, idx) => {
           if (dia === null) return <div key={`empty-${idx}`} />
-          const isToday = dia === todayDay
+          const isToday = isCurrentMonth && dia === todayDay
           const hasEvento = diasConEvento.has(dia)
           const fs = fechaStr(dia)
           const isHighlighted = diaHighlight === fs
@@ -330,6 +355,18 @@ export default function CalendarPage() {
   const [alert, setAlert] = useState<AlertState>(null)
   const [pastExpanded, setPastExpanded] = useState(false)
   const [diaHighlight, setDiaHighlight] = useState<string | null>(null)
+  const [viewDate, setViewDate] = useState(() => new Date())
+
+  const viewYear = viewDate.getFullYear()
+  const viewMonth = viewDate.getMonth()
+
+  const handlePrevMonth = useCallback(() => {
+    setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+  }, [])
+
+  const handleNextMonth = useCallback(() => {
+    setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+  }, [])
 
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -508,6 +545,10 @@ export default function CalendarPage() {
               eventos={eventos}
               onDiaClick={handleDiaClick}
               diaHighlight={diaHighlight}
+              viewYear={viewYear}
+              viewMonth={viewMonth}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
             />
 
             {/* Upcoming events */}

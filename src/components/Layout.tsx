@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import AnuncioModal from './AnuncioModal'
+import PrivateMessageToast from './PrivateMessageToast'
 
 const NAV_ITEMS = [
   { to: '/',            label: 'Inicio',      Icon: Home           },
@@ -202,6 +203,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Modal de anuncios */}
       <AnuncioModal />
+
+      {/* Toast de mensaje privado */}
+      <PrivateMessageToast />
     </div>
   )
 }
