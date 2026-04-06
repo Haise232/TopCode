@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, BookOpen, FileText, Plus, Calendar, MessageCircle,
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
-  Flame, GraduationCap, Shield, Zap, Camera, X,
+  Flame, GraduationCap, Shield, Zap, Camera, X, ClipboardCheck, Clock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Nota, EventoCalendario } from '../lib/types'
+import { Nota, EventoCalendario, Actividad } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
@@ -187,6 +187,19 @@ const QUICK_ACTIONS = [
     gradTo: 'rgba(139,92,246,0.02)',
     badge: null,
   },
+  {
+    label: 'Actividades',
+    desc: 'Tareas',
+    Icon: ClipboardCheck,
+    to: '/actividades',
+    color: '#34d399',
+    bg: 'rgba(16,185,129,0.1)',
+    border: 'rgba(16,185,129,0.25)',
+    glow: 'rgba(16,185,129,0.18)',
+    gradFrom: 'rgba(16,185,129,0.06)',
+    gradTo: 'rgba(16,185,129,0.02)',
+    badge: null, // se sobreescribe dinámicamente en el render
+  },
 ]
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -197,6 +210,8 @@ export default function Home() {
   const [notas, setNotas] = useState<Nota[]>([])
   const [allNotas, setAllNotas] = useState<Nota[]>([])
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
+  const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
+  const [actividadesPendientes, setActividadesPendientes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const bannerKey = usuario ? `topcode-banner-${usuario.id}` : null
@@ -226,28 +241,25 @@ export default function Home() {
 
   const cargarDatos = useCallback(async () => {
     if (!usuario) return
-    const [notasRecientes, todasNotas, evento] = await Promise.all([
-      supabase
-        .from('notas')
-        .select('*')
-        .eq('usuario_id', usuario.id)
-        .order('created_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('notas')
-        .select('*')
-        .eq('usuario_id', usuario.id),
-      supabase
-        .from('eventos')
-        .select('*')
-        .gte('fecha', new Date().toISOString().slice(0, 10))
-        .order('fecha', { ascending: true })
-        .limit(1),
+    const now = new Date().toISOString()
+    const [notasRecientes, todasNotas, evento, acts, estados] = await Promise.all([
+      supabase.from('notas').select('*').eq('usuario_id', usuario.id).order('created_at', { ascending: false }).limit(5),
+      supabase.from('notas').select('*').eq('usuario_id', usuario.id),
+      supabase.from('eventos').select('*').gte('fecha', new Date().toISOString().slice(0, 10)).order('fecha', { ascending: true }).limit(1),
+      supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
+      supabase.from('actividades_estado').select('actividad_id').eq('usuario_id', usuario.id).eq('completada', true),
     ])
     if (notasRecientes.data) setNotas(notasRecientes.data)
     if (todasNotas.data) setAllNotas(todasNotas.data)
     if (evento.data?.[0]) setProximoEvento(evento.data[0])
     else setProximoEvento(null)
+
+    if (acts.data) {
+      const doneIds = new Set((estados.data ?? []).map((e: { actividad_id: string }) => e.actividad_id))
+      const pendientes = acts.data.filter((a: Actividad) => !doneIds.has(a.id))
+      setActividadesPendientes(pendientes.length)
+      setProximaActividad(pendientes[0] ?? null)
+    }
   }, [usuario])
 
   useEffect(() => {
@@ -640,12 +652,16 @@ export default function Home() {
           <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
             Acceso rápido
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {QUICK_ACTIONS.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo, badge }) => (
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            {QUICK_ACTIONS.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }) => {
+              const badge = to === '/actividades' && actividadesPendientes > 0
+                ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
+                : null
+              return (
               <button
                 key={to}
                 onClick={() => navigate(to)}
-                className="group relative p-5 flex flex-col items-center gap-3 rounded-2xl transition-all duration-200 active:scale-[0.97] text-center overflow-hidden"
+                className="group relative p-4 sm:p-5 flex flex-col items-center gap-2.5 sm:gap-3 rounded-2xl transition-all duration-200 active:scale-[0.97] text-center overflow-hidden"
                 style={{
                   background: `linear-gradient(145deg, ${gradFrom}, ${gradTo}), linear-gradient(145deg, #1a1d27, #141720)`,
                   border: `1px solid rgba(255,255,255,0.06)`,
@@ -700,59 +716,89 @@ export default function Home() {
                   style={{ color }}
                 />
               </button>
-            ))}
+              )
+            })}
           </div>
         </div>
 
-        {/* ── Próximo evento ──────────────────────────────────────────────── */}
-        {proximoEvento && (
-          <button
-            onClick={() => navigate('/calendar')}
-            className="group w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-200"
-            style={{
-              background: 'linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(20,184,166,0.04) 100%), linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(245,158,11,0.18)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.32)'
-              ;(e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.35), 0 0 12px rgba(245,158,11,0.1)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.18)'
-              ;(e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'
-            }}
-          >
-            <div
-              className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl"
-              style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}
-            >
-              <Calendar size={18} style={{ color: '#fbbf24' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span
-                  className="text-2xs font-semibold uppercase tracking-wider"
-                  style={{ color: '#fbbf24' }}
+        {/* ── Próxima actividad + Próximo evento ──────────────────────────── */}
+        {(proximaActividad || proximoEvento) && (
+          <div className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+              Próximamente
+            </h2>
+            <div className="flex flex-col gap-2.5">
+
+              {/* Próxima actividad pendiente */}
+              {proximaActividad && (() => {
+                const diff = new Date(proximaActividad.fecha_entrega).getTime() - Date.now()
+                const dias = diff / 86400000
+                const urgColor = dias < 1 ? '#f43f5e' : dias < 3 ? '#f59e0b' : '#34d399'
+                const urgBg    = dias < 1 ? 'rgba(244,63,94,0.08)' : dias < 3 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)'
+                const urgBorder= dias < 1 ? 'rgba(244,63,94,0.2)'  : dias < 3 ? 'rgba(245,158,11,0.2)'  : 'rgba(16,185,129,0.2)'
+                const label = diff < 0 ? 'Vence hoy' : dias < 1
+                  ? `${Math.floor(diff / 3600000)}h restantes`
+                  : dias < 2 ? 'Mañana'
+                  : `En ${Math.floor(dias)} días`
+                return (
+                  <button
+                    onClick={() => navigate('/actividades')}
+                    className="group w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-200"
+                    style={{ background: `${urgBg}, linear-gradient(145deg, #1a1d27, #141720)`, border: `1px solid ${urgBorder}`, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 20px rgba(0,0,0,0.35), 0 0 12px ${urgColor}18` }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
+                  >
+                    <div className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl" style={{ background: urgBg, border: `1px solid ${urgBorder}` }}>
+                      <ClipboardCheck size={18} style={{ color: urgColor }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <span className="text-2xs font-semibold uppercase tracking-wider" style={{ color: urgColor }}>
+                          Actividad pendiente
+                        </span>
+                        {proximaActividad.materia && (
+                          <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${urgColor}18`, color: urgColor, border: `1px solid ${urgColor}28` }}>
+                            {proximaActividad.materia}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>
+                        {proximaActividad.titulo}
+                      </p>
+                      <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#64748b' }}>
+                        <Clock size={10} />
+                        {label} · {new Date(proximaActividad.fecha_entrega).toLocaleDateString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <ChevronRight size={16} className="shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: urgColor }} />
+                  </button>
+                )
+              })()}
+
+              {/* Próximo evento */}
+              {proximoEvento && (
+                <button
+                  onClick={() => navigate('/calendar')}
+                  className="group w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-200"
+                  style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(20,184,166,0.04) 100%), linear-gradient(145deg, #1a1d27, #141720)', border: '1px solid rgba(245,158,11,0.18)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.32)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.35), 0 0 12px rgba(245,158,11,0.1)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.18)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
                 >
-                  Próximo evento
-                </span>
-              </div>
-              <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>
-                {proximoEvento.titulo}
-              </p>
-              <p className="text-xs mt-0.5 truncate" style={{ color: '#64748b' }}>
-                {new Date(proximoEvento.fecha + 'T00:00:00').toLocaleDateString('es', {
-                  weekday: 'long', day: 'numeric', month: 'long',
-                })}
-              </p>
+                  <div className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    <Calendar size={18} style={{ color: '#fbbf24' }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-2xs font-semibold uppercase tracking-wider block mb-0.5" style={{ color: '#fbbf24' }}>Próximo evento</span>
+                    <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>{proximoEvento.titulo}</p>
+                    <p className="text-xs mt-0.5 truncate capitalize" style={{ color: '#64748b' }}>
+                      {new Date(proximoEvento.fecha + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: '#fbbf24' }} />
+                </button>
+              )}
             </div>
-            <ChevronRight
-              size={16}
-              className="shrink-0 opacity-40 group-hover:opacity-70 transition-opacity"
-              style={{ color: '#fbbf24' }}
-            />
-          </button>
+          </div>
         )}
 
         {/* ── Últimas notas ───────────────────────────────────────────────── */}

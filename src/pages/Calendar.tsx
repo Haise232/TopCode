@@ -765,7 +765,6 @@ function EventCard({
 }) {
   const relativo = fechaRelativa(evento.fecha)
   const isToday = relativo === 'Hoy'
-  const isTomorrow = relativo === 'Mañana'
 
   const dayNum = parseInt(evento.fecha.split('-')[2])
   const monthIdx = parseInt(evento.fecha.split('-')[1]) - 1
@@ -779,21 +778,34 @@ function EventCard({
   const mainBg     = hue !== null ? `hsla(${hue},60%,65%,0.1)`  : cat.bg
   const mainBorder = hue !== null ? `hsla(${hue},60%,65%,0.28)` : cat.border
 
-  // Badge style (temporal proximity)
-  const badgeStyle = isToday ? {
-    background: 'rgba(244,63,94,0.15)',
-    color: '#f43f5e',
-    border: '1px solid rgba(244,63,94,0.3)',
-  } : isTomorrow ? {
-    background: 'rgba(245,158,11,0.12)',
-    color: '#f59e0b',
-    border: '1px solid rgba(245,158,11,0.25)',
-  } : past ? {
+  // Días hasta el evento para colorear el badge de proximidad
+  const hoyMidnight = new Date(); hoyMidnight.setHours(0, 0, 0, 0)
+  const evDate = new Date(evento.fecha + 'T00:00:00')
+  const daysUntil = Math.round((evDate.getTime() - hoyMidnight.getTime()) / 86400000)
+
+  // Badge color: rojo → naranja → ámbar → verde → slate
+  const badgeStyle = past ? {
     background: 'rgba(255,255,255,0.03)',
     color: '#374151',
     border: '1px solid rgba(255,255,255,0.05)',
+  } : daysUntil === 0 ? {
+    background: 'rgba(244,63,94,0.15)',
+    color: '#f43f5e',
+    border: '1px solid rgba(244,63,94,0.3)',
+  } : daysUntil === 1 ? {
+    background: 'rgba(249,115,22,0.12)',
+    color: '#fb923c',
+    border: '1px solid rgba(249,115,22,0.25)',
+  } : daysUntil <= 3 ? {
+    background: 'rgba(245,158,11,0.12)',
+    color: '#f59e0b',
+    border: '1px solid rgba(245,158,11,0.25)',
+  } : daysUntil <= 7 ? {
+    background: 'rgba(16,185,129,0.1)',
+    color: '#34d399',
+    border: '1px solid rgba(16,185,129,0.2)',
   } : {
-    background: 'rgba(255,255,255,0.06)',
+    background: 'rgba(255,255,255,0.05)',
     color: '#64748b',
     border: '1px solid rgba(255,255,255,0.08)',
   }
