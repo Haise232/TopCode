@@ -362,22 +362,26 @@ export default function CalendarPage() {
       return
     }
     setSaving(true)
-    const { error } = await supabase.from('eventos').insert({
-      titulo: titulo.trim(),
-      descripcion: descripcion.trim() || null,
-      materia: mostrarMateria && materia.trim() ? materia.trim() : null,
-      fecha,
-      created_by: usuario!.id,
-    })
-    if (error) {
+    try {
+      const { error } = await supabase.from('eventos').insert({
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim() || null,
+        materia: mostrarMateria && materia.trim() ? materia.trim() : null,
+        fecha,
+        created_by: usuario!.id,
+      })
+      if (error) {
+        setAlert({ type: 'error', title: 'Error', message: 'No se pudo crear el evento: ' + error.message })
+        return
+      }
+      await cargar()
+      setModalVisible(false)
+      setTitulo(''); setDescripcion(''); setMateria(''); setFecha(new Date().toISOString().split('T')[0])
+    } catch {
+      setAlert({ type: 'error', title: 'Error de conexión', message: 'No se pudo conectar. Inténtalo de nuevo.' })
+    } finally {
       setSaving(false)
-      setAlert({ type: 'error', title: 'Error', message: 'No se pudo crear el evento: ' + error.message })
-      return
     }
-    await cargar()
-    setSaving(false)
-    setModalVisible(false)
-    setTitulo(''); setDescripcion(''); setMateria(''); setFecha(new Date().toISOString().split('T')[0])
   }
 
   function handleEliminar(ev: EventoCalendario) {

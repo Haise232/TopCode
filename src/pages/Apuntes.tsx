@@ -134,20 +134,28 @@ export default function Apuntes() {
       return
     }
     setSubiendo(true)
-    const ext = file.name.split('.').pop() ?? 'bin'
-    const path = `${usuario.id}/${Date.now()}.${ext}`
-    const url = await subirArchivo(file, path)
-    if (!url) {
+    try {
+      const ext = file.name.split('.').pop() ?? 'bin'
+      const path = `${usuario.id}/${Date.now()}.${ext}`
+      const url = await subirArchivo(file, path)
+      if (!url) {
+        setAlert({ type: 'error', title: 'Error al subir', message: 'No se pudo subir el archivo. Inténtalo de nuevo.' })
+        return
+      }
+      const tipo = tipoFromMime(file.type)
+      const nombre = normalizarNombre(file.name)
+      const { error } = await supabase.from('apuntes').insert({ usuario_id: usuario.id, nombre, url, tipo })
+      if (error) {
+        setAlert({ type: 'error', title: 'Error al registrar', message: 'El archivo se subió pero no se pudo registrar. Recarga la página.' })
+        return
+      }
+      await cargar()
+      setAlert({ type: 'success', title: 'Archivo subido', message: 'El archivo se subió correctamente.' })
+    } catch {
+      setAlert({ type: 'error', title: 'Error de conexión', message: 'No se pudo conectar. Inténtalo de nuevo.' })
+    } finally {
       setSubiendo(false)
-      setAlert({ type: 'error', title: 'Error al subir', message: 'No se pudo subir el archivo. Inténtalo de nuevo.' })
-      return
     }
-    const tipo = tipoFromMime(file.type)
-    const nombre = normalizarNombre(file.name)
-    await supabase.from('apuntes').insert({ usuario_id: usuario.id, nombre, url, tipo })
-    await cargar()
-    setSubiendo(false)
-    setAlert({ type: 'success', title: 'Archivo subido', message: 'El archivo se subió correctamente.' })
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
