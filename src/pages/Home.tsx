@@ -294,16 +294,41 @@ export default function Home() {
     if (!file || !usuario) return
     e.target.value = ''
     setUploadingBanner(true)
-    // Siempre el mismo nombre para que upsert sobreescriba el anterior
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `banner_${usuario.id}.${ext}`
-    const url = await subirAvatar(file, path)
-    if (url) {
-      await supabase.from('usuarios').update({ banner_url: url }).eq('id', usuario.id)
-      setBannerUrl(url)
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `banner_${usuario.id}.${ext}`
+
+      // Subir al storage directamente para capturar el error real
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { contentType: file.type, upsert: true })
+
+      if (storageError) {
+        console.error('Storage error:', storageError)
+        alert(`Error al subir: ${storageError.message}`)
+        return
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(storageData.path)
+
+      const { error: dbError } = await supabase
+        .from('usuarios')
+        .update({ banner_url: publicUrl })
+        .eq('id', usuario.id)
+
+      if (dbError) {
+        console.error('DB error:', dbError)
+        alert(`Error al guardar: ${dbError.message}`)
+        return
+      }
+
+      setBannerUrl(publicUrl)
       refreshUsuario()
+    } finally {
+      setUploadingBanner(false)
     }
-    setUploadingBanner(false)
   }
 
   async function handleBannerRemove() {
