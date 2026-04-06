@@ -5,7 +5,7 @@ import {
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
   Flame, GraduationCap, Shield, Zap, Camera, X, ClipboardCheck, Clock,
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { supabase, subirAvatar, eliminarArchivoStorage } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { Nota, EventoCalendario, Actividad } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
@@ -271,7 +271,7 @@ const ADMIN_ACTION = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { usuario } = useAuth()
+  const { usuario, refreshUsuario } = useAuth()
   const navigate = useNavigate()
   const [notas, setNotas] = useState<Nota[]>([])
   const [allNotas, setAllNotas] = useState<Nota[]>([])
@@ -280,29 +280,32 @@ export default function Home() {
   const [actividadesPendientes, setActividadesPendientes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const bannerKey = usuario ? `topcode-banner-${usuario.id}` : null
-  const [bannerUrl, setBannerUrl] = useState<string | null>(() =>
-    bannerKey ? localStorage.getItem(bannerKey) : null
-  )
+  const [bannerUrl, setBannerUrl] = useState<string | null>(usuario?.banner_url ?? null)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const bannerInputRef = useRef<HTMLInputElement>(null)
 
-  function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !bannerKey) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const url = ev.target?.result as string
-      localStorage.setItem(bannerKey, url)
-      setBannerUrl(url)
-    }
-    reader.readAsDataURL(file)
+    if (!file || !usuario) return
     e.target.value = ''
+    setUploadingBanner(true)
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const url = await subirAvatar(file, `banner_${usuario.id}.${ext}`)
+    if (url) {
+      await supabase.from('usuarios').update({ banner_url: url }).eq('id', usuario.id)
+      setBannerUrl(url)
+      await refreshUsuario()
+    }
+    setUploadingBanner(false)
   }
 
-  function handleBannerRemove() {
-    if (!bannerKey) return
-    localStorage.removeItem(bannerKey)
+  async function handleBannerRemove() {
+    if (!usuario) return
+    const ext = bannerUrl?.split('.').pop()?.split('?')[0] ?? 'jpg'
+    await eliminarArchivoStorage('avatars', `banner_${usuario.id}.${ext}`)
+    await supabase.from('usuarios').update({ banner_url: null }).eq('id', usuario.id)
     setBannerUrl(null)
+    await refreshUsuario()
   }
 
   const cargarDatos = useCallback(async () => {
@@ -404,12 +407,16 @@ export default function Home() {
         {/* Botones de banner — visibles al hacer hover sobre el hero */}
         <div className="absolute top-3 left-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
           <button
-            onClick={() => bannerInputRef.current?.click()}
+            onClick={() => !uploadingBanner && bannerInputRef.current?.click()}
+            disabled={uploadingBanner}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm transition-all duration-150 hover:scale-105"
-            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: '#f1f5f9' }}
+            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: '#f1f5f9', opacity: uploadingBanner ? 0.6 : 1 }}
             title="Cambiar banner"
           >
-            <Camera size={12} />
+            {uploadingBanner
+              ? <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+              : <Camera size={12} />
+            }
             {bannerUrl ? 'Cambiar' : 'Añadir banner'}
           </button>
           {bannerUrl && (
