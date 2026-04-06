@@ -146,7 +146,8 @@ export default function Admin() {
 
   function toggleRol(u: Usuario) {
     if (u.id === usuario?.id) return
-    if (u.rol === 'admin') return  // los admins no se pueden degradar
+    if (!isSuperAdmin) return       // solo el superadmin puede cambiar roles
+    if (u.rol === 'admin') return   // los admins no se pueden degradar
     setAlert({
       title: 'Dar permisos de administrador',
       message: `¿Seguro que quieres hacer administrador a ${u.nombre}? No podrás quitarle el rol después.`,
@@ -167,6 +168,7 @@ export default function Admin() {
     })
   }
 
+  const isSuperAdmin = usuario?.email?.toLowerCase() === 'joaquinjose1298@gmail.com'
   const admins  = users.filter(u => u.rol === 'admin')
   const alumnos = users.filter(u => u.rol === 'alumno')
 
@@ -341,10 +343,11 @@ export default function Admin() {
                 ) : (
                   <button
                     onClick={() => toggleRol(u)}
-                    disabled={u.rol === 'admin' || u.id === usuario?.id}
+                    disabled={u.rol === 'admin' || u.id === usuario?.id || !isSuperAdmin}
                     title={
                       u.id === usuario?.id ? 'No puedes cambiar tu propio rol' :
                       u.rol === 'admin' ? 'Los administradores no se pueden degradar' :
+                      !isSuperAdmin ? 'Solo el propietario puede cambiar roles' :
                       'Dar permisos de administrador'
                     }
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150"
@@ -358,17 +361,17 @@ export default function Admin() {
                       background: 'rgba(255,255,255,0.05)',
                       color: '#64748b',
                       border: '1px solid rgba(255,255,255,0.08)',
-                      cursor: u.id === usuario?.id ? 'not-allowed' : 'pointer',
-                      opacity: u.id === usuario?.id ? 0.4 : 1,
+                      cursor: (u.id === usuario?.id || !isSuperAdmin) ? 'not-allowed' : 'pointer',
+                      opacity: (u.id === usuario?.id || !isSuperAdmin) ? 0.4 : 1,
                     }}
                     onMouseEnter={e => {
-                      if (u.rol === 'admin' || u.id === usuario?.id) return
+                      if (u.rol === 'admin' || u.id === usuario?.id || !isSuperAdmin) return
                       const el = e.currentTarget as HTMLElement
                       el.style.opacity = '0.8'
                       el.style.transform = 'scale(0.97)'
                     }}
                     onMouseLeave={e => {
-                      if (u.rol === 'admin' || u.id === usuario?.id) return
+                      if (u.rol === 'admin' || u.id === usuario?.id || !isSuperAdmin) return
                       const el = e.currentTarget as HTMLElement
                       el.style.opacity = '1'
                       el.style.transform = 'scale(1)'
