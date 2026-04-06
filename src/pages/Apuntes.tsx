@@ -25,6 +25,19 @@ type ApunteConAutor = {
   usuarios: { nombre: string; avatar_url: string | null } | null
 }
 
+// Corrige mojibake en nombres de archivo (ej: "ProgramaciÃ³n" → "Programación").
+// Ocurre cuando bytes UTF-8 del nombre se interpretan como Latin-1.
+// Intenta decodificar los char codes como bytes UTF-8; si es válido era mojibake y lo corrige.
+// Si lanza, el string ya estaba bien y solo se normaliza NFC.
+function normalizarNombre(nombre: string): string {
+  try {
+    const bytes = Uint8Array.from(nombre, c => c.charCodeAt(0))
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes).normalize('NFC')
+  } catch {
+    return nombre.normalize('NFC')
+  }
+}
+
 function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
   if (mime === 'application/pdf') return 'pdf'
   if (mime.startsWith('image/')) return 'imagen'
@@ -130,7 +143,8 @@ export default function Apuntes() {
       return
     }
     const tipo = tipoFromMime(file.type)
-    await supabase.from('apuntes').insert({ usuario_id: usuario.id, nombre: file.name, url, tipo })
+    const nombre = normalizarNombre(file.name)
+    await supabase.from('apuntes').insert({ usuario_id: usuario.id, nombre, url, tipo })
     await cargar()
     setSubiendo(false)
     setAlert({ type: 'success', title: 'Archivo subido', message: 'El archivo se subió correctamente.' })
