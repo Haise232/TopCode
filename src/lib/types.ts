@@ -54,6 +54,23 @@ export interface EventoCalendario {
   created_at: string
 }
 
+export interface Actividad {
+  id: string
+  titulo: string
+  descripcion: string | null
+  materia: string | null
+  fecha_entrega: string
+  created_by: string | null
+  created_at: string
+}
+
+export interface ActividadEstado {
+  actividad_id: string
+  usuario_id: string
+  completada: boolean
+  updated_at: string
+}
+
 export interface Anuncio {
   id: string
   titulo: string

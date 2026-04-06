@@ -1,18 +1,20 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home, ClipboardList, MessageCircle, FolderOpen, Calendar, Shield, LogOut,
-  GraduationCap,
+  GraduationCap, ClipboardCheck,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AnuncioModal from './AnuncioModal'
 
 const NAV_ITEMS = [
-  { to: '/',         label: 'Inicio',   Icon: Home          },
-  { to: '/notes',    label: 'Notas',    Icon: ClipboardList },
-  { to: '/chat',     label: 'Chat',     Icon: MessageCircle },
-  { to: '/apuntes',  label: 'Apuntes',  Icon: FolderOpen    },
-  { to: '/calendar', label: 'Eventos',  Icon: Calendar      },
+  { to: '/',            label: 'Inicio',      Icon: Home           },
+  { to: '/notes',       label: 'Notas',       Icon: ClipboardList  },
+  { to: '/chat',        label: 'Chat',        Icon: MessageCircle  },
+  { to: '/apuntes',     label: 'Apuntes',     Icon: FolderOpen     },
+  { to: '/calendar',    label: 'Eventos',     Icon: Calendar       },
+  { to: '/actividades', label: 'Actividades', Icon: ClipboardCheck },
 ]
 
 const ADMIN_ITEM = { to: '/admin', label: 'Admin', Icon: Shield }
@@ -22,6 +24,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const isAdmin = usuario?.rol === 'admin'
   const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS
+
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    if (!usuario) return
+    async function fetchPending() {
+      const now = new Date().toISOString()
+      // Get actividades no vencidas
+      const { data: acts } = await supabase
+        .from('actividades')
+        .select('id')
+        .gte('fecha_entrega', now)
+      if (!acts || acts.length === 0) { setPendingCount(0); return }
+      const ids = acts.map((a: { id: string }) => a.id)
+      const { data: done } = await supabase
+        .from('actividades_estado')
+        .select('actividad_id')
+        .eq('usuario_id', usuario!.id)
+        .eq('completada', true)
+        .in('actividad_id', ids)
+      const doneIds = new Set((done ?? []).map((d: { actividad_id: string }) => d.actividad_id))
+      setPendingCount(ids.filter(id => !doneIds.has(id)).length)
+    }
+    fetchPending()
+  }, [usuario])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -117,6 +144,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <>
                     <Icon size={14} />
                     <span className="hidden sm:block">{label}</span>
+                    {/* Pending badge for Actividades */}
+                    {to === '/actividades' && pendingCount > 0 && (
+                      <span
+                        className="flex items-center justify-center text-white font-bold rounded-full"
+                        style={{
+                          fontSize: '9px',
+                          minWidth: '14px',
+                          height: '14px',
+                          padding: '0 3px',
+                          background: '#f43f5e',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {pendingCount > 9 ? '9+' : pendingCount}
+                      </span>
+                    )}
                     {/* Active underline indicator */}
                     {isActive && (
                       <span
