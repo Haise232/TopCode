@@ -98,7 +98,7 @@ export default function Admin() {
         created_by: usuario!.id,
       }),
       new Promise<{ error: { message: string } }>(resolve =>
-        setTimeout(() => resolve({ error: { message: 'Tiempo de espera agotado. Inténtalo de nuevo.' } }), 10000)
+        setTimeout(() => resolve({ error: { message: 'Tiempo de espera agotado. Inténtalo de nuevo.' } }), 30000)
       ),
     ])
     setGuardando(false)
@@ -115,7 +115,7 @@ export default function Admin() {
     setToggling(a.id)
     await Promise.race([
       supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id),
-      new Promise(resolve => setTimeout(resolve, 10000)),
+      new Promise(resolve => setTimeout(resolve, 30000)),
     ])
     setToggling(null)
     cargarAnuncios()
