@@ -211,80 +211,36 @@ export default function Admin() {
 
         {/* ── KPI cards ── */}
         <div className="grid grid-cols-3 gap-3">
-          {/* Admins */}
-          <div
-            className="p-4 md:p-5 flex items-center gap-3.5 rounded-2xl"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(99,102,241,0.18)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-          >
+          {[
+            { label: 'Admins',   value: admins.length,  Icon: Shield,    color: '#818cf8', border: 'rgba(99,102,241,0.18)',  bg: 'rgba(99,102,241,0.12)'  },
+            { label: 'Alumnos',  value: alumnos.length, Icon: Users,     color: '#10b981', border: 'rgba(16,185,129,0.15)',  bg: 'rgba(16,185,129,0.1)'   },
+            { label: 'Total',    value: users.length,   Icon: TrendingUp, color: '#a78bfa', border: 'rgba(255,255,255,0.07)', bg: 'rgba(139,92,246,0.12)'  },
+          ].map(({ label, value, Icon, color, border, bg }) => (
             <div
-              className="w-11 h-11 flex items-center justify-center rounded-xl shrink-0"
-              style={{ background: 'rgba(99,102,241,0.12)' }}
+              key={label}
+              className="p-3 md:p-5 flex items-center gap-2 md:gap-3.5 rounded-2xl min-w-0"
+              style={{
+                background: 'linear-gradient(145deg, #1a1d27, #141720)',
+                border: `1px solid ${border}`,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+              }}
             >
-              <Shield size={17} style={{ color: '#818cf8' }} />
+              <div
+                className="w-8 h-8 md:w-11 md:h-11 flex items-center justify-center rounded-xl shrink-0"
+                style={{ background: bg }}
+              >
+                <Icon size={15} style={{ color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-extrabold text-xl md:text-2xl tabular-nums leading-none" style={{ color }}>
+                  {value}
+                </p>
+                <p className="text-[10px] md:text-xs font-medium uppercase tracking-wide mt-1 truncate" style={{ color: '#4b5563' }}>
+                  {label}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-extrabold text-2xl tabular-nums" style={{ color: '#818cf8' }}>
-                {admins.length}
-              </p>
-              <p className="text-xs font-medium uppercase tracking-wider mt-0.5" style={{ color: '#4b5563' }}>
-                Admins
-              </p>
-            </div>
-          </div>
-
-          {/* Alumnos */}
-          <div
-            className="p-4 md:p-5 flex items-center gap-3.5 rounded-2xl"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(16,185,129,0.15)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-          >
-            <div
-              className="w-11 h-11 flex items-center justify-center rounded-xl shrink-0"
-              style={{ background: 'rgba(16,185,129,0.1)' }}
-            >
-              <Users size={17} style={{ color: '#10b981' }} />
-            </div>
-            <div>
-              <p className="font-extrabold text-2xl tabular-nums" style={{ color: '#10b981' }}>
-                {alumnos.length}
-              </p>
-              <p className="text-xs font-medium uppercase tracking-wider mt-0.5" style={{ color: '#4b5563' }}>
-                Alumnos
-              </p>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div
-            className="p-4 md:p-5 flex items-center gap-3.5 rounded-2xl"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-          >
-            <div
-              className="w-11 h-11 flex items-center justify-center rounded-xl shrink-0"
-              style={{ background: 'rgba(139,92,246,0.12)' }}
-            >
-              <TrendingUp size={17} style={{ color: '#a78bfa' }} />
-            </div>
-            <div>
-              <p className="font-extrabold text-2xl tabular-nums" style={{ color: '#f1f5f9' }}>
-                {users.length}
-              </p>
-              <p className="text-xs font-medium uppercase tracking-wider mt-0.5" style={{ color: '#4b5563' }}>
-                Total
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* ── User table ── */}

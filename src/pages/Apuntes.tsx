@@ -327,7 +327,8 @@ function ApunteCard({
 }) {
   const config = TIPO_CONFIG[ap.tipo]
   const { Icon } = config
-  const ext = ap.nombre.split('.').pop()?.toUpperCase() ?? '?'
+  const rawExt = ap.nombre.includes('.') ? ap.nombre.split('.').pop() ?? '' : ''
+  const ext = rawExt.length > 0 && rawExt.length <= 5 ? rawExt.toUpperCase() : config.label
   const fecha = new Date(ap.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
