@@ -60,24 +60,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 style={{ borderRadius: '8px' }}
                 onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
               />
-              {/* Fallback icon inside gradient box */}
-              <GraduationCap
-                size={14}
-                className="text-white absolute"
-                style={{ display: 'none' }}
-                aria-hidden
-              />
+              <GraduationCap size={14} className="text-white absolute" style={{ display: 'none' }} aria-hidden />
             </div>
             <span className="hidden md:block font-bold text-sm tracking-tight" style={{ color: '#f1f5f9' }}>
               Top<span style={{ color: '#818cf8' }}>Code</span>
             </span>
           </NavLink>
 
-          {/* Separator */}
+          {/* Separator — desktop only */}
           <div className="hidden md:block w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />
 
-          {/* Nav links */}
-          <div className="flex items-center gap-0.5 flex-1 min-w-0">
+          {/* Nav links — desktop only */}
+          <div className="hidden md:flex items-center gap-0.5 flex-1 min-w-0">
             {items.map(({ to, label, Icon }) => (
               <NavLink
                 key={to}
@@ -85,9 +79,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 end={to === '/'}
                 className={({ isActive }) =>
                   `relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
-                    isActive
-                      ? 'text-primary-light'
-                      : 'text-text-muted hover:text-slate-300'
+                    isActive ? 'text-primary-light' : 'text-text-muted hover:text-slate-300'
                   }`
                 }
                 style={({ isActive }) => isActive ? {
@@ -96,29 +88,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 } : {}}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement
-                  if (!el.classList.contains('text-primary-light')) {
-                    el.style.background = 'rgba(255,255,255,0.04)'
-                  }
+                  if (!el.classList.contains('text-primary-light')) el.style.background = 'rgba(255,255,255,0.04)'
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement
-                  if (!el.classList.contains('text-primary-light')) {
-                    el.style.background = 'transparent'
-                  }
+                  if (!el.classList.contains('text-primary-light')) el.style.background = 'transparent'
                 }}
               >
                 {({ isActive }) => (
                   <>
                     <Icon size={14} />
-                    <span className="hidden sm:block">{label}</span>
-                    {/* Active underline indicator */}
+                    <span>{label}</span>
                     {isActive && (
                       <span
                         className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full"
-                        style={{
-                          width: '60%',
-                          background: 'linear-gradient(90deg, transparent, #818cf8, transparent)',
-                        }}
+                        style={{ width: '60%', background: 'linear-gradient(90deg, transparent, #818cf8, transparent)' }}
                       />
                     )}
                   </>
@@ -127,59 +111,96 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             ))}
           </div>
 
-          {/* Right: profile */}
-          <div className="flex items-center gap-1 shrink-0">
-            <NavLink
-              to="/profile"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all duration-200 ${
-                  isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
-                }`
-              }
-              aria-label="Perfil"
-            >
-              <div className="relative shrink-0">
-                {usuario?.avatar_url ? (
-                  <img
-                    src={usuario.avatar_url}
-                    alt={usuario.nombre}
-                    className="w-7 h-7 rounded-lg object-cover"
-                    style={{ border: '1.5px solid rgba(99,102,241,0.3)' }}
-                  />
-                ) : (
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.2))',
-                      border: '1.5px solid rgba(99,102,241,0.3)',
-                      color: '#818cf8',
-                    }}
-                  >
-                    {initial}
-                  </div>
-                )}
-                <span
-                  className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-                  style={{ background: '#10b981', border: '1.5px solid #0d0f16' }}
+          {/* Spacer on mobile so profile sits right */}
+          <div className="flex-1 md:hidden" />
+
+          {/* Profile — always visible */}
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all duration-200 shrink-0 ${
+                isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+              }`
+            }
+            aria-label="Perfil"
+          >
+            <div className="relative shrink-0">
+              {usuario?.avatar_url ? (
+                <img
+                  src={usuario.avatar_url}
+                  alt={usuario.nombre}
+                  className="w-7 h-7 rounded-lg object-cover"
+                  style={{ border: '1.5px solid rgba(99,102,241,0.3)' }}
                 />
-              </div>
+              ) : (
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.2))',
+                    border: '1.5px solid rgba(99,102,241,0.3)',
+                    color: '#818cf8',
+                  }}
+                >
+                  {initial}
+                </div>
+              )}
               <span
-                className="hidden md:block text-xs font-medium max-w-[100px] truncate"
-                style={{ color: '#94a3b8' }}
-              >
-                {usuario?.nombre}
-              </span>
-            </NavLink>
-          </div>
+                className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
+                style={{ background: '#10b981', border: '1.5px solid #0d0f16' }}
+              />
+            </div>
+            <span className="hidden md:block text-xs font-medium max-w-[100px] truncate" style={{ color: '#94a3b8' }}>
+              {usuario?.nombre}
+            </span>
+          </NavLink>
         </div>
       </nav>
 
       {/* ── Content ── */}
-      <main className="flex-1 min-h-0 overflow-hidden bg-bg">
+      <main className="flex-1 min-h-0 overflow-hidden bg-bg pb-[60px] md:pb-0">
         {children}
       </main>
 
-      {/* Modal de anuncios — se muestra hasta que el usuario pulse "He leído" */}
+      {/* ── Bottom nav — mobile only ── */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch"
+        style={{
+          background: 'rgba(13,15,22,0.97)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.5)',
+          height: '60px',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        {items.map(({ to, label, Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-all duration-150 relative"
+            style={({ isActive }) => ({
+              color: isActive ? '#818cf8' : '#4b5563',
+            })}
+          >
+            {({ isActive }) => (
+              <>
+                <Icon size={20} />
+                <span className="text-[9px] font-medium leading-none">{label}</span>
+                {isActive && (
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full"
+                    style={{ width: '24px', height: '2px', background: '#818cf8' }}
+                  />
+                )}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Modal de anuncios */}
       <AnuncioModal />
     </div>
   )
