@@ -90,27 +90,35 @@ export default function Admin() {
     e.preventDefault()
     if (!nuevoTitulo.trim() || !nuevoContenido.trim()) return
     setGuardando(true)
-    const { error } = await supabase.from('anuncios').insert({
-      titulo: nuevoTitulo.trim(),
-      contenido: nuevoContenido.trim(),
-      activo: true,
-      created_by: usuario!.id,
-    })
-    setGuardando(false)
-    if (error) {
-      setAlert({ type: 'error', title: 'Error', message: 'No se pudo publicar: ' + error.message })
-      return
+    try {
+      const { error } = await supabase.from('anuncios').insert({
+        titulo: nuevoTitulo.trim(),
+        contenido: nuevoContenido.trim(),
+        activo: true,
+        created_by: usuario!.id,
+      })
+      if (error) {
+        setAlert({ type: 'error', title: 'Error', message: 'No se pudo publicar: ' + error.message })
+        return
+      }
+      setNuevoTitulo('')
+      setNuevoContenido('')
+      await cargarAnuncios()
+    } catch {
+      setAlert({ type: 'error', title: 'Error de conexión', message: 'No se pudo conectar. Inténtalo de nuevo.' })
+    } finally {
+      setGuardando(false)
     }
-    setNuevoTitulo('')
-    setNuevoContenido('')
-    await cargarAnuncios()
   }
 
   async function handleToggleActivo(a: Anuncio) {
     setToggling(a.id)
-    await supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id)
-    setToggling(null)
-    await cargarAnuncios()
+    try {
+      await supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id)
+      await cargarAnuncios()
+    } finally {
+      setToggling(null)
+    }
   }
 
   function handleEliminarAnuncio(a: Anuncio) {
