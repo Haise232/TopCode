@@ -90,35 +90,35 @@ export default function Admin() {
     e.preventDefault()
     if (!nuevoTitulo.trim() || !nuevoContenido.trim()) return
     setGuardando(true)
-    try {
-      const { error } = await supabase.from('anuncios').insert({
+    const { error } = await Promise.race([
+      supabase.from('anuncios').insert({
         titulo: nuevoTitulo.trim(),
         contenido: nuevoContenido.trim(),
         activo: true,
         created_by: usuario!.id,
-      })
-      if (error) {
-        setAlert({ type: 'error', title: 'Error', message: 'No se pudo publicar: ' + error.message })
-        return
-      }
-      setNuevoTitulo('')
-      setNuevoContenido('')
-      await cargarAnuncios()
-    } catch {
-      setAlert({ type: 'error', title: 'Error de conexión', message: 'No se pudo conectar. Inténtalo de nuevo.' })
-    } finally {
-      setGuardando(false)
+      }),
+      new Promise<{ error: { message: string } }>(resolve =>
+        setTimeout(() => resolve({ error: { message: 'Tiempo de espera agotado. Inténtalo de nuevo.' } }), 10000)
+      ),
+    ])
+    setGuardando(false)
+    if (error) {
+      setAlert({ type: 'error', title: 'Error', message: error.message })
+      return
     }
+    setNuevoTitulo('')
+    setNuevoContenido('')
+    cargarAnuncios()
   }
 
   async function handleToggleActivo(a: Anuncio) {
     setToggling(a.id)
-    try {
-      await supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id)
-      await cargarAnuncios()
-    } finally {
-      setToggling(null)
-    }
+    await Promise.race([
+      supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id),
+      new Promise(resolve => setTimeout(resolve, 10000)),
+    ])
+    setToggling(null)
+    cargarAnuncios()
   }
 
   function handleEliminarAnuncio(a: Anuncio) {
