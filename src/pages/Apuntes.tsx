@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Upload, FileText, Image, File, Trash2, ExternalLink, RefreshCw, FolderOpen, CloudUpload } from 'lucide-react'
+import { Upload, FileText, Image, File, Trash2, ExternalLink, RefreshCw, FolderOpen, CloudUpload, Download } from 'lucide-react'
 import { supabase, subirArchivo, eliminarArchivoStorage } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Apunte } from '../lib/types'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
@@ -15,6 +14,17 @@ type AlertState = {
   confirmDestructive?: boolean
 } | null
 
+// Apunte con info del autor (join con usuarios)
+type ApunteConAutor = {
+  id: string
+  usuario_id: string
+  nombre: string
+  url: string
+  tipo: 'pdf' | 'imagen' | 'otro'
+  created_at: string
+  usuarios: { nombre: string; avatar_url: string | null } | null
+}
+
 function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
   if (mime === 'application/pdf') return 'pdf'
   if (mime.startsWith('image/')) return 'imagen'
@@ -22,27 +32,30 @@ function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
 }
 
 const TIPO_CONFIG = {
-  pdf: {
-    Icon: FileText,
-    color: '#f43f5e',
-    bg: 'rgba(244,63,94,0.08)',
-    border: 'rgba(244,63,94,0.18)',
-    label: 'PDF',
-  },
-  imagen: {
-    Icon: Image,
-    color: '#10b981',
-    bg: 'rgba(16,185,129,0.08)',
-    border: 'rgba(16,185,129,0.15)',
-    label: 'IMG',
-  },
-  otro: {
-    Icon: File,
-    color: '#818cf8',
-    bg: 'rgba(129,140,248,0.08)',
-    border: 'rgba(129,140,248,0.15)',
-    label: 'FILE',
-  },
+  pdf:    { Icon: FileText, color: '#f43f5e', bg: 'rgba(244,63,94,0.08)',    border: 'rgba(244,63,94,0.18)',    label: 'PDF'  },
+  imagen: { Icon: Image,    color: '#10b981', bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.15)',   label: 'IMG'  },
+  otro:   { Icon: File,     color: '#818cf8', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.15)', label: 'FILE' },
+}
+
+function UserAvatar({ nombre, url, size = 24 }: { nombre: string; url?: string | null; size?: number }) {
+  if (url) return (
+    <img src={url} alt={nombre} className="rounded-lg object-cover shrink-0"
+      style={{ width: size, height: size, border: '1.5px solid rgba(255,255,255,0.08)' }} />
+  )
+  const hue = nombre.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+  return (
+    <div className="rounded-lg flex items-center justify-center font-bold shrink-0"
+      style={{
+        width: size, height: size,
+        background: `hsla(${hue},55%,20%,0.95)`,
+        border: `1.5px solid hsla(${hue},55%,40%,0.35)`,
+        color: `hsla(${hue},75%,75%,1)`,
+        fontSize: size * 0.42,
+      }}
+    >
+      {nombre[0]?.toUpperCase() ?? '?'}
+    </div>
+  )
 }
 
 function ApuntesSkeleton() {
@@ -52,19 +65,27 @@ function ApuntesSkeleton() {
         <SkeletonBox className="h-7 w-32 shimmer" />
         <SkeletonBox className="h-10 w-36 shimmer rounded-xl" />
       </div>
-      <div className="max-w-[1100px] mx-auto p-4 md:p-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {[1, 2, 3, 4, 5, 6].map(i => (
-          <SkeletonCard key={i} className="flex flex-col gap-3 p-5">
-            <div className="flex items-start justify-between">
-              <SkeletonBox className="h-12 w-12 shimmer rounded-2xl" />
-              <SkeletonBox className="h-6 w-12 shimmer rounded-lg" />
+      <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6">
+        {[1, 2].map(g => (
+          <div key={g} className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <SkeletonBox className="h-8 w-8 shimmer rounded-xl" />
+              <SkeletonBox className="h-4 w-28 shimmer" />
             </div>
-            <div className="flex flex-col gap-2">
-              <SkeletonBox className="h-4 w-4/5 shimmer" />
-              <SkeletonBox className="h-3 w-2/5 shimmer" />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[1, 2, 3].map(i => (
+                <SkeletonCard key={i} className="flex flex-col gap-3 p-4">
+                  <div className="flex items-start justify-between">
+                    <SkeletonBox className="h-11 w-11 shimmer rounded-2xl" />
+                    <SkeletonBox className="h-6 w-12 shimmer rounded-lg" />
+                  </div>
+                  <SkeletonBox className="h-4 w-4/5 shimmer" />
+                  <SkeletonBox className="h-3 w-2/5 shimmer" />
+                  <SkeletonBox className="h-9 shimmer rounded-xl" />
+                </SkeletonCard>
+              ))}
             </div>
-            <SkeletonBox className="h-9 shimmer rounded-xl" />
-          </SkeletonCard>
+          </div>
         ))}
       </div>
     </div>
@@ -73,7 +94,8 @@ function ApuntesSkeleton() {
 
 export default function Apuntes() {
   const { usuario } = useAuth()
-  const [apuntes, setApuntes] = useState<Apunte[]>([])
+  const isAdmin = usuario?.rol === 'admin'
+  const [apuntes, setApuntes] = useState<ApunteConAutor[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [subiendo, setSubiendo] = useState(false)
@@ -83,9 +105,9 @@ export default function Apuntes() {
   const cargar = useCallback(async () => {
     const { data } = await supabase
       .from('apuntes')
-      .select('*')
+      .select('*, usuarios(nombre, avatar_url)')
       .order('created_at', { ascending: false })
-    if (data) setApuntes(data)
+    if (data) setApuntes(data as ApunteConAutor[])
   }, [])
 
   useEffect(() => {
@@ -128,11 +150,15 @@ export default function Apuntes() {
     if (file) subirFile(file)
   }
 
-  function handleEliminar(ap: Apunte) {
-    if (ap.usuario_id !== usuario?.id) return
+  function handleEliminar(ap: ApunteConAutor) {
+    const esPropio = ap.usuario_id === usuario?.id
+    if (!esPropio && !isAdmin) return
+    const autor = ap.usuarios?.nombre ?? 'este usuario'
     setAlert({
       title: 'Eliminar apunte',
-      message: `¿Eliminar "${ap.nombre}"?`,
+      message: isAdmin && !esPropio
+        ? `¿Eliminar "${ap.nombre}" subido por ${autor}?`
+        : `¿Eliminar "${ap.nombre}"?`,
       confirmLabel: 'Eliminar',
       confirmDestructive: true,
       onConfirm: async () => {
@@ -145,8 +171,26 @@ export default function Apuntes() {
     })
   }
 
-  const mios = apuntes.filter(a => a.usuario_id === usuario?.id)
-  const otros = apuntes.filter(a => a.usuario_id !== usuario?.id)
+  // Agrupar por usuario, el propio siempre primero
+  const grupos = apuntes.reduce<Record<string, { nombre: string; avatar: string | null; archivos: ApunteConAutor[] }>>((acc, ap) => {
+    const uid = ap.usuario_id
+    if (!acc[uid]) {
+      acc[uid] = {
+        nombre: ap.usuarios?.nombre ?? 'Usuario desconocido',
+        avatar: ap.usuarios?.avatar_url ?? null,
+        archivos: [],
+      }
+    }
+    acc[uid].archivos.push(ap)
+    return acc
+  }, {})
+
+  // Ordenar: yo primero, resto alfabético
+  const gruposOrdenados = Object.entries(grupos).sort(([aId], [bId]) => {
+    if (aId === usuario?.id) return -1
+    if (bId === usuario?.id) return 1
+    return grupos[aId].nombre.localeCompare(grupos[bId].nombre)
+  })
 
   if (loading) return <ApuntesSkeleton />
 
@@ -169,7 +213,7 @@ export default function Apuntes() {
             <div>
               <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Apuntes</h1>
               <p className="text-xs" style={{ color: '#64748b' }}>
-                {apuntes.length} archivo{apuntes.length !== 1 ? 's' : ''} · {mios.length} míos
+                {apuntes.length} archivo{apuntes.length !== 1 ? 's' : ''} · {gruposOrdenados.length} usuario{gruposOrdenados.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -185,6 +229,9 @@ export default function Apuntes() {
             </button>
             <label
               className={`btn-primary px-4 py-2.5 text-sm cursor-pointer ${subiendo ? 'opacity-60 pointer-events-none' : ''}`}
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
             >
               {subiendo ? (
                 <div className="flex items-center gap-2">
@@ -197,21 +244,15 @@ export default function Apuntes() {
                   Subir archivo
                 </div>
               )}
-              <input
-                type="file"
-                accept=".pdf,image/*,.doc,.docx,.txt,.pptx,.xlsx"
-                onChange={handleUpload}
-                className="hidden"
-                disabled={subiendo}
-              />
+              <input type="file" accept=".pdf,image/*,.doc,.docx,.txt,.pptx,.xlsx" onChange={handleUpload} className="hidden" disabled={subiendo} />
             </label>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-7">
+      <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-8">
 
-        {/* ── Drop zone (empty state) ── */}
+        {/* ── Estado vacío ── */}
         {apuntes.length === 0 ? (
           <label
             className="cursor-pointer"
@@ -241,64 +282,65 @@ export default function Apuntes() {
                   {dragOver ? 'Suelta para subir' : 'Sin apuntes todavía'}
                 </p>
                 <p className="text-sm mt-1.5 max-w-xs leading-relaxed" style={{ color: '#64748b' }}>
-                  Arrastra un archivo aquí o pulsa para seleccionarlo. Soporta PDF, imágenes y más.
+                  Arrastra un archivo aquí o pulsa para seleccionarlo.
                 </p>
               </div>
-              <span
-                className="text-xs font-semibold px-4 py-2 rounded-xl"
-                style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}
-              >
+              <span className="text-xs font-semibold px-4 py-2 rounded-xl"
+                style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}>
                 Seleccionar archivo
               </span>
             </div>
             <input type="file" accept=".pdf,image/*,.doc,.docx,.txt,.pptx,.xlsx" onChange={handleUpload} className="hidden" />
           </label>
         ) : (
-          <>
-            {/* ── Mis archivos ── */}
-            {mios.length > 0 && (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-                    Mis archivos
-                  </h2>
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}
-                  >
-                    {mios.length}
-                  </span>
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {mios.map((ap, idx) => (
-                    <ApunteCard key={ap.id} ap={ap} canDelete onDelete={() => handleEliminar(ap)} delay={idx * 40} />
-                  ))}
-                </div>
-              </section>
-            )}
+          gruposOrdenados.map(([uid, grupo]) => {
+            const esMio = uid === usuario?.id
+            return (
+              <section key={uid} className="flex flex-col gap-3">
 
-            {/* ── De compañeros ── */}
-            {otros.length > 0 && (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-                    De mis compañeros
-                  </h2>
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)' }}
-                  >
-                    {otros.length}
+                {/* ── Cabecera de usuario ── */}
+                <div className="flex items-center gap-2.5">
+                  <UserAvatar nombre={grupo.nombre} url={grupo.avatar} size={32} />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold text-sm truncate" style={{ color: '#f1f5f9' }}>
+                      {esMio ? 'Mis archivos' : grupo.nombre}
+                    </span>
+                    {esMio && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+                        style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+                        Tú
+                      </span>
+                    )}
+                    {!esMio && grupo.archivos[0]?.usuarios && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+                        style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)' }}>
+                        Compañero
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-0.5"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#4b5563', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    {grupo.archivos.length}
                   </span>
+                  {/* Línea separadora */}
+                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
                 </div>
+
+                {/* ── Grid de archivos ── */}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {otros.map((ap, idx) => (
-                    <ApunteCard key={ap.id} ap={ap} canDelete={false} onDelete={() => {}} delay={idx * 40} />
+                  {grupo.archivos.map((ap, idx) => (
+                    <ApunteCard
+                      key={ap.id}
+                      ap={ap}
+                      canDelete={esMio || isAdmin}
+                      onDelete={() => handleEliminar(ap)}
+                      delay={idx * 35}
+                    />
                   ))}
                 </div>
               </section>
-            )}
-          </>
+            )
+          })
         )}
 
       </div>
@@ -320,7 +362,7 @@ export default function Apuntes() {
 function ApunteCard({
   ap, canDelete, onDelete, delay = 0,
 }: {
-  ap: Apunte
+  ap: ApunteConAutor
   canDelete: boolean
   onDelete: () => void
   delay?: number
@@ -333,7 +375,7 @@ function ApunteCard({
 
   return (
     <div
-      className="group p-4 flex flex-col gap-3.5 rounded-2xl transition-all duration-200 animate-slide-up"
+      className="group p-4 flex flex-col gap-3 rounded-2xl transition-all duration-200 animate-slide-up"
       style={{
         animationDelay: `${delay}ms`,
         background: 'linear-gradient(145deg, #1a1d27, #141720)',
@@ -342,9 +384,9 @@ function ApunteCard({
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = `${config.color}28`
-        el.style.transform = 'translateY(-1px)'
-        el.style.boxShadow = `0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)`
+        el.style.borderColor = `${config.color}30`
+        el.style.transform = 'translateY(-2px)'
+        el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)`
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement
@@ -353,79 +395,77 @@ function ApunteCard({
         el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.03)'
       }}
     >
-      {/* Top row: icon + badge */}
-      <div className="flex items-start justify-between">
+      {/* Icono + badge tipo */}
+      <div className="flex items-start justify-between gap-2">
         <div
-          className="w-12 h-12 flex items-center justify-center rounded-2xl"
+          className="w-11 h-11 flex items-center justify-center rounded-2xl shrink-0"
           style={{ background: config.bg, border: `1px solid ${config.border}` }}
         >
-          <Icon size={22} style={{ color: config.color }} />
+          <Icon size={20} style={{ color: config.color }} />
         </div>
-        <span
-          className="text-xs font-bold px-2.5 py-1 rounded-lg"
-          style={{ background: config.bg, color: config.color, border: `1px solid ${config.border}` }}
-        >
+        <span className="text-xs font-bold px-2 py-1 rounded-lg shrink-0"
+          style={{ background: config.bg, color: config.color, border: `1px solid ${config.border}` }}>
           {ext}
         </span>
       </div>
 
-      {/* File name + date */}
+      {/* Nombre y fecha */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-snug line-clamp-2" style={{ color: '#f1f5f9' }}>
+        <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: '#f1f5f9' }}>
           {ap.nombre}
         </p>
-        <p className="text-xs mt-1.5" style={{ color: '#4b5563' }}>
-          {fecha}
-        </p>
+        <p className="text-xs mt-1" style={{ color: '#4b5563' }}>{fecha}</p>
       </div>
 
-      {/* Actions */}
-      <div
-        className="flex gap-2 pt-3"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-      >
+      {/* Acciones */}
+      <div className="flex gap-2 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <a
           href={ap.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl transition-all duration-150"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            color: '#64748b',
-          }}
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = '#f1f5f9'
-            el.style.background = 'rgba(255,255,255,0.08)'
-            el.style.borderColor = 'rgba(255,255,255,0.12)'
+            el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.12)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = '#64748b'
-            el.style.background = 'rgba(255,255,255,0.04)'
-            el.style.borderColor = 'rgba(255,255,255,0.07)'
+            el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'; el.style.borderColor = 'rgba(255,255,255,0.07)'
           }}
         >
           <ExternalLink size={11} />
           Abrir
         </a>
+        <a
+          href={ap.url}
+          download
+          className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 shrink-0"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLElement
+            el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLElement
+            el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'
+          }}
+          aria-label="Descargar"
+        >
+          <Download size={13} />
+        </a>
         {canDelete && (
           <button
             onClick={onDelete}
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150"
+            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 shrink-0"
             style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#4b5563' }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#f43f5e'
-              el.style.background = 'rgba(244,63,94,0.08)'
-              el.style.borderColor = 'rgba(244,63,94,0.2)'
+              el.style.color = '#f43f5e'; el.style.background = 'rgba(244,63,94,0.08)'; el.style.borderColor = 'rgba(244,63,94,0.2)'
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#4b5563'
-              el.style.background = 'transparent'
-              el.style.borderColor = 'rgba(255,255,255,0.07)'
+              el.style.color = '#4b5563'; el.style.background = 'transparent'; el.style.borderColor = 'rgba(255,255,255,0.07)'
             }}
             aria-label="Eliminar archivo"
           >
