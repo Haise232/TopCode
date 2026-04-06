@@ -7,6 +7,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EventoCalendario } from '../lib/types'
+import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
@@ -327,8 +328,12 @@ export default function CalendarPage() {
 
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [materia, setMateria] = useState('')
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0])
   const [saving, setSaving] = useState(false)
+
+  const categoriaActual = inferirCategoria(titulo)
+  const mostrarMateria = categoriaActual === 'examen' || categoriaActual === 'entrega'
 
   // Refs para scroll a evento por fecha
   const eventRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -355,6 +360,7 @@ export default function CalendarPage() {
     const { error } = await supabase.from('eventos').insert({
       titulo: titulo.trim(),
       descripcion: descripcion.trim() || null,
+      materia: mostrarMateria && materia.trim() ? materia.trim() : null,
       fecha,
       created_by: usuario!.id,
     })
@@ -366,7 +372,7 @@ export default function CalendarPage() {
     await cargar()
     setSaving(false)
     setModalVisible(false)
-    setTitulo(''); setDescripcion(''); setFecha(new Date().toISOString().split('T')[0])
+    setTitulo(''); setDescripcion(''); setMateria(''); setFecha(new Date().toISOString().split('T')[0])
   }
 
   function handleEliminar(ev: EventoCalendario) {
@@ -629,6 +635,23 @@ export default function CalendarPage() {
                     autoFocus
                   />
                 </div>
+                {mostrarMateria && (
+                  <div className="flex flex-col gap-1.5 animate-fade-in">
+                    <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
+                      Asignatura
+                    </label>
+                    <input
+                      value={materia}
+                      onChange={e => setMateria(e.target.value)}
+                      placeholder="Selecciona o escribe..."
+                      className="input-base"
+                      list="cal-materias-list"
+                    />
+                    <datalist id="cal-materias-list">
+                      {MATERIAS.map(m => <option key={m.codigo} value={m.nombreCorto} />)}
+                    </datalist>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Descripción (opcional)</label>
                   <textarea
@@ -878,6 +901,18 @@ function EventCard({
             </div>
           </div>
 
+          {evento.materia && (
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit"
+              style={{
+                background: `${cat.color}18`,
+                color: cat.color,
+                border: `1px solid ${cat.color}30`,
+              }}
+            >
+              {evento.materia}
+            </span>
+          )}
           {evento.descripcion && (
             <p
               className="text-xs leading-relaxed line-clamp-2"

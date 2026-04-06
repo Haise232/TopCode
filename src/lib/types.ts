@@ -49,6 +49,7 @@ export interface EventoCalendario {
   id: string
   titulo: string
   descripcion: string | null
+  materia: string | null
   fecha: string
   created_by: string
   created_at: string

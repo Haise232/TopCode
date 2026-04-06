@@ -13,8 +13,8 @@ const NAV_ITEMS = [
   { to: '/notes',       label: 'Notas',       Icon: ClipboardList  },
   { to: '/chat',        label: 'Chat',        Icon: MessageCircle  },
   { to: '/apuntes',     label: 'Apuntes',     Icon: FolderOpen     },
-  { to: '/calendar',    label: 'Eventos',     Icon: Calendar       },
   { to: '/actividades', label: 'Actividades', Icon: ClipboardCheck },
+  { to: '/calendar',    label: 'Eventos',     Icon: Calendar       },
 ]
 
 const ADMIN_ITEM = { to: '/admin', label: 'Admin', Icon: Shield }

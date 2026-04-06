@@ -567,25 +567,23 @@ function ActividadRow({
             </button>
           )}
 
-          {/* Checkbox — solo alumnos */}
-          {!isAdmin && (
-            <button
-              onClick={onToggle}
-              disabled={toggling}
-              className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
-              style={{
-                background: completada ? '#10b981' : 'transparent',
-                border: `2px solid ${completada ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
-              }}
-              aria-label={completada ? 'Marcar como pendiente' : 'Marcar como completada'}
-            >
-              {toggling ? (
-                <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
-              ) : completada ? (
-                <Check size={11} strokeWidth={3} className="text-white" />
-              ) : null}
-            </button>
-          )}
+          {/* Checkbox */}
+          <button
+            onClick={onToggle}
+            disabled={toggling}
+            className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
+            style={{
+              background: completada ? '#10b981' : 'transparent',
+              border: `2px solid ${completada ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
+            }}
+            aria-label={completada ? 'Marcar como pendiente' : 'Marcar como completada'}
+          >
+            {toggling ? (
+              <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+            ) : completada ? (
+              <Check size={11} strokeWidth={3} className="text-white" />
+            ) : null}
+          </button>
         </div>
       </div>
     </div>
