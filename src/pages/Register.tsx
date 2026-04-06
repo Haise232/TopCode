@@ -54,8 +54,8 @@ export default function Register() {
     } else {
       setModal({
         type: 'success',
-        title: 'Cuenta creada',
-        message: 'Tu cuenta se ha creado correctamente. Ahora puedes iniciar sesión.',
+        title: '¡Revisa tu correo!',
+        message: `Hemos enviado un enlace de confirmación a ${email}. Verifica tu correo antes de iniciar sesión.`,
       })
     }
   }
@@ -136,7 +136,7 @@ export default function Register() {
 
           <div className="flex flex-col gap-3">
             {[
-              { emoji: '⚡', text: 'Registro rápido, sin verificación manual' },
+              { emoji: '⚡', text: 'Registro rápido con verificación por correo' },
               { emoji: '🔒', text: 'Tu información siempre segura' },
               { emoji: '🤝', text: 'Conecta con todos tus compañeros' },
               { emoji: '🎯', text: 'Acceso inmediato a todos los recursos' },
