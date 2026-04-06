@@ -298,16 +298,11 @@ export default function Home() {
       const ext = file.name.split('.').pop() ?? 'jpg'
       const path = `banner_${usuario.id}.${ext}`
 
-      // Subir al storage directamente para capturar el error real
       const { data: storageData, error: storageError } = await supabase.storage
         .from('avatars')
         .upload(path, file, { contentType: file.type, upsert: true })
 
-      if (storageError) {
-        console.error('Storage error:', storageError)
-        alert(`Error al subir: ${storageError.message}`)
-        return
-      }
+      if (storageError) return
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
@@ -318,11 +313,7 @@ export default function Home() {
         .update({ banner_url: publicUrl })
         .eq('id', usuario.id)
 
-      if (dbError) {
-        console.error('DB error:', dbError)
-        alert(`Error al guardar: ${dbError.message}`)
-        return
-      }
+      if (dbError) return
 
       setBannerUrl(publicUrl)
       refreshUsuario()
