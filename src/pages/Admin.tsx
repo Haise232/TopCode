@@ -145,19 +145,17 @@ export default function Admin() {
   }, [cargar, cargarAnuncios, usuario, navigate])
 
   function toggleRol(u: Usuario) {
-    const newRol: 'alumno' | 'admin' = u.rol === 'admin' ? 'alumno' : 'admin'
-    const accion = newRol === 'admin'
-      ? `dar rol de administrador a ${u.nombre}`
-      : `quitar el rol de administrador a ${u.nombre}`
+    if (u.id === usuario?.id) return
+    if (u.rol === 'admin') return  // los admins no se pueden degradar
     setAlert({
-      title: 'Cambiar rol',
-      message: `¿Seguro que quieres ${accion}?`,
+      title: 'Dar permisos de administrador',
+      message: `¿Seguro que quieres hacer administrador a ${u.nombre}? No podrás quitarle el rol después.`,
       confirmLabel: 'Confirmar',
       onConfirm: async () => {
         setUpdating(u.id)
         const { error } = await supabase
           .from('usuarios')
-          .update({ rol: newRol })
+          .update({ rol: 'admin' })
           .eq('id', u.id)
         setUpdating(null)
         if (error) {
@@ -342,16 +340,20 @@ export default function Admin() {
                   />
                 ) : (
                   <button
-                    onClick={() => { if (u.id !== usuario?.id) toggleRol(u) }}
-                    disabled={u.id === usuario?.id}
-                    title={u.id === usuario?.id ? 'No puedes cambiar tu propio rol' : `Cambiar a ${u.rol === 'admin' ? 'alumno' : 'admin'}`}
+                    onClick={() => toggleRol(u)}
+                    disabled={u.rol === 'admin' || u.id === usuario?.id}
+                    title={
+                      u.id === usuario?.id ? 'No puedes cambiar tu propio rol' :
+                      u.rol === 'admin' ? 'Los administradores no se pueden degradar' :
+                      'Dar permisos de administrador'
+                    }
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150"
                     style={u.rol === 'admin' ? {
                       background: 'rgba(99,102,241,0.12)',
                       color: '#818cf8',
                       border: '1px solid rgba(99,102,241,0.25)',
-                      cursor: u.id === usuario?.id ? 'not-allowed' : 'pointer',
-                      opacity: u.id === usuario?.id ? 0.4 : 1,
+                      cursor: 'not-allowed',
+                      opacity: 0.5,
                     } : {
                       background: 'rgba(255,255,255,0.05)',
                       color: '#64748b',
@@ -360,14 +362,15 @@ export default function Admin() {
                       opacity: u.id === usuario?.id ? 0.4 : 1,
                     }}
                     onMouseEnter={e => {
-                      if (u.id === usuario?.id) return
+                      if (u.rol === 'admin' || u.id === usuario?.id) return
                       const el = e.currentTarget as HTMLElement
                       el.style.opacity = '0.8'
                       el.style.transform = 'scale(0.97)'
                     }}
                     onMouseLeave={e => {
+                      if (u.rol === 'admin' || u.id === usuario?.id) return
                       const el = e.currentTarget as HTMLElement
-                      el.style.opacity = u.id === usuario?.id ? '0.4' : '1'
+                      el.style.opacity = '1'
                       el.style.transform = 'scale(1)'
                     }}
                   >
