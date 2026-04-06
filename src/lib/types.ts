@@ -4,6 +4,7 @@ export interface Usuario {
   email: string
   promedio: number
   avatar_url: string | null
+  banner_url: string | null
   rol: 'alumno' | 'admin'
   created_at: string
 }

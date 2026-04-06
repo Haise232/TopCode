@@ -5,7 +5,7 @@ import {
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
   Flame, GraduationCap, Shield, Zap, Camera, X, ClipboardCheck, Clock,
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { supabase, subirAvatar, eliminarArchivoStorage } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { Nota, EventoCalendario, Actividad } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
@@ -79,6 +79,58 @@ function rachaReciente(notas: Nota[]): number {
       .map(n => n.created_at.slice(0, 10))
   )
   return dias.size
+}
+
+// ── Horario ──────────────────────────────────────────────────────────────────
+
+type ClaseHorario = { inicio: string; fin: string; materia: string; codigo: string }
+
+const HORARIO: Record<number, ClaseHorario[]> = {
+  1: [
+    { inicio: '14:30', fin: '15:25', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '15:25', fin: '16:20', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '16:20', fin: '17:15', materia: 'Itinerario para la empleabilidad', codigo: 'ITK' },
+    { inicio: '17:45', fin: '18:40', materia: 'Inglés profesional', codigo: 'IKL' },
+    { inicio: '18:40', fin: '19:35', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '19:35', fin: '20:30', materia: 'Bases de datos', codigo: 'BAE' },
+  ],
+  2: [
+    { inicio: '15:30', fin: '16:20', materia: 'Digitalización aplicada', codigo: 'DJK' },
+    { inicio: '16:20', fin: '17:10', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '17:10', fin: '18:00', materia: 'Entornos de desarrollo', codigo: 'ETS' },
+    { inicio: '18:30', fin: '19:20', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '19:20', fin: '20:10', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '20:10', fin: '21:00', materia: 'Bases de datos', codigo: 'BAE' },
+  ],
+  3: [
+    { inicio: '14:30', fin: '15:25', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '15:25', fin: '16:20', materia: 'Itinerario para la empleabilidad', codigo: 'ITK' },
+    { inicio: '16:20', fin: '17:15', materia: 'Digitalización aplicada', codigo: 'DJK' },
+    { inicio: '17:45', fin: '18:40', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '18:40', fin: '19:35', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '19:35', fin: '20:30', materia: 'Inglés profesional', codigo: 'IKL' },
+  ],
+  4: [
+    { inicio: '14:30', fin: '15:25', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '15:25', fin: '16:20', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '16:20', fin: '17:15', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '17:45', fin: '18:40', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '18:40', fin: '19:35', materia: 'Bases de datos', codigo: 'BAE' },
+    { inicio: '19:35', fin: '20:30', materia: 'Entornos de desarrollo', codigo: 'ETS' },
+  ],
+  5: [
+    { inicio: '14:30', fin: '15:25', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '15:25', fin: '16:20', materia: 'Bases de datos', codigo: 'BAE' },
+    { inicio: '16:20', fin: '17:15', materia: 'Bases de datos', codigo: 'BAE' },
+    { inicio: '17:45', fin: '18:40', materia: 'Itinerario para la empleabilidad', codigo: 'ITK' },
+    { inicio: '18:40', fin: '19:35', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '19:35', fin: '20:30', materia: 'Entornos de desarrollo', codigo: 'ETS' },
+  ],
+}
+
+function enMinutos(hora: string): number {
+  const [h, m] = hora.split(':').map(Number)
+  return h * 60 + m
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -219,7 +271,7 @@ const ADMIN_ACTION = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { usuario } = useAuth()
+  const { usuario, refreshUsuario } = useAuth()
   const navigate = useNavigate()
   const [notas, setNotas] = useState<Nota[]>([])
   const [allNotas, setAllNotas] = useState<Nota[]>([])
@@ -228,29 +280,58 @@ export default function Home() {
   const [actividadesPendientes, setActividadesPendientes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const bannerKey = usuario ? `topcode-banner-${usuario.id}` : null
-  const [bannerUrl, setBannerUrl] = useState<string | null>(() =>
-    bannerKey ? localStorage.getItem(bannerKey) : null
-  )
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
   const bannerInputRef = useRef<HTMLInputElement>(null)
 
-  function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // Sincronizar con el perfil cuando carga el usuario
+  useEffect(() => {
+    setBannerUrl(usuario?.banner_url ?? null)
+  }, [usuario?.banner_url])
+
+  async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !bannerKey) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const url = ev.target?.result as string
-      localStorage.setItem(bannerKey, url)
-      setBannerUrl(url)
-    }
-    reader.readAsDataURL(file)
+    if (!file || !usuario) return
     e.target.value = ''
+    setUploadingBanner(true)
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `banner_${usuario.id}.${ext}`
+
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { contentType: file.type, upsert: true })
+
+      if (storageError) return
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(storageData.path)
+
+      const { error: dbError } = await supabase
+        .from('usuarios')
+        .update({ banner_url: publicUrl })
+        .eq('id', usuario.id)
+
+      if (dbError) return
+
+      setBannerUrl(publicUrl)
+      refreshUsuario()
+    } finally {
+      setUploadingBanner(false)
+    }
   }
 
-  function handleBannerRemove() {
-    if (!bannerKey) return
-    localStorage.removeItem(bannerKey)
+  async function handleBannerRemove() {
+    if (!usuario || !bannerUrl) return
+    // Extraer la ruta real del storage desde la URL pública
+    try {
+      const storagePath = new URL(bannerUrl).pathname.split('/object/public/avatars/')[1]
+      if (storagePath) await eliminarArchivoStorage('avatars', decodeURIComponent(storagePath))
+    } catch { /* si falla el borrado del archivo, seguimos igual */ }
+    await supabase.from('usuarios').update({ banner_url: null }).eq('id', usuario.id)
     setBannerUrl(null)
+    refreshUsuario()
   }
 
   const cargarDatos = useCallback(async () => {
@@ -352,12 +433,16 @@ export default function Home() {
         {/* Botones de banner — visibles al hacer hover sobre el hero */}
         <div className="absolute top-3 left-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
           <button
-            onClick={() => bannerInputRef.current?.click()}
+            onClick={() => !uploadingBanner && bannerInputRef.current?.click()}
+            disabled={uploadingBanner}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm transition-all duration-150 hover:scale-105"
-            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: '#f1f5f9' }}
+            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: '#f1f5f9', opacity: uploadingBanner ? 0.6 : 1 }}
             title="Cambiar banner"
           >
-            <Camera size={12} />
+            {uploadingBanner
+              ? <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+              : <Camera size={12} />
+            }
             {bannerUrl ? 'Cambiar' : 'Añadir banner'}
           </button>
           {bannerUrl && (
@@ -613,54 +698,118 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Activity strip — 7 días ─────────────────────────────────────── */}
-        <div className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-            Esta semana
-          </h2>
-          <div
-            className="p-4 rounded-2xl flex items-center gap-2 md:gap-3"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            {semana.map(dia => (
-              <div
-                key={dia.iso}
-                className="flex-1 flex flex-col items-center gap-1.5"
-                title={dia.iso}
-              >
-                <span className="text-2xs font-medium" style={{ color: dia.esHoy ? '#818cf8' : '#4b5563' }}>
-                  {dia.label}
+        {/* ── Horario de hoy ──────────────────────────────────────────────── */}
+        {(() => {
+          const ahora = new Date()
+          const diaSemana = ahora.getDay() // 0=Dom, 1=Lun ... 6=Sáb
+          const esFinDeSemana = diaSemana === 0 || diaSemana === 6
+          const diaClases = esFinDeSemana ? 1 : diaSemana
+          const clases = HORARIO[diaClases] ?? []
+          const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes()
+          const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+          return (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                  {esFinDeSemana ? 'Próximo lunes' : `Horario — ${diasSemana[diaSemana]}`}
+                </h2>
+                <span className="text-xs" style={{ color: '#374151' }}>
+                  {clases.length} clases
                 </span>
-                <div
-                  className="w-full aspect-square max-w-[32px] rounded-lg transition-all duration-200"
-                  style={{
-                    background: dia.activo
-                      ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                      : 'rgba(255,255,255,0.04)',
-                    border: dia.esHoy
-                      ? '1.5px solid rgba(99,102,241,0.4)'
-                      : dia.activo
-                        ? '1px solid rgba(99,102,241,0.3)'
-                        : '1px solid rgba(255,255,255,0.06)',
-                    boxShadow: dia.activo ? '0 0 8px rgba(99,102,241,0.25)' : 'none',
-                  }}
-                />
               </div>
-            ))}
-            <div
-              className="hidden md:flex items-center gap-1.5 ml-2 shrink-0"
-              style={{ borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: '12px' }}
-            >
-              <Zap size={12} style={{ color: '#fbbf24' }} />
-              <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>
-                {racha}/7
-              </span>
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: 'linear-gradient(145deg, #1a1d27, #141720)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                {clases.map((clase, idx) => {
+                  const iniciMin = enMinutos(clase.inicio)
+                  const finMin   = enMinutos(clase.fin)
+                  const esCurso  = !esFinDeSemana && minutosAhora >= iniciMin && minutosAhora < finMin
+                  const haPasado = !esFinDeSemana && minutosAhora >= finMin
+                  const color    = materiaColor(clase.materia)
+                  // Detectar descanso entre esta clase y la anterior
+                  const hayDescanso = idx > 0 && iniciMin - enMinutos(clases[idx - 1].fin) > 5
+
+                  return (
+                    <div key={idx}>
+                      {hayDescanso && (
+                        <div
+                          className="flex items-center gap-2 px-4 py-1.5"
+                          style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                        >
+                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                          <span className="text-2xs font-medium" style={{ color: '#374151' }}>Descanso</span>
+                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                        </div>
+                      )}
+                      <div
+                        className="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
+                        style={{
+                          borderTop: idx > 0 && !hayDescanso ? '1px solid rgba(255,255,255,0.04)' : undefined,
+                          background: esCurso ? 'rgba(99,102,241,0.06)' : 'transparent',
+                          opacity: haPasado ? 0.35 : 1,
+                        }}
+                      >
+                        {/* Hora */}
+                        <div className="shrink-0 text-right" style={{ width: '42px' }}>
+                          <span className="text-xs font-mono" style={{ color: esCurso ? '#818cf8' : '#4b5563' }}>
+                            {clase.inicio}
+                          </span>
+                        </div>
+
+                        {/* Indicador de color */}
+                        <div
+                          className="shrink-0 rounded-full"
+                          style={{
+                            width: esCurso ? 8 : 6,
+                            height: esCurso ? 8 : 6,
+                            background: esCurso ? color : haPasado ? '#374151' : color,
+                            boxShadow: esCurso ? `0 0 6px ${color}` : 'none',
+                            transition: 'all 0.2s',
+                          }}
+                        />
+
+                        {/* Nombre */}
+                        <span
+                          className="flex-1 text-sm truncate"
+                          style={{
+                            color: esCurso ? '#f1f5f9' : haPasado ? '#4b5563' : '#94a3b8',
+                            fontWeight: esCurso ? 600 : 400,
+                          }}
+                        >
+                          {clase.materia}
+                        </span>
+
+                        {/* Badge código */}
+                        <span
+                          className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg"
+                          style={{
+                            background: esCurso ? `${color}22` : 'rgba(255,255,255,0.04)',
+                            color: esCurso ? color : '#374151',
+                            border: `1px solid ${esCurso ? `${color}33` : 'rgba(255,255,255,0.06)'}`,
+                          }}
+                        >
+                          {clase.codigo}
+                        </span>
+
+                        {/* Fin de la clase */}
+                        <div className="shrink-0 text-right" style={{ width: '42px' }}>
+                          <span className="text-xs font-mono" style={{ color: '#374151' }}>
+                            {clase.fin}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* ── Quick access ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-3">
