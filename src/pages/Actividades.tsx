@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  ClipboardCheck, Plus, Trash2, RefreshCw, CheckCircle2,
-  Circle, Clock, AlertTriangle, ChevronDown, ChevronUp, BookOpen,
+  ClipboardCheck, Plus, Trash2, RefreshCw, Check,
+  Clock, AlertTriangle, ChevronDown, ChevronUp, BookOpen,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -11,7 +11,7 @@ import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
-type Filtro = 'todas' | 'pendientes' | 'completadas' | 'vencidas'
+type Filtro = 'todas' | 'pendientes' | 'completadas'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -116,7 +116,6 @@ export default function Actividades() {
   const [toggling, setToggling] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
   const [modalVisible, setModalVisible] = useState(false)
-  const [pastCollapsed, setPastCollapsed] = useState(true)
 
   // Form state
   const [titulo, setTitulo] = useState('')
@@ -127,6 +126,9 @@ export default function Actividades() {
 
   const cargar = useCallback(async () => {
     if (!usuario) return
+    // Eliminar actividades cuyo plazo ya venció
+    await supabase.from('actividades').delete().lt('fecha_entrega', new Date().toISOString())
+
     const [actsRes, estadosRes] = await Promise.all([
       supabase.from('actividades').select('*').order('fecha_entrega', { ascending: true }),
       supabase.from('actividades_estado').select('actividad_id, completada').eq('usuario_id', usuario.id),
@@ -208,30 +210,21 @@ export default function Actividades() {
 
   // ── Filtrado ────────────────────────────────────────────────────────────────
 
-  const ahora = Date.now()
-
   const actsFiltradas = actividades.filter(act => {
     const completada = estados[act.id] ?? false
-    const vencida = new Date(act.fecha_entrega).getTime() < ahora && !completada
-    if (filtro === 'pendientes') return !completada && !vencida
+    if (filtro === 'pendientes') return !completada
     if (filtro === 'completadas') return completada
-    if (filtro === 'vencidas') return vencida
     return true
   })
 
-  const proximas = actsFiltradas.filter(act => new Date(act.fecha_entrega).getTime() >= ahora || (estados[act.id] ?? false))
-  const pasadas  = actsFiltradas.filter(act => new Date(act.fecha_entrega).getTime() < ahora && !(estados[act.id] ?? false))
-
   const totalCompletadas = actividades.filter(a => estados[a.id]).length
-  const totalVencidas    = actividades.filter(a => !estados[a.id] && new Date(a.fecha_entrega).getTime() < ahora).length
-  const totalPendientes  = actividades.length - totalCompletadas - totalVencidas
+  const totalPendientes  = actividades.length - totalCompletadas
   const pct = actividades.length ? Math.round((totalCompletadas / actividades.length) * 100) : 0
 
   const FILTROS: { key: Filtro; label: string; count: number }[] = [
     { key: 'todas',      label: 'Todas',      count: actividades.length },
     { key: 'pendientes', label: 'Pendientes', count: totalPendientes },
     { key: 'completadas',label: 'Hechas',     count: totalCompletadas },
-    { key: 'vencidas',   label: 'Vencidas',   count: totalVencidas },
   ]
 
   if (loading) return <ActividadesSkeleton />
@@ -250,7 +243,6 @@ export default function Actividades() {
               <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Actividades</h1>
               <p className="text-xs" style={{ color: '#64748b' }}>
                 {totalPendientes} pendiente{totalPendientes !== 1 ? 's' : ''} · {totalCompletadas} completada{totalCompletadas !== 1 ? 's' : ''}
-                {totalVencidas > 0 && <span style={{ color: '#f43f5e' }}> · {totalVencidas} vencida{totalVencidas !== 1 ? 's' : ''}</span>}
               </p>
             </div>
           </div>
@@ -299,7 +291,7 @@ export default function Actividades() {
             </div>
             {pct === 100 && (
               <div className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <CheckCircle2 size={20} style={{ color: '#10b981' }} />
+                <Check size={20} style={{ color: '#10b981' }} />
               </div>
             )}
           </div>
@@ -350,9 +342,7 @@ export default function Actividades() {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-
-            {/* Próximas / activas */}
-            {proximas.map((act, idx) => (
+            {actsFiltradas.map((act, idx) => (
               <ActividadRow
                 key={act.id}
                 act={act}
@@ -366,34 +356,6 @@ export default function Actividades() {
                 onDelete={() => handleEliminar(act)}
               />
             ))}
-
-            {/* Vencidas colapsables */}
-            {pasadas.length > 0 && filtro === 'todas' && (
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => setPastCollapsed(v => !v)}
-                  className="flex items-center gap-2 px-1 py-1 text-xs font-semibold transition-colors duration-150 w-fit"
-                  style={{ color: '#4b5563' }}
-                >
-                  {pastCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-                  {pasadas.length} vencida{pasadas.length !== 1 ? 's'  : ''}
-                </button>
-                {!pastCollapsed && pasadas.map((act, idx) => (
-                  <ActividadRow
-                    key={act.id}
-                    act={act}
-                    completada={false}
-                    toggling={toggling === act.id}
-                    isAdmin={isAdmin}
-                    adminCount={statsAdmin[act.id] ?? 0}
-                    totalAlumnos={totalAlumnos}
-                    delay={idx * 25}
-                    onToggle={() => toggleCompletada(act)}
-                    onDelete={() => handleEliminar(act)}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -605,26 +567,25 @@ function ActividadRow({
             </button>
           )}
 
-          {/* Checkbox */}
-          <button
-            onClick={onToggle}
-            disabled={toggling}
-            className="w-7 h-7 flex items-center justify-center rounded-full transition-all duration-200 active:scale-90"
-            style={{
-              color: completada ? '#10b981' : '#374151',
-              border: `2px solid ${completada ? '#10b981' : 'rgba(255,255,255,0.15)'}`,
-              background: completada ? 'rgba(16,185,129,0.1)' : 'transparent',
-            }}
-            aria-label={completada ? 'Marcar como pendiente' : 'Marcar como completada'}
-          >
-            {toggling ? (
-              <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: completada ? '#10b981' : '#64748b' }} />
-            ) : completada ? (
-              <CheckCircle2 size={14} />
-            ) : (
-              <Circle size={14} />
-            )}
-          </button>
+          {/* Checkbox — solo alumnos */}
+          {!isAdmin && (
+            <button
+              onClick={onToggle}
+              disabled={toggling}
+              className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
+              style={{
+                background: completada ? '#10b981' : 'transparent',
+                border: `2px solid ${completada ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
+              }}
+              aria-label={completada ? 'Marcar como pendiente' : 'Marcar como completada'}
+            >
+              {toggling ? (
+                <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+              ) : completada ? (
+                <Check size={11} strokeWidth={3} className="text-white" />
+              ) : null}
+            </button>
+          )}
         </div>
       </div>
     </div>
