@@ -1,10 +1,8 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
-  Home, ClipboardList, MessageCircle, FolderOpen, Calendar, Shield, LogOut,
+  Home, ClipboardList, MessageCircle, FolderOpen, Calendar, Shield,
   GraduationCap, ClipboardCheck,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AnuncioModal from './AnuncioModal'
 
@@ -21,39 +19,8 @@ const ADMIN_ITEM = { to: '/admin', label: 'Admin', Icon: Shield }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { usuario } = useAuth()
-  const navigate = useNavigate()
   const isAdmin = usuario?.rol === 'admin'
   const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS
-
-  const [pendingCount, setPendingCount] = useState(0)
-
-  useEffect(() => {
-    if (!usuario) return
-    async function fetchPending() {
-      const now = new Date().toISOString()
-      // Get actividades no vencidas
-      const { data: acts } = await supabase
-        .from('actividades')
-        .select('id')
-        .gte('fecha_entrega', now)
-      if (!acts || acts.length === 0) { setPendingCount(0); return }
-      const ids = acts.map((a: { id: string }) => a.id)
-      const { data: done } = await supabase
-        .from('actividades_estado')
-        .select('actividad_id')
-        .eq('usuario_id', usuario!.id)
-        .eq('completada', true)
-        .in('actividad_id', ids)
-      const doneIds = new Set((done ?? []).map((d: { actividad_id: string }) => d.actividad_id))
-      setPendingCount(ids.filter(id => !doneIds.has(id)).length)
-    }
-    fetchPending()
-  }, [usuario])
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    navigate('/login')
-  }
 
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
 
@@ -144,22 +111,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <>
                     <Icon size={14} />
                     <span className="hidden sm:block">{label}</span>
-                    {/* Pending badge for Actividades */}
-                    {to === '/actividades' && pendingCount > 0 && (
-                      <span
-                        className="flex items-center justify-center text-white font-bold rounded-full"
-                        style={{
-                          fontSize: '9px',
-                          minWidth: '14px',
-                          height: '14px',
-                          padding: '0 3px',
-                          background: '#f43f5e',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {pendingCount > 9 ? '9+' : pendingCount}
-                      </span>
-                    )}
                     {/* Active underline indicator */}
                     {isActive && (
                       <span
@@ -176,7 +127,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             ))}
           </div>
 
-          {/* Right: profile + logout */}
+          {/* Right: profile */}
           <div className="flex items-center gap-1 shrink-0">
             <NavLink
               to="/profile"
@@ -187,7 +138,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               }
               aria-label="Perfil"
             >
-              {/* Avatar */}
               <div className="relative shrink-0">
                 {usuario?.avatar_url ? (
                   <img
@@ -208,7 +158,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     {initial}
                   </div>
                 )}
-                {/* Online dot */}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
                   style={{ background: '#10b981', border: '1.5px solid #0d0f16' }}
@@ -221,27 +170,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {usuario?.nombre}
               </span>
             </NavLink>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              title="Cerrar sesión"
-              className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
-              style={{ color: '#4b5563' }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.color = '#f43f5e'
-                el.style.background = 'rgba(244,63,94,0.08)'
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.color = '#4b5563'
-                el.style.background = 'transparent'
-              }}
-              aria-label="Cerrar sesión"
-            >
-              <LogOut size={14} />
-            </button>
           </div>
         </div>
       </nav>

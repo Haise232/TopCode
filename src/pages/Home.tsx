@@ -202,6 +202,20 @@ const QUICK_ACTIONS = [
   },
 ]
 
+const ADMIN_ACTION = {
+  label: 'Admin',
+  desc: 'Panel',
+  Icon: Shield,
+  to: '/admin',
+  color: '#fb7185',
+  bg: 'rgba(244,63,94,0.1)',
+  border: 'rgba(244,63,94,0.25)',
+  glow: 'rgba(244,63,94,0.18)',
+  gradFrom: 'rgba(244,63,94,0.06)',
+  gradTo: 'rgba(244,63,94,0.02)',
+  badge: null,
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -281,6 +295,7 @@ export default function Home() {
   const semana = semanaActual(allNotas)
   const racha = rachaReciente(allNotas)
   const esAdmin = usuario?.rol === 'admin'
+  const quickActions = esAdmin ? [...QUICK_ACTIONS, ADMIN_ACTION] : QUICK_ACTIONS
 
   // Tendencia: compara promedio últimas 3 notas vs promedio general
   const promedioGeneral = allNotas.length
@@ -652,8 +667,8 @@ export default function Home() {
           <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
             Acceso rápido
           </h2>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-            {QUICK_ACTIONS.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }) => {
+          <div className={`grid gap-3 grid-cols-3 ${esAdmin ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
+            {quickActions.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }) => {
               const badge = to === '/actividades' && actividadesPendientes > 0
                 ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
                 : null
