@@ -185,20 +185,21 @@ interface BubbleRowProps {
   isLastInGroup: boolean
   showAuthor: boolean
   autor: string
+  avatarUrl?: string | null
   texto: string
   time: string
 }
 
-function BubbleRow({ isMine, isGrouped, isLastInGroup, showAuthor, autor, texto, time }: BubbleRowProps) {
+function BubbleRow({ isMine, isGrouped, isLastInGroup, showAuthor, autor, avatarUrl, texto, time }: BubbleRowProps) {
   return (
     <div
       className={`flex gap-2.5 ${isMine ? 'flex-row-reverse' : 'flex-row'} items-end`}
       style={{ marginBottom: isGrouped ? '2px' : '8px' }}
     >
-      {/* Avatar placeholder — keep space even when hidden so bubbles stay aligned */}
+      {/* Avatar — se oculta en mensajes agrupados pero mantiene el espacio */}
       {!isMine && (
         <div className="shrink-0" style={{ width: 28, opacity: isGrouped ? 0 : 1 }}>
-          <Avatar nombre={autor} size={28} />
+          <Avatar nombre={autor} url={avatarUrl} size={28} />
         </div>
       )}
       <div className={`flex flex-col gap-0.5 max-w-[72%] ${isMine ? 'items-end' : 'items-start'}`}>
@@ -273,16 +274,21 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [texto, setTexto] = useState('')
   const [loading, setLoading] = useState(true)
+  const [avatares, setAvatares] = useState<Record<string, string | null>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const cargar = useCallback(async () => {
-    const { data } = await supabase
-      .from('mensajes')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .limit(100)
-    if (data) setMensajes(data)
+    const [msgsRes, usersRes] = await Promise.all([
+      supabase.from('mensajes').select('*').order('created_at', { ascending: true }).limit(100),
+      supabase.from('usuarios').select('id, avatar_url'),
+    ])
+    if (msgsRes.data) setMensajes(msgsRes.data)
+    if (usersRes.data) {
+      const map: Record<string, string | null> = {}
+      usersRes.data.forEach((u: { id: string; avatar_url: string | null }) => { map[u.id] = u.avatar_url })
+      setAvatares(map)
+    }
     setLoading(false)
   }, [])
 
@@ -376,6 +382,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
                   isLastInGroup={isLastInGroup}
                   showAuthor={!isMine && !isGrouped}
                   autor={msg.autor}
+                  avatarUrl={avatares[msg.usuario_id]}
                   texto={msg.texto}
                   time={formatTime(msg.created_at)}
                 />
