@@ -55,6 +55,11 @@ const CATEGORIA_CONFIG: Record<Categoria, { label: string; color: string; bg: st
   },
 }
 
+// Color determinista por asignatura — evita que todos los exámenes sean rojos
+function materiaHue(nombre: string): number {
+  return nombre.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360
+}
+
 function inferirCategoria(titulo: string): Categoria {
   const t = titulo.toLowerCase()
   if (t.includes('examen') || t.includes('parcial') || t.includes('final') || t.includes('quiz') || t.includes('evaluacion') || t.includes('evaluación')) return 'examen'
@@ -768,6 +773,12 @@ function EventCard({
   const categoria = inferirCategoria(evento.titulo)
   const cat = CATEGORIA_CONFIG[categoria]
 
+  // Si hay materia, el color visual principal es determinista por asignatura
+  const hue = evento.materia ? materiaHue(evento.materia) : null
+  const mainColor  = hue !== null ? `hsl(${hue},60%,65%)`       : cat.color
+  const mainBg     = hue !== null ? `hsla(${hue},60%,65%,0.1)`  : cat.bg
+  const mainBorder = hue !== null ? `hsla(${hue},60%,65%,0.28)` : cat.border
+
   // Badge style (temporal proximity)
   const badgeStyle = isToday ? {
     background: 'rgba(244,63,94,0.15)',
@@ -809,10 +820,10 @@ function EventCard({
           : 'inset 0 1px 0 rgba(255,255,255,0.03)',
       }}
     >
-      {/* Color bar — left side */}
+      {/* Color bar — left side, color por asignatura si la hay */}
       <div
         className="w-1 shrink-0"
-        style={{ background: past ? 'rgba(255,255,255,0.06)' : cat.color, opacity: past ? 1 : 0.8 }}
+        style={{ background: past ? 'rgba(255,255,255,0.06)' : mainColor, opacity: past ? 1 : 0.8 }}
       />
 
       <div className="flex gap-3.5 flex-1 min-w-0" style={{ padding: '14px 16px' }}>
@@ -821,27 +832,27 @@ function EventCard({
           className="w-12 h-12 flex flex-col items-center justify-center shrink-0 rounded-xl"
           style={{
             background: isToday
-              ? `linear-gradient(135deg, ${cat.color}, ${cat.color}cc)`
+              ? `linear-gradient(135deg, ${mainColor}, ${mainColor}cc)`
               : past
               ? 'rgba(255,255,255,0.04)'
-              : cat.bg,
+              : mainBg,
             border: isToday
               ? 'none'
               : past
               ? '1px solid rgba(255,255,255,0.05)'
-              : `1px solid ${cat.border}`,
-            boxShadow: isToday ? `0 4px 12px ${cat.color}40` : 'none',
+              : `1px solid ${mainBorder}`,
+            boxShadow: isToday ? `0 4px 16px ${mainColor}50` : 'none',
           }}
         >
           <span
             className="text-base font-extrabold leading-none tabular-nums"
-            style={{ color: isToday ? 'white' : past ? '#374151' : cat.color }}
+            style={{ color: isToday ? 'white' : past ? '#374151' : mainColor }}
           >
             {dayNum}
           </span>
           <span
             className="text-xs mt-0.5 uppercase font-medium"
-            style={{ color: isToday ? 'rgba(255,255,255,0.7)' : past ? '#2d3748' : `${cat.color}99` }}
+            style={{ color: isToday ? 'rgba(255,255,255,0.7)' : past ? '#2d3748' : mainColor, opacity: isToday ? 1 : 0.65 }}
           >
             {MESES_CORTO[monthIdx]}
           </span>
@@ -905,9 +916,9 @@ function EventCard({
             <span
               className="text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit"
               style={{
-                background: `${cat.color}18`,
-                color: cat.color,
-                border: `1px solid ${cat.color}30`,
+                background: mainBg,
+                color: mainColor,
+                border: `1px solid ${mainBorder}`,
               }}
             >
               {evento.materia}
