@@ -90,27 +90,35 @@ export default function Admin() {
     e.preventDefault()
     if (!nuevoTitulo.trim() || !nuevoContenido.trim()) return
     setGuardando(true)
-    const { error } = await supabase.from('anuncios').insert({
-      titulo: nuevoTitulo.trim(),
-      contenido: nuevoContenido.trim(),
-      activo: true,
-      created_by: usuario!.id,
-    })
+    const { error } = await Promise.race([
+      supabase.from('anuncios').insert({
+        titulo: nuevoTitulo.trim(),
+        contenido: nuevoContenido.trim(),
+        activo: true,
+        created_by: usuario!.id,
+      }),
+      new Promise<{ error: { message: string } }>(resolve =>
+        setTimeout(() => resolve({ error: { message: 'Tiempo de espera agotado. Inténtalo de nuevo.' } }), 30000)
+      ),
+    ])
     setGuardando(false)
     if (error) {
-      setAlert({ type: 'error', title: 'Error', message: 'No se pudo publicar: ' + error.message })
+      setAlert({ type: 'error', title: 'Error', message: error.message })
       return
     }
     setNuevoTitulo('')
     setNuevoContenido('')
-    await cargarAnuncios()
+    cargarAnuncios()
   }
 
   async function handleToggleActivo(a: Anuncio) {
     setToggling(a.id)
-    await supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id)
+    await Promise.race([
+      supabase.from('anuncios').update({ activo: !a.activo }).eq('id', a.id),
+      new Promise(resolve => setTimeout(resolve, 30000)),
+    ])
     setToggling(null)
-    await cargarAnuncios()
+    cargarAnuncios()
   }
 
   function handleEliminarAnuncio(a: Anuncio) {
