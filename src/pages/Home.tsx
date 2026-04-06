@@ -81,6 +81,58 @@ function rachaReciente(notas: Nota[]): number {
   return dias.size
 }
 
+// ── Horario ──────────────────────────────────────────────────────────────────
+
+type ClaseHorario = { inicio: string; fin: string; materia: string; codigo: string }
+
+const HORARIO: Record<number, ClaseHorario[]> = {
+  1: [
+    { inicio: '14:30', fin: '15:25', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '15:25', fin: '16:20', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '16:20', fin: '17:15', materia: 'Itinerario para la empleabilidad', codigo: 'ITK' },
+    { inicio: '17:45', fin: '18:40', materia: 'Inglés profesional', codigo: 'IKL' },
+    { inicio: '18:40', fin: '19:35', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '19:35', fin: '20:30', materia: 'Bases de datos', codigo: 'BAE' },
+  ],
+  2: [
+    { inicio: '15:30', fin: '16:20', materia: 'Digitalización aplicada', codigo: 'DJK' },
+    { inicio: '16:20', fin: '17:10', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '17:10', fin: '18:00', materia: 'Entornos de desarrollo', codigo: 'ETS' },
+    { inicio: '18:30', fin: '19:20', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '19:20', fin: '20:10', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '20:10', fin: '21:00', materia: 'Bases de datos', codigo: 'BAE' },
+  ],
+  3: [
+    { inicio: '14:30', fin: '15:25', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '15:25', fin: '16:20', materia: 'Itinerario para la empleabilidad', codigo: 'ITK' },
+    { inicio: '16:20', fin: '17:15', materia: 'Digitalización aplicada', codigo: 'DJK' },
+    { inicio: '17:45', fin: '18:40', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '18:40', fin: '19:35', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '19:35', fin: '20:30', materia: 'Inglés profesional', codigo: 'IKL' },
+  ],
+  4: [
+    { inicio: '14:30', fin: '15:25', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '15:25', fin: '16:20', materia: 'Lenguajes de marcas', codigo: 'LND' },
+    { inicio: '16:20', fin: '17:15', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '17:45', fin: '18:40', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '18:40', fin: '19:35', materia: 'Bases de datos', codigo: 'BAE' },
+    { inicio: '19:35', fin: '20:30', materia: 'Entornos de desarrollo', codigo: 'ETS' },
+  ],
+  5: [
+    { inicio: '14:30', fin: '15:25', materia: 'Sistemas informáticos', codigo: 'SSF' },
+    { inicio: '15:25', fin: '16:20', materia: 'Bases de datos', codigo: 'BAE' },
+    { inicio: '16:20', fin: '17:15', materia: 'Bases de datos', codigo: 'BAE' },
+    { inicio: '17:45', fin: '18:40', materia: 'Itinerario para la empleabilidad', codigo: 'ITK' },
+    { inicio: '18:40', fin: '19:35', materia: 'Programación', codigo: 'PRO' },
+    { inicio: '19:35', fin: '20:30', materia: 'Entornos de desarrollo', codigo: 'ETS' },
+  ],
+}
+
+function enMinutos(hora: string): number {
+  const [h, m] = hora.split(':').map(Number)
+  return h * 60 + m
+}
+
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function HomeSkeleton() {
@@ -613,54 +665,118 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Activity strip — 7 días ─────────────────────────────────────── */}
-        <div className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-            Esta semana
-          </h2>
-          <div
-            className="p-4 rounded-2xl flex items-center gap-2 md:gap-3"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            {semana.map(dia => (
-              <div
-                key={dia.iso}
-                className="flex-1 flex flex-col items-center gap-1.5"
-                title={dia.iso}
-              >
-                <span className="text-2xs font-medium" style={{ color: dia.esHoy ? '#818cf8' : '#4b5563' }}>
-                  {dia.label}
+        {/* ── Horario de hoy ──────────────────────────────────────────────── */}
+        {(() => {
+          const ahora = new Date()
+          const diaSemana = ahora.getDay() // 0=Dom, 1=Lun ... 6=Sáb
+          const esFinDeSemana = diaSemana === 0 || diaSemana === 6
+          const diaClases = esFinDeSemana ? 1 : diaSemana
+          const clases = HORARIO[diaClases] ?? []
+          const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes()
+          const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+          return (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                  {esFinDeSemana ? 'Próximo lunes' : `Horario — ${diasSemana[diaSemana]}`}
+                </h2>
+                <span className="text-xs" style={{ color: '#374151' }}>
+                  {clases.length} clases
                 </span>
-                <div
-                  className="w-full aspect-square max-w-[32px] rounded-lg transition-all duration-200"
-                  style={{
-                    background: dia.activo
-                      ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                      : 'rgba(255,255,255,0.04)',
-                    border: dia.esHoy
-                      ? '1.5px solid rgba(99,102,241,0.4)'
-                      : dia.activo
-                        ? '1px solid rgba(99,102,241,0.3)'
-                        : '1px solid rgba(255,255,255,0.06)',
-                    boxShadow: dia.activo ? '0 0 8px rgba(99,102,241,0.25)' : 'none',
-                  }}
-                />
               </div>
-            ))}
-            <div
-              className="hidden md:flex items-center gap-1.5 ml-2 shrink-0"
-              style={{ borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: '12px' }}
-            >
-              <Zap size={12} style={{ color: '#fbbf24' }} />
-              <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>
-                {racha}/7
-              </span>
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: 'linear-gradient(145deg, #1a1d27, #141720)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                {clases.map((clase, idx) => {
+                  const iniciMin = enMinutos(clase.inicio)
+                  const finMin   = enMinutos(clase.fin)
+                  const esCurso  = !esFinDeSemana && minutosAhora >= iniciMin && minutosAhora < finMin
+                  const haPasado = !esFinDeSemana && minutosAhora >= finMin
+                  const color    = materiaColor(clase.materia)
+                  // Detectar descanso entre esta clase y la anterior
+                  const hayDescanso = idx > 0 && iniciMin - enMinutos(clases[idx - 1].fin) > 5
+
+                  return (
+                    <div key={idx}>
+                      {hayDescanso && (
+                        <div
+                          className="flex items-center gap-2 px-4 py-1.5"
+                          style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                        >
+                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                          <span className="text-2xs font-medium" style={{ color: '#374151' }}>Descanso</span>
+                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                        </div>
+                      )}
+                      <div
+                        className="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
+                        style={{
+                          borderTop: idx > 0 && !hayDescanso ? '1px solid rgba(255,255,255,0.04)' : undefined,
+                          background: esCurso ? 'rgba(99,102,241,0.06)' : 'transparent',
+                          opacity: haPasado ? 0.35 : 1,
+                        }}
+                      >
+                        {/* Hora */}
+                        <div className="shrink-0 text-right" style={{ width: '42px' }}>
+                          <span className="text-xs font-mono" style={{ color: esCurso ? '#818cf8' : '#4b5563' }}>
+                            {clase.inicio}
+                          </span>
+                        </div>
+
+                        {/* Indicador de color */}
+                        <div
+                          className="shrink-0 rounded-full"
+                          style={{
+                            width: esCurso ? 8 : 6,
+                            height: esCurso ? 8 : 6,
+                            background: esCurso ? color : haPasado ? '#374151' : color,
+                            boxShadow: esCurso ? `0 0 6px ${color}` : 'none',
+                            transition: 'all 0.2s',
+                          }}
+                        />
+
+                        {/* Nombre */}
+                        <span
+                          className="flex-1 text-sm truncate"
+                          style={{
+                            color: esCurso ? '#f1f5f9' : haPasado ? '#4b5563' : '#94a3b8',
+                            fontWeight: esCurso ? 600 : 400,
+                          }}
+                        >
+                          {clase.materia}
+                        </span>
+
+                        {/* Badge código */}
+                        <span
+                          className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg"
+                          style={{
+                            background: esCurso ? `${color}22` : 'rgba(255,255,255,0.04)',
+                            color: esCurso ? color : '#374151',
+                            border: `1px solid ${esCurso ? `${color}33` : 'rgba(255,255,255,0.06)'}`,
+                          }}
+                        >
+                          {clase.codigo}
+                        </span>
+
+                        {/* Fin de la clase */}
+                        <div className="shrink-0 text-right" style={{ width: '42px' }}>
+                          <span className="text-xs font-mono" style={{ color: '#374151' }}>
+                            {clase.fin}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* ── Quick access ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-3">
