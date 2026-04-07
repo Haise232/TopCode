@@ -4,6 +4,23 @@ import { supabase } from '../lib/supabase'
 import { Usuario } from '../lib/types'
 
 const AUTH_TIMEOUT_MS = 8000
+const USUARIO_CACHE_KEY = 'topcode-usuario-cache'
+
+function getCachedUsuario(): Usuario | null {
+  try {
+    const raw = sessionStorage.getItem(USUARIO_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as Usuario) : null
+  } catch {
+    return null
+  }
+}
+
+function setCachedUsuario(u: Usuario | null) {
+  try {
+    if (u) sessionStorage.setItem(USUARIO_CACHE_KEY, JSON.stringify(u))
+    else sessionStorage.removeItem(USUARIO_CACHE_KEY)
+  } catch { /* ignore */ }
+}
 
 interface AuthContextValue {
   session: Session | null
@@ -23,8 +40,9 @@ export const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [usuario, setUsuario] = useState<Usuario | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Servir el perfil cacheado inmediatamente para eliminar el parpadeo de carga
+  const [usuario, setUsuario] = useState<Usuario | null>(getCachedUsuario)
+  const [loading, setLoading] = useState(() => getCachedUsuario() === null)
 
   // Evita race conditions: si fetchUsuario se llama dos veces concurrentemente,
   // solo la última respuesta actualiza el estado.
@@ -46,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentFetch !== fetchCountRef.current) return
 
     if (data && !error) {
+      setCachedUsuario(data as Usuario)
       setUsuario(data as Usuario)
       setLoading(false)
       return
@@ -73,12 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (currentFetch !== fetchCountRef.current) return
 
-      setUsuario(upserted && !upsertError ? (upserted as Usuario) : null)
+      const result = upserted && !upsertError ? (upserted as Usuario) : null
+      setCachedUsuario(result)
+      setUsuario(result)
       setLoading(false)
       return
     }
 
     // Cualquier otro error (red, RLS, etc.)
+    setCachedUsuario(null)
     setUsuario(null)
     setLoading(false)
   }, [])
@@ -111,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             sess.user.user_metadata as Record<string, unknown>,
           )
         } else {
+          setCachedUsuario(null)
           setUsuario(null)
           setLoading(false)
         }

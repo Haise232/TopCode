@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { MessageCircle, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useNotifications } from '../hooks/useNotifications'
 import { MensajePrivado } from '../lib/types'
 
 function getHue(nombre: string) {
@@ -13,11 +14,18 @@ export default function PrivateMessageToast() {
   const { usuario } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const { requestPermission, notify } = useNotifications()
 
   const [toast, setToast] = useState<MensajePrivado | null>(null)
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pathnameRef = useRef(location.pathname)
+
+  // Solicitar permiso de notificaciones en cuanto el usuario está autenticado
+  useEffect(() => {
+    if (!usuario) return
+    requestPermission()
+  }, [usuario?.id, requestPermission])
 
   // Mantener pathnameRef actualizado sin re-suscribir el canal
   useEffect(() => {
@@ -53,7 +61,18 @@ export default function PrivateMessageToast() {
           const msg = payload.new as MensajePrivado
           // No notificar mensajes propios (por si acaso)
           if (msg.de_id === uid) return
-          // No mostrar si el usuario está en /chat
+
+          const preview = msg.texto.length > 60 ? msg.texto.slice(0, 60) + '…' : msg.texto
+
+          // Notificación del navegador cuando la pestaña no está visible
+          notify(`💬 ${msg.de_nombre}`, {
+            body: preview,
+            icon: '/favicon.png',
+            tag: `pm-${msg.de_id}`,
+            onClick: () => navigate('/chat'),
+          })
+
+          // Toast en app solo si no está en /chat
           if (pathnameRef.current.startsWith('/chat')) return
           show(msg)
         }
@@ -63,7 +82,7 @@ export default function PrivateMessageToast() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [usuario?.id, show])
+  }, [usuario?.id, show, notify, navigate])
 
   // Limpiar timer al desmontar
   useEffect(() => {
