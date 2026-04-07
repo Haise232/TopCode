@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MessageCircle, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -16,7 +16,13 @@ export default function PrivateMessageToast() {
 
   const [toast, setToast] = useState<MensajePrivado | null>(null)
   const [visible, setVisible] = useState(false)
-  const [timeoutId, setTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pathnameRef = useRef(location.pathname)
+
+  // Mantener pathnameRef actualizado sin re-suscribir el canal
+  useEffect(() => {
+    pathnameRef.current = location.pathname
+  }, [location.pathname])
 
   const dismiss = useCallback(() => {
     setVisible(false)
@@ -24,30 +30,31 @@ export default function PrivateMessageToast() {
   }, [])
 
   const show = useCallback((msg: MensajePrivado) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
     setToast(msg)
     setVisible(true)
-    const id = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setVisible(false)
       setTimeout(() => setToast(null), 300)
     }, 5000)
-    setTimeoutId(id)
   }, [])
 
   useEffect(() => {
     if (!usuario) return
 
+    const uid = usuario.id
+
     const channel = supabase
-      .channel('private-msg-toast')
+      .channel(`private-msg-toast-${uid}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'mensajes_privados' },
+        { event: 'INSERT', schema: 'public', table: 'mensajes_privados', filter: `para_id=eq.${uid}` },
         payload => {
           const msg = payload.new as MensajePrivado
-          // Solo mostrar si el mensaje es para el usuario actual y no es el propio
-          if (msg.para_id !== usuario.id) return
-          if (msg.de_id === usuario.id) return
+          // No notificar mensajes propios (por si acaso)
+          if (msg.de_id === uid) return
           // No mostrar si el usuario está en /chat
-          if (location.pathname.startsWith('/chat')) return
+          if (pathnameRef.current.startsWith('/chat')) return
           show(msg)
         }
       )
@@ -56,14 +63,14 @@ export default function PrivateMessageToast() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [usuario, location.pathname, show])
+  }, [usuario?.id, show])
 
-  // Limpiar timeout al desmontar
+  // Limpiar timer al desmontar
   useEffect(() => {
     return () => {
-      if (timeoutId) clearTimeout(timeoutId)
+      if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [timeoutId])
+  }, [])
 
   if (!toast) return null
 
