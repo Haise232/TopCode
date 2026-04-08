@@ -1,31 +1,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  TrendingUp, BookOpen, FileText, Plus, Calendar, MessageCircle,
+  Calendar, MessageCircle,
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
-  Flame, GraduationCap, Shield, Zap, Camera, X, ClipboardCheck, Clock,
+  GraduationCap, Shield, Camera, X, ClipboardCheck, Clock, Newspaper,
 } from 'lucide-react'
-import { supabase, subirAvatar, eliminarArchivoStorage } from '../lib/supabase'
+import { supabase, eliminarArchivoStorage } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Nota, EventoCalendario, Actividad } from '../lib/types'
-import { MATERIAS } from '../constants/materias'
+import { EventoCalendario, Actividad } from '../lib/types'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function gradeColor(n: number) {
-  if (n >= 8) return '#10b981'
-  if (n >= 6) return '#f59e0b'
-  return '#f43f5e'
-}
-
-function gradeLabel(n: number) {
-  if (n >= 9) return 'Excelente'
-  if (n >= 8) return 'Notable'
-  if (n >= 6) return 'Bien'
-  if (n >= 5) return 'Suficiente'
-  return 'Insuficiente'
-}
 
 function saludoEmoji() {
   const h = new Date().getHours()
@@ -48,37 +33,6 @@ function materiaColor(nombre: string): string {
   }
   const hue = Math.abs(hash) % 360
   return `hsl(${hue}, 65%, 60%)`
-}
-
-// Últimos 7 días: devuelve array de { fecha ISO, label corto, tieneNota }
-function semanaActual(notas: Nota[]) {
-  const diasCortos = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá']
-  const notasDates = new Set(
-    notas.map(n => n.created_at.slice(0, 10))
-  )
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (6 - i))
-    const iso = d.toISOString().slice(0, 10)
-    return {
-      iso,
-      label: diasCortos[d.getDay()],
-      activo: notasDates.has(iso),
-      esHoy: i === 6,
-    }
-  })
-}
-
-// Días únicos con notas en los últimos 7 días = "racha semanal"
-function rachaReciente(notas: Nota[]): number {
-  const hace7 = new Date()
-  hace7.setDate(hace7.getDate() - 6)
-  const dias = new Set(
-    notas
-      .filter(n => new Date(n.created_at) >= hace7)
-      .map(n => n.created_at.slice(0, 10))
-  )
-  return dias.size
 }
 
 // ── Horario ──────────────────────────────────────────────────────────────────
@@ -152,15 +106,6 @@ function HomeSkeleton() {
         </div>
       </div>
       <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map(i => (
-            <SkeletonCard key={i} className="flex flex-col items-center gap-3 py-6">
-              <SkeletonBox className="h-9 w-9 shimmer rounded-xl" />
-              <SkeletonBox className="h-7 w-12 shimmer" />
-              <SkeletonBox className="h-3 w-16 shimmer" />
-            </SkeletonCard>
-          ))}
-        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map(i => (
             <SkeletonCard key={i} className="flex flex-col items-center gap-3 py-6">
@@ -188,10 +133,10 @@ function HomeSkeleton() {
 
 const QUICK_ACTIONS = [
   {
-    label: 'Notas',
-    desc: 'Calificaciones',
-    Icon: Plus,
-    to: '/notes',
+    label: 'Noticias',
+    desc: 'Tech',
+    Icon: Newspaper,
+    to: '/noticias',
     color: '#818cf8',
     bg: 'rgba(99,102,241,0.1)',
     border: 'rgba(99,102,241,0.25)',
@@ -273,8 +218,6 @@ const ADMIN_ACTION = {
 export default function Home() {
   const { usuario, refreshUsuario } = useAuth()
   const navigate = useNavigate()
-  const [notas, setNotas] = useState<Nota[]>([])
-  const [allNotas, setAllNotas] = useState<Nota[]>([])
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
   const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
   const [actividadesPendientes, setActividadesPendientes] = useState(0)
@@ -337,15 +280,11 @@ export default function Home() {
   const cargarDatos = useCallback(async () => {
     if (!usuario) return
     const now = new Date().toISOString()
-    const [notasRecientes, todasNotas, evento, acts, estados] = await Promise.all([
-      supabase.from('notas').select('*').eq('usuario_id', usuario.id).order('created_at', { ascending: false }).limit(5),
-      supabase.from('notas').select('*').eq('usuario_id', usuario.id),
+    const [evento, acts, estados] = await Promise.all([
       supabase.from('eventos').select('*').gte('fecha', new Date().toISOString().slice(0, 10)).order('fecha', { ascending: true }).limit(1),
       supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
       supabase.from('actividades_estado').select('actividad_id').eq('usuario_id', usuario.id).eq('completada', true),
     ])
-    if (notasRecientes.data) setNotas(notasRecientes.data)
-    if (todasNotas.data) setAllNotas(todasNotas.data)
     if (evento.data?.[0]) setProximoEvento(evento.data[0])
     else setProximoEvento(null)
 
@@ -369,24 +308,10 @@ export default function Home() {
 
   if (loading) return <HomeSkeleton />
 
-  const materias = [...new Set(notas.map(n => n.materia))].length
-  const promedio = usuario?.promedio ?? 0
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
   const { texto: saludo, emoji } = saludoEmoji()
-  const semana = semanaActual(allNotas)
-  const racha = rachaReciente(allNotas)
   const esAdmin = usuario?.rol === 'admin'
   const quickActions = esAdmin ? [...QUICK_ACTIONS, ADMIN_ACTION] : QUICK_ACTIONS
-
-  // Tendencia: compara promedio últimas 3 notas vs promedio general
-  const promedioGeneral = allNotas.length
-    ? allNotas.reduce((s, n) => s + n.media, 0) / allNotas.length
-    : 0
-  const ultimas3 = notas.slice(0, 3)
-  const promedioReciente = ultimas3.length
-    ? ultimas3.reduce((s, n) => s + n.media, 0) / ultimas3.length
-    : promedioGeneral
-  const tendenciaSubiendo = promedioReciente >= promedioGeneral
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
@@ -541,162 +466,6 @@ export default function Home() {
       </div>
 
       <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6">
-
-        {/* ── Stats row (4 tarjetas) ──────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-
-          {/* Promedio */}
-          <button
-            onClick={() => navigate('/notes')}
-            className="group relative p-4 md:p-5 flex flex-col items-center gap-2.5 rounded-2xl transition-all duration-200 hover:scale-[1.03] text-left overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: `1px solid ${gradeColor(promedio)}28`,
-              boxShadow: `0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)`,
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                `0 8px 24px rgba(0,0,0,0.4), 0 0 16px ${gradeColor(promedio)}22`
-              ;(e.currentTarget as HTMLElement).style.borderColor = `${gradeColor(promedio)}44`
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = `${gradeColor(promedio)}28`
-            }}
-          >
-            {/* Barra de progreso lineal */}
-            <div className="w-full h-1 rounded-full overflow-hidden mb-0.5" style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${Math.min((promedio / 10) * 100, 100)}%`,
-                  background: `linear-gradient(90deg, ${gradeColor(promedio)}, ${gradeColor(promedio)}aa)`,
-                  boxShadow: `0 0 6px ${gradeColor(promedio)}66`,
-                }}
-              />
-            </div>
-            <div
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
-              style={{ background: `${gradeColor(promedio)}18` }}
-            >
-              <TrendingUp size={16} style={{ color: gradeColor(promedio) }} />
-            </div>
-            <span
-              className="text-2xl md:text-3xl font-extrabold tabular-nums animate-count-up"
-              style={{ color: gradeColor(promedio) }}
-            >
-              {promedio.toFixed(1)}
-            </span>
-            <div className="text-center">
-              <span className="text-xs font-medium block" style={{ color: '#64748b' }}>Promedio</span>
-              <span className="text-xs font-semibold" style={{ color: `${gradeColor(promedio)}bb` }}>
-                {gradeLabel(promedio)}
-              </span>
-            </div>
-          </button>
-
-          {/* Materias */}
-          <div
-            className="group p-4 md:p-5 flex flex-col items-center gap-2.5 rounded-2xl transition-all duration-200 hover:scale-[1.03] cursor-default overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(99,102,241,0.12)',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 8px 24px rgba(0,0,0,0.4), 0 0 16px rgba(99,102,241,0.15)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.28)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.12)'
-            }}
-          >
-            <div className="w-full h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
-            <div
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
-              style={{ background: 'rgba(99,102,241,0.12)' }}
-            >
-              <BookOpen size={16} style={{ color: '#818cf8' }} />
-            </div>
-            <span className="text-2xl md:text-3xl font-extrabold animate-count-up" style={{ color: '#f1f5f9' }}>
-              {materias}
-            </span>
-            <span className="text-xs font-medium text-center" style={{ color: '#64748b' }}>Materias</span>
-          </div>
-
-          {/* Registros */}
-          <div
-            className="group p-4 md:p-5 flex flex-col items-center gap-2.5 rounded-2xl transition-all duration-200 hover:scale-[1.03] cursor-default overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(139,92,246,0.12)',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 8px 24px rgba(0,0,0,0.4), 0 0 16px rgba(139,92,246,0.15)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.28)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.12)'
-            }}
-          >
-            <div className="w-full h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
-            <div
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
-              style={{ background: 'rgba(139,92,246,0.12)' }}
-            >
-              <FileText size={16} style={{ color: '#a78bfa' }} />
-            </div>
-            <span className="text-2xl md:text-3xl font-extrabold animate-count-up" style={{ color: '#f1f5f9' }}>
-              {allNotas.length}
-            </span>
-            <span className="text-xs font-medium text-center" style={{ color: '#64748b' }}>Registros</span>
-          </div>
-
-          {/* Racha semanal */}
-          <div
-            className="group p-4 md:p-5 flex flex-col items-center gap-2.5 rounded-2xl transition-all duration-200 hover:scale-[1.03] cursor-default overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: 'rgba(245,158,11,0.12) 1px solid',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 8px 24px rgba(0,0,0,0.4), 0 0 16px rgba(245,158,11,0.15)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.28)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)'
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.12)'
-            }}
-          >
-            <div className="w-full h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
-            <div
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
-              style={{ background: 'rgba(245,158,11,0.12)' }}
-            >
-              <Flame size={16} style={{ color: '#fbbf24' }} />
-            </div>
-            <span className="text-2xl md:text-3xl font-extrabold animate-count-up" style={{ color: '#fbbf24' }}>
-              {racha}
-            </span>
-            <div className="text-center">
-              <span className="text-xs font-medium block" style={{ color: '#64748b' }}>Semana</span>
-              <span className="text-xs font-semibold" style={{ color: 'rgba(251,191,36,0.7)' }}>
-                {racha === 7 ? '¡Perfecto!' : racha >= 4 ? 'Muy activo' : racha >= 1 ? 'En marcha' : 'Sin actividad'}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* ── Horario de hoy ──────────────────────────────────────────────── */}
         {(() => {
@@ -964,140 +733,6 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {/* ── Últimas notas ───────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-              Últimas notas
-            </h2>
-            <button
-              onClick={() => navigate('/notes')}
-              className="flex items-center gap-1 text-xs font-semibold transition-all duration-150 hover:gap-1.5"
-              style={{ color: '#818cf8' }}
-            >
-              Ver todas
-              <ChevronRight size={13} />
-            </button>
-          </div>
-
-          {notas.length === 0 ? (
-            <div
-              className="py-14 flex flex-col items-center gap-4 text-center rounded-2xl"
-              style={{
-                background: 'linear-gradient(145deg, #1a1d27, #141720)',
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <div
-                className="w-16 h-16 flex items-center justify-center rounded-2xl"
-                style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}
-              >
-                <FileText size={24} style={{ color: '#818cf8' }} />
-              </div>
-              <div>
-                <p className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Sin notas todavía</p>
-                <p className="text-sm mt-1.5 max-w-xs leading-relaxed" style={{ color: '#64748b' }}>
-                  Ve a la sección de Notas para registrar tus primeras calificaciones.
-                </p>
-              </div>
-              <button
-                onClick={() => navigate('/notes')}
-                className="btn-primary px-5 py-2.5 text-sm"
-              >
-                <Plus size={14} />
-                Añadir nota
-              </button>
-            </div>
-          ) : (
-            <div
-              className="overflow-hidden rounded-2xl"
-              style={{
-                background: 'linear-gradient(145deg, #1a1d27, #141720)',
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              {notas.slice(0, 5).map((nota, idx) => {
-                const codigo = MATERIAS.find(m => m.nombre === nota.materia)?.codigo
-                  ?? nota.materia.slice(0, 3).toUpperCase()
-                const barColor = materiaColor(nota.materia)
-                const esTendenciaPositiva = nota.media >= promedioGeneral
-
-                return (
-                  <div
-                    key={nota.id}
-                    className="flex items-center gap-3 transition-colors duration-150 cursor-default animate-slide-up"
-                    style={{
-                      animationDelay: `${idx * 50}ms`,
-                      borderBottom: idx < notas.length - 1 && idx < 4
-                        ? '1px solid rgba(255,255,255,0.04)'
-                        : 'none',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                  >
-                    {/* Barra lateral de color por materia */}
-                    <div
-                      className="self-stretch w-0.5 shrink-0 rounded-r-full my-2"
-                      style={{
-                        background: `linear-gradient(180deg, ${barColor}, ${barColor}66)`,
-                        marginLeft: '0',
-                        minWidth: '3px',
-                      }}
-                    />
-
-                    <div className="flex items-center gap-3 flex-1 min-w-0 py-3.5 pr-4">
-                      {/* Subject badge */}
-                      <div
-                        className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0"
-                        style={{
-                          background: `${barColor}15`,
-                          border: `1px solid ${barColor}28`,
-                        }}
-                      >
-                        <span className="text-xs font-bold" style={{ color: barColor }}>{codigo}</span>
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium truncate block" style={{ color: '#f1f5f9' }}>
-                          {nota.tema}
-                        </span>
-                        <span className="text-xs truncate block mt-0.5" style={{ color: '#64748b' }}>
-                          {nota.materia}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Badge tendencia */}
-                        <span
-                          className="text-2xs font-semibold px-1.5 py-0.5 rounded-md"
-                          style={{
-                            background: esTendenciaPositiva ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)',
-                            color: esTendenciaPositiva ? '#34d399' : '#fb7185',
-                          }}
-                        >
-                          {esTendenciaPositiva ? '↑' : '↓'}
-                        </span>
-
-                        {/* Nota */}
-                        <div
-                          className="px-3 py-1.5 text-sm font-bold rounded-xl tabular-nums"
-                          style={{
-                            color: gradeColor(nota.media),
-                            background: `${gradeColor(nota.media)}15`,
-                            border: `1px solid ${gradeColor(nota.media)}25`,
-                          }}
-                        >
-                          {nota.media.toFixed(1)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
 
       </div>
     </div>
