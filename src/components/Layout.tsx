@@ -9,7 +9,7 @@ import PrivateMessageToast from './PrivateMessageToast'
 
 const NAV_ITEMS = [
   { to: '/',            label: 'Inicio',      Icon: Home           },
-  { to: '/noticias',    label: 'Noticias',    Icon: Newspaper      },
+  { to: '/news',        label: 'News',        Icon: Newspaper      },
   { to: '/chat',        label: 'Chat',        Icon: MessageCircle  },
   { to: '/apuntes',     label: 'Apuntes',     Icon: FolderOpen     },
   { to: '/actividades', label: 'Actividades', Icon: ClipboardCheck },

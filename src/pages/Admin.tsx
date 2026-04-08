@@ -16,12 +16,6 @@ type AlertState = {
   confirmDestructive?: boolean
 } | null
 
-function gradeColor(n: number) {
-  if (n >= 8) return '#10b981'
-  if (n >= 6) return '#f59e0b'
-  return '#f43f5e'
-}
-
 function AdminSkeleton() {
   return (
     <div className="animate-fade-in">
@@ -328,20 +322,6 @@ export default function Admin() {
                   )}
                 </div>
                 <p className="text-xs truncate mt-0.5" style={{ color: '#4b5563' }}>{u.email}</p>
-              </div>
-
-              {/* Promedio */}
-              <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-                <span
-                  className="text-xs font-bold px-2.5 py-1 rounded-lg tabular-nums"
-                  style={{
-                    color: gradeColor(u.promedio),
-                    background: `${gradeColor(u.promedio)}12`,
-                    border: `1px solid ${gradeColor(u.promedio)}22`,
-                  }}
-                >
-                  {u.promedio.toFixed(1)}
-                </span>
               </div>
 
               {/* Role toggle */}

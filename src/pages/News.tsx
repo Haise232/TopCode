@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
 
-interface Noticia {
+interface NewsItem {
   id: string
   titulo: string
   descripcion: string
@@ -35,7 +35,7 @@ function formatFecha(iso: string): string {
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
-function NoticiasSkeleton() {
+function NewsSkeleton() {
   return (
     <div className="h-full overflow-y-auto animate-pulse">
       {/* Header skeleton */}
@@ -121,12 +121,12 @@ function NoticiasSkeleton() {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function NoticiaCard({
+function NewsCard({
   noticia,
   isAdmin,
   onDelete,
 }: {
-  noticia: Noticia
+  noticia: NewsItem
   isAdmin: boolean
   onDelete: () => void
 }) {
@@ -225,11 +225,11 @@ function NoticiaCard({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-export default function Noticias() {
+export default function News() {
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
 
-  const [noticias, setNoticias] = useState<Noticia[]>([])
+  const [items, setItems] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
@@ -243,7 +243,7 @@ export default function Noticias() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const cargarNoticias = useCallback(async () => {
+  const cargarNews = useCallback(async () => {
     setError(null)
     const { data, error: err } = await supabase
       .from('noticias')
@@ -254,12 +254,12 @@ export default function Noticias() {
       setError('No se pudieron cargar las noticias. Intenta de nuevo.')
       return
     }
-    setNoticias((data as Noticia[]) ?? [])
+    setItems((data as NewsItem[]) ?? [])
   }, [])
 
   useEffect(() => {
-    cargarNoticias().finally(() => setLoading(false))
-  }, [cargarNoticias])
+    cargarNews().finally(() => setLoading(false))
+  }, [cargarNews])
 
   function abrirModal() {
     setTitulo('')
@@ -283,36 +283,41 @@ export default function Noticias() {
     }
     setFormError(null)
     setSaving(true)
-    const { error: err } = await supabase.from('noticias').insert({
-      titulo: titulo.trim(),
-      descripcion: descripcion.trim(),
-      url_fuente: urlFuente.trim(),
-      url_imagen: urlImagen.trim() || null,
-      created_by: usuario!.id,
-    })
-    setSaving(false)
-    if (err) {
-      setFormError('Error al guardar: ' + err.message)
-      return
+    try {
+      const { error: err } = await supabase.from('noticias').insert({
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        url_fuente: urlFuente.trim(),
+        url_imagen: urlImagen.trim() || null,
+        created_by: usuario!.id,
+      })
+      if (err) {
+        setFormError('Error al guardar: ' + err.message)
+        return
+      }
+      cerrarModal()
+      await cargarNews()
+    } catch {
+      setFormError('Error de red. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
     }
-    cerrarModal()
-    await cargarNoticias()
   }
 
-  function handleEliminar(noticia: Noticia) {
+  function handleEliminar(item: NewsItem) {
     setAlert({
       title: 'Eliminar noticia',
-      message: `¿Eliminar "${noticia.titulo}"? Esta acción no se puede deshacer.`,
+      message: `¿Eliminar "${item.titulo}"? Esta acción no se puede deshacer.`,
       confirmLabel: 'Eliminar',
       confirmDestructive: true,
       onConfirm: async () => {
-        await supabase.from('noticias').delete().eq('id', noticia.id)
-        await cargarNoticias()
+        await supabase.from('noticias').delete().eq('id', item.id)
+        await cargarNews()
       },
     })
   }
 
-  if (loading) return <NoticiasSkeleton />
+  if (loading) return <NewsSkeleton />
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
@@ -341,7 +346,7 @@ export default function Noticias() {
                 Noticias
               </h1>
               <p className="text-xs" style={{ color: '#64748b' }}>
-                {noticias.length} {noticias.length === 1 ? 'noticia' : 'noticias'}
+                {items.length} {items.length === 1 ? 'noticia' : 'noticias'}
               </p>
             </div>
           </div>
@@ -380,7 +385,7 @@ export default function Noticias() {
         )}
 
         {/* Estado vacío */}
-        {!error && noticias.length === 0 && (
+        {!error && items.length === 0 && (
           <div
             className="py-16 flex flex-col items-center gap-4 text-center rounded-2xl"
             style={{
@@ -411,10 +416,10 @@ export default function Noticias() {
         )}
 
         {/* Grid de noticias */}
-        {noticias.length > 0 && (
+        {items.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {noticias.map(n => (
-              <NoticiaCard
+            {items.map(n => (
+              <NewsCard
                 key={n.id}
                 noticia={n}
                 isAdmin={isAdmin}

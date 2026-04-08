@@ -133,10 +133,10 @@ function HomeSkeleton() {
 
 const QUICK_ACTIONS = [
   {
-    label: 'Noticias',
+    label: 'News',
     desc: 'Tech',
     Icon: Newspaper,
-    to: '/noticias',
+    to: '/news',
     color: '#818cf8',
     bg: 'rgba(99,102,241,0.1)',
     border: 'rgba(99,102,241,0.25)',
