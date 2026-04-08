@@ -9,6 +9,17 @@ export interface Usuario {
   created_at: string
 }
 
+export interface Nota {
+  id: string
+  usuario_id: string
+  materia: string
+  tema: string
+  teorica: number
+  practica: number
+  media: number
+  created_at: string
+}
+
 export interface Noticia {
   id: string
   titulo: string
