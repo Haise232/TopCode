@@ -21,6 +21,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lock: (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => fn(),
   },
+  global: {
+    // Timeout explícito de 8s para todas las queries. Sin esto, una query
+    // colgada (proyecto pausado, red inestable) bloquea la UI indefinidamente.
+    fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+      fetch(url, { ...options, signal: AbortSignal.timeout(8000) }),
+  },
 })
 
 

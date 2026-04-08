@@ -226,6 +226,12 @@ export default function Home() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const bannerInputRef = useRef<HTMLInputElement>(null)
+  // Guardia de montado: evita actualizaciones de estado tras desmontar el componente
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   // Sincronizar con el perfil cuando carga el usuario
   useEffect(() => {
@@ -285,6 +291,9 @@ export default function Home() {
       supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
       supabase.from('actividades_estado').select('actividad_id').eq('usuario_id', usuario.id).eq('completada', true),
     ])
+    // Si el componente se desmontó mientras las queries estaban en vuelo, no actualizar estado
+    if (!mountedRef.current) return
+
     if (evento.data?.[0]) setProximoEvento(evento.data[0])
     else setProximoEvento(null)
 
@@ -392,16 +401,40 @@ export default function Home() {
         <div className="max-w-[1100px] mx-auto flex justify-between items-start relative">
           <div className="flex flex-col gap-1.5">
             {/* Saludo con emoji */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <span className="text-base leading-none">{emoji}</span>
-              <span className="text-sm font-medium" style={{ color: '#64748b' }}>
+              <span
+                className="text-base font-medium"
+                style={{ color: '#64748b' }}
+              >
                 {saludo},
               </span>
+              <span
+                className="inline-block w-px h-3.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+              />
             </div>
 
-            <h1 className="font-extrabold text-2xl md:text-3xl tracking-tight" style={{ color: '#f1f5f9' }}>
+            <h1
+              className="font-extrabold text-3xl md:text-4xl tracking-tight"
+              style={{
+                background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
               {usuario?.nombre ?? 'Estudiante'}
             </h1>
+            {/* Línea decorativa bajo el nombre */}
+            <div
+              style={{
+                width: 40,
+                height: 2,
+                background: 'linear-gradient(90deg, #6366f1, transparent)',
+                borderRadius: 9999,
+                marginTop: 6,
+              }}
+            />
 
             <p className="text-xs mt-0.5 capitalize" style={{ color: '#4b5563' }}>
               {fechaFormateada()}
@@ -411,26 +444,27 @@ export default function Home() {
             <div className="mt-1.5">
               {esAdmin ? (
                 <span
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
                   style={{
                     background: 'rgba(244,63,94,0.1)',
                     color: '#fb7185',
                     border: '1px solid rgba(244,63,94,0.2)',
+                    boxShadow: '0 0 12px rgba(244,63,94,0.2)',
                   }}
                 >
-                  <Shield size={10} />
+                  <Shield size={13} />
                   Admin
                 </span>
               ) : (
                 <span
-                  className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
                   style={{
                     background: 'rgba(99,102,241,0.08)',
                     color: '#818cf8',
                     border: '1px solid rgba(99,102,241,0.15)',
                   }}
                 >
-                  <GraduationCap size={10} />
+                  <GraduationCap size={13} />
                   Alumno
                 </span>
               )}
@@ -511,7 +545,7 @@ export default function Home() {
                           style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                         >
                           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
-                          <span className="text-2xs font-medium" style={{ color: '#374151' }}>Descanso</span>
+                          <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>Descanso</span>
                           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
                         </div>
                       )}
@@ -531,16 +565,24 @@ export default function Home() {
                         </div>
 
                         {/* Indicador de color */}
-                        <div
-                          className="shrink-0 rounded-full"
-                          style={{
-                            width: esCurso ? 8 : 6,
-                            height: esCurso ? 8 : 6,
-                            background: esCurso ? color : haPasado ? '#374151' : color,
-                            boxShadow: esCurso ? `0 0 6px ${color}` : 'none',
-                            transition: 'all 0.2s',
-                          }}
-                        />
+                        <div className="shrink-0 flex items-center gap-1">
+                          <div
+                            className="rounded-full"
+                            style={{
+                              width: esCurso ? 8 : 6,
+                              height: esCurso ? 8 : 6,
+                              background: esCurso ? color : haPasado ? '#374151' : color,
+                              boxShadow: esCurso ? `0 0 6px ${color}` : 'none',
+                              transition: 'all 0.2s',
+                            }}
+                          />
+                          {esCurso && (
+                            <span
+                              className="animate-pulse rounded-full inline-block"
+                              style={{ width: 4, height: 4, background: color, opacity: 0.6 }}
+                            />
+                          )}
+                        </div>
 
                         {/* Nombre */}
                         <span
@@ -586,7 +628,7 @@ export default function Home() {
             Acceso rápido
           </h2>
           <div className={`grid gap-3 grid-cols-3 ${esAdmin ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
-            {quickActions.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }) => {
+            {quickActions.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }, index) => {
               const badge = to === '/actividades' && actividadesPendientes > 0
                 ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
                 : null
@@ -594,8 +636,9 @@ export default function Home() {
               <button
                 key={to}
                 onClick={() => navigate(to)}
-                className="group relative p-4 sm:p-5 flex flex-col items-center gap-2.5 sm:gap-3 rounded-2xl transition-all duration-200 active:scale-[0.97] text-center overflow-hidden"
+                className="group relative p-4 sm:p-5 flex flex-col items-center gap-2.5 sm:gap-3 rounded-2xl transition-all duration-200 active:scale-[0.97] text-center overflow-hidden animate-fade-in"
                 style={{
+                  animationDelay: `${index * 60}ms`,
                   background: `linear-gradient(145deg, ${gradFrom}, ${gradTo}), linear-gradient(145deg, #1a1d27, #141720)`,
                   border: `1px solid rgba(255,255,255,0.06)`,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
@@ -628,18 +671,18 @@ export default function Home() {
                 )}
 
                 <div
-                  className="w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-3deg]"
+                  className="w-16 h-16 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-3deg]"
                   style={{
                     background: bg,
                     border: `1px solid ${border}`,
                     boxShadow: `0 4px 12px ${glow}`,
                   }}
                 >
-                  <Icon size={24} style={{ color }} />
+                  <Icon size={26} style={{ color }} />
                 </div>
 
                 <div>
-                  <span className="text-sm font-semibold block" style={{ color: '#f1f5f9' }}>{label}</span>
+                  <span className="text-sm font-bold block" style={{ color: '#f1f5f9' }}>{label}</span>
                   <span className="text-xs" style={{ color: '#64748b' }}>{desc}</span>
                 </div>
 
@@ -676,12 +719,12 @@ export default function Home() {
                 return (
                   <button
                     onClick={() => navigate('/actividades')}
-                    className="group w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-200"
+                    className="group w-full text-left p-5 rounded-2xl flex items-center gap-4 transition-all duration-200"
                     style={{ background: `${urgBg}, linear-gradient(145deg, #1a1d27, #141720)`, border: `1px solid ${urgBorder}`, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 20px rgba(0,0,0,0.35), 0 0 12px ${urgColor}18` }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
                   >
-                    <div className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl" style={{ background: urgBg, border: `1px solid ${urgBorder}` }}>
+                    <div className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl" style={{ background: urgBg, border: `1px solid ${urgBorder}` }}>
                       <ClipboardCheck size={18} style={{ color: urgColor }} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -712,12 +755,12 @@ export default function Home() {
               {proximoEvento && (
                 <button
                   onClick={() => navigate('/calendar')}
-                  className="group w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-200"
+                  className="group w-full text-left p-5 rounded-2xl flex items-center gap-4 transition-all duration-200"
                   style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(20,184,166,0.04) 100%), linear-gradient(145deg, #1a1d27, #141720)', border: '1px solid rgba(245,158,11,0.18)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.32)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.35), 0 0 12px rgba(245,158,11,0.1)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.18)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
                 >
-                  <div className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                  <div className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
                     <Calendar size={18} style={{ color: '#fbbf24' }} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -733,6 +776,12 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        <div className="pt-4 pb-2 flex items-center justify-center">
+          <span style={{ color: '#1f2937', fontSize: '11px', fontWeight: 500 }}>
+            TopCode © 2026
+          </span>
+        </div>
 
       </div>
     </div>

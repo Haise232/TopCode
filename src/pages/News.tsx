@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Newspaper, Plus, Trash2, ExternalLink, X, ImageOff, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -277,12 +277,22 @@ export default function News() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Guardia de montado: evita actualizaciones de estado si el usuario navega
+  // fuera antes de que la query de Supabase termine
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
   const cargarNews = useCallback(async () => {
     setError(null)
     const { data, error: err } = await supabase
       .from('noticias')
       .select('*')
       .order('created_at', { ascending: false })
+
+    if (!mountedRef.current) return
 
     if (err) {
       setError('No se pudieron cargar las noticias. Intenta de nuevo.')
