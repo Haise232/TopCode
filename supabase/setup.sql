@@ -98,12 +98,16 @@ CREATE INDEX IF NOT EXISTS idx_noticias_created_at
 -- RLS: lectura pública para usuarios autenticados; escritura solo admins
 ALTER TABLE public.noticias ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "noticias_select_authenticated"
+DROP POLICY IF EXISTS "noticias_select_authenticated" ON public.noticias;
+DROP POLICY IF EXISTS "noticias_insert_admin"         ON public.noticias;
+DROP POLICY IF EXISTS "noticias_delete_admin"         ON public.noticias;
+
+CREATE POLICY "noticias_select_authenticated"
   ON public.noticias FOR SELECT
   TO authenticated
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "noticias_insert_admin"
+CREATE POLICY "noticias_insert_admin"
   ON public.noticias FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -113,7 +117,7 @@ CREATE POLICY IF NOT EXISTS "noticias_insert_admin"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "noticias_delete_admin"
+CREATE POLICY "noticias_delete_admin"
   ON public.noticias FOR DELETE
   TO authenticated
   USING (
