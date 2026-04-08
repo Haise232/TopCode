@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Newspaper, Plus, Trash2, ExternalLink, X, ImageOff, Shield } from 'lucide-react'
+import { Newspaper, Plus, Trash2, ExternalLink, X, ImageOff, Shield, Pencil } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
@@ -125,10 +125,12 @@ function NewsCard({
   noticia,
   isAdmin,
   onDelete,
+  onEdit,
 }: {
   noticia: NewsItem
   isAdmin: boolean
   onDelete: () => void
+  onEdit: () => void
 }) {
   const [imgError, setImgError] = useState(false)
   const showImg = noticia.url_imagen && !imgError
@@ -169,21 +171,36 @@ function NewsCard({
           </div>
         )}
 
-        {/* Eliminar (admin) — top-right overlay */}
+        {/* Botones admin — top-right overlay */}
         {isAdmin && (
-          <button
-            onClick={e => { e.stopPropagation(); onDelete() }}
-            className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
-            style={{
-              background: 'rgba(15,18,25,0.8)',
-              border: '1px solid rgba(244,63,94,0.3)',
-              color: '#f43f5e',
-              backdropFilter: 'blur(6px)',
-            }}
-            aria-label="Eliminar noticia"
-          >
-            <Trash2 size={12} />
-          </button>
+          <>
+            <button
+              onClick={e => { e.stopPropagation(); onEdit() }}
+              className="absolute top-2.5 right-11 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+              style={{
+                background: 'rgba(15,18,25,0.8)',
+                border: '1px solid rgba(99,102,241,0.3)',
+                color: '#818cf8',
+                backdropFilter: 'blur(6px)',
+              }}
+              aria-label="Editar noticia"
+            >
+              <Pencil size={12} />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onDelete() }}
+              className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+              style={{
+                background: 'rgba(15,18,25,0.8)',
+                border: '1px solid rgba(244,63,94,0.3)',
+                color: '#f43f5e',
+                backdropFilter: 'blur(6px)',
+              }}
+              aria-label="Eliminar noticia"
+            >
+              <Trash2 size={12} />
+            </button>
+          </>
         )}
       </div>
 
@@ -194,7 +211,7 @@ function NewsCard({
         </h3>
 
         <p
-          className="text-sm leading-relaxed line-clamp-3 flex-1"
+          className="text-sm leading-relaxed line-clamp-5 flex-1"
           style={{ color: '#94a3b8' }}
         >
           {noticia.descripcion}
@@ -268,6 +285,7 @@ export default function News() {
   const [error, setError] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
   const [modalVisible, setModalVisible] = useState(false)
+  const [editingItem, setEditingItem] = useState<NewsItem | null>(null)
 
   // Form state
   const [titulo, setTitulo] = useState('')
@@ -305,11 +323,22 @@ export default function News() {
     cargarNews().finally(() => setLoading(false))
   }, [cargarNews])
 
-  function abrirModal() {
+  function abrirModalCrear() {
+    setEditingItem(null)
     setTitulo('')
     setDescripcion('')
     setUrlFuente('')
     setUrlImagen('')
+    setFormError(null)
+    setModalVisible(true)
+  }
+
+  function abrirModalEditar(item: NewsItem) {
+    setEditingItem(item)
+    setTitulo(item.titulo)
+    setDescripcion(item.descripcion)
+    setUrlFuente(item.url_fuente)
+    setUrlImagen(item.url_imagen ?? '')
     setFormError(null)
     setModalVisible(true)
   }
@@ -328,16 +357,32 @@ export default function News() {
     setFormError(null)
     setSaving(true)
     try {
-      const { error: err } = await supabase.from('noticias').insert({
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim(),
-        url_fuente: urlFuente.trim(),
-        url_imagen: urlImagen.trim() || null,
-        created_by: usuario!.id,
-      })
-      if (err) {
-        setFormError('Error al guardar: ' + err.message)
-        return
+      if (editingItem) {
+        const { error: err } = await supabase
+          .from('noticias')
+          .update({
+            titulo: titulo.trim(),
+            descripcion: descripcion.trim(),
+            url_fuente: urlFuente.trim(),
+            url_imagen: urlImagen.trim() || null,
+          })
+          .eq('id', editingItem.id)
+        if (err) {
+          setFormError('Error al guardar: ' + err.message)
+          return
+        }
+      } else {
+        const { error: err } = await supabase.from('noticias').insert({
+          titulo: titulo.trim(),
+          descripcion: descripcion.trim(),
+          url_fuente: urlFuente.trim(),
+          url_imagen: urlImagen.trim() || null,
+          created_by: usuario!.id,
+        })
+        if (err) {
+          setFormError('Error al guardar: ' + err.message)
+          return
+        }
       }
       cerrarModal()
       await cargarNews()
@@ -397,7 +442,7 @@ export default function News() {
 
           {isAdmin && (
             <button
-              onClick={abrirModal}
+              onClick={abrirModalCrear}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-150 active:scale-95"
               style={{
                 background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -473,6 +518,7 @@ export default function News() {
                 noticia={n}
                 isAdmin={isAdmin}
                 onDelete={() => handleEliminar(n)}
+                onEdit={() => abrirModalEditar(n)}
               />
             ))}
           </div>
@@ -529,7 +575,7 @@ export default function News() {
                       className="font-extrabold text-xl"
                       style={{ color: '#f1f5f9' }}
                     >
-                      Nueva noticia
+                      {editingItem ? 'Editar noticia' : 'Nueva noticia'}
                     </h2>
                     {/* Content-type badges */}
                     <div className="flex gap-1.5 flex-wrap mt-1">
@@ -767,7 +813,7 @@ export default function News() {
                         Guardando...
                       </span>
                     ) : (
-                      'Guardar'
+                      editingItem ? 'Guardar cambios' : 'Guardar'
                     )}
                   </button>
                 </div>
