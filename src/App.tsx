@@ -7,7 +7,7 @@ import Loading from './components/Loading'
 const Login       = lazy(() => import('./pages/Login'))
 const Register    = lazy(() => import('./pages/Register'))
 const Home        = lazy(() => import('./pages/Home'))
-const Notes       = lazy(() => import('./pages/Notes'))
+const Noticias    = lazy(() => import('./pages/Noticias'))
 const Chat        = lazy(() => import('./pages/Chat'))
 const Apuntes     = lazy(() => import('./pages/Apuntes'))
 const CalendarPage = lazy(() => import('./pages/Calendar'))
@@ -46,7 +46,7 @@ function AppRoutes() {
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
         <Route path="/"         element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/notes"    element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+        <Route path="/noticias" element={<ProtectedRoute><Noticias /></ProtectedRoute>} />
         <Route path="/chat"     element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/apuntes"  element={<ProtectedRoute><Apuntes /></ProtectedRoute>} />
         <Route path="/calendar"    element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />

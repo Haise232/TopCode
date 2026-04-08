@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  Home, ClipboardList, MessageCircle, FolderOpen, Calendar, Shield,
+  Home, Newspaper, MessageCircle, FolderOpen, Calendar, Shield,
   GraduationCap, ClipboardCheck,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -9,7 +9,7 @@ import PrivateMessageToast from './PrivateMessageToast'
 
 const NAV_ITEMS = [
   { to: '/',            label: 'Inicio',      Icon: Home           },
-  { to: '/notes',       label: 'Notas',       Icon: ClipboardList  },
+  { to: '/noticias',    label: 'Noticias',    Icon: Newspaper      },
   { to: '/chat',        label: 'Chat',        Icon: MessageCircle  },
   { to: '/apuntes',     label: 'Apuntes',     Icon: FolderOpen     },
   { to: '/actividades', label: 'Actividades', Icon: ClipboardCheck },

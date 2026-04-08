@@ -9,14 +9,13 @@ export interface Usuario {
   created_at: string
 }
 
-export interface Nota {
+export interface Noticia {
   id: string
-  usuario_id: string
-  materia: string
-  tema: string
-  teorica: number
-  practica: number
-  media: number
+  titulo: string
+  descripcion: string
+  url_fuente: string
+  url_imagen: string | null
+  created_by: string
   created_at: string
 }
 

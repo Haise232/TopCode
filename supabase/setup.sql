@@ -74,7 +74,58 @@ COMMENT ON TABLE public.notas IS
 
 
 -- ────────────────────────────────────────────────────────────
--- 1.3 Tabla: mensajes (chat público)
+-- 1.3 Tabla: noticias (sector tecnológico)
+--   Noticias del sector tech gestionadas por admins.
+--   Lectura: todos los usuarios. Escritura/borrado: solo admins.
+--   Query más frecuente: .order('created_at', desc)
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.noticias (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo      TEXT NOT NULL,
+  descripcion TEXT NOT NULL,
+  url_fuente  TEXT NOT NULL,
+  url_imagen  TEXT DEFAULT NULL,
+  created_by  UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.noticias IS
+  'Noticias del sector tecnológico añadidas por admins. url_imagen es opcional.';
+
+CREATE INDEX IF NOT EXISTS idx_noticias_created_at
+  ON public.noticias (created_at DESC);
+
+-- RLS: lectura pública para usuarios autenticados; escritura solo admins
+ALTER TABLE public.noticias ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY IF NOT EXISTS "noticias_select_authenticated"
+  ON public.noticias FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY IF NOT EXISTS "noticias_insert_admin"
+  ON public.noticias FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.usuarios
+      WHERE id = auth.uid() AND rol = 'admin'
+    )
+  );
+
+CREATE POLICY IF NOT EXISTS "noticias_delete_admin"
+  ON public.noticias FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.usuarios
+      WHERE id = auth.uid() AND rol = 'admin'
+    )
+  );
+
+
+-- ────────────────────────────────────────────────────────────
+-- 1.4 Tabla: mensajes (chat público)
 --   Chat en tiempo real accesible a todos los usuarios.
 --   Queries: .order('created_at', asc).limit(100)
 --   INSERT con usuario_id + autor (nombre desnormalizado para

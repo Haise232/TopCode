@@ -23,23 +23,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-export async function actualizarPromedio(userId: string): Promise<void> {
-  const { data: notas, error } = await supabase
-    .from('notas')
-    .select('media')
-    .eq('usuario_id', userId)
-
-  if (error || !notas) return
-
-  const promedio = notas.length > 0
-    ? notas.reduce((acc, n) => acc + n.media, 0) / notas.length
-    : 0
-
-  await supabase
-    .from('usuarios')
-    .update({ promedio: Math.round(promedio * 100) / 100 })
-    .eq('id', userId)
-}
 
 export async function subirArchivo(
   file: File,
