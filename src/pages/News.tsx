@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Newspaper, Plus, Trash2, ExternalLink, X } from 'lucide-react'
+import { Newspaper, Plus, Trash2, ExternalLink, X, ImageOff, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
@@ -223,6 +223,40 @@ function NewsCard({
   )
 }
 
+// ── Image Preview ─────────────────────────────────────────────────────────────
+
+function ImagePreview({ url }: { url: string }) {
+  const [errored, setErrored] = useState(false)
+
+  // Reset error state when URL changes
+  useEffect(() => { setErrored(false) }, [url])
+
+  return (
+    <div
+      className="mt-1.5 rounded-xl overflow-hidden"
+      style={{
+        height: '120px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.03)',
+      }}
+    >
+      {errored ? (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5">
+          <ImageOff size={22} style={{ color: '#374151' }} />
+          <span className="text-xs" style={{ color: '#4b5563' }}>No se pudo cargar la imagen</span>
+        </div>
+      ) : (
+        <img
+          src={url}
+          alt="Preview"
+          className="w-full h-full object-cover"
+          onError={() => setErrored(true)}
+        />
+      )}
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function News() {
@@ -406,10 +440,15 @@ export default function News() {
               <p className="font-semibold" style={{ color: '#f1f5f9' }}>
                 No hay noticias todavía
               </p>
-              {isAdmin && (
+              {isAdmin ? (
                 <p className="text-sm mt-1" style={{ color: '#64748b' }}>
                   Añade la primera con el botón de arriba.
                 </p>
+              ) : (
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <Shield size={12} style={{ color: '#4b5563' }} />
+                  <span className="text-xs" style={{ color: '#4b5563' }}>Solo admins pueden añadir noticias</span>
+                </div>
               )}
             </div>
           </div>
@@ -442,12 +481,20 @@ export default function News() {
 
           {/* Panel */}
           <div
-            className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-modal animate-scale-in-modal"
+            className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-modal animate-scale-in-modal overflow-hidden"
             style={{
               background: '#1a1d27',
               border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
+            {/* Accent band */}
+            <div
+              style={{
+                height: '3px',
+                background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa)',
+              }}
+            />
+
             {/* Handle mobile */}
             <div
               className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full"
@@ -456,7 +503,7 @@ export default function News() {
 
             <div className="p-6 pt-4 sm:pt-6">
               {/* Modal header */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div
                     className="w-9 h-9 flex items-center justify-center rounded-xl"
@@ -467,12 +514,30 @@ export default function News() {
                   >
                     <Newspaper size={15} style={{ color: '#818cf8' }} />
                   </div>
-                  <h2
-                    className="font-extrabold text-xl"
-                    style={{ color: '#f1f5f9' }}
-                  >
-                    Nueva noticia
-                  </h2>
+                  <div>
+                    <h2
+                      className="font-extrabold text-xl"
+                      style={{ color: '#f1f5f9' }}
+                    >
+                      Nueva noticia
+                    </h2>
+                    {/* Content-type badges */}
+                    <div className="flex gap-1.5 flex-wrap mt-1">
+                      {['Artículo', 'Repositorio', 'Herramienta', 'Video'].map(tag => (
+                        <span
+                          key={tag}
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{
+                            background: 'rgba(99,102,241,0.08)',
+                            color: '#818cf8',
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={cerrarModal}
@@ -507,8 +572,26 @@ export default function News() {
                     value={titulo}
                     onChange={e => setTitulo(e.target.value)}
                     placeholder="Ej: Nueva actualización de React 19"
-                    className="input-base"
                     autoFocus
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '0.75rem',
+                      color: '#f1f5f9',
+                      padding: '0.625rem 0.875rem',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      width: '100%',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   />
                 </div>
 
@@ -521,8 +604,27 @@ export default function News() {
                     value={descripcion}
                     onChange={e => setDescripcion(e.target.value)}
                     placeholder="Resumen de la noticia..."
-                    rows={3}
-                    className="input-base resize-none"
+                    rows={4}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '0.75rem',
+                      color: '#f1f5f9',
+                      padding: '0.625rem 0.875rem',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      width: '100%',
+                      resize: 'none',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   />
                 </div>
 
@@ -536,7 +638,25 @@ export default function News() {
                     value={urlFuente}
                     onChange={e => setUrlFuente(e.target.value)}
                     placeholder="https://..."
-                    className="input-base"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '0.75rem',
+                      color: '#f1f5f9',
+                      padding: '0.625rem 0.875rem',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      width: '100%',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   />
                 </div>
 
@@ -551,8 +671,30 @@ export default function News() {
                     value={urlImagen}
                     onChange={e => setUrlImagen(e.target.value)}
                     placeholder="https://..."
-                    className="input-base"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '0.75rem',
+                      color: '#f1f5f9',
+                      padding: '0.625rem 0.875rem',
+                      fontSize: '0.875rem',
+                      outline: 'none',
+                      width: '100%',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   />
+                  {/* Image preview */}
+                  {urlImagen.trim() && (
+                    <ImagePreview url={urlImagen.trim()} />
+                  )}
                 </div>
 
                 {/* Error de formulario */}
@@ -568,6 +710,9 @@ export default function News() {
                     {formError}
                   </p>
                 )}
+
+                {/* Campos obligatorios */}
+                <p className="text-xs" style={{ color: '#4b5563' }}>* Campos obligatorios</p>
 
                 {/* Acciones */}
                 <div className="flex gap-3 mt-1">
