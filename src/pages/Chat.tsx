@@ -6,7 +6,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { usePublicMensajes, usePrivateMensajes } from '../hooks/useMensajes'
-import { Usuario } from '../lib/types'
+import { Usuario, UsuarioPublico } from '../lib/types'
 
 type SubTab = 'publico' | 'privado'
 
@@ -379,7 +379,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
 }
 
 // ── Private chat ─────────────────────────────────────────────────────────────
-function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: Usuario }) {
+function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico }) {
   const { mensajes, loading, enviar: enviarMensaje } = usePrivateMensajes({ meId: usuario.id, peerId: peer.id })
   const [texto, setTexto] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -506,28 +506,28 @@ function UserList({
   compact = false,
 }: {
   usuario: Usuario
-  onSelect: (u: Usuario) => void
+  onSelect: (u: UsuarioPublico) => void
   selectedId?: string | null
   compact?: boolean
 }) {
-  const [users, setUsers] = useState<Usuario[]>([])
+  const [users, setUsers] = useState<UsuarioPublico[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
 
   useEffect(() => {
     supabase
-      .from('usuarios')
-      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, created_at')
+      .from('usuarios_publicos')
+      .select('id, nombre, avatar_url')
       .neq('id', usuario.id)
       .order('nombre')
-      .then(({ data }) => { if (data) setUsers(data as Usuario[]); setLoading(false) })
+      .then(({ data }) => { if (data) setUsers(data as UsuarioPublico[]); setLoading(false) })
   }, [usuario.id])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return users
     const q = query.toLowerCase()
     return users.filter(u =>
-      u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      u.nombre.toLowerCase().includes(q)
     )
   }, [users, query])
 
@@ -607,27 +607,10 @@ function UserList({
                     >
                       {u.nombre}
                     </p>
-                    {!compact && (
-                      <p className="text-xs truncate mt-0.5" style={{ color: '#374151' }}>{u.email}</p>
-                    )}
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span
-                      className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={u.rol === 'admin' ? {
-                        background: 'rgba(99,102,241,0.12)',
-                        color: '#818cf8',
-                        border: '1px solid rgba(99,102,241,0.22)',
-                      } : {
-                        background: 'rgba(20,184,166,0.08)',
-                        color: '#2dd4bf',
-                        border: '1px solid rgba(20,184,166,0.18)',
-                      }}
-                    >
-                      {u.rol === 'admin' ? 'Admin' : 'Alumno'}
-                    </span>
-                    {isSelected && <ChevronRight size={12} style={{ color: '#14b8a6' }} />}
-                  </div>
+                  {isSelected && (
+                    <ChevronRight size={12} style={{ color: '#14b8a6', flexShrink: 0 }} />
+                  )}
                 </button>
               )
             })}
@@ -649,8 +632,8 @@ function DesktopSidebar({
   usuario: Usuario
   subTab: SubTab
   setSubTab: (t: SubTab) => void
-  selectedUser: Usuario | null
-  onSelectUser: (u: Usuario) => void
+  selectedUser: UsuarioPublico | null
+  onSelectUser: (u: UsuarioPublico) => void
 }) {
   return (
     <div
@@ -744,7 +727,7 @@ function MobileTabBar({
 }: {
   subTab: SubTab
   setSubTab: (t: SubTab) => void
-  selectedUser: Usuario | null
+  selectedUser: UsuarioPublico | null
   onBack: () => void
 }) {
   return (
@@ -851,7 +834,7 @@ const globalStyles = `
 export default function Chat() {
   const { usuario } = useAuth()
   const [subTab, setSubTab] = useState<SubTab>('publico')
-  const [selectedUser, setSelectedUser] = useState<Usuario | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UsuarioPublico | null>(null)
 
   if (!usuario) return null
 

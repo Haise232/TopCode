@@ -10,6 +10,14 @@ export interface Usuario {
   created_at: string
 }
 
+// Perfil público: solo los campos expuestos por la vista usuarios_publicos
+export interface UsuarioPublico {
+  id: string
+  nombre: string
+  avatar_url: string | null
+  rol: 'alumno' | 'admin'
+}
+
 export interface Nota {
   id: string
   usuario_id: string

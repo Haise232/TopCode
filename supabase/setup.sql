@@ -541,14 +541,33 @@ GRANT EXECUTE ON FUNCTION public.recalcular_promedio(UUID) TO authenticated;
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "usuarios_select_all"    ON public.usuarios;
+DROP POLICY IF EXISTS "usuarios_select_self"   ON public.usuarios;
+DROP POLICY IF EXISTS "usuarios_select_admin"  ON public.usuarios;
 DROP POLICY IF EXISTS "usuarios_insert_own"    ON public.usuarios;
 DROP POLICY IF EXISTS "usuarios_update_own"    ON public.usuarios;
 DROP POLICY IF EXISTS "usuarios_update_admin"  ON public.usuarios;
 
--- Todos los usuarios autenticados ven la lista completa
--- (necesario para Chat.tsx UserList y Admin.tsx)
-CREATE POLICY "usuarios_select_all" ON public.usuarios
-  FOR SELECT USING (auth.role() = 'authenticated');
+-- Cada usuario ve solo su propia fila completa
+CREATE POLICY "usuarios_select_self" ON public.usuarios
+  FOR SELECT USING (auth.uid() = id);
+
+-- Los admins ven todas las filas
+CREATE POLICY "usuarios_select_admin" ON public.usuarios
+  FOR SELECT USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+-- Vista pública con solo los campos no-sensibles para el chat
+-- security_invoker=off → usa permisos del owner (postgres), ignora RLS
+-- Así cualquier alumno autenticado puede ver nombre+avatar de otros usuarios
+-- sin acceder a email, rol, promedio ni es_superadmin.
+DROP VIEW IF EXISTS public.usuarios_publicos;
+CREATE VIEW public.usuarios_publicos
+  WITH (security_invoker = off)
+AS
+  SELECT id, nombre, avatar_url, rol FROM public.usuarios;
+REVOKE ALL ON public.usuarios_publicos FROM anon, authenticated;
+GRANT SELECT ON public.usuarios_publicos TO authenticated;
 
 -- Solo el trigger SECURITY DEFINER inserta en producción,
 -- pero esta política cubre el caso de inserción directa.
@@ -571,10 +590,15 @@ CREATE POLICY "usuarios_update_own" ON public.usuarios
 
 -- Los admins pueden actualizar cualquier fila
 -- (cambio de rol desde Admin.tsx)
--- IMPORTANTE: el subquery usa la PK de usuarios → muy rápido.
+-- WITH CHECK impide que un admin escale a es_superadmin=true.
 CREATE POLICY "usuarios_update_admin" ON public.usuarios
-  FOR UPDATE USING (
+  FOR UPDATE
+  USING (
     (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  )
+  WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+    AND es_superadmin = (SELECT es_superadmin FROM public.usuarios WHERE id = usuarios.id)
   );
 
 
