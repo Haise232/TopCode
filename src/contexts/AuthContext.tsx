@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, created_at')
+      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
       .eq('id', userId)
       .single()
 
@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // PGRST116 = no existe fila para este usuario en la tabla `usuarios`.
-    // Creamos el registro automáticamente para no dejar al usuario bloqueado.
-    if (error?.code === 'PGRST116' || !data) {
+    // Solo hacemos upsert en este caso; cualquier otro error no debe crear filas.
+    if (error?.code === 'PGRST116') {
       const nombre = (userMeta?.nombre as string | undefined)
         ?? (userMeta?.full_name as string | undefined)
         ?? (userEmail?.split('@')[0] ?? 'Usuario')
@@ -87,21 +87,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatar_url: null,
           rol: 'alumno',
         })
-        .select()
+        .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
         .single()
 
       if (currentFetch !== fetchCountRef.current) return
 
-      const result = upserted && !upsertError ? (upserted as Usuario) : null
+      if (upserted && !upsertError) {
+        setCachedUsuario(upserted as Usuario)
+        setUsuario(upserted as Usuario)
+        setLoading(false)
+        return
+      }
+
+      // El upsert falló: reintentar un SELECT por si la fila ya existía (race condition)
+      const { data: retry } = await supabase
+        .from('usuarios')
+        .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
+        .eq('id', userId)
+        .single()
+
+      if (currentFetch !== fetchCountRef.current) return
+
+      const result = (retry as Usuario) ?? null
       setCachedUsuario(result)
       setUsuario(result)
       setLoading(false)
       return
     }
 
-    // Cualquier otro error (red, RLS, etc.)
-    setCachedUsuario(null)
-    setUsuario(null)
+    // Cualquier otro error (red, RLS transitorio, etc.): reintento único antes de rendir
+    const { data: retry } = await supabase
+      .from('usuarios')
+      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
+      .eq('id', userId)
+      .single()
+
+    if (currentFetch !== fetchCountRef.current) return
+
+    const result = (retry as Usuario) ?? null
+    setCachedUsuario(result)
+    setUsuario(result)
     setLoading(false)
   }, [])
 
