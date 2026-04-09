@@ -8,7 +8,8 @@ import {
 import { supabase, eliminarArchivoStorage } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EventoCalendario, Actividad } from '../lib/types'
-import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
+import { SkeletonBox, SkeletonCard, SkeletonSchedule, SkeletonQuickActions } from '../components/Skeleton'
+import { cacheGet, cacheSet, cacheInvalidatePrefix } from '../lib/cache'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,7 @@ function enMinutos(hora: string): number {
 function HomeSkeleton() {
   return (
     <div className="animate-fade-in">
+      {/* Hero header skeleton */}
       <div
         className="px-4 md:px-6 py-8"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
@@ -105,16 +107,16 @@ function HomeSkeleton() {
           <SkeletonBox className="h-10 w-10 shimmer rounded-xl" />
         </div>
       </div>
+
       <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map(i => (
-            <SkeletonCard key={i} className="flex flex-col items-center gap-3 py-6">
-              <SkeletonBox className="h-11 w-11 shimmer rounded-xl" />
-              <SkeletonBox className="h-3 w-14 shimmer" />
-            </SkeletonCard>
-          ))}
-        </div>
-        {[1, 2, 3].map(i => (
+        {/* Horario — 6 filas que reflejan la cantidad real de clases diarias */}
+        <SkeletonSchedule rows={6} />
+
+        {/* Acceso rápido — 5 cards (alumno), 6 si admin */}
+        <SkeletonQuickActions count={5} />
+
+        {/* Próximamente: actividad + evento */}
+        {[1, 2].map(i => (
           <SkeletonCard key={i} className="flex items-center gap-3 py-4">
             <SkeletonBox className="h-10 w-10 shrink-0 shimmer rounded-xl" />
             <div className="flex-1 flex flex-col gap-2">
@@ -283,14 +285,37 @@ export default function Home() {
     refreshUsuario()
   }
 
-  const cargarDatos = useCallback(async () => {
+  const cargarDatos = useCallback(async (forzar = false) => {
     if (!usuario) return
     const now = new Date().toISOString()
+    const hoy = now.slice(0, 10)
+
+    // Claves de caché para datos globales (no dependen del usuario)
+    const CACHE_EVENTO = 'home:proximo-evento'
+    const CACHE_ACTS   = 'home:actividades-futuras'
+
+    // Si se fuerza un refresh (botón manual), invalidar caché global
+    if (forzar) cacheInvalidatePrefix('home:')
+
+    // Leer caché para las dos queries globales; si hay miss, ir a Supabase
+    const cachedEvento = cacheGet<EventoCalendario[]>(CACHE_EVENTO)
+    const cachedActs   = cacheGet<Actividad[]>(CACHE_ACTS)
+
     const [evento, acts, estados] = await Promise.all([
-      supabase.from('eventos').select('*').gte('fecha', new Date().toISOString().slice(0, 10)).order('fecha', { ascending: true }).limit(1),
-      supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
+      cachedEvento !== null
+        ? Promise.resolve({ data: cachedEvento, error: null })
+        : supabase.from('eventos').select('*').gte('fecha', hoy).order('fecha', { ascending: true }).limit(1),
+      cachedActs !== null
+        ? Promise.resolve({ data: cachedActs, error: null })
+        : supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
+      // actividades_estado es usuario-específico: siempre fresco
       supabase.from('actividades_estado').select('actividad_id').eq('usuario_id', usuario.id).eq('completada', true),
     ])
+
+    // Guardar en caché si vinieron de red (no de caché previa)
+    if (cachedEvento === null && evento.data) cacheSet(CACHE_EVENTO, evento.data)
+    if (cachedActs   === null && acts.data)   cacheSet(CACHE_ACTS,   acts.data)
+
     // Si el componente se desmontó mientras las queries estaban en vuelo, no actualizar estado
     if (!mountedRef.current) return
 
@@ -311,7 +336,7 @@ export default function Home() {
 
   async function handleRefresh() {
     setRefreshing(true)
-    await cargarDatos()
+    await cargarDatos(true)
     setRefreshing(false)
   }
 
@@ -399,76 +424,93 @@ export default function Home() {
         />
 
         <div className="max-w-[1100px] mx-auto flex justify-between items-start relative">
-          <div className="flex flex-col gap-1.5">
-            {/* Saludo con emoji */}
-            <div className="flex items-center gap-2">
-              <span className="text-base leading-none">{emoji}</span>
-              <span
-                className="text-base font-medium"
-                style={{ color: '#64748b' }}
-              >
-                {saludo},
-              </span>
-              <span
-                className="inline-block w-px h-3.5 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.1)' }}
-              />
+          <div className="flex flex-col gap-1">
+            {/* Saludo + badge de rol en la misma línea */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm leading-none">{emoji}</span>
+                <span
+                  className="text-sm font-medium tracking-wide uppercase"
+                  style={{ color: '#4b5563', letterSpacing: '0.06em' }}
+                >
+                  {saludo}
+                </span>
+              </div>
+              {/* Separador puntual */}
+              <span className="w-1 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', display: 'inline-block' }} />
+              {esAdmin ? (
+                <span
+                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(244,63,94,0.12)',
+                    color: '#fb7185',
+                    border: '1px solid rgba(244,63,94,0.22)',
+                    boxShadow: '0 0 10px rgba(244,63,94,0.18)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  <Shield size={10} />
+                  ADMIN
+                </span>
+              ) : (
+                <span
+                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(99,102,241,0.1)',
+                    color: '#818cf8',
+                    border: '1px solid rgba(99,102,241,0.18)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  <GraduationCap size={10} />
+                  ALUMNO
+                </span>
+              )}
             </div>
 
             <h1
-              className="font-extrabold text-3xl md:text-4xl tracking-tight"
+              className="font-extrabold text-3xl md:text-4xl tracking-tight mt-1"
               style={{
-                background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
+                background: 'linear-gradient(135deg, #f1f5f9 30%, #818cf8 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
             >
               {usuario?.nombre ?? 'Estudiante'}
             </h1>
-            {/* Línea decorativa bajo el nombre */}
-            <div
-              style={{
-                width: 40,
-                height: 2,
-                background: 'linear-gradient(90deg, #6366f1, transparent)',
-                borderRadius: 9999,
-                marginTop: 6,
-              }}
-            />
 
-            <p className="text-xs mt-0.5 capitalize" style={{ color: '#4b5563' }}>
+            {/* Separador decorativo con gradiente de color primario */}
+            <div className="flex items-center gap-2 mt-1.5">
+              <div
+                style={{
+                  width: 32,
+                  height: 2,
+                  background: 'linear-gradient(90deg, #6366f1, #818cf8)',
+                  borderRadius: 9999,
+                }}
+              />
+              <div
+                style={{
+                  width: 6,
+                  height: 6,
+                  background: '#6366f1',
+                  borderRadius: 9999,
+                  opacity: 0.5,
+                }}
+              />
+            </div>
+
+            {/* Fecha con icono sutil */}
+            <p
+              className="text-xs mt-1.5 capitalize flex items-center gap-1.5"
+              style={{ color: '#374151' }}
+            >
+              <span
+                className="inline-block w-1 h-1 rounded-full"
+                style={{ background: 'rgba(99,102,241,0.5)' }}
+              />
               {fechaFormateada()}
             </p>
-
-            {/* Badge de rol */}
-            <div className="mt-1.5">
-              {esAdmin ? (
-                <span
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-                  style={{
-                    background: 'rgba(244,63,94,0.1)',
-                    color: '#fb7185',
-                    border: '1px solid rgba(244,63,94,0.2)',
-                    boxShadow: '0 0 12px rgba(244,63,94,0.2)',
-                  }}
-                >
-                  <Shield size={13} />
-                  Admin
-                </span>
-              ) : (
-                <span
-                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
-                  style={{
-                    background: 'rgba(99,102,241,0.08)',
-                    color: '#818cf8',
-                    border: '1px solid rgba(99,102,241,0.15)',
-                  }}
-                >
-                  <GraduationCap size={13} />
-                  Alumno
-                </span>
-              )}
-            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -550,69 +592,95 @@ export default function Home() {
                         </div>
                       )}
                       <div
-                        className="flex items-center gap-3 px-4 py-3 transition-colors duration-150"
+                        className="relative flex items-center gap-3 px-4 py-3 transition-all duration-200"
                         style={{
                           borderTop: idx > 0 && !hayDescanso ? '1px solid rgba(255,255,255,0.04)' : undefined,
-                          background: esCurso ? 'rgba(99,102,241,0.06)' : 'transparent',
-                          opacity: haPasado ? 0.35 : 1,
+                          background: esCurso
+                            ? `linear-gradient(90deg, ${color}12 0%, ${color}04 60%, transparent 100%)`
+                            : 'transparent',
+                          opacity: haPasado ? 0.32 : 1,
                         }}
                       >
-                        {/* Hora */}
-                        <div className="shrink-0 text-right" style={{ width: '42px' }}>
-                          <span className="text-xs font-mono" style={{ color: esCurso ? '#818cf8' : '#4b5563' }}>
+                        {/* Borde izquierdo de color de materia — solo en clase activa */}
+                        {esCurso && (
+                          <div
+                            className="absolute left-0 top-1.5 bottom-1.5 rounded-r-full"
+                            style={{
+                              width: 3,
+                              background: `linear-gradient(180deg, ${color}, ${color}77)`,
+                              boxShadow: `0 0 8px ${color}88`,
+                            }}
+                          />
+                        )}
+
+                        {/* Bloque de hora: inicio + fin apilados */}
+                        <div className="shrink-0 flex flex-col items-end" style={{ width: '46px' }}>
+                          <span
+                            className="text-xs font-mono font-semibold leading-tight"
+                            style={{ color: esCurso ? '#f1f5f9' : '#4b5563' }}
+                          >
                             {clase.inicio}
+                          </span>
+                          <span
+                            className="text-2xs font-mono leading-tight"
+                            style={{ color: esCurso ? `${color}99` : '#2d3748' }}
+                          >
+                            {clase.fin}
                           </span>
                         </div>
 
-                        {/* Indicador de color */}
-                        <div className="shrink-0 flex items-center gap-1">
+                        {/* Indicador de color puntual */}
+                        <div className="shrink-0 flex flex-col items-center gap-0.5">
                           <div
-                            className="rounded-full"
+                            className="rounded-full transition-all duration-200"
                             style={{
-                              width: esCurso ? 8 : 6,
-                              height: esCurso ? 8 : 6,
-                              background: esCurso ? color : haPasado ? '#374151' : color,
-                              boxShadow: esCurso ? `0 0 6px ${color}` : 'none',
-                              transition: 'all 0.2s',
+                              width: esCurso ? 9 : 6,
+                              height: esCurso ? 9 : 6,
+                              background: haPasado ? '#374151' : color,
+                              boxShadow: esCurso ? `0 0 8px ${color}, 0 0 16px ${color}44` : 'none',
                             }}
                           />
                           {esCurso && (
-                            <span
-                              className="animate-pulse rounded-full inline-block"
-                              style={{ width: 4, height: 4, background: color, opacity: 0.6 }}
+                            <div
+                              className="animate-pulse rounded-full"
+                              style={{ width: 3, height: 3, background: color, opacity: 0.5 }}
                             />
                           )}
                         </div>
 
-                        {/* Nombre */}
-                        <span
-                          className="flex-1 text-sm truncate"
-                          style={{
-                            color: esCurso ? '#f1f5f9' : haPasado ? '#4b5563' : '#94a3b8',
-                            fontWeight: esCurso ? 600 : 400,
-                          }}
-                        >
-                          {clase.materia}
-                        </span>
+                        {/* Nombre de la materia */}
+                        <div className="flex-1 min-w-0">
+                          <span
+                            className="text-sm truncate block"
+                            style={{
+                              color: esCurso ? '#f1f5f9' : haPasado ? '#374151' : '#94a3b8',
+                              fontWeight: esCurso ? 700 : 400,
+                            }}
+                          >
+                            {clase.materia}
+                          </span>
+                          {esCurso && (
+                            <span
+                              className="text-2xs font-semibold"
+                              style={{ color, opacity: 0.8 }}
+                            >
+                              En curso
+                            </span>
+                          )}
+                        </div>
 
                         {/* Badge código */}
                         <span
                           className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg"
                           style={{
-                            background: esCurso ? `${color}22` : 'rgba(255,255,255,0.04)',
+                            background: esCurso ? `${color}20` : 'rgba(255,255,255,0.04)',
                             color: esCurso ? color : '#374151',
-                            border: `1px solid ${esCurso ? `${color}33` : 'rgba(255,255,255,0.06)'}`,
+                            border: `1px solid ${esCurso ? `${color}40` : 'rgba(255,255,255,0.05)'}`,
+                            boxShadow: esCurso ? `0 0 6px ${color}30` : 'none',
                           }}
                         >
                           {clase.codigo}
                         </span>
-
-                        {/* Fin de la clase */}
-                        <div className="shrink-0 text-right" style={{ width: '42px' }}>
-                          <span className="text-xs font-mono" style={{ color: '#374151' }}>
-                            {clase.fin}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   )
@@ -624,9 +692,12 @@ export default function Home() {
 
         {/* ── Quick access ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-            Acceso rápido
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+              Acceso rápido
+            </h2>
+            <div className="h-px flex-1 mx-3" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }} />
+          </div>
           <div className={`grid gap-3 grid-cols-3 ${esAdmin ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
             {quickActions.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }, index) => {
               const badge = to === '/actividades' && actividadesPendientes > 0
@@ -636,59 +707,71 @@ export default function Home() {
               <button
                 key={to}
                 onClick={() => navigate(to)}
-                className="group relative p-4 sm:p-5 flex flex-col items-center gap-2.5 sm:gap-3 rounded-2xl transition-all duration-200 active:scale-[0.97] text-center overflow-hidden animate-fade-in"
+                className="group relative flex flex-col items-center gap-2 rounded-2xl transition-all duration-200 active:scale-[0.96] text-center overflow-hidden animate-fade-in"
                 style={{
                   animationDelay: `${index * 60}ms`,
-                  background: `linear-gradient(145deg, ${gradFrom}, ${gradTo}), linear-gradient(145deg, #1a1d27, #141720)`,
-                  border: `1px solid rgba(255,255,255,0.06)`,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                  padding: '18px 12px 14px',
+                  background: `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 50%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, #1c1f2e, #141720)`,
+                  border: `1px solid rgba(255,255,255,0.07)`,
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement
-                  el.style.transform = 'translateY(-3px) scale(1.02)'
+                  el.style.transform = 'translateY(-4px) scale(1.02)'
                   el.style.borderColor = border
-                  el.style.boxShadow = `0 12px 28px rgba(0,0,0,0.4), 0 0 0 1px ${border}, 0 0 20px ${glow}`
+                  el.style.boxShadow = `0 16px 32px rgba(0,0,0,0.45), 0 0 0 1px ${border}, 0 0 24px ${glow}`
+                  el.style.background = `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 60%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, #1c1f2e, #141720)`
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement
                   el.style.transform = 'translateY(0) scale(1)'
-                  el.style.borderColor = 'rgba(255,255,255,0.06)'
-                  el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)'
+                  el.style.borderColor = 'rgba(255,255,255,0.07)'
+                  el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
                 }}
               >
+                {/* Shimmer de fondo al hover — línea diagonal sutil */}
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
+                  }}
+                />
+
                 {/* Badge de notificación */}
                 {badge && (
                   <div
-                    className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center rounded-full text-2xs font-bold"
+                    className="absolute top-2.5 right-2.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-2xs font-bold px-1"
                     style={{
                       background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
                       color: '#fff',
-                      boxShadow: '0 2px 6px rgba(244,63,94,0.4)',
+                      boxShadow: '0 2px 8px rgba(244,63,94,0.5)',
                     }}
                   >
                     {badge}
                   </div>
                 )}
 
+                {/* Icono con fondo glassmorphism */}
                 <div
-                  className="w-16 h-16 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-3deg]"
+                  className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg]"
                   style={{
-                    background: bg,
+                    background: `linear-gradient(135deg, ${color}1a, ${color}08)`,
                     border: `1px solid ${border}`,
-                    boxShadow: `0 4px 12px ${glow}`,
+                    boxShadow: `0 4px 16px ${glow}, inset 0 1px 0 rgba(255,255,255,0.08)`,
                   }}
                 >
-                  <Icon size={26} style={{ color }} />
+                  <Icon size={24} style={{ color }} />
                 </div>
 
-                <div>
-                  <span className="text-sm font-bold block" style={{ color: '#f1f5f9' }}>{label}</span>
-                  <span className="text-xs" style={{ color: '#64748b' }}>{desc}</span>
+                <div className="flex flex-col items-center gap-0.5 mt-0.5">
+                  <span className="text-sm font-bold leading-tight" style={{ color: '#e2e8f0' }}>{label}</span>
+                  <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>{desc}</span>
                 </div>
 
+                {/* Flecha inferior derecha al hover */}
                 <ArrowUpRight
-                  size={12}
-                  className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-60 transition-opacity duration-200"
+                  size={11}
+                  className="absolute bottom-2.5 right-2.5 opacity-0 group-hover:opacity-50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                   style={{ color }}
                 />
               </button>
@@ -700,9 +783,12 @@ export default function Home() {
         {/* ── Próxima actividad + Próximo evento ──────────────────────────── */}
         {(proximaActividad || proximoEvento) && (
           <div className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
-              Próximamente
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0" style={{ color: '#4b5563' }}>
+                Próximamente
+              </h2>
+              <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }} />
+            </div>
             <div className="flex flex-col gap-2.5">
 
               {/* Próxima actividad pendiente */}
@@ -716,63 +802,148 @@ export default function Home() {
                   ? `${Math.floor(diff / 3600000)}h restantes`
                   : dias < 2 ? 'Mañana'
                   : `En ${Math.floor(dias)} días`
+                const fechaEvento = new Date(proximaActividad.fecha_entrega)
                 return (
                   <button
                     onClick={() => navigate('/actividades')}
-                    className="group w-full text-left p-5 rounded-2xl flex items-center gap-4 transition-all duration-200"
-                    style={{ background: `${urgBg}, linear-gradient(145deg, #1a1d27, #141720)`, border: `1px solid ${urgBorder}`, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 20px rgba(0,0,0,0.35), 0 0 12px ${urgColor}18` }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
+                    className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden"
+                    style={{
+                      background: `linear-gradient(135deg, ${urgBg}, rgba(20,23,32,0.0) 70%), linear-gradient(145deg, #1c1f2e, #141720)`,
+                      border: `1px solid ${urgBorder}`,
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                    }}
+                    onMouseEnter={e => {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.transform = 'translateY(-2px)'
+                      el.style.boxShadow = `0 10px 24px rgba(0,0,0,0.4), 0 0 16px ${urgColor}18`
+                    }}
+                    onMouseLeave={e => {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.transform = 'translateY(0)'
+                      el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
+                    }}
                   >
-                    <div className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl" style={{ background: urgBg, border: `1px solid ${urgBorder}` }}>
-                      <ClipboardCheck size={18} style={{ color: urgColor }} />
+                    {/* Badge de fecha — columna izquierda */}
+                    <div
+                      className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5"
+                      style={{
+                        background: `linear-gradient(180deg, ${urgColor}18, ${urgColor}08)`,
+                        borderRight: `1px solid ${urgBorder}`,
+                        minWidth: '58px',
+                      }}
+                    >
+                      <span className="text-xs font-black leading-none uppercase" style={{ color: urgColor }}>
+                        {fechaEvento.toLocaleDateString('es', { month: 'short' })}
+                      </span>
+                      <span className="text-2xl font-black leading-none" style={{ color: urgColor }}>
+                        {fechaEvento.getDate()}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <span className="text-2xs font-semibold uppercase tracking-wider" style={{ color: urgColor }}>
-                          Actividad pendiente
-                        </span>
-                        {proximaActividad.materia && (
-                          <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full" style={{ background: `${urgColor}18`, color: urgColor, border: `1px solid ${urgColor}28` }}>
-                            {proximaActividad.materia}
-                          </span>
-                        )}
+
+                    {/* Contenido principal */}
+                    <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3.5">
+                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl" style={{ background: urgBg, border: `1px solid ${urgBorder}` }}>
+                        <ClipboardCheck size={16} style={{ color: urgColor }} />
                       </div>
-                      <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>
-                        {proximaActividad.titulo}
-                      </p>
-                      <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#64748b' }}>
-                        <Clock size={10} />
-                        {label} · {new Date(proximaActividad.fecha_entrega).toLocaleDateString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span
+                            className="text-2xs font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: `${urgColor}18`, color: urgColor, border: `1px solid ${urgColor}28` }}
+                          >
+                            {label}
+                          </span>
+                          {proximaActividad.materia && (
+                            <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>
+                              {proximaActividad.materia}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>
+                          {proximaActividad.titulo}
+                        </p>
+                        <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#4b5563' }}>
+                          <Clock size={9} />
+                          {fechaEvento.toLocaleDateString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity" style={{ color: urgColor }} />
                     </div>
-                    <ChevronRight size={16} className="shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: urgColor }} />
                   </button>
                 )
               })()}
 
               {/* Próximo evento */}
-              {proximoEvento && (
-                <button
-                  onClick={() => navigate('/calendar')}
-                  className="group w-full text-left p-5 rounded-2xl flex items-center gap-4 transition-all duration-200"
-                  style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(20,184,166,0.04) 100%), linear-gradient(145deg, #1a1d27, #141720)', border: '1px solid rgba(245,158,11,0.18)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.32)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.35), 0 0 12px rgba(245,158,11,0.1)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,158,11,0.18)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)' }}
-                >
-                  <div className="w-12 h-12 shrink-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
-                    <Calendar size={18} style={{ color: '#fbbf24' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-2xs font-semibold uppercase tracking-wider block mb-0.5" style={{ color: '#fbbf24' }}>Próximo evento</span>
-                    <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>{proximoEvento.titulo}</p>
-                    <p className="text-xs mt-0.5 truncate capitalize" style={{ color: '#64748b' }}>
-                      {new Date(proximoEvento.fecha + 'T00:00:00').toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </p>
-                  </div>
-                  <ChevronRight size={16} className="shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: '#fbbf24' }} />
-                </button>
-              )}
+              {proximoEvento && (() => {
+                const fechaEvt = new Date(proximoEvento.fecha + 'T00:00:00')
+                const diffDias = Math.ceil((fechaEvt.getTime() - Date.now()) / 86400000)
+                const evtLabel = diffDias <= 0 ? 'Hoy' : diffDias === 1 ? 'Mañana' : `En ${diffDias} días`
+                return (
+                  <button
+                    onClick={() => navigate('/calendar')}
+                    className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(245,158,11,0.07), rgba(20,23,32,0.0) 70%), linear-gradient(145deg, #1c1f2e, #141720)',
+                      border: '1px solid rgba(245,158,11,0.2)',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                    }}
+                    onMouseEnter={e => {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.transform = 'translateY(-2px)'
+                      el.style.borderColor = 'rgba(245,158,11,0.35)'
+                      el.style.boxShadow = '0 10px 24px rgba(0,0,0,0.4), 0 0 16px rgba(245,158,11,0.12)'
+                    }}
+                    onMouseLeave={e => {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.transform = 'translateY(0)'
+                      el.style.borderColor = 'rgba(245,158,11,0.2)'
+                      el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    {/* Badge de fecha — columna izquierda */}
+                    <div
+                      className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(245,158,11,0.18), rgba(245,158,11,0.07))',
+                        borderRight: '1px solid rgba(245,158,11,0.2)',
+                        minWidth: '58px',
+                      }}
+                    >
+                      <span className="text-xs font-black leading-none uppercase" style={{ color: '#fbbf24' }}>
+                        {fechaEvt.toLocaleDateString('es', { month: 'short' })}
+                      </span>
+                      <span className="text-2xl font-black leading-none" style={{ color: '#fbbf24' }}>
+                        {fechaEvt.getDate()}
+                      </span>
+                    </div>
+
+                    {/* Contenido principal */}
+                    <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3.5">
+                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                        <Calendar size={16} style={{ color: '#fbbf24' }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span
+                            className="text-2xs font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}
+                          >
+                            {evtLabel}
+                          </span>
+                          <span className="text-2xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                            Evento
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>{proximoEvento.titulo}</p>
+                        <p className="text-xs mt-0.5 capitalize" style={{ color: '#4b5563' }}>
+                          {fechaEvt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                      </div>
+                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity" style={{ color: '#fbbf24' }} />
+                    </div>
+                  </button>
+                )
+              })()}
             </div>
           </div>
         )}

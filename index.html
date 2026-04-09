@@ -9,6 +9,13 @@
     <meta name="theme-color" content="#09090b" />
     <meta name="robots" content="noindex, nofollow" />
     <title>TopCode</title>
+    <!--
+      Preconnect al proyecto Supabase: el plugin de Vite inyecta el hint exacto
+      (con el slug del proyecto) durante el build cuando VITE_SUPABASE_URL está
+      definida. Las líneas de abajo cubren el DNS compartido de la plataforma
+      y sirven de fallback si el build corre sin la variable de entorno.
+    -->
+    <link rel="dns-prefetch" href="https://supabase.co" />
   </head>
   <body>
     <div id="root"></div>

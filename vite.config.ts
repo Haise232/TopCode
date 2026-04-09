@@ -1,36 +1,75 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
 
-  base: '/',
+  // Extraer el origen del host de Supabase desde la variable de entorno.
+  // Ej: "https://xyzabc.supabase.co" → origin = "https://xyzabc.supabase.co"
+  let supabaseOrigin: string | null = null
+  try {
+    if (env.VITE_SUPABASE_URL) {
+      supabaseOrigin = new URL(env.VITE_SUPABASE_URL).origin
+    }
+  } catch { /* URL inválida — se omiten los hints */ }
 
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-    sourcemap: false,
-    chunkSizeWarningLimit: 600,
+  // Plugin que inyecta <link rel="preconnect"> en el <head> en tiempo de build.
+  const preconnectPlugin = {
+    name: 'vite-plugin-preconnect',
+    transformIndexHtml(html: string) {
+      if (!supabaseOrigin) return html
+      const hints = [
+        // API REST + Auth + Realtime
+        `  <link rel="preconnect" href="${supabaseOrigin}" crossorigin />`,
+        // Storage CDN — mismo origen, pero la petición va a /storage/v1/object
+        // El DNS es idéntico, así que un solo preconnect basta.
+      ].join('\n')
+      return html.replace('</head>', `${hints}\n  </head>`)
+    },
+  }
 
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vendor-react':    ['react', 'react-dom'],
-          'vendor-router':   ['react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-icons':    ['lucide-react'],
+  return {
+    plugins: [react(), preconnectPlugin],
+
+    base: '/',
+
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+      sourcemap: false,
+      // Separar CSS por chunk permite que las rutas lazy carguen solo
+      // el CSS que necesitan, reduciendo el CSS bloqueante en el LCP.
+      cssCodeSplit: true,
+      chunkSizeWarningLimit: 600,
+
+      rollupOptions: {
+        output: {
+          // Chunks de vendor bien separados para maximizar cache hits:
+          // react/react-dom rara vez cambian → cache muy larga en CDN.
+          // supabase, router e icons tienen su propio hash independiente.
+          manualChunks: {
+            'vendor-react':    ['react', 'react-dom'],
+            'vendor-router':   ['react-router-dom'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-icons':    ['lucide-react'],
+          },
+          // Preload de módulos para navegadores que lo soportan.
+          // 'modulepreload' emite <link rel="modulepreload"> automático por Vite;
+          // este polyfill lo activa también en browsers sin soporte nativo.
         },
+        // Inyectar polyfill de modulepreload para Firefox < 115 y Safari < 17
+        modulePreload: { polyfill: true },
       },
     },
-  },
 
-  server: {
-    port: 5173,
-    strictPort: false,
-  },
+    server: {
+      port: 5173,
+      strictPort: false,
+    },
 
-  preview: {
-    port: 4173,
-    strictPort: false,
-  },
+    preview: {
+      port: 4173,
+      strictPort: false,
+    },
+  }
 })

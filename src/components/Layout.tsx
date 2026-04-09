@@ -7,6 +7,28 @@ import { useAuth } from '../hooks/useAuth'
 import AnuncioModal from './AnuncioModal'
 import PrivateMessageToast from './PrivateMessageToast'
 
+// Mapa de ruta → función de importación dinámica para pre-cargar el chunk
+// antes de que el usuario haga click, reduciendo el tiempo de navegación.
+const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
+  '/':            () => import('../pages/Home'),
+  '/news':        () => import('../pages/News'),
+  '/chat':        () => import('../pages/Chat'),
+  '/apuntes':     () => import('../pages/Apuntes'),
+  '/actividades': () => import('../pages/Actividades'),
+  '/calendar':    () => import('../pages/Calendar'),
+  '/admin':       () => import('../pages/Admin'),
+  '/profile':     () => import('../pages/Profile'),
+}
+
+// Lanza el prefetch con un debounce de 100 ms para no dispararlo en hovers
+// accidentales (pasar el ratón de largo). Devuelve una función de cancelación.
+function schedulePrefetch(to: string): () => void {
+  const id = setTimeout(() => {
+    ROUTE_PREFETCH[to]?.()
+  }, 100)
+  return () => clearTimeout(id)
+}
+
 const NAV_ITEMS = [
   { to: '/',            label: 'Inicio',      Icon: Home           },
   { to: '/news',        label: 'News',        Icon: Newspaper      },
@@ -90,10 +112,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement
                   if (!el.classList.contains('text-primary-light')) el.style.background = 'rgba(255,255,255,0.04)'
+                  const cancel = schedulePrefetch(to)
+                  el.dataset.cancelPrefetch = 'set'
+                  ;(el as HTMLElement & { _cancelPrefetch?: () => void })._cancelPrefetch = cancel
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement
                   if (!el.classList.contains('text-primary-light')) el.style.background = 'transparent'
+                  ;(el as HTMLElement & { _cancelPrefetch?: () => void })._cancelPrefetch?.()
                 }}
               >
                 {({ isActive }) => (
@@ -184,6 +210,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             style={({ isActive }) => ({
               color: isActive ? '#818cf8' : '#4b5563',
             })}
+            onTouchStart={() => { schedulePrefetch(to) }}
           >
             {({ isActive }) => (
               <>
