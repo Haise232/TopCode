@@ -218,7 +218,7 @@ const ADMIN_ACTION = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { usuario, refreshUsuario } = useAuth()
+  const { usuario, loading: authLoading, refreshUsuario } = useAuth()
   const navigate = useNavigate()
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
   const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
@@ -331,9 +331,8 @@ export default function Home() {
   }, [usuario])
 
   useEffect(() => {
-    if (!usuario) return // esperar a que AuthContext cargue el perfil
     cargarDatos().finally(() => setLoading(false))
-  }, [cargarDatos, usuario])
+  }, [cargarDatos])
 
   async function handleRefresh() {
     setRefreshing(true)
@@ -341,7 +340,7 @@ export default function Home() {
     setRefreshing(false)
   }
 
-  if (loading) return <HomeSkeleton />
+  if (loading || authLoading) return <HomeSkeleton />
 
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
   const { texto: saludo, emoji } = saludoEmoji()
