@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data, error } = await supabase
       .from('usuarios')
-      .select('*')
+      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, created_at')
       .eq('id', userId)
       .single()
 
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // INITIAL_SESSION se dispara al montar, equivale al getSession() anterior
     // pero sin la race condition de tener dos fuentes concurrentes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, sess) => {
+      async (_event, sess) => {
         if (timeoutId) {
           clearTimeout(timeoutId)
           timeoutId = null

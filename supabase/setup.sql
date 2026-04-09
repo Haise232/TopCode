@@ -154,6 +154,63 @@ COMMENT ON TABLE public.eventos IS
   'Eventos del calendario académico. Solo admins los crean/eliminan. La fecha es tipo DATE (sin hora) para simplificar comparaciones en el cliente.';
 
 
+-- ────────────────────────────────────────────────────────────
+-- 1.7 Tabla: actividades
+--   Tareas/entregas académicas con fecha límite.
+--   Solo admins crean/eliminan. Las actividades expiradas
+--   se borran automáticamente en cada carga de useActividades.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.actividades (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo        TEXT NOT NULL,
+  descripcion   TEXT DEFAULT NULL,
+  materia       TEXT DEFAULT NULL,
+  fecha_entrega TIMESTAMPTZ NOT NULL,
+  created_by    UUID REFERENCES public.usuarios(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.actividades IS
+  'Tareas y entregas académicas. Fecha_entrega en TIMESTAMPTZ para comparaciones precisas. Solo admins crean/eliminan.';
+
+
+-- ────────────────────────────────────────────────────────────
+-- 1.8 Tabla: actividades_estado
+--   Estado completado/pendiente por usuario y actividad.
+--   PK compuesta (actividad_id, usuario_id) garantiza unicidad.
+--   Se usa upsert con onConflict en toggleEstado().
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.actividades_estado (
+  actividad_id UUID NOT NULL REFERENCES public.actividades(id) ON DELETE CASCADE,
+  usuario_id   UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  completada   BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (actividad_id, usuario_id)
+);
+
+COMMENT ON TABLE public.actividades_estado IS
+  'Estado de completado por alumno y actividad. PK compuesta (actividad_id, usuario_id) usada por upsert en toggleEstado().';
+
+
+-- ────────────────────────────────────────────────────────────
+-- 1.9 Tabla: anuncios
+--   Mensajes del admin visibles en un modal al entrar a la app.
+--   La columna "activo" permite desactivar sin borrar.
+--   AnuncioModal usa Realtime para mostrar nuevos anuncios sin recargar.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.anuncios (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo     TEXT NOT NULL,
+  contenido  TEXT NOT NULL,
+  activo     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by UUID REFERENCES public.usuarios(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.anuncios IS
+  'Anuncios del admin mostrados en modal al entrar. activo=false oculta sin borrar. Realtime habilitado para actualización inmediata.';
+
+
 -- ════════════════════════════════════════════════════════════
 -- BLOQUE 2: COLUMNAS OPCIONALES (idempotente con IF NOT EXISTS)
 -- Añade columnas que pueden no existir en instancias antiguas
@@ -170,6 +227,10 @@ UPDATE public.usuarios SET rol = 'alumno' WHERE rol IS NULL;
 -- avatar_url (referenciada en Profile.tsx, Chat.tsx, Admin.tsx)
 ALTER TABLE public.usuarios
   ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT NULL;
+
+-- banner_url (referenciada en Home.tsx, Admin.tsx, Chat.tsx; subida a bucket "avatars")
+ALTER TABLE public.usuarios
+  ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT NULL;
 
 -- promedio (referenciado en Profile.tsx, calculado en supabase.ts)
 ALTER TABLE public.usuarios
@@ -265,6 +326,36 @@ CREATE INDEX IF NOT EXISTS idx_usuarios_id_rol
 -- Query (Chat.tsx UserList): .neq('id', X).order('nombre')
 -- El índice idx_usuarios_nombre ya cubre el ORDER BY.
 
+-- ── actividades ───────────────────────────────────────────────
+-- Query principal: .order('fecha_entrega', asc).limit(100)
+CREATE INDEX IF NOT EXISTS idx_actividades_fecha_entrega
+  ON public.actividades (fecha_entrega ASC);
+
+-- Índice en created_by para políticas RLS y filtros de admin
+CREATE INDEX IF NOT EXISTS idx_actividades_created_by
+  ON public.actividades (created_by);
+
+-- ── actividades_estado ────────────────────────────────────────
+-- Query del alumno: .eq('usuario_id', X) — cubre el filtro RLS
+CREATE INDEX IF NOT EXISTS idx_ae_usuario
+  ON public.actividades_estado (usuario_id);
+
+-- Query de stats del admin: .eq('completada', true)
+-- + JOIN implícito por actividad_id → índice parcial
+CREATE INDEX IF NOT EXISTS idx_ae_completada
+  ON public.actividades_estado (actividad_id)
+  WHERE completada = TRUE;
+
+-- ── anuncios ──────────────────────────────────────────────────
+-- Query de AnuncioModal: .eq('activo', true)
+CREATE INDEX IF NOT EXISTS idx_anuncios_activo
+  ON public.anuncios (activo)
+  WHERE activo = TRUE;
+
+-- Query de Admin.tsx: .order('created_at', desc)
+CREATE INDEX IF NOT EXISTS idx_anuncios_created
+  ON public.anuncios (created_at DESC);
+
 
 -- ════════════════════════════════════════════════════════════
 -- BLOQUE 4: TRIGGER — crear perfil al registrarse
@@ -297,6 +388,46 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
+
+-- ════════════════════════════════════════════════════════════
+-- BLOQUE 4b: FUNCIÓN RPC — recalcular_promedio
+--   Reemplaza el patrón SELECT + UPDATE de dos round-trips en
+--   actualizarPromedio() (supabase.ts) por una sola operación
+--   atómica en el servidor.
+--   Llamada desde el cliente: supabase.rpc('recalcular_promedio',
+--     { p_usuario_id: userId })
+--   SECURITY DEFINER: puede actualizar la fila del usuario aunque
+--   la política UPDATE de usuarios solo permita al propio usuario.
+-- ════════════════════════════════════════════════════════════
+
+CREATE OR REPLACE FUNCTION public.recalcular_promedio(p_usuario_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_promedio NUMERIC(5,2);
+BEGIN
+  SELECT COALESCE(ROUND(AVG(media)::NUMERIC, 2), 0)
+    INTO v_promedio
+    FROM public.notas
+   WHERE usuario_id = p_usuario_id;
+
+  UPDATE public.usuarios
+     SET promedio = v_promedio
+   WHERE id = p_usuario_id;
+END;
+$$;
+
+COMMENT ON FUNCTION public.recalcular_promedio(UUID) IS
+  'Recalcula y persiste el promedio del alumno en una sola round-trip. '
+  'Llamada desde supabase.ts tras INSERT/DELETE en notas.';
+
+-- Revocar acceso público y conceder solo a usuarios autenticados
+REVOKE ALL ON FUNCTION public.recalcular_promedio(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.recalcular_promedio(UUID) TO authenticated;
 
 
 -- ════════════════════════════════════════════════════════════
@@ -465,6 +596,95 @@ CREATE POLICY "eventos_delete_admin" ON public.eventos
   );
 
 
+-- ────────────────────────────────────────────────────────────
+-- 5.7 RLS — actividades
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE public.actividades ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "actividades_select_auth"   ON public.actividades;
+DROP POLICY IF EXISTS "actividades_insert_admin"  ON public.actividades;
+DROP POLICY IF EXISTS "actividades_update_admin"  ON public.actividades;
+DROP POLICY IF EXISTS "actividades_delete_admin"  ON public.actividades;
+
+CREATE POLICY "actividades_select_auth" ON public.actividades
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "actividades_insert_admin" ON public.actividades
+  FOR INSERT WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "actividades_update_admin" ON public.actividades
+  FOR UPDATE USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+-- useActividades.ts borra actividades vencidas: solo admins
+CREATE POLICY "actividades_delete_admin" ON public.actividades
+  FOR DELETE USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+
+-- ────────────────────────────────────────────────────────────
+-- 5.8 RLS — actividades_estado
+--   Alumnos: ven y modifican solo sus filas.
+--   Admins: ven todas las filas (para stats de completado).
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE public.actividades_estado ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "ae_select_own"    ON public.actividades_estado;
+DROP POLICY IF EXISTS "ae_select_admin"  ON public.actividades_estado;
+DROP POLICY IF EXISTS "ae_upsert_own"    ON public.actividades_estado;
+DROP POLICY IF EXISTS "ae_update_own"    ON public.actividades_estado;
+
+-- Alumnos ven sus propias filas
+CREATE POLICY "ae_select_own" ON public.actividades_estado
+  FOR SELECT USING (usuario_id = auth.uid());
+
+-- Admins ven todas las filas (necesario para stats en useActividades)
+CREATE POLICY "ae_select_admin" ON public.actividades_estado
+  FOR SELECT USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+-- Cada alumno inserta y actualiza solo sus propias filas
+CREATE POLICY "ae_upsert_own" ON public.actividades_estado
+  FOR INSERT WITH CHECK (usuario_id = auth.uid());
+
+CREATE POLICY "ae_update_own" ON public.actividades_estado
+  FOR UPDATE USING (usuario_id = auth.uid());
+
+
+-- ────────────────────────────────────────────────────────────
+-- 5.9 RLS — anuncios
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE public.anuncios ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anuncios_select_auth"   ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_insert_admin"  ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_update_admin"  ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_delete_admin"  ON public.anuncios;
+
+CREATE POLICY "anuncios_select_auth" ON public.anuncios
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "anuncios_insert_admin" ON public.anuncios
+  FOR INSERT WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "anuncios_update_admin" ON public.anuncios
+  FOR UPDATE USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "anuncios_delete_admin" ON public.anuncios
+  FOR DELETE USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+
 -- ════════════════════════════════════════════════════════════
 -- BLOQUE 6: STORAGE BUCKETS Y POLÍTICAS
 -- ════════════════════════════════════════════════════════════
@@ -564,6 +784,16 @@ DO $$ BEGIN
     WHERE pubname = 'supabase_realtime' AND tablename = 'mensajes_privados'
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.mensajes_privados;
+  END IF;
+END $$;
+
+-- Anuncios (AnuncioModal.tsx: channel 'anuncios-realtime', event *)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'anuncios'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.anuncios;
   END IF;
 END $$;
 

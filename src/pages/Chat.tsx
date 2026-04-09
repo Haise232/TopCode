@@ -1,11 +1,12 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import {
   Send, ArrowLeft, MessageCircle, Lock, Users,
   Hash, Search, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Mensaje, MensajePrivado, Usuario } from '../lib/types'
+import { usePublicMensajes, usePrivateMensajes } from '../hooks/useMensajes'
+import { Usuario } from '../lib/types'
 
 type SubTab = 'publico' | 'privado'
 
@@ -111,7 +112,7 @@ function MessageInput({
   onSubmit,
   placeholder,
   inputRef,
-  accentColor = '#6366f1',
+  accentColor: _accentColor = '#6366f1',
   accentGlow = 'rgba(99,102,241,0.08)',
   accentBorder = 'rgba(99,102,241,0.4)',
   gradientFrom = '#6366f1',
@@ -271,37 +272,10 @@ function EmptyPublicChat() {
 
 // ── Public chat ──────────────────────────────────────────────────────────────
 function PublicChat({ usuario }: { usuario: Usuario }) {
-  const [mensajes, setMensajes] = useState<Mensaje[]>([])
+  const { mensajes, avatares, loading, enviar: enviarMensaje } = usePublicMensajes()
   const [texto, setTexto] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [avatares, setAvatares] = useState<Record<string, string | null>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const cargar = useCallback(async () => {
-    const [msgsRes, usersRes] = await Promise.all([
-      supabase.from('mensajes').select('*').order('created_at', { ascending: true }).limit(100),
-      supabase.from('usuarios').select('id, avatar_url'),
-    ])
-    if (msgsRes.data) setMensajes(msgsRes.data)
-    if (usersRes.data) {
-      const map: Record<string, string | null> = {}
-      usersRes.data.forEach((u: { id: string; avatar_url: string | null }) => { map[u.id] = u.avatar_url })
-      setAvatares(map)
-    }
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    cargar()
-    const channel = supabase
-      .channel('public-chat')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
-        setMensajes(prev => [...prev, payload.new as Mensaje])
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [cargar])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -312,7 +286,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
     if (!texto.trim()) return
     const t = texto.trim()
     setTexto('')
-    await supabase.from('mensajes').insert({ usuario_id: usuario.id, autor: usuario.nombre, texto: t })
+    await enviarMensaje(t, usuario.id, usuario.nombre)
     inputRef.current?.focus()
   }
 
@@ -406,38 +380,10 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
 
 // ── Private chat ─────────────────────────────────────────────────────────────
 function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: Usuario }) {
-  const [mensajes, setMensajes] = useState<MensajePrivado[]>([])
+  const { mensajes, loading, enviar: enviarMensaje } = usePrivateMensajes({ meId: usuario.id, peerId: peer.id })
   const [texto, setTexto] = useState('')
-  const [loading, setLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const cargar = useCallback(async () => {
-    const { data } = await supabase
-      .from('mensajes_privados')
-      .select('*')
-      .or(`and(de_id.eq.${usuario.id},para_id.eq.${peer.id}),and(de_id.eq.${peer.id},para_id.eq.${usuario.id})`)
-      .order('created_at', { ascending: true })
-    if (data) setMensajes(data)
-    setLoading(false)
-  }, [usuario.id, peer.id])
-
-  useEffect(() => {
-    cargar()
-    const channel = supabase
-      .channel(`private-${[usuario.id, peer.id].sort().join('-')}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes_privados' }, payload => {
-        const msg = payload.new as MensajePrivado
-        if (
-          (msg.de_id === usuario.id && msg.para_id === peer.id) ||
-          (msg.de_id === peer.id && msg.para_id === usuario.id)
-        ) {
-          setMensajes(prev => [...prev, msg])
-        }
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [cargar, usuario.id, peer.id])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -448,12 +394,7 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: Usuario }) {
     if (!texto.trim()) return
     const t = texto.trim()
     setTexto('')
-    await supabase.from('mensajes_privados').insert({
-      de_id: usuario.id,
-      de_nombre: usuario.nombre,
-      para_id: peer.id,
-      texto: t,
-    })
+    await enviarMensaje(t, usuario.nombre)
     inputRef.current?.focus()
   }
 
@@ -574,8 +515,12 @@ function UserList({
   const [query, setQuery] = useState('')
 
   useEffect(() => {
-    supabase.from('usuarios').select('*').neq('id', usuario.id).order('nombre')
-      .then(({ data }) => { if (data) setUsers(data); setLoading(false) })
+    supabase
+      .from('usuarios')
+      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, created_at')
+      .neq('id', usuario.id)
+      .order('nombre')
+      .then(({ data }) => { if (data) setUsers(data as Usuario[]); setLoading(false) })
   }, [usuario.id])
 
   const filtered = useMemo(() => {

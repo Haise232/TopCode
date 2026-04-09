@@ -1,6 +1,6 @@
 # TopCode
 
-Intranet académica para el ciclo de **Desarrollo de Aplicaciones Web (DAW)**. Gestión de notas, apuntes compartidos, chat en tiempo real y calendario de eventos.
+Intranet académica para el ciclo de **Desarrollo de Aplicaciones Web (DAM)**. Gestión de notas, apuntes compartidos, chat en tiempo real y calendario de eventos.
 
 **Demo en vivo:** [haise232.github.io/TopCode](https://haise232.github.io/TopCode/)
 
@@ -13,7 +13,7 @@ Intranet académica para el ciclo de **Desarrollo de Aplicaciones Web (DAW)**. G
 | Frontend | React 18 + TypeScript + Vite 6 |
 | Estilos | Tailwind CSS 3 |
 | Backend / DB | Supabase (PostgreSQL + Auth + Realtime + Storage) |
-| Hosting | GitHub Pages (CI/CD via GitHub Actions) |
+| Hosting | Vercel |
 
 ---
 
@@ -79,31 +79,29 @@ UPDATE public.usuarios SET rol = 'admin' WHERE email = 'tu@email.com';
 
 ---
 
-## Despliegue (GitHub Pages)
+## Despliegue (Vercel)
 
-El deploy es **automático** al hacer push a `main` via GitHub Actions.
+El deploy es **automático** al hacer push a `main`.
 
 ### Configuración inicial (una vez)
 
-1. **Secrets** → `Settings → Secrets → Actions`:
+1. Importa el repositorio en [vercel.com](https://vercel.com) → **Add New Project**
+
+2. **Variables de entorno** en el panel de Vercel:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
-2. **GitHub Pages** → `Settings → Pages → Source: GitHub Actions`
-
 3. **Supabase Auth** → `Authentication → URL Configuration`:
-   - Site URL: `https://haise232.github.io`
-   - Redirect URLs: `https://haise232.github.io/TopCode/**`
+   - Site URL: `https://tu-proyecto.vercel.app`
+   - Redirect URLs: `https://tu-proyecto.vercel.app/**`
 
 ---
 
 ## Estructura del proyecto
 
 ```
-├── .github/workflows/deploy.yml   # CI/CD → GitHub Pages
 ├── public/
-│   ├── _redirects                 # SPA routing (Netlify)
-│   └── 404.html                   # SPA routing (GitHub Pages)
+│   └── 404.html                   # SPA routing fallback
 ├── src/
 │   ├── components/                # Layout, Loading, Skeleton, AlertModal, ErrorBoundary
 │   ├── contexts/                  # AuthContext

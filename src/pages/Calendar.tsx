@@ -4,8 +4,8 @@ import {
   Plus, Trash2, RefreshCw, CalendarDays, Clock,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Zap, BookOpen, FileText, Star,
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useEventos } from '../hooks/useEventos'
 import { EventoCalendario } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
@@ -348,8 +348,15 @@ export default function CalendarPage() {
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
 
-  const [eventos, setEventos] = useState<EventoCalendario[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    eventos,
+    loading,
+    init,
+    refresh,
+    createEvento,
+    deleteEvento,
+  } = useEventos()
+
   const [refreshing, setRefreshing] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [alert, setAlert] = useState<AlertState>(null)
@@ -380,17 +387,16 @@ export default function CalendarPage() {
   // Refs para scroll a evento por fecha
   const eventRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  const cargar = useCallback(async () => {
-    const { data } = await supabase
-      .from('eventos')
-      .select('*')
-      .order('fecha', { ascending: true })
-    if (data) setEventos(data)
-  }, [])
-
+  // Inicializar carga con cache al montar
   useEffect(() => {
-    cargar().finally(() => setLoading(false))
-  }, [cargar])
+    init()
+  }, [init])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await refresh()
+    setRefreshing(false)
+  }, [refresh])
 
   async function handleGuardar(e: React.FormEvent) {
     e.preventDefault()
@@ -399,26 +405,20 @@ export default function CalendarPage() {
       return
     }
     setSaving(true)
-    try {
-      const { error } = await supabase.from('eventos').insert({
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim() || null,
-        materia: mostrarMateria && materia.trim() ? materia.trim() : null,
-        fecha,
-        created_by: usuario!.id,
-      })
-      if (error) {
-        setAlert({ type: 'error', title: 'Error', message: 'No se pudo crear el evento: ' + error.message })
-        return
-      }
-      await cargar()
-      setModalVisible(false)
-      setTitulo(''); setDescripcion(''); setMateria(''); setFecha(new Date().toISOString().split('T')[0])
-    } catch {
-      setAlert({ type: 'error', title: 'Error de conexión', message: 'No se pudo conectar. Inténtalo de nuevo.' })
-    } finally {
-      setSaving(false)
+    const { error } = await createEvento({
+      titulo: titulo.trim(),
+      descripcion: descripcion.trim() || null,
+      materia: mostrarMateria && materia.trim() ? materia.trim() : null,
+      fecha,
+      created_by: usuario!.id,
+    })
+    setSaving(false)
+    if (error) {
+      setAlert({ type: 'error', title: 'Error', message: 'No se pudo crear el evento: ' + error })
+      return
     }
+    setModalVisible(false)
+    setTitulo(''); setDescripcion(''); setMateria(''); setFecha(new Date().toISOString().split('T')[0])
   }
 
   function handleEliminar(ev: EventoCalendario) {
@@ -428,8 +428,10 @@ export default function CalendarPage() {
       confirmLabel: 'Eliminar',
       confirmDestructive: true,
       onConfirm: async () => {
-        await supabase.from('eventos').delete().eq('id', ev.id)
-        await cargar()
+        const { error } = await deleteEvento(ev.id)
+        if (error) {
+          setAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar el evento.' })
+        }
       },
     })
   }
@@ -515,7 +517,7 @@ export default function CalendarPage() {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
+              onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
               style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}

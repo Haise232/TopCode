@@ -27,7 +27,7 @@ export default function AnuncioModal() {
     async function cargar() {
       const { data } = await supabase
         .from('anuncios')
-        .select('*')
+        .select('id, titulo, contenido, activo, created_at, created_by')
         .eq('activo', true)
         .order('created_at', { ascending: false })
         .limit(1)

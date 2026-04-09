@@ -117,7 +117,7 @@ export default function Register() {
               style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}
             >
               <Sparkles size={12} style={{ color: '#818cf8' }} />
-              <span className="text-xs font-semibold" style={{ color: '#818cf8' }}>Únete al equipo DAW</span>
+              <span className="text-xs font-semibold" style={{ color: '#818cf8' }}>Únete al equipo DAM</span>
             </div>
             <h2 className="text-4xl font-extrabold leading-tight tracking-tight" style={{ color: '#f1f5f9' }}>
               Empieza tu<br />
@@ -154,7 +154,7 @@ export default function Register() {
 
         <div className="relative">
           <p className="text-xs" style={{ color: '#4b5563' }}>
-            © 2025 TopCode · Ciclo Formativo DAW
+            © 2025 TopCode · Ciclo Formativo DAM
           </p>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function Register() {
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-extrabold" style={{ color: '#f1f5f9' }}>TopCode</h1>
-              <p className="text-xs mt-1" style={{ color: '#64748b' }}>Intranet académica · DAW</p>
+              <p className="text-xs mt-1" style={{ color: '#64748b' }}>Intranet académica · DAM</p>
             </div>
           </div>
 

@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   ClipboardCheck, Plus, Trash2, RefreshCw, Check,
   Clock, AlertTriangle, ChevronDown, ChevronUp, BookOpen,
 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useActividades } from '../hooks/useActividades'
 import { Actividad } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
@@ -106,12 +106,19 @@ export default function Actividades() {
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
 
-  const [actividades, setActividades] = useState<Actividad[]>([])
-  const [estados, setEstados] = useState<Record<string, boolean>>({})
-  const [statsAdmin, setStatsAdmin] = useState<Record<string, number>>({})
-  const [totalAlumnos, setTotalAlumnos] = useState(0)
+  const {
+    actividades,
+    estados,
+    adminStats,
+    loading,
+    init,
+    refresh,
+    createActividadOptimistic,
+    deleteActividadOptimistic,
+    toggleEstado,
+  } = useActividades({ usuarioId: usuario?.id, isAdmin })
+
   const [filtro, setFiltro] = useState<Filtro>('todas')
-  const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [toggling, setToggling] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
@@ -124,53 +131,22 @@ export default function Actividades() {
   const [fechaEntrega, setFechaEntrega] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const cargar = useCallback(async () => {
-    if (!usuario) return
-    // Eliminar actividades cuyo plazo ya venció
-    await supabase.from('actividades').delete().lt('fecha_entrega', new Date().toISOString())
-
-    const [actsRes, estadosRes] = await Promise.all([
-      supabase.from('actividades').select('*').order('fecha_entrega', { ascending: true }),
-      supabase.from('actividades_estado').select('actividad_id, completada').eq('usuario_id', usuario.id),
-    ])
-    if (actsRes.data) setActividades(actsRes.data as Actividad[])
-    if (estadosRes.data) {
-      const map: Record<string, boolean> = {}
-      estadosRes.data.forEach(e => { map[e.actividad_id] = e.completada })
-      setEstados(map)
-    }
-    if (isAdmin) {
-      const [statsRes, usersRes] = await Promise.all([
-        supabase.from('actividades_estado').select('actividad_id').eq('completada', true),
-        supabase.from('usuarios').select('id', { count: 'exact', head: true }),
-      ])
-      if (statsRes.data) {
-        const counts: Record<string, number> = {}
-        statsRes.data.forEach(e => {
-          counts[e.actividad_id] = (counts[e.actividad_id] ?? 0) + 1
-        })
-        setStatsAdmin(counts)
-      }
-      setTotalAlumnos(usersRes.count ?? 0)
-    }
-  }, [usuario, isAdmin])
-
+  // Inicializar carga con cache al montar
   useEffect(() => {
-    cargar().finally(() => setLoading(false))
-  }, [cargar])
+    init()
+  }, [init])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await refresh()
+    setRefreshing(false)
+  }, [refresh])
 
   async function toggleCompletada(act: Actividad) {
     if (!usuario) return
     const actual = estados[act.id] ?? false
-    const nuevo = !actual
     setToggling(act.id)
-    setEstados(prev => ({ ...prev, [act.id]: nuevo }))
-    await supabase.from('actividades_estado').upsert({
-      actividad_id: act.id,
-      usuario_id: usuario.id,
-      completada: nuevo,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'actividad_id,usuario_id' })
+    await toggleEstado(act.id, actual)
     setToggling(null)
   }
 
@@ -181,8 +157,10 @@ export default function Actividades() {
       confirmLabel: 'Eliminar',
       confirmDestructive: true,
       onConfirm: async () => {
-        await supabase.from('actividades').delete().eq('id', act.id)
-        await cargar()
+        const { error } = await deleteActividadOptimistic(act.id)
+        if (error) {
+          setAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar la actividad.' })
+        }
       },
     })
   }
@@ -191,7 +169,7 @@ export default function Actividades() {
     e.preventDefault()
     if (!titulo.trim() || !fechaEntrega) return
     setSaving(true)
-    const { error } = await supabase.from('actividades').insert({
+    const { error } = await createActividadOptimistic({
       titulo: titulo.trim(),
       descripcion: descripcion.trim() || null,
       materia: materia.trim() || null,
@@ -200,24 +178,23 @@ export default function Actividades() {
     })
     setSaving(false)
     if (error) {
-      setAlert({ type: 'error', title: 'Error', message: 'No se pudo crear la actividad: ' + error.message })
+      setAlert({ type: 'error', title: 'Error', message: 'No se pudo crear la actividad: ' + error })
       return
     }
     setTitulo(''); setDescripcion(''); setMateria(''); setFechaEntrega('')
     setModalVisible(false)
-    await cargar()
   }
 
   // ── Filtrado ────────────────────────────────────────────────────────────────
 
-  const actsFiltradas = actividades.filter(act => {
+  const actsFiltradas = useMemo(() => actividades.filter(act => {
     const completada = estados[act.id] ?? false
     if (filtro === 'pendientes') return !completada
     if (filtro === 'completadas') return completada
     return true
-  })
+  }), [actividades, estados, filtro])
 
-  const totalCompletadas = actividades.filter(a => estados[a.id]).length
+  const totalCompletadas = useMemo(() => actividades.filter(a => estados[a.id]).length, [actividades, estados])
   const totalPendientes  = actividades.length - totalCompletadas
   const pct = actividades.length ? Math.round((totalCompletadas / actividades.length) * 100) : 0
 
@@ -248,7 +225,7 @@ export default function Actividades() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
+              onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
               style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
@@ -349,8 +326,8 @@ export default function Actividades() {
                 completada={estados[act.id] ?? false}
                 toggling={toggling === act.id}
                 isAdmin={isAdmin}
-                adminCount={statsAdmin[act.id] ?? 0}
-                totalAlumnos={totalAlumnos}
+                adminCount={adminStats.counts[act.id] ?? 0}
+                totalAlumnos={adminStats.totalAlumnos}
                 delay={idx * 30}
                 onToggle={() => toggleCompletada(act)}
                 onDelete={() => handleEliminar(act)}

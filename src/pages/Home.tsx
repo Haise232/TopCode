@@ -1,13 +1,14 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, BookOpen, FileText, Plus, Calendar, MessageCircle,
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
-  Flame, GraduationCap, Shield, Zap, Camera, X, ClipboardCheck, Clock,
+  Flame, GraduationCap, Shield, Camera, X, ClipboardCheck, Clock,
 } from 'lucide-react'
-import { supabase, subirAvatar, eliminarArchivoStorage } from '../lib/supabase'
+import { supabase, eliminarArchivoStorage } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Nota, EventoCalendario, Actividad } from '../lib/types'
+import { useHomeDatos } from '../hooks/useHomeDatos'
+import { Nota } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
@@ -50,24 +51,6 @@ function materiaColor(nombre: string): string {
   return `hsl(${hue}, 65%, 60%)`
 }
 
-// Últimos 7 días: devuelve array de { fecha ISO, label corto, tieneNota }
-function semanaActual(notas: Nota[]) {
-  const diasCortos = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá']
-  const notasDates = new Set(
-    notas.map(n => n.created_at.slice(0, 10))
-  )
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (6 - i))
-    const iso = d.toISOString().slice(0, 10)
-    return {
-      iso,
-      label: diasCortos[d.getDay()],
-      activo: notasDates.has(iso),
-      esHoy: i === 6,
-    }
-  })
-}
 
 // Días únicos con notas en los últimos 7 días = "racha semanal"
 function rachaReciente(notas: Nota[]): number {
@@ -273,12 +256,18 @@ const ADMIN_ACTION = {
 export default function Home() {
   const { usuario, refreshUsuario } = useAuth()
   const navigate = useNavigate()
-  const [notas, setNotas] = useState<Nota[]>([])
-  const [allNotas, setAllNotas] = useState<Nota[]>([])
-  const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
-  const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
-  const [actividadesPendientes, setActividadesPendientes] = useState(0)
-  const [loading, setLoading] = useState(true)
+
+  const {
+    notasRecientes: notas,
+    allNotas,
+    proximoEvento,
+    proximaActividad,
+    actividadesPendientes,
+    loading,
+    init: initDatos,
+    refresh: refreshDatos,
+  } = useHomeDatos(usuario?.id)
+
   const [refreshing, setRefreshing] = useState(false)
   const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [uploadingBanner, setUploadingBanner] = useState(false)
@@ -334,59 +323,34 @@ export default function Home() {
     refreshUsuario()
   }
 
-  const cargarDatos = useCallback(async () => {
-    if (!usuario) return
-    const now = new Date().toISOString()
-    const [notasRecientes, todasNotas, evento, acts, estados] = await Promise.all([
-      supabase.from('notas').select('*').eq('usuario_id', usuario.id).order('created_at', { ascending: false }).limit(5),
-      supabase.from('notas').select('*').eq('usuario_id', usuario.id),
-      supabase.from('eventos').select('*').gte('fecha', new Date().toISOString().slice(0, 10)).order('fecha', { ascending: true }).limit(1),
-      supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
-      supabase.from('actividades_estado').select('actividad_id').eq('usuario_id', usuario.id).eq('completada', true),
-    ])
-    if (notasRecientes.data) setNotas(notasRecientes.data)
-    if (todasNotas.data) setAllNotas(todasNotas.data)
-    if (evento.data?.[0]) setProximoEvento(evento.data[0])
-    else setProximoEvento(null)
-
-    if (acts.data) {
-      const doneIds = new Set((estados.data ?? []).map((e: { actividad_id: string }) => e.actividad_id))
-      const pendientes = acts.data.filter((a: Actividad) => !doneIds.has(a.id))
-      setActividadesPendientes(pendientes.length)
-      setProximaActividad(pendientes[0] ?? null)
-    }
-  }, [usuario])
-
+  // Inicializar carga con cache al montar
   useEffect(() => {
-    cargarDatos().finally(() => setLoading(false))
-  }, [cargarDatos])
+    initDatos()
+  }, [initDatos])
 
-  async function handleRefresh() {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true)
-    await cargarDatos()
+    await refreshDatos()
     setRefreshing(false)
-  }
+  }, [refreshDatos])
 
   if (loading) return <HomeSkeleton />
 
-  const materias = [...new Set(notas.map(n => n.materia))].length
+  const materias = useMemo(() => [...new Set(notas.map(n => n.materia))].length, [notas])
   const promedio = usuario?.promedio ?? 0
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
   const { texto: saludo, emoji } = saludoEmoji()
-  const semana = semanaActual(allNotas)
-  const racha = rachaReciente(allNotas)
+  const racha = useMemo(() => rachaReciente(allNotas), [allNotas])
   const esAdmin = usuario?.rol === 'admin'
-  const quickActions = esAdmin ? [...QUICK_ACTIONS, ADMIN_ACTION] : QUICK_ACTIONS
+  const quickActions = useMemo(() => esAdmin ? [...QUICK_ACTIONS, ADMIN_ACTION] : QUICK_ACTIONS, [esAdmin])
 
   // Tendencia: compara promedio últimas 3 notas vs promedio general
-  const promedioGeneral = allNotas.length
-    ? allNotas.reduce((s, n) => s + n.media, 0) / allNotas.length
-    : 0
-  const ultimas3 = notas.slice(0, 3)
-  const promedioReciente = ultimas3.length
-    ? ultimas3.reduce((s, n) => s + n.media, 0) / ultimas3.length
-    : promedioGeneral
-  const tendenciaSubiendo = promedioReciente >= promedioGeneral
+  const { promedioGeneral } = useMemo(() => {
+    const pg = allNotas.length ? allNotas.reduce((s, n) => s + n.media, 0) / allNotas.length : 0
+    const u3 = notas.slice(0, 3)
+    const pr = u3.length ? u3.reduce((s, n) => s + n.media, 0) / u3.length : pg
+    return { promedioGeneral: pg, tendenciaSubiendo: pr >= pg }
+  }, [allNotas, notas])
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">

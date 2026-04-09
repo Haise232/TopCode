@@ -1,9 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, RefreshCw, ClipboardList, BookOpen, TrendingUp } from 'lucide-react'
-import { supabase, actualizarPromedio } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Nota } from '../lib/types'
+import { useNotas } from '../hooks/useNotas'
 import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
@@ -78,8 +77,15 @@ const MATERIA_COLORS = [
 
 export default function Notes() {
   const { usuario } = useAuth()
-  const [notas, setNotas] = useState<Nota[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    notas,
+    loading,
+    init,
+    refresh,
+    addNotaOptimistic,
+    deleteNotaOptimistic,
+  } = useNotas({ usuarioId: usuario?.id })
+
   const [refreshing, setRefreshing] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -90,19 +96,16 @@ export default function Notes() {
   const [teorica, setTeorica] = useState('')
   const [practica, setPractica] = useState('')
 
-  const cargarNotas = useCallback(async () => {
-    if (!usuario) return
-    const { data } = await supabase
-      .from('notas')
-      .select('*')
-      .eq('usuario_id', usuario.id)
-      .order('created_at', { ascending: false })
-    if (data) setNotas(data)
-  }, [usuario])
-
+  // Inicializar carga con cache al montar (evita refetch al navegar entre tabs)
   useEffect(() => {
-    cargarNotas().finally(() => setLoading(false))
-  }, [cargarNotas])
+    init()
+  }, [init])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await refresh()
+    setRefreshing(false)
+  }, [refresh])
 
   function resetForm() {
     setMateria(''); setTema(''); setTeorica(''); setPractica('')
@@ -122,7 +125,7 @@ export default function Notes() {
     }
     const media = Math.round(((t + p) / 2) * 100) / 100
     setSaving(true)
-    const { error } = await supabase.from('notas').insert({
+    const { error } = await addNotaOptimistic({
       usuario_id: usuario!.id,
       materia: materia.trim(),
       tema: tema.trim(),
@@ -130,52 +133,50 @@ export default function Notes() {
       practica: p,
       media,
     })
+    setSaving(false)
     if (error) {
-      setSaving(false)
-      setAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar: ' + error.message })
+      setAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar: ' + error })
       return
     }
-    await actualizarPromedio(usuario!.id)
-    await cargarNotas()
-    setSaving(false)
     setModalVisible(false)
     resetForm()
   }
 
-  function handleEliminar(nota: Nota) {
+  function handleEliminar(nota: import('../lib/types').Nota) {
     setAlert({
       title: 'Eliminar nota',
       message: `¿Eliminar la nota de "${nota.materia} — ${nota.tema}"?`,
       confirmLabel: 'Eliminar',
       confirmDestructive: true,
       onConfirm: async () => {
-        const { error } = await supabase.from('notas').delete().eq('id', nota.id)
+        const { error } = await deleteNotaOptimistic(nota.id)
         if (error) {
           setAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar la nota.' })
-          return
         }
-        await actualizarPromedio(usuario!.id)
-        await cargarNotas()
       },
     })
   }
 
-  const notasPorMateria = notas.reduce<Record<string, Nota[]>>((acc, n) => {
-    if (!acc[n.materia]) acc[n.materia] = []
-    acc[n.materia].push(n)
-    return acc
-  }, {})
+  const notasPorMateria = useMemo(() =>
+    notas.reduce<Record<string, import('../lib/types').Nota[]>>((acc, n) => {
+      if (!acc[n.materia]) acc[n.materia] = []
+      acc[n.materia].push(n)
+      return acc
+    }, {}),
+    [notas]
+  )
 
-  const materiasKeys = Object.keys(notasPorMateria)
+  const materiasKeys = useMemo(() => Object.keys(notasPorMateria), [notasPorMateria])
 
   const mediaPreview = teorica && practica && !isNaN(parseFloat(teorica)) && !isNaN(parseFloat(practica))
     ? (parseFloat(teorica.replace(',', '.')) + parseFloat(practica.replace(',', '.'))) / 2
     : null
 
   // Global average
-  const promedioGlobal = notas.length > 0
-    ? notas.reduce((sum, n) => sum + n.media, 0) / notas.length
-    : null
+  const promedioGlobal = useMemo(() =>
+    notas.length > 0 ? notas.reduce((sum, n) => sum + n.media, 0) / notas.length : null,
+    [notas]
+  )
 
   if (loading) return <NotesSkeleton />
 
@@ -220,7 +221,7 @@ export default function Notes() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={async () => { setRefreshing(true); await cargarNotas(); setRefreshing(false) }}
+              onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
               style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}

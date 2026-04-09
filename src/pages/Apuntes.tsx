@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Upload, FileText, Image, File, Trash2, ExternalLink, RefreshCw, FolderOpen, CloudUpload, Download } from 'lucide-react'
-import { supabase, subirArchivo, eliminarArchivoStorage } from '../lib/supabase'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { Upload, FileText, Image, File, Trash2, ExternalLink, RefreshCw, FolderOpen, CloudUpload, Download, Search, LayoutGrid, LayoutList, SearchX } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { useApuntes } from '../hooks/useApuntes'
+import type { ApunteConAutor } from '../hooks/useApuntes'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 
@@ -14,29 +15,9 @@ type AlertState = {
   confirmDestructive?: boolean
 } | null
 
-// Apunte con info del autor (join con usuarios)
-type ApunteConAutor = {
-  id: string
-  usuario_id: string
-  nombre: string
-  url: string
-  tipo: 'pdf' | 'imagen' | 'otro'
-  created_at: string
-  usuarios: { nombre: string; avatar_url: string | null } | null
-}
+type FiltroTipo = 'todos' | 'pdf' | 'imagen' | 'otro'
 
-// Corrige mojibake en nombres de archivo (ej: "ProgramaciÃ³n" → "Programación").
-// Ocurre cuando bytes UTF-8 del nombre se interpretan como Latin-1.
-// Intenta decodificar los char codes como bytes UTF-8; si es válido era mojibake y lo corrige.
-// Si lanza, el string ya estaba bien y solo se normaliza NFC.
-function normalizarNombre(nombre: string): string {
-  try {
-    const bytes = Uint8Array.from(nombre, c => c.charCodeAt(0))
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes).normalize('NFC')
-  } catch {
-    return nombre.normalize('NFC')
-  }
-}
+// normalizarNombre y la lógica de subida están encapsuladas en useApuntes
 
 function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
   if (mime === 'application/pdf') return 'pdf'
@@ -108,24 +89,36 @@ function ApuntesSkeleton() {
 export default function Apuntes() {
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
-  const [apuntes, setApuntes] = useState<ApunteConAutor[]>([])
-  const [loading, setLoading] = useState(true)
+
+  const {
+    apuntes,
+    loading,
+    subiendo,
+    init,
+    refresh,
+    subirApunte,
+    eliminarApunte,
+  } = useApuntes()
+
   const [refreshing, setRefreshing] = useState(false)
-  const [subiendo, setSubiendo] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [alert, setAlert] = useState<AlertState>(null)
 
-  const cargar = useCallback(async () => {
-    const { data } = await supabase
-      .from('apuntes')
-      .select('*, usuarios(nombre, avatar_url)')
-      .order('created_at', { ascending: false })
-    if (data) setApuntes(data as ApunteConAutor[])
-  }, [])
+  // States para filtros y vista
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
+  const [vistaLista, setVistaLista] = useState(false)
 
+  // Inicializar carga con cache al montar
   useEffect(() => {
-    cargar().finally(() => setLoading(false))
-  }, [cargar])
+    init()
+  }, [init])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await refresh()
+    setRefreshing(false)
+  }, [refresh])
 
   async function subirFile(file: File) {
     if (!usuario) return
@@ -133,29 +126,13 @@ export default function Apuntes() {
       setAlert({ type: 'error', title: 'Archivo muy grande', message: 'El archivo no puede superar los 20 MB.' })
       return
     }
-    setSubiendo(true)
-    try {
-      const ext = file.name.split('.').pop() ?? 'bin'
-      const path = `${usuario.id}/${Date.now()}.${ext}`
-      const url = await subirArchivo(file, path)
-      if (!url) {
-        setAlert({ type: 'error', title: 'Error al subir', message: 'No se pudo subir el archivo. Inténtalo de nuevo.' })
-        return
-      }
-      const tipo = tipoFromMime(file.type)
-      const nombre = normalizarNombre(file.name)
-      const { error } = await supabase.from('apuntes').insert({ usuario_id: usuario.id, nombre, url, tipo })
-      if (error) {
-        setAlert({ type: 'error', title: 'Error al registrar', message: 'El archivo se subió pero no se pudo registrar. Recarga la página.' })
-        return
-      }
-      await cargar()
-      setAlert({ type: 'success', title: 'Archivo subido', message: 'El archivo se subió correctamente.' })
-    } catch {
-      setAlert({ type: 'error', title: 'Error de conexión', message: 'No se pudo conectar. Inténtalo de nuevo.' })
-    } finally {
-      setSubiendo(false)
+    const tipo = tipoFromMime(file.type)
+    const { error } = await subirApunte(file, usuario.id, tipo)
+    if (error) {
+      setAlert({ type: 'error', title: 'Error al subir', message: error })
+      return
     }
+    setAlert({ type: 'success', title: 'Archivo subido', message: 'El archivo se subió correctamente.' })
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -184,37 +161,56 @@ export default function Apuntes() {
       confirmLabel: 'Eliminar',
       confirmDestructive: true,
       onConfirm: async () => {
-        const urlObj = new URL(ap.url)
-        const storagePath = urlObj.pathname.split('/object/public/apuntes/')[1]
-        if (storagePath) await eliminarArchivoStorage('apuntes', decodeURIComponent(storagePath))
-        await supabase.from('apuntes').delete().eq('id', ap.id)
-        await cargar()
+        const { error } = await eliminarApunte(ap)
+        if (error) {
+          setAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar el archivo.' })
+        }
       },
     })
   }
 
-  // Agrupar por usuario, el propio siempre primero
-  const grupos = apuntes.reduce<Record<string, { nombre: string; avatar: string | null; archivos: ApunteConAutor[] }>>((acc, ap) => {
-    const uid = ap.usuario_id
-    if (!acc[uid]) {
-      acc[uid] = {
-        nombre: ap.usuarios?.nombre ?? 'Usuario desconocido',
-        avatar: ap.usuarios?.avatar_url ?? null,
-        archivos: [],
-      }
-    }
-    acc[uid].archivos.push(ap)
-    return acc
-  }, {})
+  // Estadísticas por tipo (sobre el total sin filtrar)
+  const totalPdf = useMemo(() => apuntes.filter(ap => ap.tipo === 'pdf').length, [apuntes])
+  const totalImg = useMemo(() => apuntes.filter(ap => ap.tipo === 'imagen').length, [apuntes])
+  const totalUsuarios = useMemo(() => new Set(apuntes.map(ap => ap.usuario_id)).size, [apuntes])
 
-  // Ordenar: yo primero, resto alfabético
-  const gruposOrdenados = Object.entries(grupos).sort(([aId], [bId]) => {
-    if (aId === usuario?.id) return -1
-    if (bId === usuario?.id) return 1
-    return grupos[aId].nombre.localeCompare(grupos[bId].nombre)
-  })
+  // Aplicar filtros antes de agrupar
+  const apuntesFiltrados = useMemo(() => apuntes.filter(ap => {
+    const coincideBusqueda = busqueda.trim() === '' || ap.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    const coincideTipo = filtroTipo === 'todos' || ap.tipo === filtroTipo
+    return coincideBusqueda && coincideTipo
+  }), [apuntes, busqueda, filtroTipo])
+
+  // Agrupar por usuario, el propio siempre primero
+  const gruposOrdenados = useMemo(() => {
+    const grupos = apuntesFiltrados.reduce<Record<string, { nombre: string; avatar: string | null; archivos: ApunteConAutor[] }>>((acc, ap) => {
+      const uid = ap.usuario_id
+      if (!acc[uid]) {
+        acc[uid] = {
+          nombre: ap.usuarios?.nombre ?? 'Usuario desconocido',
+          avatar: ap.usuarios?.avatar_url ?? null,
+          archivos: [],
+        }
+      }
+      acc[uid].archivos.push(ap)
+      return acc
+    }, {})
+
+    return Object.entries(grupos).sort(([aId], [bId]) => {
+      if (aId === usuario?.id) return -1
+      if (bId === usuario?.id) return 1
+      return grupos[aId].nombre.localeCompare(grupos[bId].nombre)
+    })
+  }, [apuntesFiltrados, usuario?.id])
 
   if (loading) return <ApuntesSkeleton />
+
+  const FILTROS: { key: FiltroTipo; label: string }[] = [
+    { key: 'todos',  label: 'Todos'  },
+    { key: 'pdf',    label: 'PDF'    },
+    { key: 'imagen', label: 'Imagen' },
+    { key: 'otro',   label: 'Otro'   },
+  ]
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
@@ -235,13 +231,32 @@ export default function Apuntes() {
             <div>
               <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Apuntes</h1>
               <p className="text-xs" style={{ color: '#64748b' }}>
-                {apuntes.length} archivo{apuntes.length !== 1 ? 's' : ''} · {gruposOrdenados.length} usuario{gruposOrdenados.length !== 1 ? 's' : ''}
+                {apuntes.length} archivo{apuntes.length !== 1 ? 's' : ''} · {totalUsuarios} usuario{totalUsuarios !== 1 ? 's' : ''}
+                {apuntes.length > 0 && (
+                  <>
+                    {totalPdf > 0 && <> · <span style={{ color: '#f43f5e' }}>{totalPdf} PDF</span></>}
+                    {totalImg > 0 && <> · <span style={{ color: '#10b981' }}>{totalImg} img</span></>}
+                  </>
+                )}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Toggle vista grid/lista */}
             <button
-              onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
+              onClick={() => setVistaLista(v => !v)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
+              style={{
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: vistaLista ? '#818cf8' : '#64748b',
+                background: vistaLista ? 'rgba(99,102,241,0.08)' : 'transparent',
+              }}
+              aria-label={vistaLista ? 'Vista en cuadrícula' : 'Vista en lista'}
+            >
+              {vistaLista ? <LayoutGrid size={14} /> : <LayoutList size={14} />}
+            </button>
+            <button
+              onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
               style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
@@ -274,7 +289,62 @@ export default function Apuntes() {
 
       <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-8">
 
-        {/* ── Estado vacío ── */}
+        {/* ── Barra de búsqueda + chips de filtro (solo cuando hay archivos) ── */}
+        {apuntes.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 animate-fade-in">
+            {/* Input de búsqueda */}
+            <div className="relative flex-1">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: '#4b5563' }}
+              />
+              <input
+                type="text"
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                placeholder="Buscar archivos…"
+                className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all duration-150"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#f1f5f9',
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.35)'
+                  e.currentTarget.style.background = 'rgba(99,102,241,0.05)'
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                }}
+              />
+            </div>
+
+            {/* Chips de filtro por tipo */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {FILTROS.map(f => {
+                const isActive = filtroTipo === f.key
+                return (
+                  <button
+                    key={f.key}
+                    onClick={() => setFiltroTipo(f.key)}
+                    className="px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-150"
+                    style={{
+                      background: isActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: isActive ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                      color: isActive ? '#818cf8' : '#64748b',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Estado vacío (sin archivos en absoluto) ── */}
         {apuntes.length === 0 ? (
           <label
             className="cursor-pointer"
@@ -314,6 +384,47 @@ export default function Apuntes() {
             </div>
             <input type="file" accept=".pdf,image/*,.doc,.docx,.txt,.pptx,.xlsx" onChange={handleUpload} className="hidden" />
           </label>
+
+        ) : gruposOrdenados.length === 0 ? (
+          /* ── Estado vacío para búsqueda/filtro sin resultados ── */
+          <div
+            className="py-14 flex flex-col items-center gap-4 text-center rounded-2xl animate-fade-in"
+            style={{
+              background: 'linear-gradient(145deg, #1a1d27, #141720)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}
+          >
+            <div
+              className="w-14 h-14 flex items-center justify-center rounded-2xl"
+              style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}
+            >
+              <SearchX size={24} style={{ color: '#818cf8' }} />
+            </div>
+            <div>
+              <p className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Sin resultados</p>
+              <p className="text-sm mt-1" style={{ color: '#64748b' }}>
+                {busqueda.trim() !== ''
+                  ? <>No hay archivos para <span style={{ color: '#818cf8' }}>«{busqueda}»</span></>
+                  : 'No hay archivos con ese filtro.'}
+              </p>
+            </div>
+            <button
+              onClick={() => { setBusqueda(''); setFiltroTipo('todos') }}
+              className="text-xs font-semibold px-4 py-2 rounded-xl transition-all duration-150"
+              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#818cf8' }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.background = 'rgba(99,102,241,0.18)'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.background = 'rgba(99,102,241,0.1)'
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
         ) : (
           gruposOrdenados.map(([uid, grupo]) => {
             const esMio = uid === usuario?.id
@@ -348,18 +459,33 @@ export default function Apuntes() {
                   <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
                 </div>
 
-                {/* ── Grid de archivos ── */}
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {grupo.archivos.map((ap, idx) => (
-                    <ApunteCard
-                      key={ap.id}
-                      ap={ap}
-                      canDelete={esMio || isAdmin}
-                      onDelete={() => handleEliminar(ap)}
-                      delay={idx * 35}
-                    />
-                  ))}
-                </div>
+                {/* ── Grid o Lista de archivos ── */}
+                {vistaLista ? (
+                  <div className="flex flex-col gap-1.5">
+                    {grupo.archivos.map((ap, idx) => (
+                      <ApunteCard
+                        key={ap.id}
+                        ap={ap}
+                        canDelete={esMio || isAdmin}
+                        onDelete={() => handleEliminar(ap)}
+                        delay={idx * 25}
+                        compact
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {grupo.archivos.map((ap, idx) => (
+                      <ApunteCard
+                        key={ap.id}
+                        ap={ap}
+                        canDelete={esMio || isAdmin}
+                        onDelete={() => handleEliminar(ap)}
+                        delay={idx * 35}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
             )
           })
@@ -382,12 +508,13 @@ export default function Apuntes() {
 }
 
 function ApunteCard({
-  ap, canDelete, onDelete, delay = 0,
+  ap, canDelete, onDelete, delay = 0, compact = false,
 }: {
   ap: ApunteConAutor
   canDelete: boolean
   onDelete: () => void
   delay?: number
+  compact?: boolean
 }) {
   const config = TIPO_CONFIG[ap.tipo]
   const { Icon } = config
@@ -395,6 +522,109 @@ function ApunteCard({
   const ext = rawExt.length > 0 && rawExt.length <= 5 ? rawExt.toUpperCase() : config.label
   const fecha = new Date(ap.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })
 
+  // ── Vista compacta (lista) ──
+  if (compact) {
+    return (
+      <div
+        className="group flex items-center gap-3 px-3 rounded-xl transition-all duration-200 animate-slide-up"
+        style={{
+          animationDelay: `${delay}ms`,
+          height: '48px',
+          background: 'linear-gradient(145deg, #1a1d27, #141720)',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.borderColor = `${config.color}30`
+          el.style.background = 'rgba(255,255,255,0.02)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.borderColor = 'rgba(255,255,255,0.07)'
+          el.style.background = 'linear-gradient(145deg, #1a1d27, #141720)'
+        }}
+      >
+        {/* Icono pequeño */}
+        <div
+          className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0"
+          style={{ background: config.bg, border: `1px solid ${config.border}` }}
+        >
+          <Icon size={14} style={{ color: config.color }} />
+        </div>
+
+        {/* Nombre y fecha */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate leading-none" style={{ color: '#f1f5f9' }}>
+            {ap.nombre}
+          </p>
+          <p className="text-xs mt-0.5 leading-none" style={{ color: '#4b5563' }}>{fecha}</p>
+        </div>
+
+        {/* Badge tipo + botones */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-lg hidden sm:inline-block"
+            style={{ background: config.bg, color: config.color, border: `1px solid ${config.border}` }}>
+            {ext}
+          </span>
+          <a
+            href={ap.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'
+            }}
+            aria-label="Abrir archivo"
+          >
+            <ExternalLink size={12} />
+          </a>
+          <a
+            href={ap.url}
+            download
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'
+            }}
+            aria-label="Descargar"
+          >
+            <Download size={12} />
+          </a>
+          {canDelete && (
+            <button
+              onClick={onDelete}
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150 shrink-0"
+              style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#4b5563' }}
+              onMouseEnter={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.color = '#f43f5e'; el.style.background = 'rgba(244,63,94,0.08)'; el.style.borderColor = 'rgba(244,63,94,0.2)'
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.color = '#4b5563'; el.style.background = 'transparent'; el.style.borderColor = 'rgba(255,255,255,0.07)'
+              }}
+              aria-label="Eliminar archivo"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Vista grid (original) ──
   return (
     <div
       className="group p-4 flex flex-col gap-3 rounded-2xl transition-all duration-200 animate-slide-up"
