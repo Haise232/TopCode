@@ -42,23 +42,18 @@ export default defineConfig(({ mode }) => {
       cssCodeSplit: true,
       chunkSizeWarningLimit: 600,
 
+      // Polyfill de modulepreload para Firefox < 115 y Safari < 17
+      modulePreload: { polyfill: true },
+
       rollupOptions: {
         output: {
-          // Chunks de vendor bien separados para maximizar cache hits:
-          // react/react-dom rara vez cambian → cache muy larga en CDN.
-          // supabase, router e icons tienen su propio hash independiente.
           manualChunks: {
             'vendor-react':    ['react', 'react-dom'],
             'vendor-router':   ['react-router-dom'],
             'vendor-supabase': ['@supabase/supabase-js'],
             'vendor-icons':    ['lucide-react'],
           },
-          // Preload de módulos para navegadores que lo soportan.
-          // 'modulepreload' emite <link rel="modulepreload"> automático por Vite;
-          // este polyfill lo activa también en browsers sin soporte nativo.
         },
-        // Inyectar polyfill de modulepreload para Firefox < 115 y Safari < 17
-        modulePreload: { polyfill: true },
       },
     },
 
