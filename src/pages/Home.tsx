@@ -331,8 +331,9 @@ export default function Home() {
   }, [usuario])
 
   useEffect(() => {
+    if (!usuario) return // esperar a que AuthContext cargue el perfil
     cargarDatos().finally(() => setLoading(false))
-  }, [cargarDatos])
+  }, [cargarDatos, usuario])
 
   async function handleRefresh() {
     setRefreshing(true)
