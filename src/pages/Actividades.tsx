@@ -126,8 +126,10 @@ export default function Actividades() {
 
   const cargar = useCallback(async () => {
     if (!usuario) return
-    // Eliminar actividades cuyo plazo ya venció
-    await supabase.from('actividades').delete().lt('fecha_entrega', new Date().toISOString())
+    // Solo los admins eliminan actividades vencidas (acción destructiva con impacto global)
+    if (isAdmin) {
+      await supabase.from('actividades').delete().lt('fecha_entrega', new Date().toISOString())
+    }
 
     const [actsRes, estadosRes] = await Promise.all([
       supabase.from('actividades').select('*').order('fecha_entrega', { ascending: true }),

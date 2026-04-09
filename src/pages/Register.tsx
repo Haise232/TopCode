@@ -204,10 +204,11 @@ export default function Register() {
           >
             <form onSubmit={handleRegister} className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
+                <label htmlFor="register-nombre" className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
                   Nombre completo
                 </label>
                 <input
+                  id="register-nombre"
                   type="text"
                   value={nombre}
                   onChange={e => setNombre(e.target.value)}
@@ -218,10 +219,11 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
+                <label htmlFor="register-email" className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
                   Correo electrónico
                 </label>
                 <input
+                  id="register-email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -232,11 +234,12 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
+                <label htmlFor="register-password" className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
                   Contraseña
                 </label>
                 <div className="relative">
                   <input
+                    id="register-password"
                     type={showPass ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}

@@ -173,7 +173,7 @@ export default function Admin() {
     })
   }
 
-  const isSuperAdmin = usuario?.email?.toLowerCase() === 'joaquinjose1298@gmail.com'
+  const isSuperAdmin = usuario?.es_superadmin === true
   const admins  = users.filter(u => u.rol === 'admin')
   const alumnos = users.filter(u => u.rol === 'alumno')
 

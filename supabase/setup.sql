@@ -209,6 +209,60 @@ COMMENT ON TABLE public.eventos IS
   'Eventos del calendario académico. Solo admins los crean/eliminan. La fecha es tipo DATE (sin hora) para simplificar comparaciones en el cliente.';
 
 
+-- ────────────────────────────────────────────────────────────
+-- 1.7 Tabla: anuncios
+--   Mensajes globales creados por admins que aparecen como modal
+--   a todos los usuarios hasta que los lean.
+--   Lectura: todos los autenticados. Escritura/borrado: solo admins.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.anuncios (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo      TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 100),
+  contenido   TEXT NOT NULL CHECK (length(contenido) BETWEEN 1 AND 1000),
+  activo      BOOLEAN NOT NULL DEFAULT true,
+  created_by  UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.anuncios IS
+  'Anuncios globales creados por admins. El último activo se muestra como modal a todos los usuarios.';
+
+CREATE INDEX IF NOT EXISTS idx_anuncios_created_at
+  ON public.anuncios (created_at DESC);
+
+ALTER TABLE public.anuncios ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anuncios_select_auth"   ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_insert_admin"  ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_update_admin"  ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_delete_admin"  ON public.anuncios;
+
+CREATE POLICY "anuncios_select_auth" ON public.anuncios
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "anuncios_insert_admin" ON public.anuncios
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "anuncios_update_admin" ON public.anuncios
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  )
+  WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "anuncios_delete_admin" ON public.anuncios
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+
 -- ════════════════════════════════════════════════════════════
 -- BLOQUE 2: COLUMNAS OPCIONALES (idempotente con IF NOT EXISTS)
 -- Añade columnas que pueden no existir en instancias antiguas
@@ -233,6 +287,15 @@ ALTER TABLE public.usuarios
 -- created_at en usuarios (referenciado en Profile.tsx)
 ALTER TABLE public.usuarios
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- es_superadmin: controla quién puede cambiar roles desde el panel admin.
+-- Solo se establece manualmente en la base de datos (nunca desde el cliente).
+ALTER TABLE public.usuarios
+  ADD COLUMN IF NOT EXISTS es_superadmin BOOLEAN NOT NULL DEFAULT false;
+
+-- banner_url: referenciada en Home.tsx para la imagen de cabecera del perfil
+ALTER TABLE public.usuarios
+  ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT NULL;
 
 -- NOTA: push_token NO se añade. Era una columna mobile-only
 -- usada por Expo para notificaciones push. La versión web no
@@ -622,6 +685,16 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Anuncios (AnuncioModal.tsx: channel 'anuncios', event INSERT/UPDATE)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'anuncios'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.anuncios;
+  END IF;
+END $$;
+
 
 -- ════════════════════════════════════════════════════════════
 -- BLOQUE 8: CONFIGURACIÓN INICIAL DE ROLES
@@ -632,6 +705,13 @@ END $$;
 --
 --   UPDATE public.usuarios
 --   SET rol = 'admin'
+--   WHERE email = 'tu@email.com';
+--
+-- Para marcar al propietario como super-admin (puede cambiar roles
+-- desde el panel de admin). NUNCA exponer este email en el código fuente:
+--
+--   UPDATE public.usuarios
+--   SET es_superadmin = true
 --   WHERE email = 'tu@email.com';
 
 
