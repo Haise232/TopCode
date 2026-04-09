@@ -1,44 +1,63 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Faltan variables de entorno VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY')
+// ── Environment validation ────────────────────────────────────────────────────
+// Validate at module-load time so a missing variable fails loudly in both dev
+// and CI rather than producing cryptic runtime errors later.
+function requireEnv(key: string): string {
+  const value = import.meta.env[key] as string | undefined
+  if (!value) {
+    throw new Error(
+      `Missing environment variable: ${key}\n` +
+      'Create a .env.local file at the project root based on .env.example.',
+    )
+  }
+  return value
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    // Forzar localStorage explícitamente para garantizar persistencia
-    // entre sesiones del navegador (no se borra al cerrar pestaña).
-    storage: window.localStorage,
-    storageKey: 'topcode-session',
-    // Bypasa navigator.locks para evitar bloqueos de 5s en HMR / dev
-    // y cuando hay locks huérfanos de tabs/instancias anteriores.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    lock: (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => fn(),
-  },
-})
+const supabaseUrl     = requireEnv('VITE_SUPABASE_URL')
+const supabaseAnonKey = requireEnv('VITE_SUPABASE_ANON_KEY')
 
+// ── Singleton guard ───────────────────────────────────────────────────────────
+// Vite HMR re-executes modules on every hot-update.  Without this guard, each
+// save would create a new Supabase client, leaking realtime subscriptions and
+// triggering duplicate auth-lock acquisitions (the 5-second timeout visible in
+// dev tools).  We attach the singleton to `globalThis` so it survives module
+// re-evaluations while remaining type-safe.
+declare global {
+  // eslint-disable-next-line no-var
+  var __supabaseClient: SupabaseClient | undefined
+}
+
+function getSupabaseClient(): SupabaseClient {
+  if (globalThis.__supabaseClient) return globalThis.__supabaseClient
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      // Forzar localStorage explícitamente para garantizar persistencia
+      // entre sesiones del navegador (no se borra al cerrar pestaña).
+      storage: window.localStorage,
+      storageKey: 'topcode-session',
+      // Bypasa navigator.locks para evitar bloqueos de 5s en HMR / dev
+      // y cuando hay locks huérfanos de tabs/instancias anteriores.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lock: (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => fn(),
+    },
+  })
+
+  globalThis.__supabaseClient = client
+  return client
+}
+
+export const supabase = getSupabaseClient()
+
+// actualizarPromedio — usa una función RPC que ejecuta SELECT AVG + UPDATE
+// en una sola round-trip al servidor, en lugar de dos queries separadas.
+// La función SQL correspondiente está en supabase/setup.sql (recalcular_promedio).
 export async function actualizarPromedio(userId: string): Promise<void> {
-  const { data: notas, error } = await supabase
-    .from('notas')
-    .select('media')
-    .eq('usuario_id', userId)
-
-  if (error || !notas) return
-
-  const promedio = notas.length > 0
-    ? notas.reduce((acc, n) => acc + n.media, 0) / notas.length
-    : 0
-
-  await supabase
-    .from('usuarios')
-    .update({ promedio: Math.round(promedio * 100) / 100 })
-    .eq('id', userId)
+  await supabase.rpc('recalcular_promedio', { p_usuario_id: userId })
 }
 
 export async function subirArchivo(

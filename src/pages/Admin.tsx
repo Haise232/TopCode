@@ -80,7 +80,7 @@ export default function Admin() {
   const cargarAnuncios = useCallback(async () => {
     const { data } = await supabase
       .from('anuncios')
-      .select('*')
+      .select('id, titulo, contenido, activo, created_at, created_by')
       .order('created_at', { ascending: false })
       .limit(10)
     if (data) setAnuncios(data as Anuncio[])
@@ -137,7 +137,7 @@ export default function Admin() {
   const cargar = useCallback(async () => {
     const { data } = await supabase
       .from('usuarios')
-      .select('*')
+      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, created_at')
       .order('nombre')
     if (data) setUsers(data as Usuario[])
     setLoading(false)
