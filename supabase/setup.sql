@@ -913,7 +913,92 @@ END $$;
 
 
 -- ════════════════════════════════════════════════════════════
--- BLOQUE 8: CONFIGURACIÓN INICIAL DE ROLES
+-- BLOQUE 8: SEGURIDAD DE COLUMNAS — Funciones SECURITY DEFINER
+-- Restringe email y es_superadmin de acceso directo autenticado.
+-- PostgREST respeta los grants de columna: si authenticated no
+-- tiene SELECT en una columna, .select('email') falla con 403.
+-- ════════════════════════════════════════════════════════════
+
+-- Sustituir el grant de tabla completo por grants de columna.
+-- email y es_superadmin quedan fuera: solo accesibles via RPC.
+REVOKE SELECT ON public.usuarios FROM authenticated, anon;
+GRANT SELECT (id, nombre, avatar_url, rol, promedio, banner_url, created_at)
+  ON public.usuarios TO authenticated;
+-- INSERT y UPDATE se necesitan para profile edits y cambio de rol.
+GRANT INSERT ON public.usuarios TO authenticated;
+GRANT UPDATE ON public.usuarios TO authenticated;
+
+-- ────────────────────────────────────────────────────────────
+-- 8.1 get_mi_perfil()
+--   Devuelve el perfil completo del usuario autenticado
+--   (incluyendo email y es_superadmin).
+--   SECURITY DEFINER → se ejecuta como owner (postgres),
+--   bypasa RLS y column-level grants.
+-- ────────────────────────────────────────────────────────────
+DROP FUNCTION IF EXISTS public.get_mi_perfil();
+CREATE FUNCTION public.get_mi_perfil()
+RETURNS TABLE (
+  id            uuid,
+  nombre        text,
+  email         text,
+  promedio      numeric,
+  avatar_url    text,
+  banner_url    text,
+  rol           text,
+  es_superadmin boolean,
+  created_at    timestamptz
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at
+  FROM public.usuarios
+  WHERE id = auth.uid()
+  LIMIT 1;
+$$;
+REVOKE ALL ON FUNCTION public.get_mi_perfil() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_mi_perfil() TO authenticated;
+
+-- ────────────────────────────────────────────────────────────
+-- 8.2 get_todos_usuarios()
+--   Devuelve todos los usuarios con email solo si el llamador
+--   es admin. Los no-admin reciben tabla vacía.
+-- ────────────────────────────────────────────────────────────
+DROP FUNCTION IF EXISTS public.get_todos_usuarios();
+CREATE FUNCTION public.get_todos_usuarios()
+RETURNS TABLE (
+  id            uuid,
+  nombre        text,
+  email         text,
+  promedio      numeric,
+  avatar_url    text,
+  banner_url    text,
+  rol           text,
+  es_superadmin boolean,
+  created_at    timestamptz
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT u.id, u.nombre, u.email, u.promedio, u.avatar_url, u.banner_url,
+         u.rol, u.es_superadmin, u.created_at
+  FROM public.usuarios u
+  WHERE EXISTS (
+    SELECT 1 FROM public.usuarios
+    WHERE id = auth.uid() AND rol = 'admin'
+  )
+  ORDER BY u.nombre;
+$$;
+REVOKE ALL ON FUNCTION public.get_todos_usuarios() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_todos_usuarios() TO authenticated;
+
+
+-- ════════════════════════════════════════════════════════════
+-- BLOQUE 9: CONFIGURACIÓN INICIAL DE ROLES
 -- ════════════════════════════════════════════════════════════
 
 -- Para promover a admin al primer usuario (ejecutar manualmente

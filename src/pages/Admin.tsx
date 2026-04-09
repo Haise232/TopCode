@@ -129,10 +129,7 @@ export default function Admin() {
   }
 
   const cargar = useCallback(async () => {
-    const { data } = await supabase
-      .from('usuarios')
-      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, created_at')
-      .order('nombre')
+    const { data } = await supabase.rpc('get_todos_usuarios')
     if (data) setUsers(data as Usuario[])
     setLoading(false)
   }, [])

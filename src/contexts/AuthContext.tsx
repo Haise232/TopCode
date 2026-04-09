@@ -55,29 +55,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const currentFetch = ++fetchCountRef.current
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
-      .eq('id', userId)
-      .single()
+    // get_mi_perfil() es SECURITY DEFINER: devuelve email y es_superadmin
+    // que el rol `authenticated` no puede leer directamente por column-level REVOKE.
+    const getPerfil = async () => {
+      const { data, error } = await supabase.rpc('get_mi_perfil')
+      return {
+        data: (data as Usuario[] | null)?.[0] ?? null,
+        error,
+      }
+    }
 
+    const { data, error } = await getPerfil()
     if (currentFetch !== fetchCountRef.current) return
 
     if (data && !error) {
-      setCachedUsuario(data as Usuario)
-      setUsuario(data as Usuario)
+      setCachedUsuario(data)
+      setUsuario(data)
       setLoading(false)
       return
     }
 
-    // PGRST116 = no existe fila para este usuario en la tabla `usuarios`.
-    // Solo hacemos upsert en este caso; cualquier otro error no debe crear filas.
-    if (error?.code === 'PGRST116') {
+    // Sin fila = usuario nuevo. Solo hacemos upsert en este caso.
+    if (!data && !error) {
       const nombre = (userMeta?.nombre as string | undefined)
         ?? (userMeta?.full_name as string | undefined)
         ?? (userEmail?.split('@')[0] ?? 'Usuario')
 
-      const { data: upserted, error: upsertError } = await supabase
+      const { error: upsertError } = await supabase
         .from('usuarios')
         .upsert({
           id: userId,
@@ -87,28 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatar_url: null,
           rol: 'alumno',
         })
-        .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
-        .single()
 
       if (currentFetch !== fetchCountRef.current) return
 
-      if (upserted && !upsertError) {
-        setCachedUsuario(upserted as Usuario)
-        setUsuario(upserted as Usuario)
+      if (!upsertError) {
+        const { data: result } = await getPerfil()
+        if (currentFetch !== fetchCountRef.current) return
+        setCachedUsuario(result)
+        setUsuario(result)
         setLoading(false)
         return
       }
 
-      // El upsert falló: reintentar un SELECT por si la fila ya existía (race condition)
-      const { data: retry } = await supabase
-        .from('usuarios')
-        .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
-        .eq('id', userId)
-        .single()
-
+      // El upsert falló: reintentar por si la fila ya existía (race condition)
+      const { data: result } = await getPerfil()
       if (currentFetch !== fetchCountRef.current) return
-
-      const result = (retry as Usuario) ?? null
       setCachedUsuario(result)
       setUsuario(result)
       setLoading(false)
@@ -116,15 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Cualquier otro error (red, RLS transitorio, etc.): reintento único antes de rendir
-    const { data: retry } = await supabase
-      .from('usuarios')
-      .select('id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at')
-      .eq('id', userId)
-      .single()
-
+    const { data: result } = await getPerfil()
     if (currentFetch !== fetchCountRef.current) return
-
-    const result = (retry as Usuario) ?? null
     setCachedUsuario(result)
     setUsuario(result)
     setLoading(false)
@@ -174,12 +164,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUsuario = useCallback(async () => {
     const { data: { session: sess } } = await supabase.auth.getSession()
     if (!sess?.user) return
-    await fetchUsuario(
-      sess.user.id,
-      sess.user.email,
-      sess.user.user_metadata as Record<string, unknown>,
-    )
-  }, [fetchUsuario])
+    const { data } = await supabase.rpc('get_mi_perfil')
+    const perfil = (data as Usuario[] | null)?.[0] ?? null
+    if (perfil) {
+      setCachedUsuario(perfil)
+      setUsuario(perfil)
+    }
+  }, [])
 
   return (
     <AuthContext.Provider value={{
