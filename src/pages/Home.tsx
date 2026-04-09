@@ -699,7 +699,7 @@ export default function Home() {
             <div className="h-px flex-1 mx-3" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }} />
           </div>
           <div className={`grid gap-3 grid-cols-3 ${esAdmin ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
-            {quickActions.map(({ label, desc, Icon, to, color, bg, border, glow, gradFrom, gradTo }, index) => {
+            {quickActions.map(({ label, desc, Icon, to, color, border, glow, gradFrom, gradTo }, index) => {
               const badge = to === '/actividades' && actividadesPendientes > 0
                 ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
                 : null

@@ -78,3 +78,7 @@ export async function eliminarArchivoStorage(
 ): Promise<void> {
   await supabase.storage.from(bucket).remove([path])
 }
+
+export async function actualizarPromedio(usuarioId: string): Promise<void> {
+  await supabase.rpc('recalcular_promedio', { p_usuario_id: usuarioId })
+}
