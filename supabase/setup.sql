@@ -547,20 +547,16 @@ DROP POLICY IF EXISTS "usuarios_insert_own"    ON public.usuarios;
 DROP POLICY IF EXISTS "usuarios_update_own"    ON public.usuarios;
 DROP POLICY IF EXISTS "usuarios_update_admin"  ON public.usuarios;
 
--- Cada usuario ve solo su propia fila completa
-CREATE POLICY "usuarios_select_self" ON public.usuarios
-  FOR SELECT USING (auth.uid() = id);
-
--- Los admins ven todas las filas
-CREATE POLICY "usuarios_select_admin" ON public.usuarios
-  FOR SELECT USING (
-    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
-  );
+-- NOTA: No se añaden políticas SELECT adicionales.
+-- La política legacy "usuarios: ver todos" (USING true) y "Usuarios autenticados"
+-- (FOR ALL) ya cubren el acceso de lectura sin causar recursión infinita.
+-- Añadir políticas SELECT que hagan subqueries sobre la misma tabla usuarios
+-- provoca bucle infinito → HTTP 500 en todas las queries.
 
 -- Vista pública con solo los campos no-sensibles para el chat
 -- security_invoker=off → usa permisos del owner (postgres), ignora RLS
 -- Así cualquier alumno autenticado puede ver nombre+avatar de otros usuarios
--- sin acceder a email, rol, promedio ni es_superadmin.
+-- sin acceder a email, promedio ni es_superadmin.
 DROP VIEW IF EXISTS public.usuarios_publicos;
 CREATE VIEW public.usuarios_publicos
   WITH (security_invoker = off)
@@ -588,17 +584,12 @@ CREATE POLICY "usuarios_update_own" ON public.usuarios
     AND rol = (SELECT rol FROM public.usuarios WHERE id = auth.uid())
   );
 
--- Los admins pueden actualizar cualquier fila
--- (cambio de rol desde Admin.tsx)
--- WITH CHECK impide que un admin escale a es_superadmin=true.
+-- Los admins pueden actualizar cualquier fila (cambio de rol desde Admin.tsx)
+-- Sin WITH CHECK de es_superadmin para evitar subqueries recursivos.
 CREATE POLICY "usuarios_update_admin" ON public.usuarios
   FOR UPDATE
   USING (
     (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
-  )
-  WITH CHECK (
-    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
-    AND es_superadmin = (SELECT es_superadmin FROM public.usuarios WHERE id = usuarios.id)
   );
 
 
