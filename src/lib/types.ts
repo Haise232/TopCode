@@ -6,6 +6,7 @@ export interface Usuario {
   avatar_url: string | null
   banner_url: string | null
   rol: 'alumno' | 'admin'
+  es_superadmin: boolean
   created_at: string
 }
 
@@ -17,6 +18,16 @@ export interface Nota {
   teorica: number
   practica: number
   media: number
+  created_at: string
+}
+
+export interface Noticia {
+  id: string
+  titulo: string
+  descripcion: string
+  url_fuente: string
+  url_imagen: string | null
+  created_by: string
   created_at: string
 }
 

@@ -9,17 +9,13 @@
     <meta name="theme-color" content="#09090b" />
     <meta name="robots" content="noindex, nofollow" />
     <title>TopCode</title>
-
     <!--
-      Preconnect to the Supabase project so the TLS handshake is done before
-      the JS bundle fires its first API call.  Replace the placeholder with
-      your real project URL (same value as VITE_SUPABASE_URL) when deploying.
-      Using two separate <link> tags is the recommended pattern:
-        1. preconnect  — opens socket + TLS early (crossorigin needed for CORS APIs)
-        2. dns-prefetch — lightweight fallback for browsers that ignore preconnect
+      Preconnect al proyecto Supabase: el plugin de Vite inyecta el hint exacto
+      (con el slug del proyecto) durante el build cuando VITE_SUPABASE_URL está
+      definida. Las líneas de abajo cubren el DNS compartido de la plataforma
+      y sirven de fallback si el build corre sin la variable de entorno.
     -->
-    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
-    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%" />
+    <link rel="dns-prefetch" href="https://supabase.co" />
   </head>
   <body>
     <div id="root"></div>

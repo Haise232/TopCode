@@ -74,7 +74,62 @@ COMMENT ON TABLE public.notas IS
 
 
 -- ────────────────────────────────────────────────────────────
--- 1.3 Tabla: mensajes (chat público)
+-- 1.3 Tabla: noticias (sector tecnológico)
+--   Noticias del sector tech gestionadas por admins.
+--   Lectura: todos los usuarios. Escritura/borrado: solo admins.
+--   Query más frecuente: .order('created_at', desc)
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.noticias (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo      TEXT NOT NULL,
+  descripcion TEXT NOT NULL,
+  url_fuente  TEXT NOT NULL,
+  url_imagen  TEXT DEFAULT NULL,
+  created_by  UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.noticias IS
+  'Noticias del sector tecnológico añadidas por admins. url_imagen es opcional.';
+
+CREATE INDEX IF NOT EXISTS idx_noticias_created_at
+  ON public.noticias (created_at DESC);
+
+-- RLS: lectura pública para usuarios autenticados; escritura solo admins
+ALTER TABLE public.noticias ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "noticias_select_authenticated" ON public.noticias;
+DROP POLICY IF EXISTS "noticias_insert_admin"         ON public.noticias;
+DROP POLICY IF EXISTS "noticias_delete_admin"         ON public.noticias;
+
+CREATE POLICY "noticias_select_authenticated"
+  ON public.noticias FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "noticias_insert_admin"
+  ON public.noticias FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.usuarios
+      WHERE id = auth.uid() AND rol = 'admin'
+    )
+  );
+
+CREATE POLICY "noticias_delete_admin"
+  ON public.noticias FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.usuarios
+      WHERE id = auth.uid() AND rol = 'admin'
+    )
+  );
+
+
+-- ────────────────────────────────────────────────────────────
+-- 1.4 Tabla: mensajes (chat público)
 --   Chat en tiempo real accesible a todos los usuarios.
 --   Queries: .order('created_at', asc).limit(100)
 --   INSERT con usuario_id + autor (nombre desnormalizado para
@@ -158,7 +213,7 @@ COMMENT ON TABLE public.eventos IS
 -- 1.7 Tabla: actividades
 --   Tareas/entregas académicas con fecha límite.
 --   Solo admins crean/eliminan. Las actividades expiradas
---   se borran automáticamente en cada carga de useActividades.
+--   se borran automáticamente en cada carga de Actividades.tsx.
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.actividades (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -194,21 +249,56 @@ COMMENT ON TABLE public.actividades_estado IS
 
 -- ────────────────────────────────────────────────────────────
 -- 1.9 Tabla: anuncios
---   Mensajes del admin visibles en un modal al entrar a la app.
---   La columna "activo" permite desactivar sin borrar.
---   AnuncioModal usa Realtime para mostrar nuevos anuncios sin recargar.
+--   Mensajes globales creados por admins que aparecen como modal
+--   a todos los usuarios hasta que los lean.
+--   Lectura: todos los autenticados. Escritura/borrado: solo admins.
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.anuncios (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  titulo     TEXT NOT NULL,
-  contenido  TEXT NOT NULL,
-  activo     BOOLEAN NOT NULL DEFAULT TRUE,
-  created_by UUID REFERENCES public.usuarios(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo      TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 100),
+  contenido   TEXT NOT NULL CHECK (length(contenido) BETWEEN 1 AND 1000),
+  activo      BOOLEAN NOT NULL DEFAULT true,
+  created_by  UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 COMMENT ON TABLE public.anuncios IS
-  'Anuncios del admin mostrados en modal al entrar. activo=false oculta sin borrar. Realtime habilitado para actualización inmediata.';
+  'Anuncios globales creados por admins. El último activo se muestra como modal a todos los usuarios.';
+
+CREATE INDEX IF NOT EXISTS idx_anuncios_created_at
+  ON public.anuncios (created_at DESC);
+
+ALTER TABLE public.anuncios ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "anuncios_select_auth"   ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_insert_admin"  ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_update_admin"  ON public.anuncios;
+DROP POLICY IF EXISTS "anuncios_delete_admin"  ON public.anuncios;
+
+CREATE POLICY "anuncios_select_auth" ON public.anuncios
+  FOR SELECT TO authenticated
+  USING (true);
+
+CREATE POLICY "anuncios_insert_admin" ON public.anuncios
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "anuncios_update_admin" ON public.anuncios
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  )
+  WITH CHECK (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "anuncios_delete_admin" ON public.anuncios
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT rol FROM public.usuarios WHERE id = auth.uid()) = 'admin'
+  );
 
 
 -- ════════════════════════════════════════════════════════════
@@ -239,6 +329,15 @@ ALTER TABLE public.usuarios
 -- created_at en usuarios (referenciado en Profile.tsx)
 ALTER TABLE public.usuarios
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- es_superadmin: controla quién puede cambiar roles desde el panel admin.
+-- Solo se establece manualmente en la base de datos (nunca desde el cliente).
+ALTER TABLE public.usuarios
+  ADD COLUMN IF NOT EXISTS es_superadmin BOOLEAN NOT NULL DEFAULT false;
+
+-- banner_url: referenciada en Home.tsx para la imagen de cabecera del perfil
+ALTER TABLE public.usuarios
+  ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT NULL;
 
 -- NOTA: push_token NO se añade. Era una columna mobile-only
 -- usada por Expo para notificaciones push. La versión web no
@@ -787,7 +886,7 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Anuncios (AnuncioModal.tsx: channel 'anuncios-realtime', event *)
+-- Anuncios (AnuncioModal.tsx: channel 'anuncios', event INSERT/UPDATE)
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_publication_tables
@@ -807,6 +906,13 @@ END $$;
 --
 --   UPDATE public.usuarios
 --   SET rol = 'admin'
+--   WHERE email = 'tu@email.com';
+--
+-- Para marcar al propietario como super-admin (puede cambiar roles
+-- desde el panel de admin). NUNCA exponer este email en el código fuente:
+--
+--   UPDATE public.usuarios
+--   SET es_superadmin = true
 --   WHERE email = 'tu@email.com';
 
 
