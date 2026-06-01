@@ -54,11 +54,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav
         className="z-50 shrink-0"
         style={{
-          background: 'rgba(13, 15, 22, 0.97)',
+          background: 'var(--color-nav-glass)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 1px 0 rgba(255,255,255,0.025), 0 4px 24px rgba(0,0,0,0.5)',
+          borderBottom: '1px solid var(--color-nav-border)',
+          boxShadow: 'var(--shadow-nav)',
         }}
       >
         <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-[56px] flex items-center gap-3">
@@ -85,13 +85,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               />
               <GraduationCap size={14} className="text-white absolute" style={{ display: 'none' }} aria-hidden />
             </div>
-            <span className="hidden md:block font-bold text-sm tracking-tight" style={{ color: '#f1f5f9' }}>
-              Top<span style={{ color: '#818cf8' }}>Code</span>
+            <span className="hidden md:block font-bold text-sm tracking-tight" style={{ color: 'var(--color-text)' }}>
+              Top<span style={{ color: 'var(--color-primary-light)' }}>Code</span>
             </span>
           </NavLink>
 
           {/* Separator — desktop only */}
-          <div className="hidden md:block w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />
+          <div className="hidden md:block w-px h-4 shrink-0" style={{ background: 'var(--border)' }} />
 
           {/* Nav links — desktop only */}
           <div className="hidden md:flex items-center gap-0.5 flex-1 min-w-0">
@@ -173,10 +173,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
               <span
                 className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-                style={{ background: '#10b981', border: '1.5px solid #0d0f16' }}
+                style={{ background: '#10b981', border: '1.5px solid var(--color-bg)' }}
               />
             </div>
-            <span className="hidden md:block text-xs font-medium max-w-[100px] truncate" style={{ color: '#94a3b8' }}>
+            <span className="hidden md:block text-xs font-medium max-w-[100px] truncate" style={{ color: 'var(--color-text-secondary)' }}>
               {usuario?.nombre}
             </span>
           </NavLink>
@@ -192,11 +192,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch"
         style={{
-          background: 'rgba(13,15,22,0.97)',
+          background: 'var(--color-nav-glass)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          boxShadow: '0 -4px 24px rgba(0,0,0,0.5)',
+          borderTop: '1px solid var(--color-nav-border)',
+          boxShadow: 'var(--shadow-nav-bottom)',
           height: '60px',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
@@ -208,7 +208,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             end={to === '/'}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-all duration-150 relative"
             style={({ isActive }) => ({
-              color: isActive ? '#818cf8' : '#4b5563',
+              color: isActive ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
             })}
             onTouchStart={() => { schedulePrefetch(to) }}
           >

@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays } from 'lucide-react'
+import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays, Sun, Moon } from 'lucide-react'
 import { supabase, subirAvatar } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useTheme } from '../contexts/ThemeContext'
 import AlertModal from '../components/AlertModal'
 
 type AlertState = {
@@ -31,6 +32,7 @@ function gradeLabel(n: number) {
 
 export default function Profile() {
   const { usuario, refreshUsuario } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -113,17 +115,17 @@ export default function Profile() {
       {/* ── Page header ── */}
       <div
         className="relative px-4 md:px-6 py-5 overflow-hidden"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div className="max-w-[700px] mx-auto flex items-center gap-3 relative">
           <button
             onClick={() => navigate(-1)}
             className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-            style={{ color: '#64748b', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--border)' }}
           >
             <ArrowLeft size={15} />
           </button>
-          <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Perfil</h1>
+          <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Perfil</h1>
         </div>
       </div>
 
@@ -133,8 +135,8 @@ export default function Profile() {
         <div
           className="relative overflow-hidden rounded-2xl"
           style={{
-            background: 'linear-gradient(145deg, #1a1d27 0%, #141720 100%)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-bg) 100%)',
+            border: '1px solid var(--border)',
           }}
         >
           {/* Background gradient accent */}
@@ -161,14 +163,14 @@ export default function Profile() {
                 className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl"
                 style={{
                   background: 'rgba(99,102,241,0.15)',
-                  border: '3px solid #1a1d27',
+                  border: '3px solid var(--color-surface)',
                   boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
                 }}
               >
                 {avatarSrc ? (
                   <img src={avatarSrc} alt={usuario?.nombre} className="w-20 h-20 object-cover" />
                 ) : (
-                  <span className="font-extrabold text-3xl" style={{ color: '#818cf8' }}>
+                  <span className="font-extrabold text-3xl" style={{ color: 'var(--color-primary-light)' }}>
                     {initial}
                   </span>
                 )}
@@ -201,14 +203,14 @@ export default function Profile() {
             {/* Info */}
             <div className="flex flex-col gap-1 mb-5">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="font-bold text-xl" style={{ color: '#f1f5f9' }}>{usuario?.nombre}</h2>
+                <h2 className="font-bold text-xl" style={{ color: 'var(--color-text)' }}>{usuario?.nombre}</h2>
                 {usuario?.rol === 'admin' ? (
                   <span
                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
                     style={{
                       background: 'rgba(99,102,241,0.15)',
                       border: '1px solid rgba(99,102,241,0.3)',
-                      color: '#818cf8',
+                      color: 'var(--color-primary-light)',
                     }}
                   >
                     <Shield size={10} />
@@ -218,9 +220,9 @@ export default function Profile() {
                   <span
                     className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
                     style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: '#64748b',
+                      background: 'var(--color-surface-alpha)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--color-text-muted)',
                     }}
                   >
                     <GraduationCap size={10} />
@@ -228,7 +230,7 @@ export default function Profile() {
                   </span>
                 )}
               </div>
-              <p className="text-sm" style={{ color: '#64748b' }}>{usuario?.email}</p>
+              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{usuario?.email}</p>
             </div>
 
             {/* Stats chips row */}
@@ -244,18 +246,18 @@ export default function Profile() {
                 <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(promedio) }}>
                   {promedio.toFixed(2)}
                 </span>
-                <span className="text-xs" style={{ color: '#64748b' }}>promedio</span>
+                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>promedio</span>
               </div>
 
               <div
                 className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--color-surface-alpha)',
+                  border: '1px solid var(--border)',
                 }}
               >
-                <CalendarDays size={13} style={{ color: '#818cf8' }} />
-                <span className="text-xs" style={{ color: '#94a3b8' }}>
+                <CalendarDays size={13} style={{ color: 'var(--color-primary-light)' }} />
+                <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   Desde {new Date(usuario?.created_at ?? '').toLocaleDateString('es', { month: 'long', year: 'numeric' })}
                 </span>
               </div>
@@ -281,8 +283,8 @@ export default function Profile() {
         <div
           className="p-5 rounded-2xl"
           style={{
-            background: 'linear-gradient(145deg, #1a1d27, #141720)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'linear-gradient(145deg, var(--color-surface), var(--color-bg))',
+            border: '1px solid var(--border)',
           }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -290,11 +292,11 @@ export default function Profile() {
               className="w-1.5 h-5 rounded-full"
               style={{ background: 'linear-gradient(180deg, #6366f1, #8b5cf6)' }}
             />
-            <h2 className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Editar nombre</h2>
+            <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Editar nombre</h2>
           </div>
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Nombre visible</label>
+              <label className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Nombre visible</label>
               <input
                 type="text"
                 value={nombre}
@@ -314,12 +316,58 @@ export default function Profile() {
           </form>
         </div>
 
-        {/* ── Danger zone ── */}
+        {/* ── Apariencia ── */}
         <div
           className="p-5 rounded-2xl"
           style={{
-            background: 'linear-gradient(145deg, #1a1d27, #141720)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'linear-gradient(145deg, var(--color-surface), var(--color-bg))',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="w-1.5 h-5 rounded-full"
+              style={{ background: 'linear-gradient(180deg, #f59e0b, #6366f1)' }}
+            />
+            <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Apariencia</h2>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {theme === 'dark'
+                ? <Moon size={16} style={{ color: 'var(--color-primary-light)' }} />
+                : <Sun size={16} style={{ color: '#f59e0b' }} />
+              }
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  {theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleTheme}
+              role="switch"
+              aria-checked={theme === 'light'}
+              aria-label="Cambiar tema"
+              className="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
+              style={{ background: theme === 'light' ? '#f59e0b' : 'rgba(255,255,255,0.12)' }}
+            >
+              <span
+                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-300"
+                style={{ transform: theme === 'light' ? 'translateX(24px)' : 'translateX(0)' }}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Sesión ── */}
+        <div
+          className="p-5 rounded-2xl"
+          style={{
+            background: 'linear-gradient(145deg, var(--color-surface), var(--color-bg))',
+            border: '1px solid var(--border)',
           }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -327,7 +375,7 @@ export default function Profile() {
               className="w-1.5 h-5 rounded-full"
               style={{ background: 'linear-gradient(180deg, #f43f5e, #e11d48)' }}
             />
-            <h2 className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Sesión</h2>
+            <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Sesión</h2>
           </div>
           <button
             onClick={handleLogout}
@@ -335,7 +383,7 @@ export default function Profile() {
             style={{
               background: 'rgba(244,63,94,0.06)',
               border: '1px solid rgba(244,63,94,0.15)',
-              color: '#94a3b8',
+              color: 'var(--color-text-secondary)',
             }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
@@ -345,7 +393,7 @@ export default function Profile() {
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#94a3b8'
+              el.style.color = 'var(--color-text-secondary)'
               el.style.borderColor = 'rgba(244,63,94,0.15)'
               el.style.background = 'rgba(244,63,94,0.06)'
             }}

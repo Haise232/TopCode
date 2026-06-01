@@ -4,17 +4,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg:           '#0f1117',
-        surface:      '#1a1d27',
-        'surface-2':  '#1e2130',
-        card:         '#1a1d27',
-        'card-hover': '#1e2130',
-        input:        '#141720',
-        border:       '#ffffff14',
+        bg:           'var(--color-bg)',
+        surface:      'var(--color-surface)',
+        'surface-2':  'var(--color-surface-2)',
+        card:         'var(--color-surface)',
+        'card-hover': 'var(--color-surface-2)',
+        input:        'var(--color-input)',
+        border:       'var(--border)',
         primary: {
           DEFAULT: '#6366f1',
           dark:    '#4f46e5',
-          light:   '#818cf8',
+          light:   'var(--color-primary-light)',
           subtle:  'rgba(99,102,241,0.12)',
           glow:    'rgba(99,102,241,0.25)',
         },
@@ -47,9 +47,9 @@ export default {
         error:    '#f43f5e',
         warning:  '#f59e0b',
         info:     '#3b82f6',
-        'text-primary':   '#f1f5f9',
-        'text-secondary': '#94a3b8',
-        'text-muted':     '#64748b',
+        'text-primary':   'var(--color-text)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-muted':     'var(--color-text-muted)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],

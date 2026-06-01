@@ -4,22 +4,58 @@
 
 /* ── CSS Variables ─────────────────────────────────────────────────────────── */
 :root {
-  --color-bg:          #0f1117;
-  --color-surface:     #1a1d27;
-  --color-surface-2:   #1e2130;
-  --color-primary:     #6366f1;
-  --color-primary-light: #818cf8;
-  --color-secondary:   #10b981;
-  --color-text:        #f1f5f9;
-  --color-text-muted:  #64748b;
-  --color-success:     #10b981;
-  --color-error:       #f43f5e;
-  --color-warning:     #f59e0b;
-  --color-info:        #3b82f6;
-  --color-teal:        #14b8a6;
-  --color-rose:        #f43f5e;
-  --color-amber:       #f59e0b;
-  --border:            rgba(255,255,255,0.08);
+  --color-bg:              #0f1117;
+  --color-surface:         #1a1d27;
+  --color-surface-2:       #1e2130;
+  --color-input:           #141720;
+  --color-primary:         #6366f1;
+  --color-primary-light:   #818cf8;
+  --color-secondary:       #10b981;
+  --color-text:            #f1f5f9;
+  --color-text-secondary:  #94a3b8;
+  --color-text-muted:      #64748b;
+  --color-success:         #10b981;
+  --color-error:           #f43f5e;
+  --color-warning:         #f59e0b;
+  --color-info:            #3b82f6;
+  --color-teal:            #14b8a6;
+  --color-rose:            #f43f5e;
+  --color-amber:           #f59e0b;
+  --border:                rgba(255,255,255,0.08);
+  --color-surface-alpha:   rgba(255,255,255,0.04);
+  --color-nav-glass:       rgba(13, 15, 22, 0.97);
+  --color-nav-border:      rgba(255,255,255,0.06);
+  --shadow-nav:            0 1px 0 rgba(255,255,255,0.025), 0 4px 24px rgba(0,0,0,0.5);
+  --shadow-nav-bottom:     0 -4px 24px rgba(0,0,0,0.5);
+  --color-glass:           rgba(26, 29, 39, 0.88);
+  --color-glass-light:     rgba(30, 33, 48, 0.65);
+  --color-scrollbar:       rgba(255,255,255,0.10);
+  --color-scrollbar-hover: rgba(255,255,255,0.18);
+  --color-shimmer-1:       #1a1d27;
+  --color-shimmer-2:       #1e2130;
+}
+
+[data-theme="light"] {
+  --color-bg:              #f8fafc;
+  --color-surface:         #ffffff;
+  --color-surface-2:       #f1f5f9;
+  --color-input:           #f1f5f9;
+  --color-primary-light:   #4f46e5;
+  --color-text:            #0f172a;
+  --color-text-secondary:  #475569;
+  --color-text-muted:      #64748b;
+  --border:                rgba(0,0,0,0.10);
+  --color-surface-alpha:   rgba(0,0,0,0.04);
+  --color-nav-glass:       rgba(248, 250, 252, 0.97);
+  --color-nav-border:      rgba(0,0,0,0.08);
+  --shadow-nav:            0 1px 0 rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-nav-bottom:     0 -4px 12px rgba(0,0,0,0.08);
+  --color-glass:           rgba(255, 255, 255, 0.88);
+  --color-glass-light:     rgba(241, 245, 249, 0.65);
+  --color-scrollbar:       rgba(0,0,0,0.15);
+  --color-scrollbar-hover: rgba(0,0,0,0.25);
+  --color-shimmer-1:       #ffffff;
+  --color-shimmer-2:       #f1f5f9;
 }
 
 @layer base {
@@ -51,11 +87,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
+    background: var(--color-scrollbar);
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.18);
+    background: var(--color-scrollbar-hover);
   }
 
   /* Date input */
@@ -72,7 +108,7 @@
   /* Selection */
   ::selection {
     background: rgba(99,102,241,0.25);
-    color: #f1f5f9;
+    color: var(--color-text);
   }
 }
 
@@ -107,12 +143,12 @@
 
   /* Glass */
   .glass {
-    background: rgba(26, 29, 39, 0.88);
+    background: var(--color-glass);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
   .glass-light {
-    background: rgba(30, 33, 48, 0.65);
+    background: var(--color-glass-light);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
@@ -121,11 +157,11 @@
   .shimmer {
     background: linear-gradient(
       90deg,
-      #1a1d27 0%,
-      #1e2130 30%,
+      var(--color-shimmer-1) 0%,
+      var(--color-shimmer-2) 30%,
       rgba(99,102,241,0.06) 50%,
-      #1e2130 70%,
-      #1a1d27 100%
+      var(--color-shimmer-2) 70%,
+      var(--color-shimmer-1) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.8s ease-in-out infinite;
@@ -202,14 +238,14 @@
   .badge-admin {
     @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full;
     background: rgba(99,102,241,0.15);
-    color: #818cf8;
+    color: var(--color-primary-light);
     border: 1px solid rgba(99,102,241,0.25);
   }
   .badge-alumno {
     @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full;
-    background: rgba(255,255,255,0.05);
-    color: #64748b;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--color-surface-alpha);
+    color: var(--color-text-muted);
+    border: 1px solid var(--border);
   }
 
   /* Page header */
