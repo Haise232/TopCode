@@ -4,7 +4,7 @@ export default function Loading() {
   return (
     <div
       className="flex items-center justify-center h-full min-h-screen"
-      style={{ background: '#0f1117' }}
+      style={{ background: 'var(--color-bg)' }}
     >
       <div className="flex flex-col items-center gap-8">
         {/* Logo with spinner ring */}
@@ -19,7 +19,7 @@ export default function Loading() {
             <circle
               cx="40" cy="40" r="36"
               fill="none"
-              stroke="rgba(99,102,241,0.12)"
+              stroke="rgba(85,239,196,0.12)"
               strokeWidth="2"
             />
             <circle
@@ -32,9 +32,9 @@ export default function Loading() {
             />
             <defs>
               <linearGradient id="indigo-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
-                <stop offset="50%" stopColor="#6366f1" stopOpacity="1" />
-                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.6" />
+                <stop offset="0%" stopColor="#55efc4" stopOpacity="0" />
+                <stop offset="50%" stopColor="#55efc4" stopOpacity="1" />
+                <stop offset="100%" stopColor="#00cec9" stopOpacity="0.6" />
               </linearGradient>
             </defs>
           </svg>
@@ -43,8 +43,8 @@ export default function Loading() {
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+              background: 'linear-gradient(135deg, #55efc4 0%, #00cec9 100%)',
+              boxShadow: '0 4px 20px rgba(85,239,196,0.4)',
             }}
           >
             <GraduationCap size={22} className="text-white" />
@@ -53,8 +53,8 @@ export default function Loading() {
 
         {/* Brand */}
         <div className="flex flex-col items-center gap-2">
-          <span className="font-bold text-lg" style={{ color: '#f1f5f9' }}>
-            Top<span style={{ color: '#818cf8' }}>Code</span>
+          <span className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>
+            Top<span style={{ color: '#8ff5d6' }}>Code</span>
           </span>
           <div className="flex items-center gap-1.5">
             {[0, 1, 2].map(i => (
@@ -62,7 +62,7 @@ export default function Loading() {
                 key={i}
                 className="w-1.5 h-1.5 rounded-full"
                 style={{
-                  background: '#6366f1',
+                  background: '#55efc4',
                   animation: 'dot-bounce 1.4s ease-in-out infinite',
                   animationDelay: `${i * 0.18}s`,
                 }}

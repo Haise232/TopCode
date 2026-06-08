@@ -28,13 +28,13 @@ function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
 const TIPO_CONFIG = {
   pdf:    { Icon: FileText, color: '#f43f5e', bg: 'rgba(244,63,94,0.08)',    border: 'rgba(244,63,94,0.18)',    label: 'PDF'  },
   imagen: { Icon: Image,    color: '#10b981', bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.15)',   label: 'IMG'  },
-  otro:   { Icon: File,     color: '#818cf8', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.15)', label: 'FILE' },
+  otro:   { Icon: File,     color: '#8ff5d6', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.15)', label: 'FILE' },
 }
 
 function UserAvatar({ nombre, url, size = 24 }: { nombre: string; url?: string | null; size?: number }) {
   if (url) return (
     <img src={url} alt={nombre} className="rounded-lg object-cover shrink-0"
-      style={{ width: size, height: size, border: '1.5px solid rgba(255,255,255,0.08)' }} />
+      style={{ width: size, height: size, border: '1.5px solid var(--overlay-08)' }} />
   )
   const hue = nombre.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360
   return (
@@ -55,7 +55,7 @@ function UserAvatar({ nombre, url, size = 24 }: { nombre: string; url?: string |
 function ApuntesSkeleton() {
   return (
     <div className="animate-fade-in">
-      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
         <SkeletonBox className="h-7 w-32 shimmer" />
         <SkeletonBox className="h-10 w-36 shimmer rounded-xl" />
       </div>
@@ -218,18 +218,18 @@ export default function Apuntes() {
       {/* ── Header ── */}
       <div
         className="relative px-4 md:px-6 py-5 overflow-hidden"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div className="max-w-[1100px] mx-auto flex justify-between items-center relative">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 flex items-center justify-center rounded-xl"
-              style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)' }}
+              style={{ background: 'rgba(0,206,201,0.12)', border: '1px solid rgba(0,206,201,0.2)' }}
             >
-              <FolderOpen size={15} style={{ color: '#a78bfa' }} />
+              <FolderOpen size={15} style={{ color: '#00cec9' }} />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Apuntes</h1>
+              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Apuntes</h1>
               <p className="text-xs" style={{ color: '#64748b' }}>
                 {apuntes.length} archivo{apuntes.length !== 1 ? 's' : ''} · {totalUsuarios} usuario{totalUsuarios !== 1 ? 's' : ''}
                 {apuntes.length > 0 && (
@@ -247,9 +247,9 @@ export default function Apuntes() {
               onClick={() => setVistaLista(v => !v)}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
               style={{
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: vistaLista ? '#818cf8' : '#64748b',
-                background: vistaLista ? 'rgba(99,102,241,0.08)' : 'transparent',
+                border: '1px solid var(--overlay-08)',
+                color: vistaLista ? '#8ff5d6' : '#64748b',
+                background: vistaLista ? 'rgba(85,239,196,0.08)' : 'transparent',
               }}
               aria-label={vistaLista ? 'Vista en cuadrícula' : 'Vista en lista'}
             >
@@ -259,7 +259,7 @@ export default function Apuntes() {
               onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
+              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
               aria-label="Actualizar"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -272,7 +272,7 @@ export default function Apuntes() {
             >
               {subiendo ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }} />
+                  <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }} />
                   Subiendo...
                 </div>
               ) : (
@@ -306,17 +306,17 @@ export default function Apuntes() {
                 placeholder="Buscar archivos…"
                 className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all duration-150"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#f1f5f9',
+                  background: 'var(--overlay-04)',
+                  border: '1px solid var(--overlay-08)',
+                  color: 'var(--color-text)',
                 }}
                 onFocus={e => {
-                  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.35)'
-                  e.currentTarget.style.background = 'rgba(99,102,241,0.05)'
+                  e.currentTarget.style.borderColor = 'rgba(85,239,196,0.35)'
+                  e.currentTarget.style.background = 'rgba(85,239,196,0.05)'
                 }}
                 onBlur={e => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                  e.currentTarget.style.borderColor = 'var(--overlay-08)'
+                  e.currentTarget.style.background = 'var(--overlay-04)'
                 }}
               />
             </div>
@@ -331,9 +331,9 @@ export default function Apuntes() {
                     onClick={() => setFiltroTipo(f.key)}
                     className="px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-150"
                     style={{
-                      background: isActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: isActive ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(255,255,255,0.08)',
-                      color: isActive ? '#818cf8' : '#64748b',
+                      background: isActive ? 'rgba(85,239,196,0.15)' : 'var(--overlay-04)',
+                      border: isActive ? '1px solid rgba(85,239,196,0.35)' : '1px solid var(--overlay-08)',
+                      color: isActive ? '#8ff5d6' : '#64748b',
                     }}
                   >
                     {f.label}
@@ -355,22 +355,22 @@ export default function Apuntes() {
             <div
               className="py-16 flex flex-col items-center gap-4 text-center rounded-2xl transition-all duration-200"
               style={{
-                background: dragOver ? 'rgba(139,92,246,0.06)' : 'linear-gradient(145deg, #1a1d27, #141720)',
-                border: `2px dashed ${dragOver ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                background: dragOver ? 'rgba(0,206,201,0.06)' : 'var(--gradient-card)',
+                border: `2px dashed ${dragOver ? 'rgba(0,206,201,0.4)' : 'var(--overlay-08)'}`,
               }}
             >
               <div
                 className="w-16 h-16 flex items-center justify-center rounded-2xl transition-transform duration-200"
                 style={{
-                  background: 'rgba(139,92,246,0.1)',
-                  border: '1px solid rgba(139,92,246,0.2)',
+                  background: 'rgba(0,206,201,0.1)',
+                  border: '1px solid rgba(0,206,201,0.2)',
                   transform: dragOver ? 'scale(1.1)' : 'scale(1)',
                 }}
               >
-                <CloudUpload size={28} style={{ color: '#a78bfa' }} />
+                <CloudUpload size={28} style={{ color: '#00cec9' }} />
               </div>
               <div>
-                <p className="font-semibold text-lg" style={{ color: '#f1f5f9' }}>
+                <p className="font-semibold text-lg" style={{ color: 'var(--color-text)' }}>
                   {dragOver ? 'Suelta para subir' : 'Sin apuntes todavía'}
                 </p>
                 <p className="text-sm mt-1.5 max-w-xs leading-relaxed" style={{ color: '#64748b' }}>
@@ -378,7 +378,7 @@ export default function Apuntes() {
                 </p>
               </div>
               <span className="text-xs font-semibold px-4 py-2 rounded-xl"
-                style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}>
+                style={{ background: 'rgba(0,206,201,0.1)', border: '1px solid rgba(0,206,201,0.2)', color: '#00cec9' }}>
                 Seleccionar archivo
               </span>
             </div>
@@ -390,35 +390,35 @@ export default function Apuntes() {
           <div
             className="py-14 flex flex-col items-center gap-4 text-center rounded-2xl animate-fade-in"
             style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: 'var(--gradient-card)',
+              border: '1px solid var(--overlay-07)',
             }}
           >
             <div
               className="w-14 h-14 flex items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}
+              style={{ background: 'rgba(85,239,196,0.08)', border: '1px solid rgba(85,239,196,0.15)' }}
             >
-              <SearchX size={24} style={{ color: '#818cf8' }} />
+              <SearchX size={24} style={{ color: '#8ff5d6' }} />
             </div>
             <div>
-              <p className="font-semibold text-base" style={{ color: '#f1f5f9' }}>Sin resultados</p>
+              <p className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Sin resultados</p>
               <p className="text-sm mt-1" style={{ color: '#64748b' }}>
                 {busqueda.trim() !== ''
-                  ? <>No hay archivos para <span style={{ color: '#818cf8' }}>«{busqueda}»</span></>
+                  ? <>No hay archivos para <span style={{ color: '#8ff5d6' }}>«{busqueda}»</span></>
                   : 'No hay archivos con ese filtro.'}
               </p>
             </div>
             <button
               onClick={() => { setBusqueda(''); setFiltroTipo('todos') }}
               className="text-xs font-semibold px-4 py-2 rounded-xl transition-all duration-150"
-              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#818cf8' }}
+              style={{ background: 'rgba(85,239,196,0.1)', border: '1px solid rgba(85,239,196,0.2)', color: '#8ff5d6' }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement
-                el.style.background = 'rgba(99,102,241,0.18)'
+                el.style.background = 'rgba(85,239,196,0.18)'
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement
-                el.style.background = 'rgba(99,102,241,0.1)'
+                el.style.background = 'rgba(85,239,196,0.1)'
               }}
             >
               Limpiar filtros
@@ -435,28 +435,28 @@ export default function Apuntes() {
                 <div className="flex items-center gap-2.5">
                   <UserAvatar nombre={grupo.nombre} url={grupo.avatar} size={32} />
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-semibold text-sm truncate" style={{ color: '#f1f5f9' }}>
+                    <span className="font-semibold text-sm truncate" style={{ color: 'var(--color-text)' }}>
                       {esMio ? 'Mis archivos' : grupo.nombre}
                     </span>
                     {esMio && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-                        style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+                        style={{ background: 'rgba(85,239,196,0.12)', color: '#8ff5d6', border: '1px solid rgba(85,239,196,0.2)' }}>
                         Tú
                       </span>
                     )}
                     {!esMio && grupo.archivos[0]?.usuarios && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-                        style={{ background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)' }}>
+                        style={{ background: 'rgba(0,206,201,0.1)', color: '#00cec9', border: '1px solid rgba(0,206,201,0.2)' }}>
                         Compañero
                       </span>
                     )}
                   </div>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ml-0.5"
-                    style={{ background: 'rgba(255,255,255,0.05)', color: '#4b5563', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    style={{ background: 'var(--overlay-05)', color: '#4b5563', border: '1px solid var(--overlay-07)' }}>
                     {grupo.archivos.length}
                   </span>
                   {/* Línea separadora */}
-                  <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                  <div className="flex-1 h-px" style={{ background: 'var(--overlay-05)' }} />
                 </div>
 
                 {/* ── Grid o Lista de archivos ── */}
@@ -530,18 +530,18 @@ function ApunteCard({
         style={{
           animationDelay: `${delay}ms`,
           height: '48px',
-          background: 'linear-gradient(145deg, #1a1d27, #141720)',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: 'var(--gradient-card)',
+          border: '1px solid var(--overlay-07)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget as HTMLElement
           el.style.borderColor = `${config.color}30`
-          el.style.background = 'rgba(255,255,255,0.02)'
+          el.style.background = 'var(--overlay-02)'
         }}
         onMouseLeave={e => {
           const el = e.currentTarget as HTMLElement
-          el.style.borderColor = 'rgba(255,255,255,0.07)'
-          el.style.background = 'linear-gradient(145deg, #1a1d27, #141720)'
+          el.style.borderColor = 'var(--overlay-07)'
+          el.style.background = 'var(--gradient-card)'
         }}
       >
         {/* Icono pequeño */}
@@ -554,7 +554,7 @@ function ApunteCard({
 
         {/* Nombre y fecha */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate leading-none" style={{ color: '#f1f5f9' }}>
+          <p className="text-sm font-semibold truncate leading-none" style={{ color: 'var(--color-text)' }}>
             {ap.nombre}
           </p>
           <p className="text-xs mt-0.5 leading-none" style={{ color: '#4b5563' }}>{fecha}</p>
@@ -571,14 +571,14 @@ function ApunteCard({
             target="_blank"
             rel="noopener noreferrer"
             className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+            style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)', color: '#64748b' }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'
+              el.style.color = '#f1f5f9'; el.style.background = 'var(--overlay-08)'
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'
+              el.style.color = '#64748b'; el.style.background = 'var(--overlay-04)'
             }}
             aria-label="Abrir archivo"
           >
@@ -588,14 +588,14 @@ function ApunteCard({
             href={ap.url}
             download
             className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+            style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)', color: '#64748b' }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'
+              el.style.color = '#f1f5f9'; el.style.background = 'var(--overlay-08)'
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'
+              el.style.color = '#64748b'; el.style.background = 'var(--overlay-04)'
             }}
             aria-label="Descargar"
           >
@@ -605,14 +605,14 @@ function ApunteCard({
             <button
               onClick={onDelete}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150 shrink-0"
-              style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#4b5563' }}
+              style={{ border: '1px solid var(--overlay-07)', color: '#4b5563' }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLElement
                 el.style.color = '#f43f5e'; el.style.background = 'rgba(244,63,94,0.08)'; el.style.borderColor = 'rgba(244,63,94,0.2)'
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLElement
-                el.style.color = '#4b5563'; el.style.background = 'transparent'; el.style.borderColor = 'rgba(255,255,255,0.07)'
+                el.style.color = '#4b5563'; el.style.background = 'transparent'; el.style.borderColor = 'var(--overlay-07)'
               }}
               aria-label="Eliminar archivo"
             >
@@ -630,21 +630,21 @@ function ApunteCard({
       className="group p-4 flex flex-col gap-3 rounded-2xl transition-all duration-200 animate-slide-up"
       style={{
         animationDelay: `${delay}ms`,
-        background: 'linear-gradient(145deg, #1a1d27, #141720)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+        background: 'var(--gradient-card)',
+        border: '1px solid var(--overlay-07)',
+        boxShadow: 'inset 0 1px 0 var(--overlay-03)',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement
         el.style.borderColor = `${config.color}30`
         el.style.transform = 'translateY(-2px)'
-        el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)`
+        el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3), inset 0 1px 0 var(--overlay-04)`
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(255,255,255,0.07)'
+        el.style.borderColor = 'var(--overlay-07)'
         el.style.transform = 'translateY(0)'
-        el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.03)'
+        el.style.boxShadow = 'inset 0 1px 0 var(--overlay-03)'
       }}
     >
       {/* Icono + badge tipo */}
@@ -663,27 +663,27 @@ function ApunteCard({
 
       {/* Nombre y fecha */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: '#f1f5f9' }}>
+        <p className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: 'var(--color-text)' }}>
           {ap.nombre}
         </p>
         <p className="text-xs mt-1" style={{ color: '#4b5563' }}>{fecha}</p>
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-2 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex gap-2 pt-2.5" style={{ borderTop: '1px solid var(--overlay-05)' }}>
         <a
           href={ap.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl transition-all duration-150"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+          style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)', color: '#64748b' }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.12)'
+            el.style.color = '#f1f5f9'; el.style.background = 'var(--overlay-08)'; el.style.borderColor = 'var(--overlay-12)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'; el.style.borderColor = 'rgba(255,255,255,0.07)'
+            el.style.color = '#64748b'; el.style.background = 'var(--overlay-04)'; el.style.borderColor = 'var(--overlay-07)'
           }}
         >
           <ExternalLink size={11} />
@@ -693,14 +693,14 @@ function ApunteCard({
           href={ap.url}
           download
           className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 shrink-0"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#64748b' }}
+          style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)', color: '#64748b' }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = '#f1f5f9'; el.style.background = 'rgba(255,255,255,0.08)'
+            el.style.color = '#f1f5f9'; el.style.background = 'var(--overlay-08)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = '#64748b'; el.style.background = 'rgba(255,255,255,0.04)'
+            el.style.color = '#64748b'; el.style.background = 'var(--overlay-04)'
           }}
           aria-label="Descargar"
         >
@@ -710,14 +710,14 @@ function ApunteCard({
           <button
             onClick={onDelete}
             className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 shrink-0"
-            style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#4b5563' }}
+            style={{ border: '1px solid var(--overlay-07)', color: '#4b5563' }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
               el.style.color = '#f43f5e'; el.style.background = 'rgba(244,63,94,0.08)'; el.style.borderColor = 'rgba(244,63,94,0.2)'
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.color = '#4b5563'; el.style.background = 'transparent'; el.style.borderColor = 'rgba(255,255,255,0.07)'
+              el.style.color = '#4b5563'; el.style.background = 'transparent'; el.style.borderColor = 'var(--overlay-07)'
             }}
             aria-label="Eliminar archivo"
           >

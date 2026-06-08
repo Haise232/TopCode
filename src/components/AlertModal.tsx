@@ -35,8 +35,8 @@ const CONFIG = {
     iconColor: '#3b82f6',
     bgColor: 'rgba(59,130,246,0.1)',
     borderColor: 'rgba(59,130,246,0.2)',
-    btnBg: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-    btnShadow: '0 4px 14px rgba(99,102,241,0.3)',
+    btnBg: 'linear-gradient(135deg, #55efc4 0%, #00cec9 100%)',
+    btnShadow: '0 4px 14px rgba(85,239,196,0.3)',
   },
   warning: {
     Icon: AlertTriangle,
@@ -63,15 +63,15 @@ export default function AlertModal({
   if (!visible) return null
 
   const config = type ? CONFIG[type] : null
-  const defaultBtnBg = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-  const defaultBtnShadow = '0 4px 14px rgba(99,102,241,0.3)'
+  const defaultBtnBg = 'linear-gradient(135deg, #55efc4 0%, #00cec9 100%)'
+  const defaultBtnShadow = '0 4px 14px rgba(85,239,196,0.3)'
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in">
       {/* Backdrop */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}
+        style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(8px)' }}
         onClick={onClose}
       />
 
@@ -79,10 +79,10 @@ export default function AlertModal({
       <div
         className="relative w-full max-w-sm overflow-hidden animate-scale-in-modal"
         style={{
-          background: '#1a1d27',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--overlay-08)',
           borderRadius: '20px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--overlay-04)',
         }}
       >
         {/* Close button */}
@@ -90,18 +90,18 @@ export default function AlertModal({
           onClick={onClose}
           className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
           style={{
-            background: 'rgba(255,255,255,0.06)',
+            background: 'var(--overlay-06)',
             color: '#64748b',
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
             el.style.color = '#e2e8f0'
-            el.style.background = 'rgba(255,255,255,0.1)'
+            el.style.background = 'var(--overlay-10)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
             el.style.color = '#64748b'
-            el.style.background = 'rgba(255,255,255,0.06)'
+            el.style.background = 'var(--overlay-06)'
           }}
           aria-label="Cerrar"
         >
@@ -124,7 +124,7 @@ export default function AlertModal({
 
           {/* Text */}
           <div className="flex flex-col gap-2">
-            <h3 className="font-bold text-base leading-snug" style={{ color: '#f1f5f9' }}>
+            <h3 className="font-bold text-base leading-snug" style={{ color: 'var(--color-text)' }}>
               {title}
             </h3>
             {message && (

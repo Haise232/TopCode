@@ -17,8 +17,8 @@ export function SkeletonCard({ children, className = '' }: { children?: React.Re
     <div
       className={`p-4 rounded-2xl ${className}`}
       style={{
-        background: '#1a1d27',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--overlay-06)',
       }}
     >
       {children}
@@ -57,15 +57,15 @@ export function SkeletonSchedule({ rows = 6 }: { rows?: number }) {
       <div
         className="rounded-2xl overflow-hidden"
         style={{
-          background: 'linear-gradient(145deg, #1a1d27, #141720)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'var(--gradient-card)',
+          border: '1px solid var(--overlay-06)',
         }}
       >
         {Array.from({ length: rows }).map((_, i) => (
           <div
             key={i}
             className="flex items-center gap-3 px-4 py-3"
-            style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : undefined }}
+            style={{ borderTop: i > 0 ? '1px solid var(--overlay-04)' : undefined }}
           >
             {/* Hora inicio */}
             <SkeletonBox className="h-3 w-10 shimmer shrink-0" />

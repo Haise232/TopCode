@@ -110,10 +110,10 @@ export default function PrivateMessageToast() {
         className="flex items-center gap-3 pr-3 pl-3 py-3 rounded-2xl shadow-lg"
         style={{
           background: 'rgba(20, 22, 34, 0.97)',
-          border: '1px solid rgba(255,255,255,0.09)',
+          border: '1px solid var(--overlay-09)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px var(--overlay-04)',
           maxWidth: '280px',
         }}
       >
@@ -132,12 +132,12 @@ export default function PrivateMessageToast() {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <MessageCircle size={10} style={{ color: '#818cf8', flexShrink: 0 }} />
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#818cf8' }}>
+            <MessageCircle size={10} style={{ color: '#8ff5d6', flexShrink: 0 }} />
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#8ff5d6' }}>
               Mensaje privado
             </span>
           </div>
-          <p className="text-xs font-semibold leading-tight truncate" style={{ color: '#f1f5f9' }}>
+          <p className="text-xs font-semibold leading-tight truncate" style={{ color: 'var(--color-text)' }}>
             {toast.de_nombre}
           </p>
           <p className="text-xs leading-snug mt-0.5" style={{ color: '#64748b' }}>
@@ -159,9 +159,9 @@ export default function PrivateMessageToast() {
             onClick={() => { navigate('/chat'); dismiss() }}
             className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
             style={{
-              background: 'rgba(99,102,241,0.15)',
-              color: '#818cf8',
-              border: '1px solid rgba(99,102,241,0.25)',
+              background: 'rgba(85,239,196,0.15)',
+              color: '#8ff5d6',
+              border: '1px solid rgba(85,239,196,0.25)',
             }}
           >
             Abrir

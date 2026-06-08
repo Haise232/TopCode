@@ -96,7 +96,7 @@ function HomeSkeleton() {
       {/* Hero header skeleton */}
       <div
         className="px-4 md:px-6 py-8"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div className="max-w-[1100px] mx-auto flex justify-between items-center">
           <div className="flex flex-col gap-2.5">
@@ -139,12 +139,12 @@ const QUICK_ACTIONS = [
     desc: 'Tech',
     Icon: Newspaper,
     to: '/news',
-    color: '#818cf8',
-    bg: 'rgba(99,102,241,0.1)',
-    border: 'rgba(99,102,241,0.25)',
-    glow: 'rgba(99,102,241,0.2)',
-    gradFrom: 'rgba(99,102,241,0.06)',
-    gradTo: 'rgba(99,102,241,0.02)',
+    color: '#8ff5d6',
+    bg: 'rgba(85,239,196,0.1)',
+    border: 'rgba(85,239,196,0.25)',
+    glow: 'rgba(85,239,196,0.2)',
+    gradFrom: 'rgba(85,239,196,0.06)',
+    gradTo: 'rgba(85,239,196,0.02)',
     badge: null,
   },
   {
@@ -178,12 +178,12 @@ const QUICK_ACTIONS = [
     desc: 'Archivos',
     Icon: FolderOpen,
     to: '/apuntes',
-    color: '#c084fc',
-    bg: 'rgba(139,92,246,0.1)',
-    border: 'rgba(139,92,246,0.25)',
-    glow: 'rgba(139,92,246,0.2)',
-    gradFrom: 'rgba(139,92,246,0.06)',
-    gradTo: 'rgba(139,92,246,0.02)',
+    color: '#00cec9',
+    bg: 'rgba(0,206,201,0.1)',
+    border: 'rgba(0,206,201,0.25)',
+    glow: 'rgba(0,206,201,0.2)',
+    gradFrom: 'rgba(0,206,201,0.06)',
+    gradTo: 'rgba(0,206,201,0.02)',
     badge: null,
   },
   {
@@ -353,7 +353,7 @@ export default function Home() {
       {/* ── Hero header ───────────────────────────────────────────────────── */}
       <div
         className="group relative px-4 md:px-6 py-8 overflow-hidden"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         {/* Fondo: banner de usuario o gradiente por defecto */}
         {bannerUrl ? (
@@ -374,7 +374,7 @@ export default function Home() {
             <div
               className="absolute inset-0 pointer-events-none animate-gradient-shift"
               style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.07) 0%, rgba(20,184,166,0.05) 50%, rgba(139,92,246,0.06) 100%)',
+                background: 'linear-gradient(135deg, rgba(85,239,196,0.07) 0%, rgba(20,184,166,0.05) 50%, rgba(0,206,201,0.06) 100%)',
                 backgroundSize: '200% 200%',
               }}
             />
@@ -384,7 +384,7 @@ export default function Home() {
             />
             <div
               className="absolute -bottom-6 -left-6 w-40 h-40 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)', filter: 'blur(20px)' }}
+              style={{ background: 'radial-gradient(circle, rgba(85,239,196,0.1) 0%, transparent 70%)', filter: 'blur(20px)' }}
             />
           </>
         )}
@@ -395,11 +395,11 @@ export default function Home() {
             onClick={() => !uploadingBanner && bannerInputRef.current?.click()}
             disabled={uploadingBanner}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm transition-all duration-150 hover:scale-105"
-            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.12)', color: '#f1f5f9', opacity: uploadingBanner ? 0.6 : 1 }}
+            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid var(--overlay-12)', color: '#f1f5f9', opacity: uploadingBanner ? 0.6 : 1 }}
             title="Cambiar banner"
           >
             {uploadingBanner
-              ? <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+              ? <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-30)', borderTopColor: 'white' }} />
               : <Camera size={12} />
             }
             {bannerUrl ? 'Cambiar' : 'Añadir banner'}
@@ -437,7 +437,7 @@ export default function Home() {
                 </span>
               </div>
               {/* Separador puntual */}
-              <span className="w-1 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', display: 'inline-block' }} />
+              <span className="w-1 h-1 rounded-full" style={{ background: 'var(--overlay-12)', display: 'inline-block' }} />
               {esAdmin ? (
                 <span
                   className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full"
@@ -456,9 +456,9 @@ export default function Home() {
                 <span
                   className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full"
                   style={{
-                    background: 'rgba(99,102,241,0.1)',
-                    color: '#818cf8',
-                    border: '1px solid rgba(99,102,241,0.18)',
+                    background: 'rgba(85,239,196,0.1)',
+                    color: '#8ff5d6',
+                    border: '1px solid rgba(85,239,196,0.18)',
                     letterSpacing: '0.04em',
                   }}
                 >
@@ -471,7 +471,7 @@ export default function Home() {
             <h1
               className="font-extrabold text-3xl md:text-4xl tracking-tight mt-1"
               style={{
-                background: 'linear-gradient(135deg, #f1f5f9 30%, #818cf8 100%)',
+                background: 'linear-gradient(135deg, #f1f5f9 30%, #8ff5d6 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -485,7 +485,7 @@ export default function Home() {
                 style={{
                   width: 32,
                   height: 2,
-                  background: 'linear-gradient(90deg, #6366f1, #818cf8)',
+                  background: 'linear-gradient(90deg, #55efc4, #8ff5d6)',
                   borderRadius: 9999,
                 }}
               />
@@ -493,7 +493,7 @@ export default function Home() {
                 style={{
                   width: 6,
                   height: 6,
-                  background: '#6366f1',
+                  background: '#55efc4',
                   borderRadius: 9999,
                   opacity: 0.5,
                 }}
@@ -507,7 +507,7 @@ export default function Home() {
             >
               <span
                 className="inline-block w-1 h-1 rounded-full"
-                style={{ background: 'rgba(99,102,241,0.5)' }}
+                style={{ background: 'rgba(85,239,196,0.5)' }}
               />
               {fechaFormateada()}
             </p>
@@ -518,7 +518,7 @@ export default function Home() {
               onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
+              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
               aria-label="Actualizar"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -527,13 +527,13 @@ export default function Home() {
             <button
               onClick={() => navigate('/profile')}
               className="relative w-10 h-10 overflow-hidden rounded-xl transition-all duration-150 hover:ring-2 hover:ring-primary/50"
-              style={{ border: '1.5px solid rgba(99,102,241,0.3)' }}
+              style={{ border: '1.5px solid rgba(85,239,196,0.3)' }}
             >
               {usuario?.avatar_url ? (
                 <img src={usuario.avatar_url} alt="" className="w-10 h-10 object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)' }}>
-                  <span className="font-bold text-sm" style={{ color: '#818cf8' }}>{initial}</span>
+                <div className="w-full h-full flex items-center justify-center" style={{ background: 'rgba(85,239,196,0.15)' }}>
+                  <span className="font-bold text-sm" style={{ color: '#8ff5d6' }}>{initial}</span>
                 </div>
               )}
             </button>
@@ -566,8 +566,8 @@ export default function Home() {
               <div
                 className="rounded-2xl overflow-hidden"
                 style={{
-                  background: 'linear-gradient(145deg, #1a1d27, #141720)',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'var(--gradient-card)',
+                  border: '1px solid var(--overlay-06)',
                 }}
               >
                 {clases.map((clase, idx) => {
@@ -584,17 +584,17 @@ export default function Home() {
                       {hayDescanso && (
                         <div
                           className="flex items-center gap-2 px-4 py-1.5"
-                          style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                          style={{ borderTop: '1px solid var(--overlay-04)', borderBottom: '1px solid var(--overlay-04)' }}
                         >
-                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                          <div className="flex-1 h-px" style={{ background: 'var(--overlay-04)' }} />
                           <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>Descanso</span>
-                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                          <div className="flex-1 h-px" style={{ background: 'var(--overlay-04)' }} />
                         </div>
                       )}
                       <div
                         className="relative flex items-center gap-3 px-4 py-3 transition-all duration-200"
                         style={{
-                          borderTop: idx > 0 && !hayDescanso ? '1px solid rgba(255,255,255,0.04)' : undefined,
+                          borderTop: idx > 0 && !hayDescanso ? '1px solid var(--overlay-04)' : undefined,
                           background: esCurso
                             ? `linear-gradient(90deg, ${color}12 0%, ${color}04 60%, transparent 100%)`
                             : 'transparent',
@@ -673,9 +673,9 @@ export default function Home() {
                         <span
                           className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg"
                           style={{
-                            background: esCurso ? `${color}20` : 'rgba(255,255,255,0.04)',
+                            background: esCurso ? `${color}20` : 'var(--overlay-04)',
                             color: esCurso ? color : '#374151',
-                            border: `1px solid ${esCurso ? `${color}40` : 'rgba(255,255,255,0.05)'}`,
+                            border: `1px solid ${esCurso ? `${color}40` : 'var(--overlay-05)'}`,
                             boxShadow: esCurso ? `0 0 6px ${color}30` : 'none',
                           }}
                         >
@@ -696,7 +696,7 @@ export default function Home() {
             <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
               Acceso rápido
             </h2>
-            <div className="h-px flex-1 mx-3" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }} />
+            <div className="h-px flex-1 mx-3" style={{ background: 'linear-gradient(90deg, rgba(85,239,196,0.15), transparent)' }} />
           </div>
           <div className={`grid gap-3 grid-cols-3 ${esAdmin ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
             {quickActions.map(({ label, desc, Icon, to, color, border, glow, gradFrom, gradTo }, index) => {
@@ -711,8 +711,8 @@ export default function Home() {
                 style={{
                   animationDelay: `${index * 60}ms`,
                   padding: '18px 12px 14px',
-                  background: `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 50%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, #1c1f2e, #141720)`,
-                  border: `1px solid rgba(255,255,255,0.07)`,
+                  background: `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 50%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, var(--color-surface), var(--color-input))`,
+                  border: `1px solid var(--overlay-07)`,
                   boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                 }}
                 onMouseEnter={e => {
@@ -720,12 +720,12 @@ export default function Home() {
                   el.style.transform = 'translateY(-4px) scale(1.02)'
                   el.style.borderColor = border
                   el.style.boxShadow = `0 16px 32px rgba(0,0,0,0.45), 0 0 0 1px ${border}, 0 0 24px ${glow}`
-                  el.style.background = `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 60%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, #1c1f2e, #141720)`
+                  el.style.background = `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 60%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, var(--color-surface), var(--color-input))`
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement
                   el.style.transform = 'translateY(0) scale(1)'
-                  el.style.borderColor = 'rgba(255,255,255,0.07)'
+                  el.style.borderColor = 'var(--overlay-07)'
                   el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
                 }}
               >
@@ -757,7 +757,7 @@ export default function Home() {
                   style={{
                     background: `linear-gradient(135deg, ${color}1a, ${color}08)`,
                     border: `1px solid ${border}`,
-                    boxShadow: `0 4px 16px ${glow}, inset 0 1px 0 rgba(255,255,255,0.08)`,
+                    boxShadow: `0 4px 16px ${glow}, inset 0 1px 0 var(--overlay-08)`,
                   }}
                 >
                   <Icon size={24} style={{ color }} />
@@ -787,7 +787,7 @@ export default function Home() {
               <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0" style={{ color: '#4b5563' }}>
                 Próximamente
               </h2>
-              <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }} />
+              <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(85,239,196,0.15), transparent)' }} />
             </div>
             <div className="flex flex-col gap-2.5">
 
@@ -808,7 +808,7 @@ export default function Home() {
                     onClick={() => navigate('/actividades')}
                     className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden"
                     style={{
-                      background: `linear-gradient(135deg, ${urgBg}, rgba(20,23,32,0.0) 70%), linear-gradient(145deg, #1c1f2e, #141720)`,
+                      background: `linear-gradient(135deg, ${urgBg}, rgba(20,23,32,0.0) 70%), linear-gradient(145deg, var(--color-surface), var(--color-input))`,
                       border: `1px solid ${urgBorder}`,
                       boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                     }}
@@ -859,7 +859,7 @@ export default function Home() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>
+                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
                           {proximaActividad.titulo}
                         </p>
                         <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#4b5563' }}>
@@ -883,7 +883,7 @@ export default function Home() {
                     onClick={() => navigate('/calendar')}
                     className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(245,158,11,0.07), rgba(20,23,32,0.0) 70%), linear-gradient(145deg, #1c1f2e, #141720)',
+                      background: 'linear-gradient(135deg, rgba(245,158,11,0.07), rgba(20,23,32,0.0) 70%), linear-gradient(145deg, var(--color-surface), var(--color-input))',
                       border: '1px solid rgba(245,158,11,0.2)',
                       boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                     }}
@@ -934,7 +934,7 @@ export default function Home() {
                             Evento
                           </span>
                         </div>
-                        <p className="text-sm font-semibold truncate" style={{ color: '#f1f5f9' }}>{proximoEvento.titulo}</p>
+                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{proximoEvento.titulo}</p>
                         <p className="text-xs mt-0.5 capitalize" style={{ color: '#4b5563' }}>
                           {fechaEvt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </p>

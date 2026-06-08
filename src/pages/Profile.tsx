@@ -143,7 +143,7 @@ export default function Profile() {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.12) 0%, transparent 70%)',
+              background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(85,239,196,0.12) 0%, transparent 70%)',
             }}
           />
 
@@ -151,8 +151,8 @@ export default function Profile() {
           <div
             className="h-24 w-full"
             style={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 50%, rgba(99,102,241,0.05) 100%)',
-              borderBottom: '1px solid rgba(99,102,241,0.1)',
+              background: 'linear-gradient(135deg, rgba(85,239,196,0.15) 0%, rgba(0,206,201,0.1) 50%, rgba(85,239,196,0.05) 100%)',
+              borderBottom: '1px solid rgba(85,239,196,0.1)',
             }}
           />
 
@@ -162,9 +162,9 @@ export default function Profile() {
               <div
                 className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl"
                 style={{
-                  background: 'rgba(99,102,241,0.15)',
+                  background: 'rgba(85,239,196,0.15)',
                   border: '3px solid var(--color-surface)',
-                  boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
+                  boxShadow: '0 4px 20px rgba(85,239,196,0.25)',
                 }}
               >
                 {avatarSrc ? (
@@ -179,13 +179,13 @@ export default function Profile() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 className="absolute -bottom-1.5 -right-1.5 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-60 shadow-primary"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                style={{ background: 'linear-gradient(135deg, #55efc4, #00cec9)' }}
                 aria-label="Cambiar foto"
               >
                 {uploading ? (
                   <div
                     className="w-4 h-4 rounded-full animate-spin"
-                    style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }}
+                    style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }}
                   />
                 ) : (
                   <Camera size={13} className="text-white" />
@@ -208,8 +208,8 @@ export default function Profile() {
                   <span
                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
                     style={{
-                      background: 'rgba(99,102,241,0.15)',
-                      border: '1px solid rgba(99,102,241,0.3)',
+                      background: 'rgba(85,239,196,0.15)',
+                      border: '1px solid rgba(85,239,196,0.3)',
                       color: 'var(--color-primary-light)',
                     }}
                   >
@@ -290,7 +290,7 @@ export default function Profile() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-1.5 h-5 rounded-full"
-              style={{ background: 'linear-gradient(180deg, #6366f1, #8b5cf6)' }}
+              style={{ background: 'linear-gradient(180deg, #55efc4, #00cec9)' }}
             />
             <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Editar nombre</h2>
           </div>
@@ -327,7 +327,7 @@ export default function Profile() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-1.5 h-5 rounded-full"
-              style={{ background: 'linear-gradient(180deg, #f59e0b, #6366f1)' }}
+              style={{ background: 'linear-gradient(180deg, #f59e0b, #55efc4)' }}
             />
             <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Apariencia</h2>
           </div>
@@ -352,7 +352,7 @@ export default function Profile() {
               aria-checked={theme === 'light'}
               aria-label="Cambiar tema"
               className="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
-              style={{ background: theme === 'light' ? '#f59e0b' : 'rgba(255,255,255,0.12)' }}
+              style={{ background: theme === 'light' ? '#f59e0b' : 'var(--overlay-12)' }}
             >
               <span
                 className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-300"

@@ -40,8 +40,8 @@ const URGENCIA_STYLE: Record<Urgencia, { color: string; bg: string; border: stri
   completada: { color: '#10b981', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.25)', label: 'Completada' },
   vencida:    { color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',   border: 'rgba(244,63,94,0.25)',  label: 'Vencida'    },
   hoy:        { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.25)', label: 'Hoy'        },
-  pronto:     { color: '#818cf8', bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.25)', label: 'Próxima'    },
-  normal:     { color: '#64748b', bg: 'rgba(255,255,255,0.05)',border: 'rgba(255,255,255,0.08)', label: 'Pendiente' },
+  pronto:     { color: '#8ff5d6', bg: 'rgba(85,239,196,0.1)',  border: 'rgba(85,239,196,0.25)', label: 'Próxima'    },
+  normal:     { color: '#64748b', bg: 'var(--overlay-05)',border: 'var(--overlay-08)', label: 'Pendiente' },
 }
 
 function countdown(fechaEntrega: string): string {
@@ -75,7 +75,7 @@ function materiaColor(nombre: string) {
 function ActividadesSkeleton() {
   return (
     <div className="animate-fade-in">
-      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
         <SkeletonBox className="h-7 w-40 shimmer" />
         <SkeletonBox className="h-10 w-36 shimmer rounded-xl" />
       </div>
@@ -235,14 +235,14 @@ export default function Actividades() {
     <div className="animate-fade-in h-full overflow-y-auto">
 
       {/* ── Header ── */}
-      <div className="relative px-4 md:px-6 py-5 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="relative px-4 md:px-6 py-5 overflow-hidden" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
         <div className="max-w-[1100px] mx-auto flex justify-between items-center relative">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <ClipboardCheck size={15} style={{ color: '#818cf8' }} />
+            <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}>
+              <ClipboardCheck size={15} style={{ color: '#8ff5d6' }} />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Actividades</h1>
+              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Actividades</h1>
               <p className="text-xs" style={{ color: '#64748b' }}>
                 {totalPendientes} pendiente{totalPendientes !== 1 ? 's' : ''} · {totalCompletadas} completada{totalCompletadas !== 1 ? 's' : ''}
               </p>
@@ -253,7 +253,7 @@ export default function Actividades() {
               onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
+              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             </button>
@@ -270,20 +270,20 @@ export default function Actividades() {
 
         {/* ── Progreso general ── */}
         {actividades.length > 0 && (
-          <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(145deg, #1a1d27, #141720)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: 'var(--gradient-card)', border: '1px solid var(--overlay-07)' }}>
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Tu progreso</span>
-                <span className="text-xs font-bold tabular-nums" style={{ color: pct === 100 ? '#10b981' : '#818cf8' }}>{pct}%</span>
+                <span className="text-xs font-bold tabular-nums" style={{ color: pct === 100 ? '#10b981' : '#8ff5d6' }}>{pct}%</span>
               </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--overlay-06)' }}>
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${pct}%`,
                     background: pct === 100
                       ? 'linear-gradient(90deg, #10b981, #059669)'
-                      : 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+                      : 'linear-gradient(90deg, #55efc4, #00cec9)',
                   }}
                 />
               </div>
@@ -307,19 +307,19 @@ export default function Actividades() {
               onClick={() => setFiltro(f.key)}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150"
               style={filtro === f.key ? {
-                background: 'rgba(99,102,241,0.15)',
-                border: '1px solid rgba(99,102,241,0.3)',
-                color: '#818cf8',
+                background: 'rgba(85,239,196,0.15)',
+                border: '1px solid rgba(85,239,196,0.3)',
+                color: '#8ff5d6',
               } : {
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.07)',
+                background: 'var(--overlay-04)',
+                border: '1px solid var(--overlay-07)',
                 color: '#64748b',
               }}
             >
               {f.label}
               <span className="px-1.5 py-0.5 rounded-md text-2xs font-bold" style={{
-                background: filtro === f.key ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)',
-                color: filtro === f.key ? '#818cf8' : '#4b5563',
+                background: filtro === f.key ? 'rgba(85,239,196,0.2)' : 'var(--overlay-06)',
+                color: filtro === f.key ? '#8ff5d6' : '#4b5563',
               }}>
                 {f.count}
               </span>
@@ -329,12 +329,12 @@ export default function Actividades() {
 
         {/* ── Lista ── */}
         {actsFiltradas.length === 0 ? (
-          <div className="py-14 flex flex-col items-center gap-3 text-center rounded-2xl" style={{ background: 'linear-gradient(145deg, #1a1d27, #141720)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="w-14 h-14 flex items-center justify-center rounded-2xl" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <ClipboardCheck size={24} style={{ color: '#818cf8' }} />
+          <div className="py-14 flex flex-col items-center gap-3 text-center rounded-2xl" style={{ background: 'var(--gradient-card)', border: '1px solid var(--overlay-06)' }}>
+            <div className="w-14 h-14 flex items-center justify-center rounded-2xl" style={{ background: 'rgba(85,239,196,0.1)', border: '1px solid rgba(85,239,196,0.2)' }}>
+              <ClipboardCheck size={24} style={{ color: '#8ff5d6' }} />
             </div>
             <div>
-              <p className="font-semibold" style={{ color: '#f1f5f9' }}>
+              <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
                 {filtro === 'todas' ? 'Sin actividades todavía' : `Sin actividades ${filtro}`}
               </p>
               <p className="text-sm mt-1" style={{ color: '#64748b' }}>
@@ -365,15 +365,15 @@ export default function Actividades() {
       {/* ── Modal nueva actividad ── */}
       {modalVisible && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }} onClick={() => setModalVisible(false)} />
-          <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-modal animate-scale-in-modal" style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <div className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+          <div className="absolute inset-0" style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(8px)' }} onClick={() => setModalVisible(false)} />
+          <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-modal animate-scale-in-modal" style={{ background: 'var(--color-surface)', border: '1px solid var(--overlay-08)' }}>
+            <div className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full" style={{ background: 'var(--overlay-15)' }} />
             <div className="p-6 pt-4 sm:pt-6">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  <ClipboardCheck size={15} style={{ color: '#818cf8' }} />
+                <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}>
+                  <ClipboardCheck size={15} style={{ color: '#8ff5d6' }} />
                 </div>
-                <h2 className="font-extrabold text-xl" style={{ color: '#f1f5f9' }}>Nueva actividad</h2>
+                <h2 className="font-extrabold text-xl" style={{ color: 'var(--color-text)' }}>Nueva actividad</h2>
               </div>
               <form onSubmit={handleCrear} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
@@ -411,7 +411,7 @@ export default function Actividades() {
                   <button type="submit" disabled={saving || !titulo.trim() || !fechaEntrega} className="flex-[2] btn-primary py-3 text-sm disabled:opacity-40">
                     {saving ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }} />
+                        <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }} />
                         Creando...
                       </div>
                     ) : 'Crear actividad'}
@@ -464,8 +464,8 @@ function ActividadRow({
       className="rounded-2xl overflow-hidden animate-slide-up transition-all duration-200"
       style={{
         animationDelay: `${delay}ms`,
-        background: 'linear-gradient(145deg, #1a1d27, #141720)',
-        border: `1px solid ${completada ? 'rgba(16,185,129,0.15)' : urg === 'vencida' ? 'rgba(244,63,94,0.12)' : 'rgba(255,255,255,0.07)'}`,
+        background: 'var(--gradient-card)',
+        border: `1px solid ${completada ? 'rgba(16,185,129,0.15)' : urg === 'vencida' ? 'rgba(244,63,94,0.12)' : 'var(--overlay-07)'}`,
         opacity: completada ? 0.75 : 1,
       }}
     >
@@ -534,7 +534,7 @@ function ActividadRow({
                 {expanded ? 'Ocultar' : 'Ver descripción'}
               </button>
               {expanded && (
-                <p className="mt-2 text-xs leading-relaxed rounded-lg p-2.5 whitespace-pre-wrap" style={{ color: '#94a3b8', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <p className="mt-2 text-xs leading-relaxed rounded-lg p-2.5 whitespace-pre-wrap" style={{ color: '#94a3b8', background: 'var(--overlay-03)', border: '1px solid var(--overlay-05)' }}>
                   {act.descripcion}
                 </p>
               )}
@@ -544,7 +544,7 @@ function ActividadRow({
           {/* Admin: progreso de alumnos */}
           {isAdmin && totalAlumnos > 0 && (
             <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-1 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="flex-1 h-1 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--overlay-06)' }}>
                 <div className="h-full rounded-full" style={{ width: `${(adminCount / totalAlumnos) * 100}%`, background: '#10b981' }} />
               </div>
               <span className="text-[10px] font-medium" style={{ color: '#4b5563' }}>
@@ -576,12 +576,12 @@ function ActividadRow({
             className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
             style={{
               background: completada ? '#10b981' : 'transparent',
-              border: `2px solid ${completada ? '#10b981' : 'rgba(255,255,255,0.2)'}`,
+              border: `2px solid ${completada ? '#10b981' : 'var(--overlay-20)'}`,
             }}
             aria-label={completada ? 'Marcar como pendiente' : 'Marcar como completada'}
           >
             {toggling ? (
-              <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+              <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-30)', borderTopColor: 'white' }} />
             ) : completada ? (
               <Check size={11} strokeWidth={3} className="text-white" />
             ) : null}

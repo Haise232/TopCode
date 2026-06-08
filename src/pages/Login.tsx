@@ -44,13 +44,13 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#0f1117' }}>
+    <div className="min-h-screen flex" style={{ background: 'var(--color-bg)' }}>
       {/* Left panel — branding */}
       <div
         className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-10 relative overflow-hidden"
         style={{
           background: 'linear-gradient(145deg, #13152a 0%, #0f1117 60%, #111420 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.05)',
+          borderRight: '1px solid var(--overlay-05)',
         }}
       >
         {/* Background glow */}
@@ -59,7 +59,7 @@ export default function Login() {
           style={{
             top: '-80px', left: '-80px',
             width: '480px', height: '480px',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(85,239,196,0.18) 0%, transparent 70%)',
             filter: 'blur(40px)',
           }}
         />
@@ -68,7 +68,7 @@ export default function Login() {
           style={{
             bottom: '0px', right: '-60px',
             width: '320px', height: '320px',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(0,206,201,0.12) 0%, transparent 70%)',
             filter: 'blur(40px)',
           }}
         />
@@ -77,12 +77,12 @@ export default function Login() {
         <div className="relative flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 4px 16px rgba(99,102,241,0.4)' }}
+            style={{ background: 'linear-gradient(135deg, #55efc4, #00cec9)', boxShadow: '0 4px 16px rgba(85,239,196,0.4)' }}
           >
             <GraduationCap size={20} className="text-white" />
           </div>
           <span className="font-bold text-lg" style={{ color: '#f1f5f9' }}>
-            Top<span style={{ color: '#818cf8' }}>Code</span>
+            Top<span style={{ color: '#8ff5d6' }}>Code</span>
           </span>
         </div>
 
@@ -91,16 +91,16 @@ export default function Login() {
           <div className="flex flex-col gap-4">
             <div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full w-fit"
-              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}
+              style={{ background: 'rgba(85,239,196,0.1)', border: '1px solid rgba(85,239,196,0.2)' }}
             >
-              <Sparkles size={12} style={{ color: '#818cf8' }} />
-              <span className="text-xs font-semibold" style={{ color: '#818cf8' }}>Intranet académica DAM</span>
+              <Sparkles size={12} style={{ color: '#8ff5d6' }} />
+              <span className="text-xs font-semibold" style={{ color: '#8ff5d6' }}>Intranet académica DAM</span>
             </div>
             <h2 className="text-4xl font-extrabold leading-tight tracking-tight" style={{ color: '#f1f5f9' }}>
               Tu espacio<br />
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #818cf8, #c084fc)',
+                  background: 'linear-gradient(135deg, #8ff5d6, #00cec9)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -144,7 +144,7 @@ export default function Login() {
         <div
           className="absolute inset-0 pointer-events-none lg:hidden"
           style={{
-            background: 'radial-gradient(ellipse at top, rgba(99,102,241,0.08) 0%, transparent 60%)',
+            background: 'radial-gradient(ellipse at top, rgba(85,239,196,0.08) 0%, transparent 60%)',
           }}
         />
 
@@ -153,19 +153,19 @@ export default function Login() {
           <div className="flex flex-col items-center gap-3 mb-10 lg:hidden">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-primary"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+              style={{ background: 'linear-gradient(135deg, #55efc4, #00cec9)' }}
             >
               <GraduationCap size={26} className="text-white" />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-extrabold" style={{ color: '#f1f5f9' }}>TopCode</h1>
+              <h1 className="text-2xl font-extrabold" style={{ color: 'var(--color-text)' }}>TopCode</h1>
               <p className="text-xs mt-1" style={{ color: '#64748b' }}>Intranet académica · DAM</p>
             </div>
           </div>
 
           {/* Heading */}
           <div className="mb-8">
-            <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: '#f1f5f9' }}>
+            <h2 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--color-text)' }}>
               Bienvenido de vuelta
             </h2>
             <p className="text-sm mt-1.5" style={{ color: '#64748b' }}>
@@ -177,8 +177,8 @@ export default function Login() {
           <div
             className="rounded-2xl p-6"
             style={{
-              background: '#1a1d27',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--overlay-07)',
               boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
             }}
           >
@@ -234,7 +234,7 @@ export default function Login() {
                   <div className="flex items-center gap-2">
                     <div
                       className="w-4 h-4 rounded-full animate-spin"
-                      style={{ border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }}
+                      style={{ border: '2px solid var(--overlay-20)', borderTopColor: 'white' }}
                     />
                     Verificando...
                   </div>
@@ -255,7 +255,7 @@ export default function Login() {
               <Link
                 to="/register"
                 className="font-semibold transition-colors duration-150 hover:text-indigo-300"
-                style={{ color: '#818cf8' }}
+                style={{ color: '#8ff5d6' }}
               >
                 Crear una cuenta
               </Link>

@@ -73,23 +73,23 @@ export default function AnuncioModal() {
       {/* Backdrop — no se puede cerrar haciendo click fuera */}
       <div
         className="absolute inset-0"
-        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+        style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(8px)' }}
       />
 
       {/* Card */}
       <div
         className="relative w-full max-w-md rounded-2xl shadow-modal"
         style={{
-          background: 'linear-gradient(145deg, #1a1d27, #141720)',
-          border: '1px solid rgba(99,102,241,0.25)',
-          boxShadow: '0 0 0 1px rgba(99,102,241,0.1), 0 24px 64px rgba(0,0,0,0.7)',
+          background: 'var(--gradient-card)',
+          border: '1px solid rgba(85,239,196,0.25)',
+          boxShadow: '0 0 0 1px rgba(85,239,196,0.1), 0 24px 64px var(--color-modal-backdrop)',
           animation: cerrando ? 'scale-out 0.2s ease-in forwards' : 'scale-in-modal 0.25s cubic-bezier(0.16,1,0.3,1)',
         }}
       >
         {/* Glow superior */}
         <div
           className="absolute inset-x-0 top-0 h-px rounded-t-2xl"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(85,239,196,0.6), transparent)' }}
         />
 
         <div className="p-6">
@@ -98,18 +98,18 @@ export default function AnuncioModal() {
             <div
               className="w-11 h-11 flex items-center justify-center rounded-xl shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15))',
-                border: '1px solid rgba(99,102,241,0.3)',
-                boxShadow: '0 2px 12px rgba(99,102,241,0.2)',
+                background: 'linear-gradient(135deg, rgba(85,239,196,0.2), rgba(0,206,201,0.15))',
+                border: '1px solid rgba(85,239,196,0.3)',
+                boxShadow: '0 2px 12px rgba(85,239,196,0.2)',
               }}
             >
-              <Megaphone size={20} style={{ color: '#818cf8' }} />
+              <Megaphone size={20} style={{ color: '#8ff5d6' }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#6366f1' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#55efc4' }}>
                 Comunicado
               </p>
-              <h2 className="font-extrabold text-lg leading-snug" style={{ color: '#f1f5f9' }}>
+              <h2 className="font-extrabold text-lg leading-snug" style={{ color: 'var(--color-text)' }}>
                 {anuncio.titulo}
               </h2>
             </div>
@@ -119,8 +119,8 @@ export default function AnuncioModal() {
           <div
             className="rounded-xl p-4 mb-5 text-sm leading-relaxed whitespace-pre-wrap"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--overlay-03)',
+              border: '1px solid var(--overlay-06)',
               color: '#cbd5e1',
             }}
           >
@@ -139,9 +139,9 @@ export default function AnuncioModal() {
             onClick={handleLeer}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all duration-150 active:scale-[0.97]"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: 'linear-gradient(135deg, #55efc4, #00cec9)',
               color: 'white',
-              boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
+              boxShadow: '0 4px 16px rgba(85,239,196,0.35)',
             }}
           >
             <CheckCheck size={16} />

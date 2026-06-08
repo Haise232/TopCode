@@ -57,67 +57,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // get_mi_perfil() es SECURITY DEFINER: devuelve email y es_superadmin
     // que el rol `authenticated` no puede leer directamente por column-level REVOKE.
+    // Envuelto en try/catch: supabase-js puede *lanzar* (no solo devolver `error`)
+    // cuando el fetch falla por red/timeout/abort, y eso no debe dejar loading colgado.
     const getPerfil = async () => {
-      const { data, error } = await supabase.rpc('get_mi_perfil')
-      return {
-        data: (data as Usuario[] | null)?.[0] ?? null,
-        error,
+      try {
+        const { data, error } = await supabase.rpc('get_mi_perfil')
+        return {
+          data: (data as Usuario[] | null)?.[0] ?? null,
+          error,
+        }
+      } catch (err) {
+        return { data: null as Usuario | null, error: err }
       }
     }
 
-    const { data, error } = await getPerfil()
-    if (currentFetch !== fetchCountRef.current) return
-
-    if (data && !error) {
-      setCachedUsuario(data)
-      setUsuario(data)
-      setLoading(false)
-      return
-    }
-
-    // Sin fila = usuario nuevo. Solo hacemos upsert en este caso.
-    if (!data && !error) {
-      const nombre = (userMeta?.nombre as string | undefined)
-        ?? (userMeta?.full_name as string | undefined)
-        ?? (userEmail?.split('@')[0] ?? 'Usuario')
-
-      const { error: upsertError } = await supabase
-        .from('usuarios')
-        .upsert({
-          id: userId,
-          nombre,
-          email: userEmail ?? '',
-          promedio: 0,
-          avatar_url: null,
-          rol: 'alumno',
-        })
-
+    // Cualquier excepción inesperada en este flujo (red, abort, etc.) no debe dejar
+    // `loading` colgado indefinidamente: siempre se libera al final.
+    try {
+      const { data, error } = await getPerfil()
       if (currentFetch !== fetchCountRef.current) return
 
-      if (!upsertError) {
+      if (data && !error) {
+        setCachedUsuario(data)
+        setUsuario(data)
+        return
+      }
+
+      // Sin fila = usuario nuevo. Solo hacemos upsert en este caso.
+      if (!data && !error) {
+        const nombre = (userMeta?.nombre as string | undefined)
+          ?? (userMeta?.full_name as string | undefined)
+          ?? (userEmail?.split('@')[0] ?? 'Usuario')
+
+        const { error: upsertError } = await supabase
+          .from('usuarios')
+          .upsert({
+            id: userId,
+            nombre,
+            email: userEmail ?? '',
+            promedio: 0,
+            avatar_url: null,
+            rol: 'alumno',
+          })
+
+        if (currentFetch !== fetchCountRef.current) return
+
+        if (!upsertError) {
+          const { data: result } = await getPerfil()
+          if (currentFetch !== fetchCountRef.current) return
+          setCachedUsuario(result)
+          setUsuario(result)
+          return
+        }
+
+        // El upsert falló: reintentar por si la fila ya existía (race condition)
         const { data: result } = await getPerfil()
         if (currentFetch !== fetchCountRef.current) return
         setCachedUsuario(result)
         setUsuario(result)
-        setLoading(false)
         return
       }
 
-      // El upsert falló: reintentar por si la fila ya existía (race condition)
+      // Cualquier otro error (red, RLS transitorio, etc.): reintento único antes de rendir
       const { data: result } = await getPerfil()
       if (currentFetch !== fetchCountRef.current) return
       setCachedUsuario(result)
       setUsuario(result)
-      setLoading(false)
-      return
+    } finally {
+      if (currentFetch === fetchCountRef.current) setLoading(false)
     }
-
-    // Cualquier otro error (red, RLS transitorio, etc.): reintento único antes de rendir
-    const { data: result } = await getPerfil()
-    if (currentFetch !== fetchCountRef.current) return
-    setCachedUsuario(result)
-    setUsuario(result)
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -134,23 +142,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // pero sin la race condition de tener dos fuentes concurrentes.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, sess) => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-
         setSession(sess)
 
-        if (sess?.user) {
-          await fetchUsuario(
-            sess.user.id,
-            sess.user.email,
-            sess.user.user_metadata as Record<string, unknown>,
-          )
-        } else {
-          setCachedUsuario(null)
-          setUsuario(null)
-          setLoading(false)
+        try {
+          if (sess?.user) {
+            await fetchUsuario(
+              sess.user.id,
+              sess.user.email,
+              sess.user.user_metadata as Record<string, unknown>,
+            )
+          } else {
+            setCachedUsuario(null)
+            setUsuario(null)
+            setLoading(false)
+          }
+        } finally {
+          // Solo se desactiva el timeout de seguridad una vez resuelto el flujo
+          // completo (éxito o error): si se limpiara antes de `await fetchUsuario`,
+          // una excepción ahí dejaría `loading` colgado sin red de seguridad.
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+            timeoutId = null
+          }
         }
       },
     )

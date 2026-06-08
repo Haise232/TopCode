@@ -41,28 +41,28 @@ function NewsSkeleton() {
       {/* Header skeleton */}
       <div
         className="px-4 md:px-6 py-5"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div className="max-w-[1100px] mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
+              style={{ background: 'var(--overlay-06)' }}
             />
             <div className="flex flex-col gap-1.5">
               <div
                 className="h-5 w-28 rounded-md"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
+                style={{ background: 'var(--overlay-06)' }}
               />
               <div
                 className="h-3 w-20 rounded-md"
-                style={{ background: 'rgba(255,255,255,0.04)' }}
+                style={{ background: 'var(--overlay-04)' }}
               />
             </div>
           </div>
           <div
             className="h-9 w-36 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.06)' }}
+            style={{ background: 'var(--overlay-06)' }}
           />
         </div>
       </div>
@@ -74,41 +74,41 @@ function NewsSkeleton() {
             key={i}
             className="rounded-2xl overflow-hidden"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--overlay-03)',
+              border: '1px solid var(--overlay-08)',
             }}
           >
             <div
               className="h-44"
-              style={{ background: 'rgba(255,255,255,0.05)' }}
+              style={{ background: 'var(--overlay-05)' }}
             />
             <div className="p-4 flex flex-col gap-3">
               <div
                 className="h-4 w-3/4 rounded-md"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
+                style={{ background: 'var(--overlay-06)' }}
               />
               <div className="flex flex-col gap-1.5">
                 <div
                   className="h-3 w-full rounded-md"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  style={{ background: 'var(--overlay-04)' }}
                 />
                 <div
                   className="h-3 w-5/6 rounded-md"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  style={{ background: 'var(--overlay-04)' }}
                 />
                 <div
                   className="h-3 w-2/3 rounded-md"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  style={{ background: 'var(--overlay-04)' }}
                 />
               </div>
               <div className="flex justify-between items-center mt-1">
                 <div
                   className="h-3 w-20 rounded-md"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  style={{ background: 'var(--overlay-04)' }}
                 />
                 <div
                   className="h-3 w-16 rounded-md"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  style={{ background: 'var(--overlay-04)' }}
                 />
               </div>
             </div>
@@ -139,18 +139,18 @@ function NewsCard({
     <div
       className="rounded-2xl overflow-hidden flex flex-col transition-all duration-200 group"
       style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--overlay-03)',
+        border: '1px solid var(--overlay-08)',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(99,102,241,0.25)'
-        el.style.background = 'rgba(255,255,255,0.04)'
+        el.style.borderColor = 'rgba(85,239,196,0.25)'
+        el.style.background = 'var(--overlay-04)'
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(255,255,255,0.08)'
-        el.style.background = 'rgba(255,255,255,0.03)'
+        el.style.borderColor = 'var(--overlay-08)'
+        el.style.background = 'var(--overlay-03)'
       }}
     >
       {/* Image / Placeholder */}
@@ -165,7 +165,7 @@ function NewsCard({
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.04)' }}
+            style={{ background: 'var(--overlay-04)' }}
           >
             <Newspaper size={36} style={{ color: '#374151' }} />
           </div>
@@ -179,8 +179,8 @@ function NewsCard({
               className="absolute top-2.5 right-11 w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
               style={{
                 background: 'rgba(15,18,25,0.8)',
-                border: '1px solid rgba(99,102,241,0.3)',
-                color: '#818cf8',
+                border: '1px solid rgba(85,239,196,0.3)',
+                color: '#8ff5d6',
                 backdropFilter: 'blur(6px)',
               }}
               aria-label="Editar noticia"
@@ -206,7 +206,7 @@ function NewsCard({
 
       {/* Content */}
       <div className="flex flex-col gap-2.5 p-4 flex-1">
-        <h3 className="font-bold text-sm leading-snug" style={{ color: '#f1f5f9' }}>
+        <h3 className="font-bold text-sm leading-snug" style={{ color: 'var(--color-text)' }}>
           {noticia.titulo}
         </h3>
 
@@ -217,7 +217,7 @@ function NewsCard({
           {noticia.descripcion}
         </p>
 
-        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-between mt-auto pt-2" style={{ borderTop: '1px solid var(--overlay-06)' }}>
           <span className="text-xs" style={{ color: '#64748b' }}>
             {formatFecha(noticia.created_at)}
           </span>
@@ -226,9 +226,9 @@ function NewsCard({
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs font-semibold transition-colors duration-150"
-            style={{ color: '#818cf8' }}
+            style={{ color: '#8ff5d6' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#a5b4fc' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#818cf8' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#8ff5d6' }}
             onClick={e => e.stopPropagation()}
           >
             Ver fuente
@@ -253,8 +253,8 @@ function ImagePreview({ url }: { url: string }) {
       className="mt-1.5 rounded-xl overflow-hidden"
       style={{
         height: '120px',
-        border: '1px solid rgba(255,255,255,0.08)',
-        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--overlay-08)',
+        background: 'var(--overlay-03)',
       }}
     >
       {errored ? (
@@ -414,23 +414,23 @@ export default function News() {
       {/* ── Header ── */}
       <div
         className="px-4 md:px-6 py-5"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div className="max-w-[1100px] mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 flex items-center justify-center rounded-xl"
               style={{
-                background: 'rgba(99,102,241,0.12)',
-                border: '1px solid rgba(99,102,241,0.2)',
+                background: 'rgba(85,239,196,0.12)',
+                border: '1px solid rgba(85,239,196,0.2)',
               }}
             >
-              <Newspaper size={15} style={{ color: '#818cf8' }} />
+              <Newspaper size={15} style={{ color: '#8ff5d6' }} />
             </div>
             <div>
               <h1
                 className="font-extrabold text-xl tracking-tight"
-                style={{ color: '#f1f5f9' }}
+                style={{ color: 'var(--color-text)' }}
               >
                 Noticias
               </h1>
@@ -445,8 +445,8 @@ export default function News() {
               onClick={abrirModalCrear}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-150 active:scale-95"
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
+                background: 'linear-gradient(135deg, #55efc4, #00cec9)',
+                boxShadow: '0 4px 14px rgba(85,239,196,0.3)',
               }}
             >
               <Plus size={15} />
@@ -478,21 +478,21 @@ export default function News() {
           <div
             className="py-16 flex flex-col items-center gap-4 text-center rounded-2xl"
             style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--gradient-card)',
+              border: '1px solid var(--overlay-06)',
             }}
           >
             <div
               className="w-16 h-16 flex items-center justify-center rounded-2xl"
               style={{
-                background: 'rgba(99,102,241,0.1)',
-                border: '1px solid rgba(99,102,241,0.2)',
+                background: 'rgba(85,239,196,0.1)',
+                border: '1px solid rgba(85,239,196,0.2)',
               }}
             >
-              <Newspaper size={28} style={{ color: '#818cf8' }} />
+              <Newspaper size={28} style={{ color: '#8ff5d6' }} />
             </div>
             <div>
-              <p className="font-semibold" style={{ color: '#f1f5f9' }}>
+              <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
                 No hay noticias todavía
               </p>
               {isAdmin ? (
@@ -531,7 +531,7 @@ export default function News() {
           {/* Backdrop */}
           <div
             className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+            style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(8px)' }}
             onClick={cerrarModal}
           />
 
@@ -539,22 +539,22 @@ export default function News() {
           <div
             className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-modal animate-scale-in-modal overflow-hidden"
             style={{
-              background: '#1a1d27',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--overlay-08)',
             }}
           >
             {/* Accent band */}
             <div
               style={{
                 height: '3px',
-                background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa)',
+                background: 'linear-gradient(90deg, #55efc4, #00cec9, #00cec9)',
               }}
             />
 
             {/* Handle mobile */}
             <div
               className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full"
-              style={{ background: 'rgba(255,255,255,0.15)' }}
+              style={{ background: 'var(--overlay-15)' }}
             />
 
             <div className="p-6 pt-4 sm:pt-6">
@@ -564,16 +564,16 @@ export default function News() {
                   <div
                     className="w-9 h-9 flex items-center justify-center rounded-xl"
                     style={{
-                      background: 'rgba(99,102,241,0.12)',
-                      border: '1px solid rgba(99,102,241,0.2)',
+                      background: 'rgba(85,239,196,0.12)',
+                      border: '1px solid rgba(85,239,196,0.2)',
                     }}
                   >
-                    <Newspaper size={15} style={{ color: '#818cf8' }} />
+                    <Newspaper size={15} style={{ color: '#8ff5d6' }} />
                   </div>
                   <div>
                     <h2
                       className="font-extrabold text-xl"
-                      style={{ color: '#f1f5f9' }}
+                      style={{ color: 'var(--color-text)' }}
                     >
                       {editingItem ? 'Editar noticia' : 'Nueva noticia'}
                     </h2>
@@ -584,8 +584,8 @@ export default function News() {
                           key={tag}
                           className="text-xs px-2 py-0.5 rounded-full"
                           style={{
-                            background: 'rgba(99,102,241,0.08)',
-                            color: '#818cf8',
+                            background: 'rgba(85,239,196,0.08)',
+                            color: '#8ff5d6',
                             fontSize: '0.65rem',
                           }}
                         >
@@ -599,18 +599,18 @@ export default function News() {
                   onClick={cerrarModal}
                   className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150"
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
+                    background: 'var(--overlay-06)',
                     color: '#64748b',
                   }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLElement
                     el.style.color = '#e2e8f0'
-                    el.style.background = 'rgba(255,255,255,0.1)'
+                    el.style.background = 'var(--overlay-10)'
                   }}
                   onMouseLeave={e => {
                     const el = e.currentTarget as HTMLElement
                     el.style.color = '#64748b'
-                    el.style.background = 'rgba(255,255,255,0.06)'
+                    el.style.background = 'var(--overlay-06)'
                   }}
                   aria-label="Cerrar"
                 >
@@ -630,10 +630,10 @@ export default function News() {
                     placeholder="Ej: Nueva actualización de React 19"
                     autoFocus
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'var(--overlay-04)',
+                      border: '1px solid var(--overlay-08)',
                       borderRadius: '0.75rem',
-                      color: '#f1f5f9',
+                      color: 'var(--color-text)',
                       padding: '0.625rem 0.875rem',
                       fontSize: '0.875rem',
                       outline: 'none',
@@ -641,11 +641,11 @@ export default function News() {
                       transition: 'border-color 0.15s, box-shadow 0.15s',
                     }}
                     onFocus={e => {
-                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                      e.currentTarget.style.borderColor = 'rgba(85,239,196,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(85,239,196,0.1)'
                     }}
                     onBlur={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.borderColor = 'var(--overlay-08)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   />
@@ -662,10 +662,10 @@ export default function News() {
                     placeholder="Resumen de la noticia..."
                     rows={4}
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'var(--overlay-04)',
+                      border: '1px solid var(--overlay-08)',
                       borderRadius: '0.75rem',
-                      color: '#f1f5f9',
+                      color: 'var(--color-text)',
                       padding: '0.625rem 0.875rem',
                       fontSize: '0.875rem',
                       outline: 'none',
@@ -674,11 +674,11 @@ export default function News() {
                       transition: 'border-color 0.15s, box-shadow 0.15s',
                     }}
                     onFocus={e => {
-                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                      e.currentTarget.style.borderColor = 'rgba(85,239,196,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(85,239,196,0.1)'
                     }}
                     onBlur={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.borderColor = 'var(--overlay-08)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   />
@@ -695,10 +695,10 @@ export default function News() {
                     onChange={e => setUrlFuente(e.target.value)}
                     placeholder="https://..."
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'var(--overlay-04)',
+                      border: '1px solid var(--overlay-08)',
                       borderRadius: '0.75rem',
-                      color: '#f1f5f9',
+                      color: 'var(--color-text)',
                       padding: '0.625rem 0.875rem',
                       fontSize: '0.875rem',
                       outline: 'none',
@@ -706,11 +706,11 @@ export default function News() {
                       transition: 'border-color 0.15s, box-shadow 0.15s',
                     }}
                     onFocus={e => {
-                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                      e.currentTarget.style.borderColor = 'rgba(85,239,196,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(85,239,196,0.1)'
                     }}
                     onBlur={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.borderColor = 'var(--overlay-08)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   />
@@ -728,10 +728,10 @@ export default function News() {
                     onChange={e => setUrlImagen(e.target.value)}
                     placeholder="https://..."
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'var(--overlay-04)',
+                      border: '1px solid var(--overlay-08)',
                       borderRadius: '0.75rem',
-                      color: '#f1f5f9',
+                      color: 'var(--color-text)',
                       padding: '0.625rem 0.875rem',
                       fontSize: '0.875rem',
                       outline: 'none',
@@ -739,11 +739,11 @@ export default function News() {
                       transition: 'border-color 0.15s, box-shadow 0.15s',
                     }}
                     onFocus={e => {
-                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'
+                      e.currentTarget.style.borderColor = 'rgba(85,239,196,0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(85,239,196,0.1)'
                     }}
                     onBlur={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                      e.currentTarget.style.borderColor = 'var(--overlay-08)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   />
@@ -777,17 +777,17 @@ export default function News() {
                     onClick={cerrarModal}
                     className="flex-1 py-3 text-sm font-semibold rounded-xl transition-all duration-150"
                     style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'var(--overlay-05)',
+                      border: '1px solid var(--overlay-08)',
                       color: '#94a3b8',
                     }}
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement
-                      el.style.background = 'rgba(255,255,255,0.08)'
+                      el.style.background = 'var(--overlay-08)'
                     }}
                     onMouseLeave={e => {
                       const el = e.currentTarget as HTMLElement
-                      el.style.background = 'rgba(255,255,255,0.05)'
+                      el.style.background = 'var(--overlay-05)'
                     }}
                   >
                     Cancelar
@@ -797,8 +797,8 @@ export default function News() {
                     disabled={saving}
                     className="flex-[2] py-3 text-sm font-semibold text-white rounded-xl active:scale-[0.98] transition-all duration-150 disabled:opacity-40"
                     style={{
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
+                      background: 'linear-gradient(135deg, #55efc4, #00cec9)',
+                      boxShadow: '0 4px 14px rgba(85,239,196,0.3)',
                     }}
                   >
                     {saving ? (
@@ -806,7 +806,7 @@ export default function News() {
                         <span
                           className="w-4 h-4 rounded-full animate-spin"
                           style={{
-                            border: '1.5px solid rgba(255,255,255,0.2)',
+                            border: '1.5px solid var(--overlay-20)',
                             borderTopColor: 'white',
                           }}
                         />

@@ -38,7 +38,7 @@ function Avatar({ nombre, url, size = 32 }: { nombre: string; url?: string | nul
       src={url}
       alt={nombre}
       className="object-cover shrink-0"
-      style={{ width: size, height: size, borderRadius: '10px', border: '1.5px solid rgba(255,255,255,0.08)' }}
+      style={{ width: size, height: size, borderRadius: '10px', border: '1.5px solid var(--overlay-08)' }}
     />
   )
   const hue = getHue(nombre)
@@ -69,7 +69,7 @@ function LoadingDots() {
             key={i}
             className="w-2 h-2 rounded-full"
             style={{
-              background: '#6366f1',
+              background: '#55efc4',
               animation: 'dot-bounce 1.4s ease-in-out infinite',
               animationDelay: `${i * 0.18}s`,
             }}
@@ -85,14 +85,14 @@ function DateSeparator({ label }: { label: string }) {
     <div className="flex items-center gap-3 my-5">
       <div
         className="flex-1 h-px"
-        style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.07))' }}
+        style={{ background: 'linear-gradient(to right, transparent, var(--overlay-07))' }}
       />
       <span
         className="text-xs font-semibold px-3 py-1 rounded-full shrink-0"
         style={{
-          background: 'rgba(99,102,241,0.06)',
-          color: '#6366f1',
-          border: '1px solid rgba(99,102,241,0.18)',
+          background: 'rgba(85,239,196,0.06)',
+          color: '#55efc4',
+          border: '1px solid rgba(85,239,196,0.18)',
           letterSpacing: '0.04em',
         }}
       >
@@ -100,7 +100,7 @@ function DateSeparator({ label }: { label: string }) {
       </span>
       <div
         className="flex-1 h-px"
-        style={{ background: 'linear-gradient(to left, transparent, rgba(255,255,255,0.07))' }}
+        style={{ background: 'linear-gradient(to left, transparent, var(--overlay-07))' }}
       />
     </div>
   )
@@ -112,11 +112,11 @@ function MessageInput({
   onSubmit,
   placeholder,
   inputRef,
-  accentColor: _accentColor = '#6366f1',
-  accentGlow = 'rgba(99,102,241,0.08)',
-  accentBorder = 'rgba(99,102,241,0.4)',
-  gradientFrom = '#6366f1',
-  gradientTo = '#8b5cf6',
+  accentColor: _accentColor = '#55efc4',
+  accentGlow = 'rgba(85,239,196,0.08)',
+  accentBorder = 'rgba(85,239,196,0.4)',
+  gradientFrom = '#55efc4',
+  gradientTo = '#00cec9',
 }: {
   value: string
   onChange: (v: string) => void
@@ -134,13 +134,13 @@ function MessageInput({
     <form
       onSubmit={onSubmit}
       className="px-4 py-3 shrink-0"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#14161f' }}
+      style={{ borderTop: '1px solid var(--overlay-05)', background: 'var(--color-surface-2)' }}
     >
       <div
         className="flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all duration-200"
         style={{
-          background: '#1a1d27',
-          border: active ? `1px solid ${accentBorder}` : '1px solid rgba(255,255,255,0.07)',
+          background: 'var(--color-surface)',
+          border: active ? `1px solid ${accentBorder}` : '1px solid var(--overlay-07)',
           boxShadow: active ? `0 0 0 3px ${accentGlow}` : 'none',
         }}
       >
@@ -150,7 +150,7 @@ function MessageInput({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-600"
-          style={{ color: '#f1f5f9' }}
+          style={{ color: 'var(--color-text)' }}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
@@ -165,7 +165,7 @@ function MessageInput({
           style={{
             background: active
               ? `linear-gradient(135deg, ${gradientFrom}, ${gradientTo})`
-              : 'rgba(255,255,255,0.04)',
+              : 'var(--overlay-04)',
             boxShadow: active ? `0 2px 8px ${accentGlow}` : 'none',
             opacity: active ? 1 : 0.4,
           }}
@@ -216,13 +216,13 @@ function BubbleRow({ isMine, isGrouped, isLastInGroup, showAuthor, autor, avatar
           className="px-3.5 py-2.5 text-sm leading-relaxed"
           style={isMine ? {
             borderRadius: isGrouped ? '18px 4px 4px 18px' : '18px 4px 18px 18px',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            background: 'linear-gradient(135deg, #55efc4, #00cec9)',
             color: 'white',
-            boxShadow: '0 2px 10px rgba(99,102,241,0.28)',
+            boxShadow: '0 2px 10px rgba(85,239,196,0.28)',
           } : {
             borderRadius: isGrouped ? '4px 18px 18px 4px' : '4px 18px 18px 18px',
             background: '#1e2233',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid var(--overlay-07)',
             color: '#e2e8f0',
           }}
         >
@@ -244,24 +244,24 @@ function EmptyPublicChat() {
     <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center py-16 px-6">
       <div
         className="relative w-20 h-20 flex items-center justify-center rounded-3xl"
-        style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)' }}
+        style={{ background: 'rgba(85,239,196,0.08)', border: '1px solid rgba(85,239,196,0.18)' }}
       >
         {/* Simple SVG illustration */}
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-          <rect x="4" y="8" width="32" height="20" rx="5" fill="rgba(99,102,241,0.25)" stroke="#6366f1" strokeWidth="1.5"/>
-          <circle cx="12" cy="18" r="2.5" fill="#818cf8"/>
-          <circle cx="20" cy="18" r="2.5" fill="#818cf8"/>
-          <circle cx="28" cy="18" r="2.5" fill="#818cf8"/>
-          <path d="M16 28 L16 33 L22 28" fill="rgba(99,102,241,0.25)" stroke="#6366f1" strokeWidth="1.5" strokeLinejoin="round"/>
+          <rect x="4" y="8" width="32" height="20" rx="5" fill="rgba(85,239,196,0.25)" stroke="#55efc4" strokeWidth="1.5"/>
+          <circle cx="12" cy="18" r="2.5" fill="#8ff5d6"/>
+          <circle cx="20" cy="18" r="2.5" fill="#8ff5d6"/>
+          <circle cx="28" cy="18" r="2.5" fill="#8ff5d6"/>
+          <path d="M16 28 L16 33 L22 28" fill="rgba(85,239,196,0.25)" stroke="#55efc4" strokeWidth="1.5" strokeLinejoin="round"/>
         </svg>
         {/* Decorative glow */}
         <div
           className="absolute inset-0 rounded-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(85,239,196,0.12) 0%, transparent 70%)' }}
         />
       </div>
       <div>
-        <p className="font-semibold" style={{ color: '#f1f5f9' }}>El canal está tranquilo por ahora</p>
+        <p className="font-semibold" style={{ color: 'var(--color-text)' }}>El canal está tranquilo por ahora</p>
         <p className="text-sm mt-1.5 max-w-[240px]" style={{ color: '#4b5563', lineHeight: 1.5 }}>
           Sé el primero en escribir algo y empieza la conversación
         </p>
@@ -303,16 +303,16 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
       {/* Channel header */}
       <div
         className="px-5 py-3.5 shrink-0 flex items-center gap-3"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#14161f' }}
+        style={{ borderBottom: '1px solid var(--overlay-05)', background: 'var(--color-surface-2)' }}
       >
         <div
           className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0"
-          style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)' }}
+          style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}
         >
-          <Hash size={14} style={{ color: '#818cf8' }} />
+          <Hash size={14} style={{ color: '#8ff5d6' }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm leading-tight" style={{ color: '#f1f5f9' }}>general</p>
+          <p className="font-semibold text-sm leading-tight" style={{ color: 'var(--color-text)' }}>general</p>
           <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>
             {loading ? 'Cargando...' : `${todayCount} mensaje${todayCount !== 1 ? 's' : ''} hoy`}
           </p>
@@ -403,11 +403,11 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
       {/* Conversation header */}
       <div
         className="px-5 py-3.5 shrink-0 flex items-center gap-3"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#14161f' }}
+        style={{ borderBottom: '1px solid var(--overlay-05)', background: 'var(--color-surface-2)' }}
       >
         <Avatar nombre={peer.nombre} url={peer.avatar_url} size={38} />
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm leading-tight" style={{ color: '#f1f5f9' }}>{peer.nombre}</p>
+          <p className="font-semibold text-sm leading-tight" style={{ color: 'var(--color-text)' }}>{peer.nombre}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Lock size={9} style={{ color: '#14b8a6' }} />
             <p className="text-xs" style={{ color: '#4b5563' }}>Conversación privada</p>
@@ -416,9 +416,9 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
         <span
           className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
           style={peer.rol === 'admin' ? {
-            background: 'rgba(99,102,241,0.12)',
-            color: '#818cf8',
-            border: '1px solid rgba(99,102,241,0.25)',
+            background: 'rgba(85,239,196,0.12)',
+            color: '#8ff5d6',
+            border: '1px solid rgba(85,239,196,0.25)',
           } : {
             background: 'rgba(20,184,166,0.08)',
             color: '#2dd4bf',
@@ -448,7 +448,7 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
               </div>
             </div>
             <div>
-              <p className="font-semibold" style={{ color: '#f1f5f9' }}>
+              <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
                 Hola, ¡empieza la conversación!
               </p>
               <p className="text-sm mt-1.5 max-w-[220px]" style={{ color: '#4b5563', lineHeight: 1.5 }}>
@@ -492,7 +492,7 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
         accentGlow="rgba(20,184,166,0.08)"
         accentBorder="rgba(20,184,166,0.4)"
         gradientFrom="#14b8a6"
-        gradientTo="#6366f1"
+        gradientTo="#55efc4"
       />
     </div>
   )
@@ -537,7 +537,7 @@ function UserList({
       <div className="px-3 py-2.5 shrink-0">
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)' }}
         >
           <Search size={13} style={{ color: '#4b5563', flexShrink: 0 }} />
           <input
@@ -545,7 +545,7 @@ function UserList({
             onChange={e => setQuery(e.target.value)}
             placeholder="Buscar usuario..."
             className="flex-1 bg-transparent text-xs outline-none placeholder:text-slate-600"
-            style={{ color: '#f1f5f9' }}
+            style={{ color: 'var(--color-text)' }}
           />
         </div>
       </div>
@@ -558,7 +558,7 @@ function UserList({
           <div className="flex flex-col items-center justify-center py-10 gap-3 text-center px-4">
             <div
               className="w-12 h-12 flex items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)' }}
             >
               <Users size={20} style={{ color: '#374151' }} />
             </div>
@@ -587,7 +587,7 @@ function UserList({
                   onMouseEnter={e => {
                     if (!isSelected) {
                       const el = e.currentTarget as HTMLElement
-                      el.style.background = 'rgba(255,255,255,0.04)'
+                      el.style.background = 'var(--overlay-04)'
                     }
                   }}
                   onMouseLeave={e => {
@@ -640,22 +640,22 @@ function DesktopSidebar({
       className="hidden md:flex flex-col shrink-0 h-full"
       style={{
         width: 280,
-        background: '#0f1117',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--color-bg)',
+        borderRight: '1px solid var(--overlay-06)',
       }}
     >
       {/* Sidebar header */}
       <div
         className="px-4 py-4 shrink-0 flex items-center gap-2.5"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div
           className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+          style={{ background: 'linear-gradient(135deg, #55efc4, #00cec9)' }}
         >
           <MessageCircle size={13} style={{ color: 'white' }} />
         </div>
-        <span className="font-bold text-sm" style={{ color: '#f1f5f9' }}>TopCode Chat</span>
+        <span className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>TopCode Chat</span>
       </div>
 
       {/* General section */}
@@ -667,21 +667,21 @@ function DesktopSidebar({
           onClick={() => setSubTab('publico')}
           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all duration-150"
           style={{
-            background: subTab === 'publico' ? 'rgba(99,102,241,0.12)' : 'transparent',
-            border: subTab === 'publico' ? '1px solid rgba(99,102,241,0.22)' : '1px solid transparent',
+            background: subTab === 'publico' ? 'rgba(85,239,196,0.12)' : 'transparent',
+            border: subTab === 'publico' ? '1px solid rgba(85,239,196,0.22)' : '1px solid transparent',
           }}
         >
           <div
             className="w-6 h-6 flex items-center justify-center rounded-lg shrink-0"
             style={{
-              background: subTab === 'publico' ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+              background: subTab === 'publico' ? 'rgba(85,239,196,0.2)' : 'var(--overlay-05)',
             }}
           >
-            <Hash size={11} style={{ color: subTab === 'publico' ? '#818cf8' : '#4b5563' }} />
+            <Hash size={11} style={{ color: subTab === 'publico' ? '#8ff5d6' : '#4b5563' }} />
           </div>
           <span
             className="text-sm font-medium"
-            style={{ color: subTab === 'publico' ? '#818cf8' : '#6b7280' }}
+            style={{ color: subTab === 'publico' ? '#8ff5d6' : '#6b7280' }}
           >
             general
           </span>
@@ -695,7 +695,7 @@ function DesktopSidebar({
       </div>
 
       {/* Divider */}
-      <div className="mx-4 my-2 shrink-0" style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />
+      <div className="mx-4 my-2 shrink-0" style={{ height: 1, background: 'var(--overlay-04)' }} />
 
       {/* Private messages section */}
       <div className="px-2 pb-1 shrink-0">
@@ -735,7 +735,7 @@ function MobileTabBar({
       className="md:hidden px-4 py-3 shrink-0"
       style={{
         background: 'rgba(15,17,23,0.97)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid var(--overlay-06)',
         backdropFilter: 'blur(12px)',
       }}
     >
@@ -744,7 +744,7 @@ function MobileTabBar({
           <button
             onClick={onBack}
             className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 shrink-0"
-            style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#94a3b8' }}
+            style={{ border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
           >
             <ArrowLeft size={15} />
           </button>
@@ -755,7 +755,7 @@ function MobileTabBar({
             <div className="flex items-center gap-2.5">
               <Avatar nombre={selectedUser.nombre} url={selectedUser.avatar_url} size={30} />
               <div>
-                <p className="font-semibold text-sm leading-tight" style={{ color: '#f1f5f9' }}>
+                <p className="font-semibold text-sm leading-tight" style={{ color: 'var(--color-text)' }}>
                   {selectedUser.nombre}
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
@@ -768,7 +768,7 @@ function MobileTabBar({
             /* Segmented control */
             <div
               className="flex p-0.5 gap-0.5 rounded-xl"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-06)' }}
             >
               {(['publico', 'privado'] as SubTab[]).map(tab => (
                 <button
@@ -776,9 +776,9 @@ function MobileTabBar({
                   onClick={() => setSubTab(tab)}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all duration-200"
                   style={subTab === tab ? {
-                    background: tab === 'publico' ? 'rgba(99,102,241,0.15)' : 'rgba(20,184,166,0.12)',
-                    border: tab === 'publico' ? '1px solid rgba(99,102,241,0.25)' : '1px solid rgba(20,184,166,0.22)',
-                    color: tab === 'publico' ? '#818cf8' : '#2dd4bf',
+                    background: tab === 'publico' ? 'rgba(85,239,196,0.15)' : 'rgba(20,184,166,0.12)',
+                    border: tab === 'publico' ? '1px solid rgba(85,239,196,0.25)' : '1px solid rgba(20,184,166,0.22)',
+                    color: tab === 'publico' ? '#8ff5d6' : '#2dd4bf',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                   } : {
                     background: 'transparent',
@@ -848,7 +848,7 @@ export default function Chat() {
       {/* Inject keyframes once */}
       <style>{globalStyles}</style>
 
-      <div className="flex h-full overflow-hidden" style={{ background: '#0f1117' }}>
+      <div className="flex h-full overflow-hidden" style={{ background: 'var(--color-bg)' }}>
 
         {/* Desktop sidebar */}
         <DesktopSidebar
@@ -873,7 +873,7 @@ export default function Chat() {
           {/* Content area */}
           <div
             className="flex-1 min-h-0 flex flex-col"
-            style={{ background: '#14161f' }}
+            style={{ background: 'var(--color-surface-2)' }}
           >
             {subTab === 'publico' ? (
               <PublicChat usuario={usuario} />
@@ -884,9 +884,9 @@ export default function Chat() {
               <div className="flex flex-col flex-1 min-h-0 md:hidden">
                 <div
                   className="px-5 py-3.5 shrink-0"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#14161f' }}
+                  style={{ borderBottom: '1px solid var(--overlay-05)', background: 'var(--color-surface-2)' }}
                 >
-                  <p className="font-semibold text-sm" style={{ color: '#f1f5f9' }}>Mensajes Directos</p>
+                  <p className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Mensajes Directos</p>
                   <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>Selecciona un usuario para chatear</p>
                 </div>
                 <UserList

@@ -72,8 +72,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div
               className="relative w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
               style={{
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                boxShadow: '0 2px 10px rgba(99,102,241,0.4)',
+                background: 'linear-gradient(135deg, #55efc4, #00cec9)',
+                boxShadow: '0 2px 10px rgba(85,239,196,0.4)',
               }}
             >
               <img
@@ -106,12 +106,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   }`
                 }
                 style={({ isActive }) => isActive ? {
-                  background: 'rgba(99,102,241,0.12)',
-                  boxShadow: 'inset 0 1px 0 rgba(99,102,241,0.1)',
+                  background: 'rgba(85,239,196,0.12)',
+                  boxShadow: 'inset 0 1px 0 rgba(85,239,196,0.1)',
                 } : {}}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement
-                  if (!el.classList.contains('text-primary-light')) el.style.background = 'rgba(255,255,255,0.04)'
+                  if (!el.classList.contains('text-primary-light')) el.style.background = 'var(--overlay-04)'
                   const cancel = schedulePrefetch(to)
                   el.dataset.cancelPrefetch = 'set'
                   ;(el as HTMLElement & { _cancelPrefetch?: () => void })._cancelPrefetch = cancel
@@ -129,7 +129,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     {isActive && (
                       <span
                         className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full"
-                        style={{ width: '60%', background: 'linear-gradient(90deg, transparent, #818cf8, transparent)' }}
+                        style={{ width: '60%', background: 'linear-gradient(90deg, transparent, #8ff5d6, transparent)' }}
                       />
                     )}
                   </>
@@ -157,15 +157,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   src={usuario.avatar_url}
                   alt={usuario.nombre}
                   className="w-7 h-7 rounded-lg object-cover"
-                  style={{ border: '1.5px solid rgba(99,102,241,0.3)' }}
+                  style={{ border: '1.5px solid rgba(85,239,196,0.3)' }}
                 />
               ) : (
                 <div
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.2))',
-                    border: '1.5px solid rgba(99,102,241,0.3)',
-                    color: '#818cf8',
+                    background: 'linear-gradient(135deg, rgba(85,239,196,0.25), rgba(0,206,201,0.2))',
+                    border: '1.5px solid rgba(85,239,196,0.3)',
+                    color: '#8ff5d6',
                   }}
                 >
                   {initial}
@@ -219,7 +219,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {isActive && (
                   <span
                     className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full"
-                    style={{ width: '24px', height: '2px', background: '#818cf8' }}
+                    style={{ width: '24px', height: '2px', background: '#8ff5d6' }}
                   />
                 )}
               </>

@@ -41,9 +41,9 @@ const CATEGORIA_CONFIG: Record<Categoria, { label: string; color: string; bg: st
   },
   clase: {
     label: 'Clase especial',
-    color: '#6366f1',
-    bg: 'rgba(99,102,241,0.12)',
-    border: 'rgba(99,102,241,0.25)',
+    color: '#55efc4',
+    bg: 'rgba(85,239,196,0.12)',
+    border: 'rgba(85,239,196,0.25)',
     Icon: ({ size = 12 }) => <Star size={size} />,
   },
   general: {
@@ -117,7 +117,7 @@ function diasEnMes(year: number, month: number): number {
 function CalendarSkeleton() {
   return (
     <div className="animate-fade-in">
-      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
         <SkeletonBox className="h-7 w-28 shimmer" />
         <SkeletonBox className="h-10 w-32 shimmer rounded-xl" />
       </div>
@@ -184,8 +184,8 @@ function MiniCalendario({
     <div
       className="rounded-2xl p-4"
       style={{
-        background: 'linear-gradient(145deg, #1a1d27, #141720)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--gradient-card)',
+        border: '1px solid var(--overlay-07)',
       }}
     >
       {/* Month title */}
@@ -194,18 +194,18 @@ function MiniCalendario({
           <button
             onClick={onPrevMonth}
             className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 hover:bg-white/[0.06]"
-            style={{ color: '#64748b', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ color: '#64748b', border: '1px solid var(--overlay-07)' }}
             aria-label="Mes anterior"
           >
             <ChevronLeft size={13} />
           </button>
-          <span className="font-bold text-sm capitalize" style={{ color: '#f1f5f9', minWidth: '120px', textAlign: 'center' }}>
+          <span className="font-bold text-sm capitalize" style={{ color: 'var(--color-text)', minWidth: '120px', textAlign: 'center' }}>
             {MESES[viewMonth]} {viewYear}
           </span>
           <button
             onClick={onNextMonth}
             className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 hover:bg-white/[0.06]"
-            style={{ color: '#64748b', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ color: '#64748b', border: '1px solid var(--overlay-07)' }}
             aria-label="Mes siguiente"
           >
             <ChevronRight size={13} />
@@ -213,7 +213,7 @@ function MiniCalendario({
         </div>
         <div className="flex items-center gap-3 text-xs" style={{ color: '#4b5563' }}>
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#6366f1' }} />
+            <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#55efc4' }} />
             Hoy
           </span>
           <span className="flex items-center gap-1.5">
@@ -248,17 +248,17 @@ function MiniCalendario({
               className="relative flex flex-col items-center justify-center h-9 w-full rounded-lg transition-all duration-150"
               style={{
                 background: isToday
-                  ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                  ? 'linear-gradient(135deg, #55efc4, #00cec9)'
                   : isHighlighted
-                  ? 'rgba(99,102,241,0.15)'
+                  ? 'rgba(85,239,196,0.15)'
                   : hasEvento
                   ? 'rgba(245,158,11,0.06)'
                   : 'transparent',
                 border: isHighlighted && !isToday
-                  ? '1px solid rgba(99,102,241,0.3)'
+                  ? '1px solid rgba(85,239,196,0.3)'
                   : '1px solid transparent',
                 cursor: hasEvento ? 'pointer' : 'default',
-                boxShadow: isToday ? '0 2px 8px rgba(99,102,241,0.35)' : 'none',
+                boxShadow: isToday ? '0 2px 8px rgba(85,239,196,0.35)' : 'none',
               }}
             >
               <span
@@ -291,8 +291,8 @@ function EmptyState({ isAdmin, onNew }: { isAdmin: boolean; onNew: () => void })
     <div
       className="py-16 flex flex-col items-center gap-5 text-center rounded-2xl"
       style={{
-        background: 'linear-gradient(145deg, #1a1d27, #141720)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--gradient-card)',
+        border: '1px solid var(--overlay-06)',
       }}
     >
       {/* Inline SVG illustration */}
@@ -301,16 +301,16 @@ function EmptyState({ isAdmin, onNew }: { isAdmin: boolean; onNew: () => void })
         <rect x="8" y="16" width="64" height="16" rx="8" fill="rgba(245,158,11,0.12)" />
         <rect x="22" y="8" width="4" height="16" rx="2" fill="#f59e0b" opacity="0.6" />
         <rect x="54" y="8" width="4" height="16" rx="2" fill="#f59e0b" opacity="0.6" />
-        <rect x="20" y="44" width="12" height="12" rx="3" fill="rgba(99,102,241,0.25)" stroke="rgba(99,102,241,0.3)" strokeWidth="1" />
+        <rect x="20" y="44" width="12" height="12" rx="3" fill="rgba(85,239,196,0.25)" stroke="rgba(85,239,196,0.3)" strokeWidth="1" />
         <rect x="36" y="44" width="12" height="12" rx="3" fill="rgba(245,158,11,0.15)" stroke="rgba(245,158,11,0.2)" strokeWidth="1" />
         <rect x="52" y="44" width="12" height="12" rx="3" fill="rgba(20,184,166,0.12)" stroke="rgba(20,184,166,0.2)" strokeWidth="1" />
-        <circle cx="60" cy="60" r="12" fill="rgba(99,102,241,0.15)" stroke="rgba(99,102,241,0.3)" strokeWidth="1.5" />
-        <line x1="60" y1="55" x2="60" y2="60" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="60" y1="60" x2="63" y2="63" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="60" cy="60" r="12" fill="rgba(85,239,196,0.15)" stroke="rgba(85,239,196,0.3)" strokeWidth="1.5" />
+        <line x1="60" y1="55" x2="60" y2="60" stroke="#8ff5d6" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="60" y1="60" x2="63" y2="63" stroke="#8ff5d6" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
 
       <div className="flex flex-col gap-2">
-        <p className="font-bold text-lg" style={{ color: '#f1f5f9' }}>Sin eventos programados</p>
+        <p className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>Sin eventos programados</p>
         <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#4b5563' }}>
           {isAdmin
             ? 'Añade el primer evento para que tu clase esté al tanto de lo que se viene.'
@@ -475,7 +475,7 @@ export default function CalendarPage() {
       {/* ── Header ── */}
       <div
         className="relative px-4 md:px-6 py-5 overflow-hidden"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div className="max-w-[1100px] mx-auto flex justify-between items-start gap-4 relative">
           <div className="flex items-start gap-3">
@@ -487,7 +487,7 @@ export default function CalendarPage() {
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-extrabold text-xl tracking-tight capitalize" style={{ color: '#f1f5f9' }}>
+                <h1 className="font-extrabold text-xl tracking-tight capitalize" style={{ color: 'var(--color-text)' }}>
                   Calendario
                 </h1>
                 {todayCount > 0 && (
@@ -504,7 +504,7 @@ export default function CalendarPage() {
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <StatChip value={upcoming.length} label="próximos" color="#4b5563" />
                 <span style={{ color: '#2d3748', fontSize: 10 }}>·</span>
-                <StatChip value={weekCount} label="esta semana" color="#6366f1" />
+                <StatChip value={weekCount} label="esta semana" color="#55efc4" />
                 {todayCount > 0 && (
                   <>
                     <span style={{ color: '#2d3748', fontSize: 10 }}>·</span>
@@ -520,7 +520,7 @@ export default function CalendarPage() {
               onClick={handleRefresh}
               disabled={refreshing}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
+              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
               aria-label="Actualizar"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -583,13 +583,13 @@ export default function CalendarPage() {
                   className="flex items-center gap-2 group"
                   aria-expanded={pastExpanded}
                 >
-                  <SectionLabel label="Pasados" count={past.length} color="#374151" colorBg="rgba(255,255,255,0.04)" colorBorder="rgba(255,255,255,0.06)" />
+                  <SectionLabel label="Pasados" count={past.length} color="#374151" colorBg="var(--overlay-04)" colorBorder="var(--overlay-06)" />
                   <span
                     className="ml-auto text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all duration-150"
                     style={{
                       color: '#4b5563',
-                      background: pastExpanded ? 'rgba(255,255,255,0.06)' : 'transparent',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: pastExpanded ? 'var(--overlay-06)' : 'transparent',
+                      border: '1px solid var(--overlay-06)',
                     }}
                   >
                     {pastExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
@@ -628,14 +628,14 @@ export default function CalendarPage() {
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
             className="absolute inset-0"
-            style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)' }}
+            style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(10px)' }}
             onClick={() => setModalVisible(false)}
           />
           <div
             className="relative w-full sm:max-w-md animate-slide-in-bottom sm:animate-scale-in-modal rounded-t-2xl sm:rounded-2xl shadow-modal"
-            style={{ background: '#1a1d27', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--overlay-08)' }}
           >
-            <div className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+            <div className="w-8 h-1 mx-auto mt-4 mb-1 sm:hidden rounded-full" style={{ background: 'var(--overlay-15)' }} />
 
             <div className="p-6 pt-4 sm:pt-6">
               <div className="flex items-center gap-3 mb-5">
@@ -646,7 +646,7 @@ export default function CalendarPage() {
                   <CalendarDays size={15} style={{ color: '#f59e0b' }} />
                 </div>
                 <div>
-                  <h2 className="font-extrabold text-lg leading-tight" style={{ color: '#f1f5f9' }}>Nuevo Evento</h2>
+                  <h2 className="font-extrabold text-lg leading-tight" style={{ color: 'var(--color-text)' }}>Nuevo Evento</h2>
                   <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>El tipo se detecta automáticamente del título</p>
                 </div>
               </div>
@@ -661,9 +661,9 @@ export default function CalendarPage() {
                       key={cat}
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-all duration-200"
                       style={{
-                        background: active ? cfg.bg : 'rgba(255,255,255,0.03)',
+                        background: active ? cfg.bg : 'var(--overlay-03)',
                         color: active ? cfg.color : '#374151',
-                        border: `1px solid ${active ? cfg.border : 'rgba(255,255,255,0.06)'}`,
+                        border: `1px solid ${active ? cfg.border : 'var(--overlay-06)'}`,
                         fontWeight: active ? 600 : 400,
                         transform: active ? 'scale(1.04)' : 'scale(1)',
                       }}
@@ -724,7 +724,7 @@ export default function CalendarPage() {
                   />
                   {/* Human-readable date preview */}
                   {fecha && (
-                    <p className="text-xs capitalize mt-0.5" style={{ color: '#6366f1' }}>
+                    <p className="text-xs capitalize mt-0.5" style={{ color: '#55efc4' }}>
                       {formatFechaPreview(fecha)}
                     </p>
                   )}
@@ -736,7 +736,7 @@ export default function CalendarPage() {
                   <button type="submit" disabled={saving} className="flex-[2] btn-primary py-3 text-sm">
                     {saving ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'white' }} />
+                        <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }} />
                         Creando...
                       </div>
                     ) : 'Crear Evento'}
@@ -832,9 +832,9 @@ function EventCard({
 
   // Badge color: rojo → naranja → ámbar → verde → slate
   const badgeStyle = past ? {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'var(--overlay-03)',
     color: '#374151',
-    border: '1px solid rgba(255,255,255,0.05)',
+    border: '1px solid var(--overlay-05)',
   } : daysUntil === 0 ? {
     background: 'rgba(244,63,94,0.15)',
     color: '#f43f5e',
@@ -852,9 +852,9 @@ function EventCard({
     color: '#34d399',
     border: '1px solid rgba(16,185,129,0.2)',
   } : {
-    background: 'rgba(255,255,255,0.05)',
+    background: 'var(--overlay-05)',
     color: '#64748b',
-    border: '1px solid rgba(255,255,255,0.08)',
+    border: '1px solid var(--overlay-08)',
   }
 
   return (
@@ -863,26 +863,26 @@ function EventCard({
       style={{
         background: past
           ? 'rgba(20,23,32,0.55)'
-          : 'linear-gradient(145deg, #1a1d27, #141720)',
+          : 'var(--gradient-card)',
         border: highlight
-          ? '1px solid rgba(99,102,241,0.45)'
+          ? '1px solid rgba(85,239,196,0.45)'
           : isToday
           ? '1px solid rgba(244,63,94,0.2)'
           : past
-          ? '1px solid rgba(255,255,255,0.04)'
-          : '1px solid rgba(255,255,255,0.07)',
+          ? '1px solid var(--overlay-04)'
+          : '1px solid var(--overlay-07)',
         opacity: past ? 0.55 : 1,
         boxShadow: highlight
-          ? '0 0 0 3px rgba(99,102,241,0.12)'
+          ? '0 0 0 3px rgba(85,239,196,0.12)'
           : isToday
-          ? '0 0 0 1px rgba(244,63,94,0.08), inset 0 1px 0 rgba(255,255,255,0.04)'
-          : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+          ? '0 0 0 1px rgba(244,63,94,0.08), inset 0 1px 0 var(--overlay-04)'
+          : 'inset 0 1px 0 var(--overlay-03)',
       }}
     >
       {/* Color bar — left side, color por asignatura si la hay */}
       <div
         className="w-1 shrink-0"
-        style={{ background: past ? 'rgba(255,255,255,0.06)' : mainColor, opacity: past ? 1 : 0.8 }}
+        style={{ background: past ? 'var(--overlay-06)' : mainColor, opacity: past ? 1 : 0.8 }}
       />
 
       <div className="flex gap-3.5 flex-1 min-w-0" style={{ padding: '14px 16px' }}>
@@ -893,12 +893,12 @@ function EventCard({
             background: isToday
               ? `linear-gradient(135deg, ${mainColor}, ${mainColor}cc)`
               : past
-              ? 'rgba(255,255,255,0.04)'
+              ? 'var(--overlay-04)'
               : mainBg,
             border: isToday
               ? 'none'
               : past
-              ? '1px solid rgba(255,255,255,0.05)'
+              ? '1px solid var(--overlay-05)'
               : `1px solid ${mainBorder}`,
             boxShadow: isToday ? `0 4px 16px ${mainColor}50` : 'none',
           }}

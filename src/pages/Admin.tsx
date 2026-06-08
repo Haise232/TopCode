@@ -19,7 +19,7 @@ type AlertState = {
 function AdminSkeleton() {
   return (
     <div className="animate-fade-in">
-      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
         <SkeletonBox className="h-7 w-36 shimmer" />
         <SkeletonBox className="h-9 w-9 shimmer rounded-xl" />
       </div>
@@ -36,11 +36,11 @@ function AdminSkeleton() {
           ))}
         </div>
         <SkeletonCard className="p-0 overflow-hidden">
-          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
             <SkeletonBox className="h-5 w-24 shimmer" />
           </div>
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div key={i} className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: '1px solid var(--overlay-04)' }}>
               <SkeletonBox className="h-10 w-10 shrink-0 shimmer rounded-xl" />
               <div className="flex-1 flex flex-col gap-2">
                 <SkeletonBox className="h-4 w-32 shimmer" />
@@ -182,18 +182,18 @@ export default function Admin() {
       {/* ── Header ── */}
       <div
         className="relative px-4 md:px-6 py-5 overflow-hidden"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
         <div className="max-w-[1100px] mx-auto flex justify-between items-center relative">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 flex items-center justify-center rounded-xl"
-              style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)' }}
+              style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}
             >
-              <Settings size={15} style={{ color: '#818cf8' }} />
+              <Settings size={15} style={{ color: '#8ff5d6' }} />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: '#f1f5f9' }}>Panel Admin</h1>
+              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Panel Admin</h1>
               <p className="text-xs" style={{ color: '#64748b' }}>Control de accesos y roles</p>
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function Admin() {
             onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
             disabled={refreshing}
             className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-            style={{ border: '1px solid rgba(255,255,255,0.08)', color: '#64748b' }}
+            style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
             aria-label="Actualizar"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -214,17 +214,17 @@ export default function Admin() {
         {/* ── KPI cards ── */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Admins',   value: admins.length,  Icon: Shield,    color: '#818cf8', border: 'rgba(99,102,241,0.18)',  bg: 'rgba(99,102,241,0.12)'  },
+            { label: 'Admins',   value: admins.length,  Icon: Shield,    color: '#8ff5d6', border: 'rgba(85,239,196,0.18)',  bg: 'rgba(85,239,196,0.12)'  },
             { label: 'Alumnos',  value: alumnos.length, Icon: Users,     color: '#10b981', border: 'rgba(16,185,129,0.15)',  bg: 'rgba(16,185,129,0.1)'   },
-            { label: 'Total',    value: users.length,   Icon: TrendingUp, color: '#a78bfa', border: 'rgba(255,255,255,0.07)', bg: 'rgba(139,92,246,0.12)'  },
+            { label: 'Total',    value: users.length,   Icon: TrendingUp, color: '#00cec9', border: 'var(--overlay-07)', bg: 'rgba(0,206,201,0.12)'  },
           ].map(({ label, value, Icon, color, border, bg }) => (
             <div
               key={label}
               className="p-3 md:p-5 flex items-center gap-2 md:gap-3.5 rounded-2xl min-w-0"
               style={{
-                background: 'linear-gradient(145deg, #1a1d27, #141720)',
+                background: 'var(--gradient-card)',
                 border: `1px solid ${border}`,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+                boxShadow: 'inset 0 1px 0 var(--overlay-04)',
               }}
             >
               <div
@@ -249,22 +249,22 @@ export default function Admin() {
         <div
           className="overflow-hidden rounded-2xl"
           style={{
-            background: 'linear-gradient(145deg, #1a1d27, #141720)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'var(--gradient-card)',
+            border: '1px solid var(--overlay-07)',
           }}
         >
           {/* Table head */}
           <div
             className="px-5 py-3.5 flex items-center gap-2"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+            style={{ borderBottom: '1px solid var(--overlay-06)' }}
           >
-            <h2 className="font-semibold text-sm" style={{ color: '#f1f5f9' }}>Usuarios</h2>
+            <h2 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Usuarios</h2>
             <span
               className="text-xs font-bold px-2 py-0.5 rounded-full"
               style={{
-                background: 'rgba(99,102,241,0.12)',
-                color: '#818cf8',
-                border: '1px solid rgba(99,102,241,0.2)',
+                background: 'rgba(85,239,196,0.12)',
+                color: '#8ff5d6',
+                border: '1px solid rgba(85,239,196,0.2)',
               }}
             >
               {users.length}
@@ -277,24 +277,24 @@ export default function Admin() {
               key={u.id}
               className="flex items-center gap-3.5 px-5 py-3.5 transition-colors duration-100"
               style={{
-                borderBottom: idx < users.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                borderBottom: idx < users.length - 1 ? '1px solid var(--overlay-04)' : 'none',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--overlay-02)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
               {/* Avatar */}
               <div
                 className="w-9 h-9 shrink-0 overflow-hidden rounded-xl"
-                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                style={{ border: '1px solid var(--overlay-08)' }}
               >
                 {u.avatar_url ? (
                   <img src={u.avatar_url} alt={u.nombre} className="w-9 h-9 object-cover" />
                 ) : (
                   <div
                     className="w-9 h-9 flex items-center justify-center"
-                    style={{ background: 'rgba(99,102,241,0.12)' }}
+                    style={{ background: 'rgba(85,239,196,0.12)' }}
                   >
-                    <span className="font-bold text-xs" style={{ color: '#818cf8' }}>
+                    <span className="font-bold text-xs" style={{ color: '#8ff5d6' }}>
                       {u.nombre[0]?.toUpperCase() ?? '?'}
                     </span>
                   </div>
@@ -304,14 +304,14 @@ export default function Admin() {
               {/* Name + email */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-sm" style={{ color: '#f1f5f9' }}>{u.nombre}</p>
+                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>{u.nombre}</p>
                   {u.id === usuario?.id && (
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded-full"
                       style={{
-                        background: 'rgba(99,102,241,0.1)',
-                        color: '#818cf8',
-                        border: '1px solid rgba(99,102,241,0.2)',
+                        background: 'rgba(85,239,196,0.1)',
+                        color: '#8ff5d6',
+                        border: '1px solid rgba(85,239,196,0.2)',
                       }}
                     >
                       Tú
@@ -326,7 +326,7 @@ export default function Admin() {
                 {updating === u.id ? (
                   <div
                     className="w-6 h-6 rounded-full animate-spin"
-                    style={{ border: '1.5px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1' }}
+                    style={{ border: '1.5px solid rgba(85,239,196,0.2)', borderTopColor: '#55efc4' }}
                   />
                 ) : (
                   <button
@@ -339,15 +339,15 @@ export default function Admin() {
                     }
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150"
                     style={u.rol === 'admin' ? {
-                      background: 'rgba(99,102,241,0.12)',
-                      color: '#818cf8',
-                      border: '1px solid rgba(99,102,241,0.25)',
+                      background: 'rgba(85,239,196,0.12)',
+                      color: '#8ff5d6',
+                      border: '1px solid rgba(85,239,196,0.25)',
                       cursor: (u.id === usuario?.id || !isSuperAdmin) ? 'not-allowed' : 'pointer',
                       opacity: (u.id === usuario?.id || !isSuperAdmin) ? 0.5 : 1,
                     } : {
-                      background: 'rgba(255,255,255,0.05)',
+                      background: 'var(--overlay-05)',
                       color: '#64748b',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      border: '1px solid var(--overlay-08)',
                       cursor: (u.id === usuario?.id || !isSuperAdmin) ? 'not-allowed' : 'pointer',
                       opacity: (u.id === usuario?.id || !isSuperAdmin) ? 0.4 : 1,
                     }}
@@ -392,7 +392,7 @@ export default function Admin() {
               <Megaphone size={14} style={{ color: '#f59e0b' }} />
             </div>
             <div>
-              <h2 className="font-bold text-sm" style={{ color: '#f1f5f9' }}>Anuncios</h2>
+              <h2 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>Anuncios</h2>
               <p className="text-xs" style={{ color: '#4b5563' }}>
                 El último anuncio activo aparece como modal a todos los usuarios hasta que lo lean
               </p>
@@ -404,7 +404,7 @@ export default function Admin() {
             onSubmit={handlePublicar}
             className="rounded-2xl p-5 flex flex-col gap-3"
             style={{
-              background: 'linear-gradient(145deg, #1a1d27, #141720)',
+              background: 'var(--gradient-card)',
               border: '1px solid rgba(245,158,11,0.15)',
             }}
           >
@@ -442,7 +442,7 @@ export default function Admin() {
                 }}
               >
                 {guardando ? (
-                  <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
+                  <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-30)', borderTopColor: 'white' }} />
                 ) : (
                   <Plus size={14} />
                 )}
@@ -456,11 +456,11 @@ export default function Admin() {
             <div
               className="overflow-hidden rounded-2xl"
               style={{
-                background: 'linear-gradient(145deg, #1a1d27, #141720)',
-                border: '1px solid rgba(255,255,255,0.07)',
+                background: 'var(--gradient-card)',
+                border: '1px solid var(--overlay-07)',
               }}
             >
-              <div className="px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
                 <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
                   Historial
                 </p>
@@ -469,7 +469,7 @@ export default function Admin() {
                 <div
                   key={a.id}
                   className="flex items-start gap-3 px-5 py-4"
-                  style={{ borderBottom: idx < anuncios.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}
+                  style={{ borderBottom: idx < anuncios.length - 1 ? '1px solid var(--overlay-04)' : 'none' }}
                 >
                   {/* Indicador activo */}
                   <div className="mt-1 shrink-0">
@@ -500,13 +500,13 @@ export default function Admin() {
                       title={a.activo ? 'Desactivar' : 'Activar'}
                       className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
                       style={{
-                        background: a.activo ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)',
-                        border: a.activo ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                        background: a.activo ? 'rgba(16,185,129,0.1)' : 'var(--overlay-04)',
+                        border: a.activo ? '1px solid rgba(16,185,129,0.25)' : '1px solid var(--overlay-08)',
                         color: a.activo ? '#10b981' : '#4b5563',
                       }}
                     >
                       {toggling === a.id ? (
-                        <div className="w-3.5 h-3.5 rounded-full animate-spin" style={{ border: '1.5px solid rgba(255,255,255,0.2)', borderTopColor: 'currentColor' }} />
+                        <div className="w-3.5 h-3.5 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'currentColor' }} />
                       ) : a.activo ? (
                         <Eye size={13} />
                       ) : (
