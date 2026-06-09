@@ -53,9 +53,6 @@ function shimmerBg(p: HomePalette) {
 
 /** Skeleton para el widget de horario diario en Home */
 export function SkeletonSchedule({ rows = 6, palette }: { rows?: number; palette?: HomePalette }) {
-  const cardBg = palette?.gradientCard ?? 'var(--gradient-card)'
-  const border = palette?.overlay06 ?? 'var(--overlay-06)'
-  const sep = palette?.overlay04 ?? 'var(--overlay-04)'
   const shimmer = shimmerBg(palette)
 
   return (
@@ -93,8 +90,6 @@ export function SkeletonSchedule({ rows = 6, palette }: { rows?: number; palette
 
 /** Skeleton para la cuadrícula de acceso rápido en Home */
 export function SkeletonQuickActions({ count = 5, palette }: { count?: number; palette?: HomePalette }) {
-  const cardBg = palette?.gradientCard ?? 'var(--gradient-card)'
-  const border = palette?.overlay06 ?? 'var(--overlay-06)'
   const shimmer = shimmerBg(palette)
 
   return (

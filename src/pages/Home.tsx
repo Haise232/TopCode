@@ -499,7 +499,7 @@ export default function Home() {
             <div className="h-px flex-1 mx-3 bg-gradient-to-r from-primary/15 to-transparent" />
           </div>
           <div className={cn("grid gap-3 grid-cols-3", esAdmin ? "sm:grid-cols-6" : "sm:grid-cols-5")}>
-            {quickActions.map(({ label, desc, Icon, to, color, border, glow, gradFrom, gradTo }, index) => {
+            {quickActions.map(({ label, desc, Icon, to, color }, index) => {
               const badge = to === '/actividades' && actividadesPendientes > 0
                 ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
                 : null
