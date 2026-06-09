@@ -15,6 +15,7 @@ const CalendarPage = lazy(() => import('./pages/Calendar'))
 const Admin       = lazy(() => import('./pages/Admin'))
 const Profile     = lazy(() => import('./pages/Profile'))
 const Actividades = lazy(() => import('./pages/Actividades'))
+const Notas       = lazy(() => import('./pages/Notas'))
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth()
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="/apuntes"  element={<ProtectedRoute><Apuntes /></ProtectedRoute>} />
         <Route path="/calendar"    element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/actividades" element={<ProtectedRoute><Actividades /></ProtectedRoute>} />
+        <Route path="/notas"    element={<ProtectedRoute><Notas /></ProtectedRoute>} />
         <Route path="/profile"  element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/admin"    element={
           <ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>

@@ -1,11 +1,13 @@
-import { useEffect, useRef, useMemo, useState } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Send, ArrowLeft, MessageCircle, Lock, Users,
-  Hash, Search, ChevronRight,
+  Hash, Search, ChevronRight, Pencil, Trash2, Check, X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { usePublicMensajes, usePrivateMensajes } from '../hooks/useMensajes'
+import { markChatVisited } from '../hooks/useUnreadCounts'
 import { Usuario, UsuarioPublico } from '../lib/types'
 
 type SubTab = 'publico' | 'privado'
@@ -110,6 +112,7 @@ function MessageInput({
   value,
   onChange,
   onSubmit,
+  onTyping,
   placeholder,
   inputRef,
   accentColor: _accentColor = '#55efc4',
@@ -121,6 +124,7 @@ function MessageInput({
   value: string
   onChange: (v: string) => void
   onSubmit: (e: React.FormEvent) => void
+  onTyping?: () => void
   placeholder: string
   inputRef?: React.RefObject<HTMLInputElement>
   accentColor?: string
@@ -147,7 +151,7 @@ function MessageInput({
         <input
           ref={inputRef}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={e => { onChange(e.target.value); if (e.target.value.trim()) onTyping?.() }}
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-600"
           style={{ color: 'var(--color-text)' }}
@@ -179,7 +183,6 @@ function MessageInput({
 }
 
 // ── Bubble row ────────────────────────────────────────────────────────────────
-// Shared between PublicChat and PrivateChat to keep bubble styles consistent.
 interface BubbleRowProps {
   isMine: boolean
   isGrouped: boolean
@@ -189,50 +192,165 @@ interface BubbleRowProps {
   avatarUrl?: string | null
   texto: string
   time: string
+  editado?: boolean
+  eliminado?: boolean
+  isEditing?: boolean
+  canEdit?: boolean
+  onStartEdit?: () => void
+  onCancelEdit?: () => void
+  onConfirmEdit?: (text: string) => void
+  onDelete?: () => void
 }
 
-function BubbleRow({ isMine, isGrouped, isLastInGroup, showAuthor, autor, avatarUrl, texto, time }: BubbleRowProps) {
+function BubbleRow({
+  isMine, isGrouped, isLastInGroup, showAuthor, autor, avatarUrl,
+  texto, time, editado, eliminado, isEditing, canEdit,
+  onStartEdit, onCancelEdit, onConfirmEdit, onDelete,
+}: BubbleRowProps) {
+  const [editText, setEditText] = useState(texto)
+  const [hovered, setHovered] = useState(false)
+  const editInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditing) {
+      setEditText(texto)
+      setTimeout(() => editInputRef.current?.focus(), 50)
+    }
+  }, [isEditing, texto])
+
+  if (eliminado) {
+    return (
+      <div
+        className={`flex gap-2.5 ${isMine ? 'flex-row-reverse' : 'flex-row'} items-end`}
+        style={{ marginBottom: isGrouped ? '2px' : '8px' }}
+      >
+        {!isMine && <div className="shrink-0" style={{ width: 28 }} />}
+        <div className={`flex flex-col gap-0.5 max-w-[72%] ${isMine ? 'items-end' : 'items-start'}`}>
+          <div
+            className="px-3.5 py-2 text-xs italic"
+            style={{
+              borderRadius: '12px',
+              background: 'var(--overlay-03)',
+              border: '1px solid var(--overlay-06)',
+              color: '#4b5563',
+            }}
+          >
+            Mensaje eliminado
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
-      className={`flex gap-2.5 ${isMine ? 'flex-row-reverse' : 'flex-row'} items-end`}
+      className={`flex gap-2.5 ${isMine ? 'flex-row-reverse' : 'flex-row'} items-end group/bubble`}
       style={{ marginBottom: isGrouped ? '2px' : '8px' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Avatar — se oculta en mensajes agrupados pero mantiene el espacio */}
       {!isMine && (
         <div className="shrink-0" style={{ width: 28, opacity: isGrouped ? 0 : 1 }}>
           <Avatar nombre={autor} url={avatarUrl} size={28} />
         </div>
       )}
-      <div className={`flex flex-col gap-0.5 max-w-[72%] ${isMine ? 'items-end' : 'items-start'}`}>
-        {!isMine && showAuthor && (
-          <span
-            className="text-xs font-semibold ml-1 mb-0.5"
-            style={{ color: `hsla(${getHue(autor)}, 65%, 65%, 1)` }}
+
+      <div className={`flex items-end gap-1.5 max-w-[72%] ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+        {/* Menú de acciones (solo mis mensajes, en hover) */}
+        {canEdit && hovered && !isEditing && (
+          <div
+            className="flex items-center gap-1 shrink-0 mb-1"
+            style={{ opacity: hovered ? 1 : 0, transition: 'opacity 0.15s' }}
           >
-            {autor}
-          </span>
+            <button
+              onClick={onStartEdit}
+              className="w-6 h-6 flex items-center justify-center rounded-lg transition-all"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#55efc4' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+              title="Editar"
+            >
+              <Pencil size={10} />
+            </button>
+            <button
+              onClick={onDelete}
+              className="w-6 h-6 flex items-center justify-center rounded-lg transition-all"
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f43f5e' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+              title="Eliminar"
+            >
+              <Trash2 size={10} />
+            </button>
+          </div>
         )}
-        <div
-          className="px-3.5 py-2.5 text-sm leading-relaxed"
-          style={isMine ? {
-            borderRadius: isGrouped ? '18px 4px 4px 18px' : '18px 4px 18px 18px',
-            background: 'linear-gradient(135deg, #55efc4, #00cec9)',
-            color: 'white',
-            boxShadow: '0 2px 10px rgba(85,239,196,0.28)',
-          } : {
-            borderRadius: isGrouped ? '4px 18px 18px 4px' : '4px 18px 18px 18px',
-            background: '#1e2233',
-            border: '1px solid var(--overlay-07)',
-            color: '#e2e8f0',
-          }}
-        >
-          {texto}
+
+        <div className={`flex flex-col gap-0.5 ${isMine ? 'items-end' : 'items-start'}`}>
+          {!isMine && showAuthor && (
+            <span className="text-xs font-semibold ml-1 mb-0.5" style={{ color: `hsla(${getHue(autor)}, 65%, 65%, 1)` }}>
+              {autor}
+            </span>
+          )}
+
+          {isEditing ? (
+            /* Modo edición */
+            <div
+              className="flex items-center gap-2 px-3 py-2"
+              style={{
+                borderRadius: '14px',
+                background: 'rgba(85,239,196,0.1)',
+                border: '1.5px solid rgba(85,239,196,0.4)',
+                minWidth: '180px',
+              }}
+            >
+              <input
+                ref={editInputRef}
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onConfirmEdit?.(editText) }
+                  if (e.key === 'Escape') onCancelEdit?.()
+                }}
+                className="flex-1 bg-transparent text-sm outline-none"
+                style={{ color: 'white', minWidth: 0 }}
+              />
+              <button onClick={() => onConfirmEdit?.(editText)}
+                className="w-5 h-5 flex items-center justify-center rounded-md transition-all"
+                style={{ background: 'rgba(85,239,196,0.3)', color: 'white' }}>
+                <Check size={10} />
+              </button>
+              <button onClick={onCancelEdit}
+                className="w-5 h-5 flex items-center justify-center rounded-md transition-all"
+                style={{ color: '#64748b' }}>
+                <X size={10} />
+              </button>
+            </div>
+          ) : (
+            <div
+              className="px-3.5 py-2.5 text-sm leading-relaxed"
+              style={isMine ? {
+                borderRadius: isGrouped ? '18px 4px 4px 18px' : '18px 4px 18px 18px',
+                background: 'linear-gradient(135deg, #55efc4, #00cec9)',
+                color: 'white',
+                boxShadow: '0 2px 10px rgba(85,239,196,0.28)',
+              } : {
+                borderRadius: isGrouped ? '4px 18px 18px 4px' : '4px 18px 18px 18px',
+                background: '#1e2233',
+                border: '1px solid var(--overlay-07)',
+                color: '#e2e8f0',
+              }}
+            >
+              {texto}
+            </div>
+          )}
+
+          {isLastInGroup && !isEditing && (
+            <span className="text-xs mx-1.5 mt-0.5 flex items-center gap-1.5" style={{ color: '#374151' }}>
+              {time}
+              {editado && <span style={{ color: '#4b5563', fontSize: 10 }}>(editado)</span>}
+            </span>
+          )}
         </div>
-        {isLastInGroup && (
-          <span className="text-xs mx-1.5 mt-0.5" style={{ color: '#374151' }}>
-            {time}
-          </span>
-        )}
       </div>
     </div>
   )
@@ -272,10 +390,26 @@ function EmptyPublicChat() {
 
 // ── Public chat ──────────────────────────────────────────────────────────────
 function PublicChat({ usuario }: { usuario: Usuario }) {
-  const { mensajes, avatares, loading, enviar: enviarMensaje } = usePublicMensajes()
+  const {
+    mensajes, avatares, loading,
+    typingUsers,
+    enviar: enviarMensaje,
+    editarMensaje,
+    eliminarMensaje,
+    emitirTyping,
+  } = usePublicMensajes()
   const [texto, setTexto] = useState('')
+  const [editandoId, setEditandoId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Debounce typing: emitir máximo una vez cada 2s mientras escribe
+  const typingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleTyping = useCallback(() => {
+    if (typingDebounce.current) return
+    emitirTyping(usuario.nombre)
+    typingDebounce.current = setTimeout(() => { typingDebounce.current = null }, 2000)
+  }, [emitirTyping, usuario.nombre])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -290,11 +424,13 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
     inputRef.current?.focus()
   }
 
-  // Count today's messages
   const todayCount = useMemo(() => {
     const todayStr = new Date().toDateString()
     return mensajes.filter(m => new Date(m.created_at).toDateString() === todayStr).length
   }, [mensajes])
+
+  // Usuarios escribiendo que NO soy yo
+  const othersTyping = typingUsers.filter(n => n !== usuario.nombre)
 
   let lastDate = ''
 
@@ -317,7 +453,6 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
             {loading ? 'Cargando...' : `${todayCount} mensaje${todayCount !== 1 ? 's' : ''} hoy`}
           </p>
         </div>
-        {/* Live badge */}
         <div
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shrink-0"
           style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}
@@ -359,6 +494,17 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
                   avatarUrl={avatares[msg.usuario_id]}
                   texto={msg.texto}
                   time={formatTime(msg.created_at)}
+                  editado={msg.editado}
+                  eliminado={msg.eliminado}
+                  isEditing={editandoId === msg.id}
+                  canEdit={isMine}
+                  onStartEdit={() => setEditandoId(msg.id)}
+                  onCancelEdit={() => setEditandoId(null)}
+                  onConfirmEdit={async (text) => {
+                    setEditandoId(null)
+                    await editarMensaje(msg.id, text)
+                  }}
+                  onDelete={() => eliminarMensaje(msg.id)}
                 />
               </div>
             )
@@ -367,10 +513,31 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
         <div ref={bottomRef} />
       </div>
 
+      {/* Typing indicator */}
+      {othersTyping.length > 0 && (
+        <div
+          className="px-5 py-2 shrink-0 flex items-center gap-2"
+          style={{ borderTop: '1px solid var(--overlay-04)', background: 'var(--color-surface-2)' }}
+        >
+          <div className="flex gap-1">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="w-1.5 h-1.5 rounded-full"
+                style={{ background: '#55efc4', animation: 'dot-bounce 1.4s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
+            ))}
+          </div>
+          <span className="text-xs" style={{ color: '#4b5563' }}>
+            {othersTyping.length === 1
+              ? `${othersTyping[0]} está escribiendo…`
+              : `${othersTyping.slice(0, 2).join(', ')} están escribiendo…`}
+          </span>
+        </div>
+      )}
+
       <MessageInput
         value={texto}
         onChange={setTexto}
         onSubmit={enviar}
+        onTyping={handleTyping}
         placeholder="Escribe algo en #general..."
         inputRef={inputRef}
       />
@@ -833,8 +1000,37 @@ const globalStyles = `
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Chat() {
   const { usuario } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [subTab, setSubTab] = useState<SubTab>('publico')
   const [selectedUser, setSelectedUser] = useState<UsuarioPublico | null>(null)
+
+  // Marcar visita y limpiar contadores de DM no leídos
+  useEffect(() => {
+    if (!usuario) return
+    markChatVisited(usuario.id)
+  }, [usuario?.id])
+
+  // Deep-link: ?dm=userId&from=nombre → abrir DM directo
+  useEffect(() => {
+    const dmId = searchParams.get('dm')
+    const fromName = searchParams.get('from') ?? ''
+    if (!dmId || !usuario) return
+
+    supabase
+      .from('usuarios_publicos')
+      .select('id, nombre, avatar_url, rol')
+      .eq('id', dmId)
+      .single()
+      .then(({ data }) => {
+        const peer: UsuarioPublico = data
+          ? (data as UsuarioPublico)
+          : { id: dmId, nombre: decodeURIComponent(fromName), avatar_url: null, rol: 'alumno' }
+        setSelectedUser(peer)
+        setSubTab('privado')
+      })
+    // Limpiar params de la URL para que no persistan
+    setSearchParams({}, { replace: true })
+  }, []) // solo en el primer montaje
 
   if (!usuario) return null
 

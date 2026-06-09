@@ -7,6 +7,7 @@ export type ApunteConAutor = {
   nombre: string
   url: string
   tipo: 'pdf' | 'imagen' | 'otro'
+  materia: string | null
   created_at: string
   usuarios: { nombre: string; avatar_url: string | null } | null
 }
@@ -21,7 +22,8 @@ interface UseApuntesReturn {
   subirApunte: (
     file: File,
     usuarioId: string,
-    tipo: 'pdf' | 'imagen' | 'otro'
+    tipo: 'pdf' | 'imagen' | 'otro',
+    materia?: string | null
   ) => Promise<{ error: string | null }>
   eliminarApunte: (ap: ApunteConAutor) => Promise<{ error: string | null }>
 }
@@ -91,7 +93,8 @@ export function useApuntes(): UseApuntesReturn {
   const subirApunte = useCallback(async (
     file: File,
     usuarioId: string,
-    tipo: 'pdf' | 'imagen' | 'otro'
+    tipo: 'pdf' | 'imagen' | 'otro',
+    materia?: string | null
   ): Promise<{ error: string | null }> => {
     if (file.size > 20 * 1024 * 1024) {
       return { error: 'El archivo no puede superar los 20 MB.' }
@@ -114,6 +117,7 @@ export function useApuntes(): UseApuntesReturn {
         nombre,
         url,
         tipo,
+        materia: materia ?? null,
         created_at: new Date().toISOString(),
         usuarios: null,
       }
@@ -121,7 +125,7 @@ export function useApuntes(): UseApuntesReturn {
 
       const { data, error: insertError } = await supabase
         .from('apuntes')
-        .insert({ usuario_id: usuarioId, nombre, url, tipo })
+        .insert({ usuario_id: usuarioId, nombre, url, tipo, materia: materia ?? null })
         .select('*, usuarios(nombre, avatar_url)')
         .single()
 

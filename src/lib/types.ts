@@ -44,6 +44,8 @@ export interface Mensaje {
   usuario_id: string
   autor: string
   texto: string
+  editado: boolean
+  eliminado: boolean
   created_at: string
 }
 
@@ -62,6 +64,7 @@ export interface Apunte {
   nombre: string
   url: string
   tipo: 'pdf' | 'imagen' | 'otro'
+  materia: string | null
   created_at: string
 }
 
@@ -71,6 +74,7 @@ export interface EventoCalendario {
   descripcion: string | null
   materia: string | null
   fecha: string
+  hora: string | null
   created_by: string
   created_at: string
 }

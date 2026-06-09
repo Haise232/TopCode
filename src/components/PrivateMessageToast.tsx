@@ -75,6 +75,8 @@ export default function PrivateMessageToast() {
           // Toast en app solo si no está en /chat
           if (pathnameRef.current.startsWith('/chat')) return
           show(msg)
+          // Guardar último remitente para deep-link desde el nav
+          try { sessionStorage.setItem('lastDmSender', JSON.stringify({ id: msg.de_id, nombre: msg.de_nombre })) } catch { /* ignore */ }
         }
       )
       .subscribe()
@@ -156,7 +158,10 @@ export default function PrivateMessageToast() {
             <X size={11} />
           </button>
           <button
-            onClick={() => { navigate('/chat'); dismiss() }}
+            onClick={() => {
+              navigate(`/chat?dm=${toast.de_id}&from=${encodeURIComponent(toast.de_nombre)}`)
+              dismiss()
+            }}
             className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
             style={{
               background: 'rgba(85,239,196,0.15)',

@@ -2,19 +2,21 @@ import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { EventoCalendario } from '../lib/types'
 
+type EventoInput = Omit<EventoCalendario, 'id' | 'created_at'>
+type EventoUpdate = Partial<Pick<EventoCalendario, 'titulo' | 'descripcion' | 'materia' | 'fecha' | 'hora'>>
+
 interface UseEventosReturn {
   eventos: EventoCalendario[]
   loading: boolean
   error: string | null
   init: () => Promise<void>
   refresh: () => Promise<void>
-  createEvento: (
-    ev: Omit<EventoCalendario, 'id' | 'created_at'>
-  ) => Promise<{ error: string | null }>
+  createEvento: (ev: EventoInput) => Promise<{ error: string | null }>
+  updateEvento: (id: string, updates: EventoUpdate) => Promise<{ error: string | null }>
   deleteEvento: (id: string) => Promise<{ error: string | null }>
 }
 
-const CACHE_TTL_MS = 60_000 // 1 minuto — los eventos cambian con menos frecuencia
+const CACHE_TTL_MS = 60_000
 
 export function useEventos(): UseEventosReturn {
   const [eventos, setEventos] = useState<EventoCalendario[]>([])
@@ -24,27 +26,29 @@ export function useEventos(): UseEventosReturn {
   const cacheRef = useRef<{ data: EventoCalendario[]; ts: number } | null>(null)
   const mountedRef = useRef(true)
 
+  const sortEventos = (list: EventoCalendario[]) =>
+    [...list].sort((a, b) =>
+      a.fecha !== b.fecha
+        ? a.fecha.localeCompare(b.fecha)
+        : (a.hora ?? '').localeCompare(b.hora ?? '')
+    )
+
   const fetchEventos = useCallback(async (force = false) => {
     if (!force && cacheRef.current && Date.now() - cacheRef.current.ts < CACHE_TTL_MS) {
-      if (mountedRef.current) {
-        setEventos(cacheRef.current.data)
-        setLoading(false)
-      }
+      if (mountedRef.current) { setEventos(cacheRef.current.data); setLoading(false) }
       return
     }
 
     const controller = new AbortController()
-
     try {
       const { data, error: fetchError } = await supabase
         .from('eventos')
-        .select('id, titulo, descripcion, materia, fecha, created_by, created_at')
+        .select('id, titulo, descripcion, materia, fecha, hora, created_by, created_at')
         .order('fecha', { ascending: true })
         .limit(200)
         .abortSignal(controller.signal)
 
       if (!mountedRef.current) return
-
       if (fetchError) { setError(fetchError.message); return }
 
       const result = (data ?? []) as EventoCalendario[]
@@ -61,32 +65,16 @@ export function useEventos(): UseEventosReturn {
   }, [])
 
   const init = useCallback(() => fetchEventos(false), [fetchEventos])
+  const refresh = useCallback(async () => { setLoading(true); await fetchEventos(true) }, [fetchEventos])
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    await fetchEventos(true)
-  }, [fetchEventos])
-
-  const createEvento = useCallback(async (
-    ev: Omit<EventoCalendario, 'id' | 'created_at'>
-  ): Promise<{ error: string | null }> => {
+  const createEvento = useCallback(async (ev: EventoInput): Promise<{ error: string | null }> => {
     const tempId = `temp-${Date.now()}`
-    const tempEvento: EventoCalendario = {
-      ...ev,
-      id: tempId,
-      created_at: new Date().toISOString(),
-    }
+    const tempEvento: EventoCalendario = { ...ev, id: tempId, created_at: new Date().toISOString() }
 
-    // Optimistic: insertar y re-ordenar por fecha
-    setEventos(prev =>
-      [...prev, tempEvento].sort((a, b) => a.fecha.localeCompare(b.fecha))
-    )
+    setEventos(prev => sortEventos([...prev, tempEvento]))
 
     const { data, error: insertError } = await supabase
-      .from('eventos')
-      .insert(ev)
-      .select()
-      .single()
+      .from('eventos').insert(ev).select().single()
 
     if (insertError) {
       setEventos(prev => prev.filter(e => e.id !== tempId))
@@ -94,47 +82,45 @@ export function useEventos(): UseEventosReturn {
     }
 
     const real = data as EventoCalendario
-    setEventos(prev =>
-      prev
-        .map(e => (e.id === tempId ? real : e))
-        .sort((a, b) => a.fecha.localeCompare(b.fecha))
-    )
+    setEventos(prev => sortEventos(prev.map(e => e.id === tempId ? real : e)))
     if (cacheRef.current) {
-      cacheRef.current = {
-        data: [...cacheRef.current.data, real].sort((a, b) => a.fecha.localeCompare(b.fecha)),
-        ts: Date.now(),
-      }
+      cacheRef.current = { data: sortEventos([...cacheRef.current.data, real]), ts: Date.now() }
     }
     return { error: null }
   }, [])
 
-  const deleteEvento = useCallback(async (id: string): Promise<{ error: string | null }> => {
+  const updateEvento = useCallback(async (id: string, updates: EventoUpdate): Promise<{ error: string | null }> => {
     const snapshot = eventos.find(e => e.id === id)
+    setEventos(prev => sortEventos(prev.map(e => e.id === id ? { ...e, ...updates } : e)))
 
-    setEventos(prev => prev.filter(e => e.id !== id))
-
-    const { error: deleteError } = await supabase
-      .from('eventos')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      if (snapshot) {
-        setEventos(prev =>
-          [...prev, snapshot].sort((a, b) => a.fecha.localeCompare(b.fecha))
-        )
-      }
-      return { error: deleteError.message }
+    const { error: e } = await supabase.from('eventos').update(updates).eq('id', id)
+    if (e) {
+      if (snapshot) setEventos(prev => sortEventos(prev.map(ev => ev.id === id ? snapshot : ev)))
+      return { error: e.message }
     }
-
     if (cacheRef.current) {
       cacheRef.current = {
-        data: cacheRef.current.data.filter(e => e.id !== id),
+        data: sortEventos(cacheRef.current.data.map(ev => ev.id === id ? { ...ev, ...updates } : ev)),
         ts: Date.now(),
       }
     }
     return { error: null }
   }, [eventos])
 
-  return { eventos, loading, error, init, refresh, createEvento, deleteEvento }
+  const deleteEvento = useCallback(async (id: string): Promise<{ error: string | null }> => {
+    const snapshot = eventos.find(e => e.id === id)
+    setEventos(prev => prev.filter(e => e.id !== id))
+
+    const { error: deleteError } = await supabase.from('eventos').delete().eq('id', id)
+    if (deleteError) {
+      if (snapshot) setEventos(prev => sortEventos([...prev, snapshot]))
+      return { error: deleteError.message }
+    }
+    if (cacheRef.current) {
+      cacheRef.current = { data: cacheRef.current.data.filter(e => e.id !== id), ts: Date.now() }
+    }
+    return { error: null }
+  }, [eventos])
+
+  return { eventos, loading, error, init, refresh, createEvento, updateEvento, deleteEvento }
 }

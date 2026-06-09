@@ -9,18 +9,23 @@ interface UsePublicMensajesReturn {
   avatares: Record<string, string | null>
   loading: boolean
   error: string | null
+  typingUsers: string[]
   enviar: (texto: string, usuarioId: string, autor: string) => Promise<void>
+  editarMensaje: (id: string, nuevoTexto: string) => Promise<{ error: string | null }>
+  eliminarMensaje: (id: string) => Promise<{ error: string | null }>
+  emitirTyping: (nombre: string) => void
 }
-
-const PUBLIC_CACHE_TTL_MS = 0 // el chat público usa realtime, no cachear
 
 export function usePublicMensajes(): UsePublicMensajesReturn {
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [avatares, setAvatares] = useState<Record<string, string | null>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [typingUsers, setTypingUsers] = useState<string[]>([])
 
   const mountedRef = useRef(true)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   useEffect(() => {
     mountedRef.current = true
@@ -31,7 +36,7 @@ export function usePublicMensajes(): UsePublicMensajesReturn {
         const [msgsRes, usersRes] = await Promise.all([
           supabase
             .from('mensajes')
-            .select('id, usuario_id, autor, texto, created_at')
+            .select('id, usuario_id, autor, texto, editado, eliminado, created_at')
             .order('created_at', { ascending: true })
             .limit(100)
             .abortSignal(controller.signal),
@@ -63,31 +68,87 @@ export function usePublicMensajes(): UsePublicMensajesReturn {
 
     cargar()
 
-    // Realtime subscription
     const channel = supabase
       .channel('public-chat')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
         if (!mountedRef.current) return
         setMensajes(prev => [...prev, payload.new as Mensaje])
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes' }, payload => {
+        if (!mountedRef.current) return
+        const updated = payload.new as Mensaje
+        setMensajes(prev => prev.map(m => m.id === updated.id ? updated : m))
+      })
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (!mountedRef.current) return
+        const nombre = payload?.nombre as string
+        if (!nombre) return
+        setTypingUsers(prev => prev.includes(nombre) ? prev : [...prev, nombre])
+        if (typingTimers.current[nombre]) clearTimeout(typingTimers.current[nombre])
+        typingTimers.current[nombre] = setTimeout(() => {
+          setTypingUsers(prev => prev.filter(n => n !== nombre))
+          delete typingTimers.current[nombre]
+        }, 3000)
+      })
       .subscribe()
+
+    channelRef.current = channel
 
     return () => {
       mountedRef.current = false
       controller.abort()
+      Object.values(typingTimers.current).forEach(clearTimeout)
       supabase.removeChannel(channel)
     }
-  }, []) // solo se ejecuta al montar/desmontar
+  }, [])
 
   const enviar = useCallback(async (texto: string, usuarioId: string, autor: string) => {
     if (!texto.trim()) return
     await supabase.from('mensajes').insert({ usuario_id: usuarioId, autor, texto: texto.trim() })
   }, [])
 
-  // Silenciar la advertencia de PUBLIC_CACHE_TTL_MS no usado
-  void PUBLIC_CACHE_TTL_MS
+  const editarMensaje = useCallback(async (id: string, nuevoTexto: string): Promise<{ error: string | null }> => {
+    const texto = nuevoTexto.trim()
+    if (!texto) return { error: 'El mensaje no puede estar vacío.' }
+    // Optimistic
+    setMensajes(prev => prev.map(m => m.id === id ? { ...m, texto, editado: true } : m))
+    const { error: e } = await supabase
+      .from('mensajes')
+      .update({ texto, editado: true })
+      .eq('id', id)
+    if (e) {
+      // Revert — re-fetch para restaurar el texto original
+      supabase
+        .from('mensajes')
+        .select('id, usuario_id, autor, texto, editado, eliminado, created_at')
+        .eq('id', id)
+        .single()
+        .then(({ data }) => {
+          if (data) setMensajes(prev => prev.map(m => m.id === id ? data as Mensaje : m))
+        })
+      return { error: e.message }
+    }
+    return { error: null }
+  }, [])
 
-  return { mensajes, avatares, loading, error, enviar }
+  const eliminarMensaje = useCallback(async (id: string): Promise<{ error: string | null }> => {
+    setMensajes(prev => prev.map(m => m.id === id ? { ...m, eliminado: true } : m))
+    const { error: e } = await supabase
+      .from('mensajes')
+      .update({ eliminado: true })
+      .eq('id', id)
+    if (e) {
+      setMensajes(prev => prev.map(m => m.id === id ? { ...m, eliminado: false } : m))
+      return { error: e.message }
+    }
+    return { error: null }
+  }, [])
+
+  const emitirTyping = useCallback((nombre: string) => {
+    channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { nombre } })
+  }, [])
+
+  return { mensajes, avatares, loading, error, typingUsers, enviar, editarMensaje, eliminarMensaje, emitirTyping }
 }
 
 // ── Private chat messages ─────────────────────────────────────────────────────
@@ -142,8 +203,6 @@ export function usePrivateMensajes({ meId, peerId }: UsePrivateMensajesOptions):
 
     cargar()
 
-    // Filtro servidor: solo INSERT donde el receptor soy yo.
-    // Los mensajes que yo envío se añaden via optimistic en `enviar`.
     const channelName = `private-${[meId, peerId].sort().join('-')}`
     const channel = supabase
       .channel(channelName)
@@ -175,8 +234,6 @@ export function usePrivateMensajes({ meId, peerId }: UsePrivateMensajesOptions):
   const enviar = useCallback(async (texto: string, deNombre: string) => {
     if (!texto.trim()) return
     const t = texto.trim()
-    // Optimistic: el filtro Realtime no captura mensajes propios (para_id != meId),
-    // así que los añadimos inmediatamente al estado local.
     const optimista: MensajePrivado = {
       id: `tmp-${Date.now()}`,
       de_id: meId,
