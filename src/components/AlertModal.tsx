@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
+import { Modal } from './ui'
 
 interface AlertModalProps {
   visible: boolean
@@ -51,130 +50,100 @@ const CONFIG = {
 export default function AlertModal({
   visible, type, title, message, onClose, onConfirm, confirmLabel, confirmDestructive,
 }: AlertModalProps) {
-  useEffect(() => {
-    if (!visible) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [visible, onClose])
-
-  if (!visible) return null
-
   const config = type ? CONFIG[type] : null
   const defaultBtnBg = 'linear-gradient(135deg, #55efc4 0%, #00cec9 100%)'
   const defaultBtnShadow = '0 4px 14px rgba(85,239,196,0.3)'
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(8px)' }}
+  return (
+    <Modal open={visible} onClose={onClose}>
+      {/* Close button */}
+      <button
         onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className="relative w-full max-w-sm overflow-hidden animate-scale-in-modal"
+        className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
         style={{
-          background: 'var(--color-surface)',
-          border: '1px solid var(--overlay-08)',
-          borderRadius: '20px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--overlay-04)',
+          background: 'var(--overlay-06)',
+          color: '#64748b',
         }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.color = '#e2e8f0'
+          el.style.background = 'var(--overlay-10)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.color = '#64748b'
+          el.style.background = 'var(--overlay-06)'
+        }}
+        aria-label="Cerrar"
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
-          style={{
-            background: 'var(--overlay-06)',
-            color: '#64748b',
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.color = '#e2e8f0'
-            el.style.background = 'var(--overlay-10)'
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.color = '#64748b'
-            el.style.background = 'var(--overlay-06)'
-          }}
-          aria-label="Cerrar"
-        >
-          <X size={14} />
-        </button>
+        <X size={14} />
+      </button>
 
-        <div className="p-6 flex flex-col items-center gap-5 text-center">
-          {/* Icon */}
-          {config && (
-            <div
-              className="w-14 h-14 flex items-center justify-center rounded-2xl"
-              style={{
-                background: config.bgColor,
-                border: `1px solid ${config.borderColor}`,
-              }}
-            >
-              <config.Icon size={26} style={{ color: config.iconColor }} />
-            </div>
-          )}
-
-          {/* Text */}
-          <div className="flex flex-col gap-2">
-            <h3 className="font-bold text-base leading-snug" style={{ color: 'var(--color-text)' }}>
-              {title}
-            </h3>
-            {message && (
-              <p className="text-sm leading-relaxed max-w-[260px] mx-auto" style={{ color: '#64748b' }}>
-                {message}
-              </p>
-            )}
+      <div className="p-6 flex flex-col items-center gap-5 text-center">
+        {/* Icon */}
+        {config && (
+          <div
+            className="w-14 h-14 flex items-center justify-center rounded-2xl"
+            style={{
+              background: config.bgColor,
+              border: `1px solid ${config.borderColor}`,
+            }}
+          >
+            <config.Icon size={26} style={{ color: config.iconColor }} />
           </div>
-        </div>
+        )}
 
-        {/* Actions */}
-        <div className={`flex gap-3 px-6 pb-6 ${onConfirm ? '' : 'justify-center'}`}>
-          {onConfirm ? (
-            <>
-              <button
-                onClick={onClose}
-                className="flex-1 btn-ghost py-2.5 text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => { onConfirm(); onClose() }}
-                className="flex-[2] font-semibold py-2.5 text-sm text-white rounded-xl active:scale-[0.98] transition-all duration-200"
-                style={{
-                  background: confirmDestructive
-                    ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)'
-                    : defaultBtnBg,
-                  boxShadow: confirmDestructive
-                    ? '0 4px 14px rgba(244,63,94,0.3)'
-                    : defaultBtnShadow,
-                }}
-              >
-                {confirmLabel ?? 'Confirmar'}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={onClose}
-              className="font-semibold py-2.5 px-8 text-sm text-white rounded-xl active:scale-[0.98] transition-all duration-200 hover:opacity-90"
-              style={{
-                background: config ? config.btnBg : defaultBtnBg,
-                boxShadow: config ? config.btnShadow : defaultBtnShadow,
-              }}
-            >
-              Aceptar
-            </button>
+        {/* Text */}
+        <div className="flex flex-col gap-2">
+          <h3 className="font-bold text-base leading-snug text-text-primary">
+            {title}
+          </h3>
+          {message && (
+            <p className="text-sm leading-relaxed max-w-[260px] mx-auto text-text-muted">
+              {message}
+            </p>
           )}
         </div>
       </div>
-    </div>,
-    document.body
+
+      {/* Actions */}
+      <div className={`flex gap-3 px-6 pb-6 ${onConfirm ? '' : 'justify-center'}`}>
+        {onConfirm ? (
+          <>
+            <button
+              onClick={onClose}
+              className="flex-1 btn-ghost py-2.5 text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => { onConfirm(); onClose() }}
+              className="flex-[2] font-semibold py-2.5 text-sm text-white rounded-xl active:scale-[0.98] transition-all duration-200"
+              style={{
+                background: confirmDestructive
+                  ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)'
+                  : defaultBtnBg,
+                boxShadow: confirmDestructive
+                  ? '0 4px 14px rgba(244,63,94,0.3)'
+                  : defaultBtnShadow,
+              }}
+            >
+              {confirmLabel ?? 'Confirmar'}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={onClose}
+            className="font-semibold py-2.5 px-8 text-sm text-white rounded-xl active:scale-[0.98] transition-all duration-200 hover:opacity-90"
+            style={{
+              background: config ? config.btnBg : defaultBtnBg,
+              boxShadow: config ? config.btnShadow : defaultBtnShadow,
+            }}
+          >
+            Aceptar
+          </button>
+        )}
+      </div>
+    </Modal>
   )
 }

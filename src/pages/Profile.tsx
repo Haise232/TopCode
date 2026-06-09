@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays, Sun, Moon } from 'lucide-react'
+import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays } from 'lucide-react'
 import { supabase, subirAvatar } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { useTheme } from '../contexts/ThemeContext'
 import AlertModal from '../components/AlertModal'
+import { Badge, Button, Spinner } from '../components/ui'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -32,7 +32,6 @@ function gradeLabel(n: number) {
 
 export default function Profile() {
   const { usuario, refreshUsuario } = useAuth()
-  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -113,19 +112,15 @@ export default function Profile() {
     <div className="animate-fade-in h-full overflow-y-auto">
 
       {/* ── Page header ── */}
-      <div
-        className="relative px-4 md:px-6 py-5 overflow-hidden"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
+      <div className="relative px-4 md:px-6 py-5 overflow-hidden border-b border-border">
         <div className="max-w-[700px] mx-auto flex items-center gap-3 relative">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-            style={{ color: 'var(--color-text-muted)', border: '1px solid var(--border)' }}
+            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted border border-border"
           >
             <ArrowLeft size={15} />
           </button>
-          <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Perfil</h1>
+          <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Perfil</h1>
         </div>
       </div>
 
@@ -170,7 +165,7 @@ export default function Profile() {
                 {avatarSrc ? (
                   <img src={avatarSrc} alt={usuario?.nombre} className="w-20 h-20 object-cover" />
                 ) : (
-                  <span className="font-extrabold text-3xl" style={{ color: 'var(--color-primary-light)' }}>
+                  <span className="font-extrabold text-3xl text-primary-light">
                     {initial}
                   </span>
                 )}
@@ -178,18 +173,10 @@ export default function Profile() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="absolute -bottom-1.5 -right-1.5 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-60 shadow-primary"
-                style={{ background: 'linear-gradient(135deg, #55efc4, #00cec9)' }}
+                className="absolute -bottom-1.5 -right-1.5 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-60 shadow-primary bg-gradient-primary"
                 aria-label="Cambiar foto"
               >
-                {uploading ? (
-                  <div
-                    className="w-4 h-4 rounded-full animate-spin"
-                    style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }}
-                  />
-                ) : (
-                  <Camera size={13} className="text-white" />
-                )}
+                {uploading ? <Spinner size="sm" className="text-white" /> : <Camera size={13} className="text-white" />}
               </button>
               <input
                 ref={fileInputRef}
@@ -203,34 +190,20 @@ export default function Profile() {
             {/* Info */}
             <div className="flex flex-col gap-1 mb-5">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="font-bold text-xl" style={{ color: 'var(--color-text)' }}>{usuario?.nombre}</h2>
+                <h2 className="font-bold text-xl text-text-primary">{usuario?.nombre}</h2>
                 {usuario?.rol === 'admin' ? (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-                    style={{
-                      background: 'rgba(85,239,196,0.15)',
-                      border: '1px solid rgba(85,239,196,0.3)',
-                      color: 'var(--color-primary-light)',
-                    }}
-                  >
+                  <Badge variant="admin">
                     <Shield size={10} />
                     Administrador
-                  </span>
+                  </Badge>
                 ) : (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
-                    style={{
-                      background: 'var(--color-surface-alpha)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--color-text-muted)',
-                    }}
-                  >
+                  <Badge variant="alumno">
                     <GraduationCap size={10} />
                     Alumno
-                  </span>
+                  </Badge>
                 )}
               </div>
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{usuario?.email}</p>
+              <p className="text-sm text-text-muted">{usuario?.email}</p>
             </div>
 
             {/* Stats chips row */}
@@ -246,18 +219,15 @@ export default function Profile() {
                 <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(promedio) }}>
                   {promedio.toFixed(2)}
                 </span>
-                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>promedio</span>
+                <span className="text-xs text-text-muted">promedio</span>
               </div>
 
               <div
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
-                style={{
-                  background: 'var(--color-surface-alpha)',
-                  border: '1px solid var(--border)',
-                }}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border"
+                style={{ background: 'var(--color-surface-alpha)' }}
               >
-                <CalendarDays size={13} style={{ color: 'var(--color-primary-light)' }} />
-                <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                <CalendarDays size={13} className="text-primary-light" />
+                <span className="text-xs text-text-secondary">
                   Desde {new Date(usuario?.created_at ?? '').toLocaleDateString('es', { month: 'long', year: 'numeric' })}
                 </span>
               </div>
@@ -292,11 +262,11 @@ export default function Profile() {
               className="w-1.5 h-5 rounded-full"
               style={{ background: 'linear-gradient(180deg, #55efc4, #00cec9)' }}
             />
-            <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Editar nombre</h2>
+            <h2 className="font-semibold text-base text-text-primary">Editar nombre</h2>
           </div>
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Nombre visible</label>
+              <label className="text-xs font-semibold text-text-secondary">Nombre visible</label>
               <input
                 type="text"
                 value={nombre}
@@ -305,61 +275,15 @@ export default function Profile() {
                 className="input-base"
               />
             </div>
-            <button
+            <Button
               type="submit"
               disabled={saving || nombre.trim() === usuario?.nombre}
-              className="btn-primary py-2.5 flex items-center justify-center gap-2 text-sm"
+              icon={<Save size={14} />}
+              className="py-2.5 text-sm"
             >
-              <Save size={14} />
               {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
+            </Button>
           </form>
-        </div>
-
-        {/* ── Apariencia ── */}
-        <div
-          className="p-5 rounded-2xl"
-          style={{
-            background: 'linear-gradient(145deg, var(--color-surface), var(--color-bg))',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <div
-              className="w-1.5 h-5 rounded-full"
-              style={{ background: 'linear-gradient(180deg, #f59e0b, #55efc4)' }}
-            />
-            <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Apariencia</h2>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {theme === 'dark'
-                ? <Moon size={16} style={{ color: 'var(--color-primary-light)' }} />
-                : <Sun size={16} style={{ color: '#f59e0b' }} />
-              }
-              <div>
-                <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                  {theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}
-                </p>
-                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={toggleTheme}
-              role="switch"
-              aria-checked={theme === 'light'}
-              aria-label="Cambiar tema"
-              className="relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
-              style={{ background: theme === 'light' ? '#f59e0b' : 'var(--overlay-12)' }}
-            >
-              <span
-                className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-300"
-                style={{ transform: theme === 'light' ? 'translateX(24px)' : 'translateX(0)' }}
-              />
-            </button>
-          </div>
         </div>
 
         {/* ── Sesión ── */}
@@ -375,7 +299,7 @@ export default function Profile() {
               className="w-1.5 h-5 rounded-full"
               style={{ background: 'linear-gradient(180deg, #f43f5e, #e11d48)' }}
             />
-            <h2 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>Sesión</h2>
+            <h2 className="font-semibold text-base text-text-primary">Sesión</h2>
           </div>
           <button
             onClick={handleLogout}

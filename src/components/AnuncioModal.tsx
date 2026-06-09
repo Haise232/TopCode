@@ -103,13 +103,13 @@ export default function AnuncioModal() {
                 boxShadow: '0 2px 12px rgba(85,239,196,0.2)',
               }}
             >
-              <Megaphone size={20} style={{ color: '#8ff5d6' }} />
+              <Megaphone size={20} className="text-primary-light" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#55efc4' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-primary">
                 Comunicado
               </p>
-              <h2 className="font-extrabold text-lg leading-snug" style={{ color: 'var(--color-text)' }}>
+              <h2 className="font-extrabold text-lg leading-snug text-text-primary">
                 {anuncio.titulo}
               </h2>
             </div>
@@ -117,18 +117,17 @@ export default function AnuncioModal() {
 
           {/* Contenido */}
           <div
-            className="rounded-xl p-4 mb-5 text-sm leading-relaxed whitespace-pre-wrap"
+            className="rounded-xl p-4 mb-5 text-sm leading-relaxed whitespace-pre-wrap text-text-secondary"
             style={{
               background: 'var(--overlay-03)',
               border: '1px solid var(--overlay-06)',
-              color: '#cbd5e1',
             }}
           >
             {anuncio.contenido}
           </div>
 
           {/* Fecha */}
-          <p className="text-xs mb-5" style={{ color: '#4b5563' }}>
+          <p className="text-xs mb-5 text-text-muted">
             {new Date(anuncio.created_at).toLocaleDateString('es', {
               weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
             })}

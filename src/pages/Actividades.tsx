@@ -10,6 +10,7 @@ import { Actividad } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
+import { Button, Spinner } from '../components/ui'
 
 type Filtro = 'todas' | 'pendientes' | 'completadas'
 
@@ -239,11 +240,11 @@ export default function Actividades() {
         <div className="max-w-[1100px] mx-auto flex justify-between items-center relative">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}>
-              <ClipboardCheck size={15} style={{ color: '#8ff5d6' }} />
+              <ClipboardCheck size={15} className="text-primary-light" />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Actividades</h1>
-              <p className="text-xs" style={{ color: '#64748b' }}>
+              <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Actividades</h1>
+              <p className="text-xs text-text-muted">
                 {totalPendientes} pendiente{totalPendientes !== 1 ? 's' : ''} · {totalCompletadas} completada{totalCompletadas !== 1 ? 's' : ''}
               </p>
             </div>
@@ -252,8 +253,8 @@ export default function Actividades() {
             <button
               onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
               disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted"
+              style={{ border: '1px solid var(--overlay-08)' }}
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             </button>
@@ -273,8 +274,8 @@ export default function Actividades() {
           <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: 'var(--gradient-card)', border: '1px solid var(--overlay-07)' }}>
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Tu progreso</span>
-                <span className="text-xs font-bold tabular-nums" style={{ color: pct === 100 ? '#10b981' : '#8ff5d6' }}>{pct}%</span>
+                <span className="text-xs font-semibold text-text-secondary">Tu progreso</span>
+                <span className={`text-xs font-bold tabular-nums ${pct === 100 ? 'text-success' : 'text-primary-light'}`}>{pct}%</span>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--overlay-06)' }}>
                 <div
@@ -287,13 +288,13 @@ export default function Actividades() {
                   }}
                 />
               </div>
-              <p className="text-xs mt-1.5" style={{ color: '#4b5563' }}>
+              <p className="text-xs mt-1.5 text-text-muted">
                 {totalCompletadas} de {actividades.length} actividades completadas
               </p>
             </div>
             {pct === 100 && (
               <div className="w-10 h-10 flex items-center justify-center rounded-xl shrink-0" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <Check size={20} style={{ color: '#10b981' }} />
+                <Check size={20} className="text-success" />
               </div>
             )}
           </div>
@@ -309,18 +310,16 @@ export default function Actividades() {
               style={filtro === f.key ? {
                 background: 'rgba(85,239,196,0.15)',
                 border: '1px solid rgba(85,239,196,0.3)',
-                color: '#8ff5d6',
               } : {
                 background: 'var(--overlay-04)',
                 border: '1px solid var(--overlay-07)',
-                color: '#64748b',
               }}
             >
-              {f.label}
-              <span className="px-1.5 py-0.5 rounded-md text-2xs font-bold" style={{
-                background: filtro === f.key ? 'rgba(85,239,196,0.2)' : 'var(--overlay-06)',
-                color: filtro === f.key ? '#8ff5d6' : '#4b5563',
-              }}>
+              <span className={filtro === f.key ? 'text-primary-light' : 'text-text-muted'}>{f.label}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-2xs font-bold ${filtro === f.key ? 'text-primary-light' : 'text-text-muted'}`}
+                style={{ background: filtro === f.key ? 'rgba(85,239,196,0.2)' : 'var(--overlay-06)' }}
+              >
                 {f.count}
               </span>
             </button>
@@ -331,13 +330,13 @@ export default function Actividades() {
         {actsFiltradas.length === 0 ? (
           <div className="py-14 flex flex-col items-center gap-3 text-center rounded-2xl" style={{ background: 'var(--gradient-card)', border: '1px solid var(--overlay-06)' }}>
             <div className="w-14 h-14 flex items-center justify-center rounded-2xl" style={{ background: 'rgba(85,239,196,0.1)', border: '1px solid rgba(85,239,196,0.2)' }}>
-              <ClipboardCheck size={24} style={{ color: '#8ff5d6' }} />
+              <ClipboardCheck size={24} className="text-primary-light" />
             </div>
             <div>
-              <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
+              <p className="font-semibold text-text-primary">
                 {filtro === 'todas' ? 'Sin actividades todavía' : `Sin actividades ${filtro}`}
               </p>
-              <p className="text-sm mt-1" style={{ color: '#64748b' }}>
+              <p className="text-sm mt-1 text-text-muted">
                 {filtro === 'todas' && isAdmin ? 'Crea la primera con el botón de arriba.' : '¡Todo en orden!'}
               </p>
             </div>
@@ -371,17 +370,17 @@ export default function Actividades() {
             <div className="p-6 pt-4 sm:pt-6">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}>
-                  <ClipboardCheck size={15} style={{ color: '#8ff5d6' }} />
+                  <ClipboardCheck size={15} className="text-primary-light" />
                 </div>
-                <h2 className="font-extrabold text-xl" style={{ color: 'var(--color-text)' }}>Nueva actividad</h2>
+                <h2 className="font-extrabold text-xl text-text-primary">Nueva actividad</h2>
               </div>
               <form onSubmit={handleCrear} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Título *</label>
+                  <label className="text-xs font-semibold text-text-secondary">Título *</label>
                   <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej: Práctica 3 — Herencia en Java" className="input-base" autoFocus />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Materia</label>
+                  <label className="text-xs font-semibold text-text-secondary">Materia</label>
                   <input
                     value={materia}
                     onChange={e => setMateria(e.target.value)}
@@ -394,28 +393,23 @@ export default function Actividades() {
                   </datalist>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Descripción (opcional)</label>
+                  <label className="text-xs font-semibold text-text-secondary">Descripción (opcional)</label>
                   <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Instrucciones, recursos, etc." rows={3} className="input-base resize-none" />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Fecha y hora límite *</label>
+                  <label className="text-xs font-semibold text-text-secondary">Fecha y hora límite *</label>
                   <input type="datetime-local" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} className="input-base [color-scheme:dark]" />
                   {fechaEntrega && (
-                    <p className="text-xs capitalize" style={{ color: '#64748b' }}>
+                    <p className="text-xs capitalize text-text-muted">
                       {new Date(fechaEntrega).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
                 <div className="flex gap-3 mt-1">
-                  <button type="button" onClick={() => setModalVisible(false)} className="flex-1 btn-ghost py-3 text-sm">Cancelar</button>
-                  <button type="submit" disabled={saving || !titulo.trim() || !fechaEntrega} className="flex-[2] btn-primary py-3 text-sm disabled:opacity-40">
-                    {saving ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }} />
-                        Creando...
-                      </div>
-                    ) : 'Crear actividad'}
-                  </button>
+                  <Button type="button" variant="ghost" onClick={() => setModalVisible(false)} className="flex-1 py-3 text-sm">Cancelar</Button>
+                  <Button type="submit" disabled={saving || !titulo.trim() || !fechaEntrega} loading={saving} className="flex-[2] py-3 text-sm disabled:opacity-40">
+                    {saving ? 'Creando...' : 'Crear actividad'}
+                  </Button>
                 </div>
               </form>
             </div>
@@ -488,11 +482,8 @@ function ActividadRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 flex-wrap">
             <p
-              className="font-semibold text-sm leading-snug"
-              style={{
-                color: completada ? '#64748b' : '#f1f5f9',
-                textDecoration: completada ? 'line-through' : 'none',
-              }}
+              className={`font-semibold text-sm leading-snug ${completada ? 'text-text-muted' : 'text-text-primary'}`}
+              style={{ textDecoration: completada ? 'line-through' : 'none' }}
             >
               {act.titulo}
             </p>
@@ -517,7 +508,7 @@ function ActividadRow({
               {urg === 'vencida' ? <AlertTriangle size={11} /> : <Clock size={11} />}
               {cd}
             </span>
-            <span className="text-xs capitalize" style={{ color: '#374151' }}>
+            <span className="text-xs capitalize text-text-muted">
               {formatFechaEntrega(act.fecha_entrega)}
             </span>
           </div>
@@ -527,14 +518,13 @@ function ActividadRow({
             <div>
               <button
                 onClick={() => setExpanded(v => !v)}
-                className="flex items-center gap-1 mt-1.5 text-xs transition-colors duration-150"
-                style={{ color: '#4b5563' }}
+                className="flex items-center gap-1 mt-1.5 text-xs transition-colors duration-150 text-text-muted"
               >
                 {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                 {expanded ? 'Ocultar' : 'Ver descripción'}
               </button>
               {expanded && (
-                <p className="mt-2 text-xs leading-relaxed rounded-lg p-2.5 whitespace-pre-wrap" style={{ color: '#94a3b8', background: 'var(--overlay-03)', border: '1px solid var(--overlay-05)' }}>
+                <p className="mt-2 text-xs leading-relaxed rounded-lg p-2.5 whitespace-pre-wrap text-text-secondary" style={{ background: 'var(--overlay-03)', border: '1px solid var(--overlay-05)' }}>
                   {act.descripcion}
                 </p>
               )}
@@ -545,9 +535,9 @@ function ActividadRow({
           {isAdmin && totalAlumnos > 0 && (
             <div className="flex items-center gap-2 mt-2">
               <div className="flex-1 h-1 rounded-full overflow-hidden max-w-[100px]" style={{ background: 'var(--overlay-06)' }}>
-                <div className="h-full rounded-full" style={{ width: `${(adminCount / totalAlumnos) * 100}%`, background: '#10b981' }} />
+                <div className="h-full rounded-full bg-success" style={{ width: `${(adminCount / totalAlumnos) * 100}%` }} />
               </div>
-              <span className="text-[10px] font-medium" style={{ color: '#4b5563' }}>
+              <span className="text-[10px] font-medium text-text-muted">
                 {adminCount}/{totalAlumnos} completaron
               </span>
             </div>
@@ -581,7 +571,7 @@ function ActividadRow({
             aria-label={completada ? 'Marcar como pendiente' : 'Marcar como completada'}
           >
             {toggling ? (
-              <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-30)', borderTopColor: 'white' }} />
+              <Spinner size="sm" className="!w-2.5 !h-2.5 text-white" />
             ) : completada ? (
               <Check size={11} strokeWidth={3} className="text-white" />
             ) : null}

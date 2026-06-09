@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Plus, Trash2, RefreshCw, CalendarDays, Clock,
+  Plus, Trash2, RefreshCw, CalendarDays, Clock, Search,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Zap, BookOpen, FileText, Star,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -10,6 +10,7 @@ import { EventoCalendario } from '../lib/types'
 import { MATERIAS } from '../constants/materias'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
+import { Button } from '../components/ui'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -27,28 +28,28 @@ type Categoria = 'examen' | 'entrega' | 'clase' | 'general'
 const CATEGORIA_CONFIG: Record<Categoria, { label: string; color: string; bg: string; border: string; Icon: React.FC<{ size?: number }> }> = {
   examen: {
     label: 'Examen',
-    color: '#f43f5e',
+    color: 'var(--color-rose)',
     bg: 'rgba(244,63,94,0.12)',
     border: 'rgba(244,63,94,0.25)',
     Icon: ({ size = 12 }) => <BookOpen size={size} />,
   },
   entrega: {
     label: 'Entrega',
-    color: '#f59e0b',
+    color: 'var(--color-warning)',
     bg: 'rgba(245,158,11,0.12)',
     border: 'rgba(245,158,11,0.25)',
     Icon: ({ size = 12 }) => <FileText size={size} />,
   },
   clase: {
     label: 'Clase especial',
-    color: '#55efc4',
+    color: 'var(--color-primary)',
     bg: 'rgba(85,239,196,0.12)',
     border: 'rgba(85,239,196,0.25)',
     Icon: ({ size = 12 }) => <Star size={size} />,
   },
   general: {
     label: 'Evento',
-    color: '#14b8a6',
+    color: 'var(--color-teal)',
     bg: 'rgba(20,184,166,0.12)',
     border: 'rgba(20,184,166,0.25)',
     Icon: ({ size = 12 }) => <CalendarDays size={size} />,
@@ -118,11 +119,20 @@ function CalendarSkeleton() {
   return (
     <div className="animate-fade-in">
       <div className="px-4 md:px-6 py-5 flex justify-between items-center" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
-        <SkeletonBox className="h-7 w-28 shimmer" />
+        <div className="flex items-center gap-3">
+          <SkeletonBox className="h-9 w-9 shimmer rounded-xl" />
+          <SkeletonBox className="h-7 w-28 shimmer" />
+        </div>
         <SkeletonBox className="h-10 w-32 shimmer rounded-xl" />
       </div>
       <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-4">
         <SkeletonCard className="h-64 shimmer rounded-2xl" />
+        <div className="flex gap-2">
+          <SkeletonBox className="h-8 w-16 shimmer rounded-full" />
+          <SkeletonBox className="h-8 w-20 shimmer rounded-full" />
+          <SkeletonBox className="h-8 w-24 shimmer rounded-full" />
+          <SkeletonBox className="h-8 w-16 shimmer rounded-full" />
+        </div>
         {[1, 2, 3].map(i => (
           <SkeletonCard key={i} className="flex gap-4 items-center py-5">
             <SkeletonBox className="h-14 w-14 shrink-0 shimmer rounded-xl" />
@@ -185,7 +195,7 @@ function MiniCalendario({
       className="rounded-2xl p-4"
       style={{
         background: 'var(--gradient-card)',
-        border: '1px solid var(--overlay-07)',
+        border: '1px solid var(--border)',
       }}
     >
       {/* Month title */}
@@ -193,31 +203,31 @@ function MiniCalendario({
         <div className="flex items-center gap-2">
           <button
             onClick={onPrevMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 hover:bg-white/[0.06]"
-            style={{ color: '#64748b', border: '1px solid var(--overlay-07)' }}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 text-text-muted"
+            style={{ background: 'var(--color-surface-alpha)', border: '1px solid var(--border)' }}
             aria-label="Mes anterior"
           >
             <ChevronLeft size={13} />
           </button>
-          <span className="font-bold text-sm capitalize" style={{ color: 'var(--color-text)', minWidth: '120px', textAlign: 'center' }}>
+          <span className="font-bold text-sm capitalize text-text-primary" style={{ minWidth: '120px', textAlign: 'center' }}>
             {MESES[viewMonth]} {viewYear}
           </span>
           <button
             onClick={onNextMonth}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 hover:bg-white/[0.06]"
-            style={{ color: '#64748b', border: '1px solid var(--overlay-07)' }}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 text-text-muted"
+            style={{ background: 'var(--color-surface-alpha)', border: '1px solid var(--border)' }}
             aria-label="Mes siguiente"
           >
             <ChevronRight size={13} />
           </button>
         </div>
-        <div className="flex items-center gap-3 text-xs" style={{ color: '#4b5563' }}>
+        <div className="flex items-center gap-3 text-xs text-text-muted">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#55efc4' }} />
+            <span className="w-2 h-2 rounded-full inline-block bg-primary" />
             Hoy
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#f59e0b' }} />
+            <span className="w-1.5 h-1.5 rounded-full inline-block bg-amber" />
             Evento
           </span>
         </div>
@@ -226,7 +236,7 @@ function MiniCalendario({
       {/* Days of week header */}
       <div className="grid grid-cols-7 mb-1">
         {DIAS_SEMANA.map(d => (
-          <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: '#4b5563' }}>
+          <div key={d} className="text-center text-xs font-semibold py-1 text-text-muted">
             {d}
           </div>
         ))}
@@ -248,7 +258,7 @@ function MiniCalendario({
               className="relative flex flex-col items-center justify-center h-9 w-full rounded-lg transition-all duration-150"
               style={{
                 background: isToday
-                  ? 'linear-gradient(135deg, #55efc4, #00cec9)'
+                  ? 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))'
                   : isHighlighted
                   ? 'rgba(85,239,196,0.15)'
                   : hasEvento
@@ -264,17 +274,14 @@ function MiniCalendario({
               <span
                 className="text-xs font-semibold tabular-nums"
                 style={{
-                  color: isToday ? 'white' : hasEvento ? '#f1f5f9' : '#4b5563',
+                  color: isToday ? 'white' : hasEvento ? 'var(--color-text)' : 'var(--color-text-muted)',
                   fontWeight: isToday || hasEvento ? 700 : 400,
                 }}
               >
                 {dia}
               </span>
               {hasEvento && !isToday && (
-                <span
-                  className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                  style={{ background: '#f59e0b' }}
-                />
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber" />
               )}
             </button>
           )
@@ -310,8 +317,8 @@ function EmptyState({ isAdmin, onNew }: { isAdmin: boolean; onNew: () => void })
       </svg>
 
       <div className="flex flex-col gap-2">
-        <p className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>Sin eventos programados</p>
-        <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#4b5563' }}>
+        <p className="font-bold text-lg text-text-primary">Sin eventos programados</p>
+        <p className="text-sm leading-relaxed max-w-xs text-text-muted">
           {isAdmin
             ? 'Añade el primer evento para que tu clase esté al tanto de lo que se viene.'
             : 'Todavía no hay eventos en el calendario. Vuelve pronto para estar al día.'}
@@ -327,6 +334,37 @@ function EmptyState({ isAdmin, onNew }: { isAdmin: boolean; onNew: () => void })
           Crear primer evento
         </button>
       )}
+    </div>
+  )
+}
+
+// ─── Section components ───────────────────────────────────────────────────────
+
+function SectionHeader({ label, count, color }: { label: string; count: number; color: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-1">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color }}>{label}</h2>
+        <span
+          className="text-xs font-bold px-2 py-0.5 rounded-full"
+          style={{ background: 'var(--color-surface-alpha)', color, border: `1px solid var(--border)` }}
+        >
+          {count}
+        </span>
+      </div>
+      <div className="flex-1 h-px" style={{ background: 'var(--overlay-06)' }} />
+    </div>
+  )
+}
+
+function SectionEmpty({ message }: { message: string }) {
+  return (
+    <div
+      className="py-10 flex flex-col items-center gap-3 text-center rounded-2xl"
+      style={{ background: 'var(--gradient-card)', border: '1px solid var(--overlay-06)' }}
+    >
+      <CalendarDays size={28} className="text-text-muted opacity-40" />
+      <p className="text-sm text-text-muted">{message}</p>
     </div>
   )
 }
@@ -363,6 +401,9 @@ export default function CalendarPage() {
   const [pastExpanded, setPastExpanded] = useState(false)
   const [diaHighlight, setDiaHighlight] = useState<string | null>(null)
   const [viewDate, setViewDate] = useState(() => new Date())
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoriaFilter, setCategoriaFilter] = useState<'todas' | Categoria>('todas')
 
   const viewYear = viewDate.getFullYear()
   const viewMonth = viewDate.getMonth()
@@ -452,8 +493,22 @@ export default function CalendarPage() {
     setTimeout(() => setDiaHighlight(null), 2000)
   }
 
-  const upcoming = eventos.filter(e => isUpcoming(e.fecha))
-  const past = eventos.filter(e => !isUpcoming(e.fecha)).reverse()
+  // ── Filtering ───────────────────────────────────────────────────────────────
+
+  const eventosFiltrados = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return eventos.filter(ev => {
+      const matchesSearch = q === '' ||
+        ev.titulo.toLowerCase().includes(q) ||
+        (ev.materia?.toLowerCase() ?? '').includes(q) ||
+        (ev.descripcion?.toLowerCase() ?? '').includes(q)
+      const matchesCategoria = categoriaFilter === 'todas' || inferirCategoria(ev.titulo) === categoriaFilter
+      return matchesSearch && matchesCategoria
+    })
+  }, [eventos, searchQuery, categoriaFilter])
+
+  const upcoming = eventosFiltrados.filter(e => isUpcoming(e.fecha))
+  const past = eventosFiltrados.filter(e => !isUpcoming(e.fecha)).reverse()
 
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
@@ -477,23 +532,23 @@ export default function CalendarPage() {
         className="relative px-4 md:px-6 py-5 overflow-hidden"
         style={{ borderBottom: '1px solid var(--overlay-06)' }}
       >
-        <div className="max-w-[1100px] mx-auto flex justify-between items-start gap-4 relative">
+        <div className="max-w-[1100px] mx-auto flex flex-col md:flex-row md:justify-between md:items-start gap-4 relative">
           <div className="flex items-start gap-3">
             <div
               className="w-9 h-9 flex items-center justify-center rounded-xl mt-0.5 shrink-0"
               style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}
             >
-              <CalendarDays size={15} style={{ color: '#f59e0b' }} />
+              <CalendarDays size={15} className="text-amber" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="font-extrabold text-xl tracking-tight capitalize" style={{ color: 'var(--color-text)' }}>
+                <h1 className="font-extrabold text-xl tracking-tight capitalize text-text-primary">
                   Calendario
                 </h1>
                 {todayCount > 0 && (
                   <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full animate-pulse-soft"
-                    style={{ background: 'rgba(244,63,94,0.15)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.25)' }}
+                    className="text-xs font-bold px-2 py-0.5 rounded-full animate-pulse-soft text-rose"
+                    style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.25)' }}
                   >
                     <Zap size={9} style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
                     {todayCount} hoy
@@ -502,13 +557,13 @@ export default function CalendarPage() {
               </div>
               {/* Stats rápidas */}
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <StatChip value={upcoming.length} label="próximos" color="#4b5563" />
-                <span style={{ color: '#2d3748', fontSize: 10 }}>·</span>
-                <StatChip value={weekCount} label="esta semana" color="#55efc4" />
+                <StatChip value={upcoming.length} label="próximos" color="var(--color-text-muted)" />
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: 10 }}>·</span>
+                <StatChip value={weekCount} label="esta semana" color="var(--color-primary)" />
                 {todayCount > 0 && (
                   <>
-                    <span style={{ color: '#2d3748', fontSize: 10 }}>·</span>
-                    <StatChip value={todayCount} label="hoy" color="#f43f5e" pulse />
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 10 }}>·</span>
+                    <StatChip value={todayCount} label="hoy" color="var(--color-rose)" pulse />
                   </>
                 )}
               </div>
@@ -516,17 +571,28 @@ export default function CalendarPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Search */}
+            <div className="relative w-full md:w-64">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar eventos..."
+                className="input-base pl-9 w-full text-sm"
+              />
+            </div>
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted shrink-0"
+              style={{ border: '1px solid var(--overlay-08)' }}
               aria-label="Actualizar"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             </button>
             {isAdmin && (
-              <button onClick={() => setModalVisible(true)} className="btn-primary px-4 py-2.5 text-sm">
+              <button onClick={() => setModalVisible(true)} className="btn-primary px-4 py-2.5 text-sm shrink-0">
                 <Plus size={15} />
                 Nuevo Evento
               </button>
@@ -553,11 +619,56 @@ export default function CalendarPage() {
               onNextMonth={handleNextMonth}
             />
 
+            {/* Category filters */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <button
+                onClick={() => setCategoriaFilter('todas')}
+                className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-200"
+                style={{
+                  background: categoriaFilter === 'todas' ? 'var(--color-primary)' : 'var(--color-surface)',
+                  color: categoriaFilter === 'todas' ? 'var(--color-bg)' : 'var(--color-text)',
+                  borderColor: categoriaFilter === 'todas' ? 'var(--color-primary)' : 'var(--border)',
+                }}
+              >
+                Todas
+              </button>
+              {(Object.keys(CATEGORIA_CONFIG) as Categoria[]).map(cat => {
+                const cfg = CATEGORIA_CONFIG[cat]
+                const active = categoriaFilter === cat
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoriaFilter(active ? 'todas' : cat)}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-200"
+                    style={{
+                      background: active ? cfg.bg : 'var(--color-surface)',
+                      color: active ? cfg.color : 'var(--color-text)',
+                      borderColor: active ? cfg.border : 'var(--border)',
+                      transform: active ? 'scale(1.03)' : 'scale(1)',
+                    }}
+                  >
+                    <cfg.Icon size={10} />
+                    {cfg.label}
+                  </button>
+                )
+              })}
+              {(searchQuery || categoriaFilter !== 'todas') && (
+                <button
+                  onClick={() => { setSearchQuery(''); setCategoriaFilter('todas') }}
+                  className="text-xs text-text-muted hover:text-text-primary underline underline-offset-2 transition-colors ml-auto"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+
             {/* Upcoming events */}
-            {upcoming.length > 0 && (
-              <div className="flex flex-col gap-2.5">
-                <SectionLabel label="Próximos" count={upcoming.length} color="#f59e0b" colorBg="rgba(245,158,11,0.1)" colorBorder="rgba(245,158,11,0.2)" />
-                {upcoming.map((ev, idx) => (
+            <div className="flex flex-col gap-2.5">
+              <SectionHeader label="Próximos" count={upcoming.length} color="var(--color-warning)" />
+              {upcoming.length === 0 ? (
+                <SectionEmpty message="No hay eventos próximos que coincidan con los filtros aplicados." />
+              ) : (
+                upcoming.map((ev, idx) => (
                   <div
                     key={ev.id}
                     ref={el => { eventRefs.current[ev.id] = el }}
@@ -571,35 +682,36 @@ export default function CalendarPage() {
                       highlight={diaHighlight === ev.fecha}
                     />
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
 
             {/* Past events — collapsible */}
-            {past.length > 0 && (
-              <div className="flex flex-col gap-2.5">
-                <button
-                  onClick={() => setPastExpanded(p => !p)}
-                  className="flex items-center gap-2 group"
-                  aria-expanded={pastExpanded}
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={() => setPastExpanded(p => !p)}
+                className="flex items-center gap-2 group w-full"
+                aria-expanded={pastExpanded}
+              >
+                <SectionHeader label="Pasados" count={past.length} color="var(--color-text-muted)" />
+                <span
+                  className="ml-auto text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all duration-150 text-text-muted shrink-0"
+                  style={{
+                    background: pastExpanded ? 'var(--overlay-06)' : 'transparent',
+                    border: '1px solid var(--overlay-06)',
+                  }}
                 >
-                  <SectionLabel label="Pasados" count={past.length} color="#374151" colorBg="var(--overlay-04)" colorBorder="var(--overlay-06)" />
-                  <span
-                    className="ml-auto text-xs px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all duration-150"
-                    style={{
-                      color: '#4b5563',
-                      background: pastExpanded ? 'var(--overlay-06)' : 'transparent',
-                      border: '1px solid var(--overlay-06)',
-                    }}
-                  >
-                    {pastExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                    {pastExpanded ? 'Ocultar' : `Ver ${past.length} pasados`}
-                  </span>
-                </button>
+                  {pastExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                  {pastExpanded ? 'Ocultar' : `Ver ${past.length}`}
+                </span>
+              </button>
 
-                {pastExpanded && (
-                  <div className="flex flex-col gap-2.5">
-                    {past.map((ev, idx) => (
+              {pastExpanded && (
+                <div className="flex flex-col gap-2.5">
+                  {past.length === 0 ? (
+                    <SectionEmpty message="No hay eventos pasados que coincidan con los filtros aplicados." />
+                  ) : (
+                    past.map((ev, idx) => (
                       <div
                         key={ev.id}
                         ref={el => { eventRefs.current[ev.id] = el }}
@@ -614,11 +726,11 @@ export default function CalendarPage() {
                           highlight={diaHighlight === ev.fecha}
                         />
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -643,11 +755,11 @@ export default function CalendarPage() {
                   className="w-9 h-9 flex items-center justify-center rounded-xl"
                   style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}
                 >
-                  <CalendarDays size={15} style={{ color: '#f59e0b' }} />
+                  <CalendarDays size={15} className="text-amber" />
                 </div>
                 <div>
-                  <h2 className="font-extrabold text-lg leading-tight" style={{ color: 'var(--color-text)' }}>Nuevo Evento</h2>
-                  <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>El tipo se detecta automáticamente del título</p>
+                  <h2 className="font-extrabold text-lg leading-tight text-text-primary">Nuevo Evento</h2>
+                  <p className="text-xs mt-0.5 text-text-muted">El tipo se detecta automáticamente del título</p>
                 </div>
               </div>
 
@@ -662,7 +774,7 @@ export default function CalendarPage() {
                       className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-all duration-200"
                       style={{
                         background: active ? cfg.bg : 'var(--overlay-03)',
-                        color: active ? cfg.color : '#374151',
+                        color: active ? cfg.color : 'var(--color-text-muted)',
                         border: `1px solid ${active ? cfg.border : 'var(--overlay-06)'}`,
                         fontWeight: active ? 600 : 400,
                         transform: active ? 'scale(1.04)' : 'scale(1)',
@@ -677,7 +789,7 @@ export default function CalendarPage() {
 
               <form onSubmit={handleGuardar} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Título</label>
+                  <label className="text-xs font-semibold text-text-secondary">Título</label>
                   <input
                     type="text"
                     value={titulo}
@@ -689,7 +801,7 @@ export default function CalendarPage() {
                 </div>
                 {mostrarMateria && (
                   <div className="flex flex-col gap-1.5 animate-fade-in">
-                    <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
+                    <label className="text-xs font-semibold text-text-secondary">
                       Asignatura
                     </label>
                     <input
@@ -705,7 +817,7 @@ export default function CalendarPage() {
                   </div>
                 )}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Descripción (opcional)</label>
+                  <label className="text-xs font-semibold text-text-secondary">Descripción (opcional)</label>
                   <textarea
                     value={descripcion}
                     onChange={e => setDescripcion(e.target.value)}
@@ -715,7 +827,7 @@ export default function CalendarPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold" style={{ color: '#94a3b8' }}>Fecha</label>
+                  <label className="text-xs font-semibold text-text-secondary">Fecha</label>
                   <input
                     type="date"
                     value={fecha}
@@ -724,23 +836,18 @@ export default function CalendarPage() {
                   />
                   {/* Human-readable date preview */}
                   {fecha && (
-                    <p className="text-xs capitalize mt-0.5" style={{ color: '#55efc4' }}>
+                    <p className="text-xs capitalize mt-0.5 text-primary">
                       {formatFechaPreview(fecha)}
                     </p>
                   )}
                 </div>
                 <div className="flex gap-3 mt-1">
-                  <button type="button" onClick={() => setModalVisible(false)} className="flex-1 btn-ghost py-3 text-sm">
+                  <Button type="button" variant="ghost" onClick={() => setModalVisible(false)} className="flex-1 py-3 text-sm">
                     Cancelar
-                  </button>
-                  <button type="submit" disabled={saving} className="flex-[2] btn-primary py-3 text-sm">
-                    {saving ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'white' }} />
-                        Creando...
-                      </div>
-                    ) : 'Crear Evento'}
-                  </button>
+                  </Button>
+                  <Button type="submit" disabled={saving} loading={saving} className="flex-[2] py-3 text-sm">
+                    {saving ? 'Creando...' : 'Crear Evento'}
+                  </Button>
                 </div>
               </form>
             </div>
@@ -769,35 +876,11 @@ function StatChip({ value, label, color, pulse }: { value: number; label: string
   return (
     <span
       className={`text-xs ${pulse ? 'animate-pulse-soft' : ''}`}
-      style={{ color: value > 0 ? color : '#2d3748' }}
+      style={{ color: value > 0 ? color : 'var(--color-text-secondary)' }}
     >
       <span className="font-bold">{value}</span>{' '}
-      <span style={{ color: '#4b5563' }}>{label}</span>
+      <span className="text-text-muted">{label}</span>
     </span>
-  )
-}
-
-function SectionLabel({
-  label, count, color, colorBg, colorBorder,
-}: {
-  label: string
-  count: number
-  color: string
-  colorBg: string
-  colorBorder: string
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color }}>
-        {label}
-      </h2>
-      <span
-        className="text-xs font-bold px-2 py-0.5 rounded-full"
-        style={{ background: colorBg, color, border: `1px solid ${colorBorder}` }}
-      >
-        {count}
-      </span>
-    </div>
   )
 }
 
@@ -833,11 +916,11 @@ function EventCard({
   // Badge color: rojo → naranja → ámbar → verde → slate
   const badgeStyle = past ? {
     background: 'var(--overlay-03)',
-    color: '#374151',
+    color: 'var(--color-text-muted)',
     border: '1px solid var(--overlay-05)',
   } : daysUntil === 0 ? {
     background: 'rgba(244,63,94,0.15)',
-    color: '#f43f5e',
+    color: 'var(--color-rose)',
     border: '1px solid rgba(244,63,94,0.3)',
   } : daysUntil === 1 ? {
     background: 'rgba(249,115,22,0.12)',
@@ -845,7 +928,7 @@ function EventCard({
     border: '1px solid rgba(249,115,22,0.25)',
   } : daysUntil <= 3 ? {
     background: 'rgba(245,158,11,0.12)',
-    color: '#f59e0b',
+    color: 'var(--color-warning)',
     border: '1px solid rgba(245,158,11,0.25)',
   } : daysUntil <= 7 ? {
     background: 'rgba(16,185,129,0.1)',
@@ -853,7 +936,7 @@ function EventCard({
     border: '1px solid rgba(16,185,129,0.2)',
   } : {
     background: 'var(--overlay-05)',
-    color: '#64748b',
+    color: 'var(--color-text-muted)',
     border: '1px solid var(--overlay-08)',
   }
 
@@ -862,7 +945,7 @@ function EventCard({
       className="flex rounded-2xl overflow-hidden transition-all duration-200"
       style={{
         background: past
-          ? 'rgba(20,23,32,0.55)'
+          ? 'var(--color-surface)'
           : 'var(--gradient-card)',
         border: highlight
           ? '1px solid rgba(85,239,196,0.45)'
@@ -905,13 +988,13 @@ function EventCard({
         >
           <span
             className="text-base font-extrabold leading-none tabular-nums"
-            style={{ color: isToday ? 'white' : past ? '#374151' : mainColor }}
+            style={{ color: isToday ? 'white' : past ? 'var(--color-text-muted)' : mainColor }}
           >
             {dayNum}
           </span>
           <span
             className="text-xs mt-0.5 uppercase font-medium"
-            style={{ color: isToday ? 'rgba(255,255,255,0.7)' : past ? '#2d3748' : mainColor, opacity: isToday ? 1 : 0.65 }}
+            style={{ color: isToday ? 'rgba(255,255,255,0.7)' : past ? 'var(--color-text-secondary)' : mainColor, opacity: isToday ? 1 : 0.65 }}
           >
             {MESES_CORTO[monthIdx]}
           </span>
@@ -933,7 +1016,7 @@ function EventCard({
               )}
               <p
                 className="font-semibold text-sm leading-snug"
-                style={{ color: past ? '#4b5563' : '#f1f5f9' }}
+                style={{ color: past ? 'var(--color-text-muted)' : 'var(--color-text)' }}
               >
                 {evento.titulo}
               </p>
@@ -950,16 +1033,16 @@ function EventCard({
                 <button
                   onClick={onDelete}
                   className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150"
-                  style={{ color: '#4b5563', border: '1px solid transparent' }}
+                  style={{ color: 'var(--color-text-muted)', border: '1px solid transparent' }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLElement
-                    el.style.color = '#f43f5e'
+                    el.style.color = 'var(--color-rose)'
                     el.style.background = 'rgba(244,63,94,0.1)'
                     el.style.borderColor = 'rgba(244,63,94,0.2)'
                   }}
                   onMouseLeave={e => {
                     const el = e.currentTarget as HTMLElement
-                    el.style.color = '#4b5563'
+                    el.style.color = 'var(--color-text-muted)'
                     el.style.background = 'transparent'
                     el.style.borderColor = 'transparent'
                   }}
@@ -986,15 +1069,15 @@ function EventCard({
           {evento.descripcion && (
             <p
               className="text-xs leading-relaxed line-clamp-2"
-              style={{ color: past ? '#374151' : '#64748b' }}
+              style={{ color: past ? 'var(--color-text-muted)' : 'var(--color-text-secondary)' }}
             >
               {evento.descripcion}
             </p>
           )}
 
           <div className="flex items-center gap-1 mt-0.5">
-            <Clock size={10} style={{ color: past ? '#2d3748' : '#4b5563' }} />
-            <p className="text-xs" style={{ color: past ? '#2d3748' : '#4b5563' }}>
+            <Clock size={10} style={{ color: past ? 'var(--color-text-secondary)' : 'var(--color-text-muted)' }} />
+            <p className="text-xs" style={{ color: past ? 'var(--color-text-secondary)' : 'var(--color-text-muted)' }}>
               {formatFecha(evento.fecha)}
             </p>
           </div>

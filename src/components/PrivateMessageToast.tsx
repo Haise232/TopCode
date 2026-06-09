@@ -109,11 +109,11 @@ export default function PrivateMessageToast() {
       <div
         className="flex items-center gap-3 pr-3 pl-3 py-3 rounded-2xl shadow-lg"
         style={{
-          background: 'rgba(20, 22, 34, 0.97)',
-          border: '1px solid var(--overlay-09)',
+          background: 'var(--color-glass)',
+          border: '1px solid var(--border)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px var(--overlay-04)',
+          boxShadow: 'var(--shadow-elevated), 0 0 0 1px var(--border)',
           maxWidth: '280px',
         }}
       >
@@ -137,7 +137,7 @@ export default function PrivateMessageToast() {
               Mensaje privado
             </span>
           </div>
-          <p className="text-xs font-semibold leading-tight truncate" style={{ color: 'var(--color-text)' }}>
+          <p className="text-xs font-semibold leading-tight truncate text-slate-100">
             {toast.de_nombre}
           </p>
           <p className="text-xs leading-snug mt-0.5" style={{ color: '#64748b' }}>

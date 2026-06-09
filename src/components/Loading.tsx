@@ -2,10 +2,7 @@ import { GraduationCap } from 'lucide-react'
 
 export default function Loading() {
   return (
-    <div
-      className="flex items-center justify-center h-full min-h-screen"
-      style={{ background: 'var(--color-bg)' }}
-    >
+    <div className="flex items-center justify-center h-full min-h-screen bg-bg">
       <div className="flex flex-col items-center gap-8">
         {/* Logo with spinner ring */}
         <div className="relative w-20 h-20 flex items-center justify-center">
@@ -41,11 +38,8 @@ export default function Loading() {
 
           {/* Center icon */}
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, #55efc4 0%, #00cec9 100%)',
-              boxShadow: '0 4px 20px rgba(85,239,196,0.4)',
-            }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-primary"
+            style={{ boxShadow: '0 4px 20px rgba(85,239,196,0.4)' }}
           >
             <GraduationCap size={22} className="text-white" />
           </div>
@@ -53,8 +47,8 @@ export default function Loading() {
 
         {/* Brand */}
         <div className="flex flex-col items-center gap-2">
-          <span className="font-bold text-lg" style={{ color: 'var(--color-text)' }}>
-            Top<span style={{ color: '#8ff5d6' }}>Code</span>
+          <span className="font-bold text-lg text-text-primary">
+            Top<span className="text-primary-light">Code</span>
           </span>
           <div className="flex items-center gap-1.5">
             {[0, 1, 2].map(i => (

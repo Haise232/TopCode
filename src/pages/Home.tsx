@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import {
   Calendar, MessageCircle,
   FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
-  GraduationCap, Shield, Camera, X, ClipboardCheck, Clock, Newspaper,
+  GraduationCap, Shield, ClipboardCheck, Clock, Newspaper,
 } from 'lucide-react'
-import { supabase, eliminarArchivoStorage } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EventoCalendario, Actividad } from '../lib/types'
 import { SkeletonBox, SkeletonCard, SkeletonSchedule, SkeletonQuickActions } from '../components/Skeleton'
 import { cacheGet, cacheSet, cacheInvalidatePrefix } from '../lib/cache'
+import { cn } from '../components/ui/cn'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -94,10 +95,7 @@ function HomeSkeleton() {
   return (
     <div className="animate-fade-in">
       {/* Hero header skeleton */}
-      <div
-        className="px-4 md:px-6 py-8"
-        style={{ borderBottom: '1px solid var(--overlay-06)' }}
-      >
+      <div className="px-4 md:px-6 py-8 border-b border-overlay-6">
         <div className="max-w-[1100px] mx-auto flex justify-between items-center">
           <div className="flex flex-col gap-2.5">
             <SkeletonBox className="h-3 w-20 shimmer" />
@@ -218,72 +216,19 @@ const ADMIN_ACTION = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { usuario, loading: authLoading, refreshUsuario } = useAuth()
+  const { usuario, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
   const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
   const [actividadesPendientes, setActividadesPendientes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
-  const [uploadingBanner, setUploadingBanner] = useState(false)
-  const bannerInputRef = useRef<HTMLInputElement>(null)
   // Guardia de montado: evita actualizaciones de estado tras desmontar el componente
   const mountedRef = useRef(true)
   useEffect(() => {
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
-
-  // Sincronizar con el perfil cuando carga el usuario
-  useEffect(() => {
-    setBannerUrl(usuario?.banner_url ?? null)
-  }, [usuario?.banner_url])
-
-  async function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !usuario) return
-    e.target.value = ''
-    setUploadingBanner(true)
-    try {
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const path = `banner_${usuario.id}.${ext}`
-
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { contentType: file.type, upsert: true })
-
-      if (storageError) return
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(storageData.path)
-
-      const { error: dbError } = await supabase
-        .from('usuarios')
-        .update({ banner_url: publicUrl })
-        .eq('id', usuario.id)
-
-      if (dbError) return
-
-      setBannerUrl(publicUrl)
-      refreshUsuario()
-    } finally {
-      setUploadingBanner(false)
-    }
-  }
-
-  async function handleBannerRemove() {
-    if (!usuario || !bannerUrl) return
-    // Extraer la ruta real del storage desde la URL pública
-    try {
-      const storagePath = new URL(bannerUrl).pathname.split('/object/public/avatars/')[1]
-      if (storagePath) await eliminarArchivoStorage('avatars', decodeURIComponent(storagePath))
-    } catch { /* si falla el borrado del archivo, seguimos igual */ }
-    await supabase.from('usuarios').update({ banner_url: null }).eq('id', usuario.id)
-    setBannerUrl(null)
-    refreshUsuario()
-  }
 
   const cargarDatos = useCallback(async (forzar = false) => {
     if (!usuario) return
@@ -350,165 +295,44 @@ export default function Home() {
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
 
-      {/* ── Hero header ───────────────────────────────────────────────────── */}
-      <div
-        className="group relative px-4 md:px-6 py-8 overflow-hidden"
-        style={{ borderBottom: '1px solid var(--overlay-06)' }}
-      >
-        {/* Fondo: banner de usuario o gradiente por defecto */}
-        {bannerUrl ? (
-          <>
-            <img
-              src={bannerUrl}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-            />
-            {/* Overlay oscuro para legibilidad */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(135deg, rgba(15,17,23,0.72) 0%, rgba(15,17,23,0.55) 100%)' }}
-            />
-          </>
-        ) : (
-          <>
-            <div
-              className="absolute inset-0 pointer-events-none animate-gradient-shift"
-              style={{
-                background: 'linear-gradient(135deg, rgba(85,239,196,0.07) 0%, rgba(20,184,166,0.05) 50%, rgba(0,206,201,0.06) 100%)',
-                backgroundSize: '200% 200%',
-              }}
-            />
-            <div
-              className="absolute -top-8 -right-8 w-48 h-48 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, transparent 70%)', filter: 'blur(24px)' }}
-            />
-            <div
-              className="absolute -bottom-6 -left-6 w-40 h-40 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(85,239,196,0.1) 0%, transparent 70%)', filter: 'blur(20px)' }}
-            />
-          </>
-        )}
+      <div className="max-w-[1100px] mx-auto px-4 md:px-6 pt-6 pb-6 flex flex-col gap-6">
 
-        {/* Botones de banner — visibles al hacer hover sobre el hero */}
-        <div className="absolute top-3 left-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-          <button
-            onClick={() => !uploadingBanner && bannerInputRef.current?.click()}
-            disabled={uploadingBanner}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm transition-all duration-150 hover:scale-105"
-            style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid var(--overlay-12)', color: '#f1f5f9', opacity: uploadingBanner ? 0.6 : 1 }}
-            title="Cambiar banner"
-          >
-            {uploadingBanner
-              ? <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-30)', borderTopColor: 'white' }} />
-              : <Camera size={12} />
-            }
-            {bannerUrl ? 'Cambiar' : 'Añadir banner'}
-          </button>
-          {bannerUrl && (
-            <button
-              onClick={handleBannerRemove}
-              className="w-7 h-7 flex items-center justify-center rounded-lg backdrop-blur-sm transition-all duration-150 hover:scale-105"
-              style={{ background: 'rgba(244,63,94,0.3)', border: '1px solid rgba(244,63,94,0.4)', color: '#fda4af' }}
-              title="Quitar banner"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
-        <input
-          ref={bannerInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleBannerChange}
-        />
-
-        <div className="max-w-[1100px] mx-auto flex justify-between items-start relative">
+        {/* ── Header ───────────────────────────────────────────────────────── */}
+        <div className="flex justify-between items-start">
           <div className="flex flex-col gap-1">
-            {/* Saludo + badge de rol en la misma línea */}
+            {/* Saludo + badge de rol */}
             <div className="flex items-center gap-2.5 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm leading-none">{emoji}</span>
-                <span
-                  className="text-sm font-medium tracking-wide uppercase"
-                  style={{ color: '#4b5563', letterSpacing: '0.06em' }}
-                >
+                <span className="text-sm font-medium tracking-widest uppercase text-gray-500">
                   {saludo}
                 </span>
               </div>
-              {/* Separador puntual */}
-              <span className="w-1 h-1 rounded-full" style={{ background: 'var(--overlay-12)', display: 'inline-block' }} />
+              <span className="w-1 h-1 rounded-full bg-white/[0.12] inline-block" />
               {esAdmin ? (
-                <span
-                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full"
-                  style={{
-                    background: 'rgba(244,63,94,0.12)',
-                    color: '#fb7185',
-                    border: '1px solid rgba(244,63,94,0.22)',
-                    boxShadow: '0 0 10px rgba(244,63,94,0.18)',
-                    letterSpacing: '0.04em',
-                  }}
-                >
+                <span className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full bg-rose-500/12 text-rose-300 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.18)] tracking-wide">
                   <Shield size={10} />
                   ADMIN
                 </span>
               ) : (
-                <span
-                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full"
-                  style={{
-                    background: 'rgba(85,239,196,0.1)',
-                    color: '#8ff5d6',
-                    border: '1px solid rgba(85,239,196,0.18)',
-                    letterSpacing: '0.04em',
-                  }}
-                >
+                <span className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary-light border border-primary/20 tracking-wide">
                   <GraduationCap size={10} />
                   ALUMNO
                 </span>
               )}
             </div>
 
-            <h1
-              className="font-extrabold text-3xl md:text-4xl tracking-tight mt-1"
-              style={{
-                background: 'linear-gradient(135deg, #f1f5f9 30%, #8ff5d6 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
+            <h1 className="font-extrabold text-3xl md:text-4xl tracking-tight mt-1 bg-gradient-to-br from-slate-100 via-slate-100 to-primary-light bg-clip-text text-transparent">
               {usuario?.nombre ?? 'Estudiante'}
             </h1>
 
-            {/* Separador decorativo con gradiente de color primario */}
             <div className="flex items-center gap-2 mt-1.5">
-              <div
-                style={{
-                  width: 32,
-                  height: 2,
-                  background: 'linear-gradient(90deg, #55efc4, #8ff5d6)',
-                  borderRadius: 9999,
-                }}
-              />
-              <div
-                style={{
-                  width: 6,
-                  height: 6,
-                  background: '#55efc4',
-                  borderRadius: 9999,
-                  opacity: 0.5,
-                }}
-              />
+              <div className="w-8 h-0.5 bg-gradient-to-r from-primary to-primary-light rounded-full" />
+              <div className="w-1.5 h-1.5 bg-primary rounded-full opacity-50" />
             </div>
 
-            {/* Fecha con icono sutil */}
-            <p
-              className="text-xs mt-1.5 capitalize flex items-center gap-1.5"
-              style={{ color: '#374151' }}
-            >
-              <span
-                className="inline-block w-1 h-1 rounded-full"
-                style={{ background: 'rgba(85,239,196,0.5)' }}
-              />
+            <p className="text-xs mt-1.5 capitalize flex items-center gap-1.5 text-gray-600">
+              <span className="inline-block w-1 h-1 rounded-full bg-primary/50" />
               {fechaFormateada()}
             </p>
           </div>
@@ -517,8 +341,7 @@ export default function Home() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-              style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 border border-white/[0.08] text-gray-400"
               aria-label="Actualizar"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -526,22 +349,18 @@ export default function Home() {
 
             <button
               onClick={() => navigate('/profile')}
-              className="relative w-10 h-10 overflow-hidden rounded-xl transition-all duration-150 hover:ring-2 hover:ring-primary/50"
-              style={{ border: '1.5px solid rgba(85,239,196,0.3)' }}
+              className="relative w-10 h-10 overflow-hidden rounded-xl transition-all duration-150 hover:ring-2 hover:ring-primary/50 border-[1.5px] border-primary/30"
             >
               {usuario?.avatar_url ? (
                 <img src={usuario.avatar_url} alt="" className="w-10 h-10 object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: 'rgba(85,239,196,0.15)' }}>
-                  <span className="font-bold text-sm" style={{ color: '#8ff5d6' }}>{initial}</span>
+                <div className="w-full h-full flex items-center justify-center bg-primary/15">
+                  <span className="font-bold text-sm text-primary-light">{initial}</span>
                 </div>
               )}
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6">
 
         {/* ── Horario de hoy ──────────────────────────────────────────────── */}
         {(() => {
@@ -556,20 +375,14 @@ export default function Home() {
           return (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                   {esFinDeSemana ? 'Próximo lunes' : `Horario — ${diasSemana[diaSemana]}`}
                 </h2>
-                <span className="text-xs" style={{ color: '#374151' }}>
+                <span className="text-xs text-gray-600">
                   {clases.length} clases
                 </span>
               </div>
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  background: 'var(--gradient-card)',
-                  border: '1px solid var(--overlay-06)',
-                }}
-              >
+              <div className="rounded-2xl overflow-hidden bg-gradient-card border border-overlay-6">
                 {clases.map((clase, idx) => {
                   const iniciMin = enMinutos(clase.inicio)
                   const finMin   = enMinutos(clase.fin)
@@ -582,48 +395,42 @@ export default function Home() {
                   return (
                     <div key={idx}>
                       {hayDescanso && (
-                        <div
-                          className="flex items-center gap-2 px-4 py-1.5"
-                          style={{ borderTop: '1px solid var(--overlay-04)', borderBottom: '1px solid var(--overlay-04)' }}
-                        >
-                          <div className="flex-1 h-px" style={{ background: 'var(--overlay-04)' }} />
-                          <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>Descanso</span>
-                          <div className="flex-1 h-px" style={{ background: 'var(--overlay-04)' }} />
+                        <div className="flex items-center gap-2 px-4 py-1.5 border-y border-overlay-4">
+                          <div className="flex-1 h-px bg-overlay-4" />
+                          <span className="text-2xs font-medium text-gray-500">Descanso</span>
+                          <div className="flex-1 h-px bg-overlay-4" />
                         </div>
                       )}
                       <div
-                        className="relative flex items-center gap-3 px-4 py-3 transition-all duration-200"
-                        style={{
-                          borderTop: idx > 0 && !hayDescanso ? '1px solid var(--overlay-04)' : undefined,
-                          background: esCurso
-                            ? `linear-gradient(90deg, ${color}12 0%, ${color}04 60%, transparent 100%)`
-                            : 'transparent',
-                          opacity: haPasado ? 0.32 : 1,
-                        }}
+                        className={cn(
+                          "relative flex items-center gap-3 px-4 py-3 transition-all duration-200",
+                          idx > 0 && !hayDescanso && "border-t border-overlay-4",
+                          haPasado && "opacity-[0.32]"
+                        )}
+                        style={esCurso ? { '--materia-color': color } as React.CSSProperties : undefined}
                       >
                         {/* Borde izquierdo de color de materia — solo en clase activa */}
                         {esCurso && (
                           <div
-                            className="absolute left-0 top-1.5 bottom-1.5 rounded-r-full"
-                            style={{
-                              width: 3,
-                              background: `linear-gradient(180deg, ${color}, ${color}77)`,
-                              boxShadow: `0 0 8px ${color}88`,
-                            }}
+                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-[var(--materia-color)] to-[var(--materia-color)]/50 shadow-[0_0_8px_var(--materia-color)]"
                           />
                         )}
 
                         {/* Bloque de hora: inicio + fin apilados */}
-                        <div className="shrink-0 flex flex-col items-end" style={{ width: '46px' }}>
+                        <div className="shrink-0 flex flex-col items-end w-[46px]">
                           <span
-                            className="text-xs font-mono font-semibold leading-tight"
-                            style={{ color: esCurso ? '#f1f5f9' : '#4b5563' }}
+                            className={cn(
+                              "text-xs font-mono font-semibold leading-tight",
+                              esCurso ? "text-slate-100" : "text-gray-500"
+                            )}
                           >
                             {clase.inicio}
                           </span>
                           <span
-                            className="text-2xs font-mono leading-tight"
-                            style={{ color: esCurso ? `${color}99` : '#2d3748' }}
+                            className={cn(
+                              "text-2xs font-mono leading-tight",
+                              esCurso ? "text-[var(--materia-color)]/60" : "text-gray-700"
+                            )}
                           >
                             {clase.fin}
                           </span>
@@ -632,38 +439,32 @@ export default function Home() {
                         {/* Indicador de color puntual */}
                         <div className="shrink-0 flex flex-col items-center gap-0.5">
                           <div
-                            className="rounded-full transition-all duration-200"
-                            style={{
-                              width: esCurso ? 9 : 6,
-                              height: esCurso ? 9 : 6,
-                              background: haPasado ? '#374151' : color,
-                              boxShadow: esCurso ? `0 0 8px ${color}, 0 0 16px ${color}44` : 'none',
-                            }}
+                            className={cn(
+                              "rounded-full transition-all duration-200",
+                              esCurso ? "w-[9px] h-[9px]" : "w-1.5 h-1.5",
+                              haPasado ? "bg-gray-600" : "bg-[var(--materia-color)]",
+                              esCurso && "shadow-[0_0_8px_var(--materia-color)]"
+                            )}
                           />
                           {esCurso && (
-                            <div
-                              className="animate-pulse rounded-full"
-                              style={{ width: 3, height: 3, background: color, opacity: 0.5 }}
-                            />
+                            <div className="animate-pulse rounded-full w-[3px] h-[3px] bg-[var(--materia-color)] opacity-50" />
                           )}
                         </div>
 
                         {/* Nombre de la materia */}
                         <div className="flex-1 min-w-0">
                           <span
-                            className="text-sm truncate block"
-                            style={{
-                              color: esCurso ? '#f1f5f9' : haPasado ? '#374151' : '#94a3b8',
-                              fontWeight: esCurso ? 700 : 400,
-                            }}
+                            className={cn(
+                              "text-sm truncate block",
+                              esCurso && "text-slate-100 font-bold",
+                              !esCurso && haPasado && "text-gray-600",
+                              !esCurso && !haPasado && "text-slate-400"
+                            )}
                           >
                             {clase.materia}
                           </span>
                           {esCurso && (
-                            <span
-                              className="text-2xs font-semibold"
-                              style={{ color, opacity: 0.8 }}
-                            >
+                            <span className="text-2xs font-semibold text-[var(--materia-color)] opacity-80">
                               En curso
                             </span>
                           )}
@@ -671,13 +472,12 @@ export default function Home() {
 
                         {/* Badge código */}
                         <span
-                          className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg"
-                          style={{
-                            background: esCurso ? `${color}20` : 'var(--overlay-04)',
-                            color: esCurso ? color : '#374151',
-                            border: `1px solid ${esCurso ? `${color}40` : 'var(--overlay-05)'}`,
-                            boxShadow: esCurso ? `0 0 6px ${color}30` : 'none',
-                          }}
+                          className={cn(
+                            "shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg border",
+                            esCurso
+                              ? "bg-[var(--materia-color)]/10 text-[var(--materia-color)] border-[var(--materia-color)]/20 shadow-[0_0_6px_var(--materia-color)]/10"
+                              : "bg-overlay-4 text-gray-600 border-overlay-5"
+                          )}
                         >
                           {clase.codigo}
                         </span>
@@ -693,12 +493,12 @@ export default function Home() {
         {/* ── Quick access ───────────────────────────────────────────────── */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Acceso rápido
             </h2>
-            <div className="h-px flex-1 mx-3" style={{ background: 'linear-gradient(90deg, rgba(85,239,196,0.15), transparent)' }} />
+            <div className="h-px flex-1 mx-3 bg-gradient-to-r from-primary/15 to-transparent" />
           </div>
-          <div className={`grid gap-3 grid-cols-3 ${esAdmin ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
+          <div className={cn("grid gap-3 grid-cols-3", esAdmin ? "sm:grid-cols-6" : "sm:grid-cols-5")}>
             {quickActions.map(({ label, desc, Icon, to, color, border, glow, gradFrom, gradTo }, index) => {
               const badge = to === '/actividades' && actividadesPendientes > 0
                 ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
@@ -707,72 +507,38 @@ export default function Home() {
               <button
                 key={to}
                 onClick={() => navigate(to)}
-                className="group relative flex flex-col items-center gap-2 rounded-2xl transition-all duration-200 active:scale-[0.96] text-center overflow-hidden animate-fade-in"
-                style={{
-                  animationDelay: `${index * 60}ms`,
-                  padding: '18px 12px 14px',
-                  background: `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 50%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, var(--color-surface), var(--color-input))`,
-                  border: `1px solid var(--overlay-07)`,
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.transform = 'translateY(-4px) scale(1.02)'
-                  el.style.borderColor = border
-                  el.style.boxShadow = `0 16px 32px rgba(0,0,0,0.45), 0 0 0 1px ${border}, 0 0 24px ${glow}`
-                  el.style.background = `linear-gradient(160deg, ${gradFrom} 0%, ${gradTo} 60%, rgba(20,23,32,0.0) 100%), linear-gradient(145deg, var(--color-surface), var(--color-input))`
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.transform = 'translateY(0) scale(1)'
-                  el.style.borderColor = 'var(--overlay-07)'
-                  el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
-                }}
+                className={cn(
+                  "group relative flex flex-col items-center gap-2 rounded-2xl transition-all duration-200 active:scale-[0.96] text-center overflow-hidden animate-fade-in",
+                  "py-[18px] px-3 pb-3.5",
+                  "bg-gradient-to-br from-surface to-input border border-overlay-7 shadow-card",
+                  "hover:-translate-y-1 hover:scale-[1.02] hover:shadow-elevated"
+                )}
+                style={{ '--action-color': color, animationDelay: `${index * 60}ms` } as React.CSSProperties}
               >
                 {/* Shimmer de fondo al hover — línea diagonal sutil */}
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{
-                    background: `linear-gradient(135deg, ${color}06 0%, transparent 50%)`,
-                  }}
-                />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none bg-gradient-to-br from-[var(--action-color)]/[0.04] to-transparent" />
 
                 {/* Badge de notificación */}
                 {badge && (
-                  <div
-                    className="absolute top-2.5 right-2.5 min-w-[20px] h-5 flex items-center justify-center rounded-full text-2xs font-bold px-1"
-                    style={{
-                      background: 'linear-gradient(135deg, #f43f5e, #e11d48)',
-                      color: '#fff',
-                      boxShadow: '0 2px 8px rgba(244,63,94,0.5)',
-                    }}
-                  >
+                  <div className="absolute top-2.5 right-2.5 min-w-5 h-5 flex items-center justify-center rounded-full text-2xs font-bold px-1 bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-[0_2px_8px_rgba(244,63,94,0.5)]">
                     {badge}
                   </div>
                 )}
 
                 {/* Icono con fondo glassmorphism */}
-                <div
-                  className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg]"
-                  style={{
-                    background: `linear-gradient(135deg, ${color}1a, ${color}08)`,
-                    border: `1px solid ${border}`,
-                    boxShadow: `0 4px 16px ${glow}, inset 0 1px 0 var(--overlay-08)`,
-                  }}
-                >
-                  <Icon size={24} style={{ color }} />
+                <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg] bg-gradient-to-br from-[var(--action-color)]/10 to-[var(--action-color)]/[0.03] border border-[var(--action-color)]/20 shadow-[0_4px_16px_var(--action-color)]/20">
+                  <Icon size={24} className="text-[var(--action-color)]" />
                 </div>
 
                 <div className="flex flex-col items-center gap-0.5 mt-0.5">
-                  <span className="text-sm font-bold leading-tight" style={{ color: '#e2e8f0' }}>{label}</span>
-                  <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>{desc}</span>
+                  <span className="text-sm font-bold leading-tight text-slate-200">{label}</span>
+                  <span className="text-2xs font-medium text-gray-500">{desc}</span>
                 </div>
 
                 {/* Flecha inferior derecha al hover */}
                 <ArrowUpRight
                   size={11}
-                  className="absolute bottom-2.5 right-2.5 opacity-0 group-hover:opacity-50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                  style={{ color }}
+                  className="absolute bottom-2.5 right-2.5 opacity-0 group-hover:opacity-50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[var(--action-color)]"
                 />
               </button>
               )
@@ -784,10 +550,10 @@ export default function Home() {
         {(proximaActividad || proximoEvento) && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0" style={{ color: '#4b5563' }}>
+              <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0 text-gray-500">
                 Próximamente
               </h2>
-              <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, rgba(85,239,196,0.15), transparent)' }} />
+              <div className="h-px flex-1 bg-gradient-to-r from-primary/15 to-transparent" />
             </div>
             <div className="flex flex-col gap-2.5">
 
@@ -796,7 +562,6 @@ export default function Home() {
                 const diff = new Date(proximaActividad.fecha_entrega).getTime() - Date.now()
                 const dias = diff / 86400000
                 const urgColor = dias < 1 ? '#f43f5e' : dias < 3 ? '#f59e0b' : '#34d399'
-                const urgBg    = dias < 1 ? 'rgba(244,63,94,0.08)' : dias < 3 ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)'
                 const urgBorder= dias < 1 ? 'rgba(244,63,94,0.2)'  : dias < 3 ? 'rgba(245,158,11,0.2)'  : 'rgba(16,185,129,0.2)'
                 const label = diff < 0 ? 'Vence hoy' : dias < 1
                   ? `${Math.floor(diff / 3600000)}h restantes`
@@ -806,68 +571,44 @@ export default function Home() {
                 return (
                   <button
                     onClick={() => navigate('/actividades')}
-                    className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden"
-                    style={{
-                      background: `linear-gradient(135deg, ${urgBg}, rgba(20,23,32,0.0) 70%), linear-gradient(145deg, var(--color-surface), var(--color-input))`,
-                      border: `1px solid ${urgBorder}`,
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                    }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement
-                      el.style.transform = 'translateY(-2px)'
-                      el.style.boxShadow = `0 10px 24px rgba(0,0,0,0.4), 0 0 16px ${urgColor}18`
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement
-                      el.style.transform = 'translateY(0)'
-                      el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
-                    }}
+                    className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden bg-gradient-to-br from-surface to-input border shadow-card hover:-translate-y-0.5 hover:shadow-card-hover"
+                    style={{ borderColor: urgBorder, '--urg-color': urgColor } as React.CSSProperties}
                   >
                     {/* Badge de fecha — columna izquierda */}
-                    <div
-                      className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5"
-                      style={{
-                        background: `linear-gradient(180deg, ${urgColor}18, ${urgColor}08)`,
-                        borderRight: `1px solid ${urgBorder}`,
-                        minWidth: '58px',
-                      }}
-                    >
-                      <span className="text-xs font-black leading-none uppercase" style={{ color: urgColor }}>
+                    <div className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5 bg-gradient-to-b from-[var(--urg-color)]/10 to-[var(--urg-color)]/5 border-r border-[var(--urg-color)]/20 min-w-[58px]">
+                      <span className="text-xs font-black leading-none uppercase text-[var(--urg-color)]">
                         {fechaEvento.toLocaleDateString('es', { month: 'short' })}
                       </span>
-                      <span className="text-2xl font-black leading-none" style={{ color: urgColor }}>
+                      <span className="text-2xl font-black leading-none text-[var(--urg-color)]">
                         {fechaEvento.getDate()}
                       </span>
                     </div>
 
                     {/* Contenido principal */}
                     <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3.5">
-                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl" style={{ background: urgBg, border: `1px solid ${urgBorder}` }}>
-                        <ClipboardCheck size={16} style={{ color: urgColor }} />
+                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-[var(--urg-color)]/10 border border-[var(--urg-color)]/20">
+                        <ClipboardCheck size={16} className="text-[var(--urg-color)]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span
-                            className="text-2xs font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: `${urgColor}18`, color: urgColor, border: `1px solid ${urgColor}28` }}
-                          >
+                          <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-[var(--urg-color)]/10 text-[var(--urg-color)] border border-[var(--urg-color)]/20">
                             {label}
                           </span>
                           {proximaActividad.materia && (
-                            <span className="text-2xs font-medium" style={{ color: '#4b5563' }}>
+                            <span className="text-2xs font-medium text-gray-500">
                               {proximaActividad.materia}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
+                        <p className="text-sm font-semibold truncate text-text-primary">
                           {proximaActividad.titulo}
                         </p>
-                        <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#4b5563' }}>
+                        <p className="text-xs mt-0.5 flex items-center gap-1 text-gray-500">
                           <Clock size={9} />
                           {fechaEvento.toLocaleDateString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity" style={{ color: urgColor }} />
+                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity text-[var(--urg-color)]" />
                     </div>
                   </button>
                 )
@@ -881,65 +622,38 @@ export default function Home() {
                 return (
                   <button
                     onClick={() => navigate('/calendar')}
-                    className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(245,158,11,0.07), rgba(20,23,32,0.0) 70%), linear-gradient(145deg, var(--color-surface), var(--color-input))',
-                      border: '1px solid rgba(245,158,11,0.2)',
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                    }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement
-                      el.style.transform = 'translateY(-2px)'
-                      el.style.borderColor = 'rgba(245,158,11,0.35)'
-                      el.style.boxShadow = '0 10px 24px rgba(0,0,0,0.4), 0 0 16px rgba(245,158,11,0.12)'
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement
-                      el.style.transform = 'translateY(0)'
-                      el.style.borderColor = 'rgba(245,158,11,0.2)'
-                      el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)'
-                    }}
+                    className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden bg-gradient-to-br from-amber-500/5 to-transparent bg-surface border border-amber-500/20 shadow-card hover:-translate-y-0.5 hover:shadow-card-hover"
                   >
                     {/* Badge de fecha — columna izquierda */}
-                    <div
-                      className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5"
-                      style={{
-                        background: 'linear-gradient(180deg, rgba(245,158,11,0.18), rgba(245,158,11,0.07))',
-                        borderRight: '1px solid rgba(245,158,11,0.2)',
-                        minWidth: '58px',
-                      }}
-                    >
-                      <span className="text-xs font-black leading-none uppercase" style={{ color: '#fbbf24' }}>
+                    <div className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5 bg-gradient-to-b from-amber-500/15 to-amber-500/5 border-r border-amber-500/20 min-w-[58px]">
+                      <span className="text-xs font-black leading-none uppercase text-amber-300">
                         {fechaEvt.toLocaleDateString('es', { month: 'short' })}
                       </span>
-                      <span className="text-2xl font-black leading-none" style={{ color: '#fbbf24' }}>
+                      <span className="text-2xl font-black leading-none text-amber-300">
                         {fechaEvt.getDate()}
                       </span>
                     </div>
 
                     {/* Contenido principal */}
                     <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3.5">
-                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
-                        <Calendar size={16} style={{ color: '#fbbf24' }} />
+                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        <Calendar size={16} className="text-amber-300" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span
-                            className="text-2xs font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}
-                          >
+                          <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
                             {evtLabel}
                           </span>
-                          <span className="text-2xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                          <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500">
                             Evento
                           </span>
                         </div>
-                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{proximoEvento.titulo}</p>
-                        <p className="text-xs mt-0.5 capitalize" style={{ color: '#4b5563' }}>
+                        <p className="text-sm font-semibold truncate text-text-primary">{proximoEvento.titulo}</p>
+                        <p className="text-xs mt-0.5 capitalize text-gray-500">
                           {fechaEvt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </p>
                       </div>
-                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity" style={{ color: '#fbbf24' }} />
+                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity text-amber-300" />
                     </div>
                   </button>
                 )
@@ -949,7 +663,7 @@ export default function Home() {
         )}
 
         <div className="pt-4 pb-2 flex items-center justify-center">
-          <span style={{ color: '#1f2937', fontSize: '11px', fontWeight: 500 }}>
+          <span className="text-gray-800 text-[11px] font-medium">
             TopCode © 2026
           </span>
         </div>

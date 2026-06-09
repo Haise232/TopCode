@@ -27,6 +27,9 @@
   --color-nav-border:      rgba(255,255,255,0.06);
   --shadow-nav:            0 1px 0 rgba(255,255,255,0.025), 0 4px 24px rgba(0,0,0,0.5);
   --shadow-nav-bottom:     0 -4px 24px rgba(0,0,0,0.5);
+  --shadow-card:           0 2px 8px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-card-hover:     0 8px 24px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-elevated:       0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
   --color-glass:           rgba(26, 29, 39, 0.88);
   --color-glass-light:     rgba(30, 33, 48, 0.65);
   --color-scrollbar:       rgba(255,255,255,0.10);
@@ -35,8 +38,7 @@
   --color-shimmer-2:       #1e2130;
 
   /* Overlays "sobre superficie" (bordes sutiles, fondos hover, divisores).
-     En oscuro son blancos translúcidos; en claro deben ser oscuros translúcidos
-     para mantener el mismo contraste relativo sobre el fondo claro. */
+     En oscuro son blancos translúcidos. */
   --overlay-02: rgba(255,255,255,0.02);
   --overlay-03: rgba(255,255,255,0.03);
   --overlay-04: rgba(255,255,255,0.04);
@@ -54,47 +56,13 @@
   --gradient-card:        linear-gradient(145deg, #1a1d27, #141720);
   --color-modal-backdrop: rgba(0,0,0,0.7);
   --color-spinner-track:  rgba(255,255,255,0.2);
-}
 
-[data-theme="light"] {
-  --color-bg:              #f8fafc;
-  --color-surface:         #ffffff;
-  --color-surface-2:       #f1f5f9;
-  --color-input:           #f1f5f9;
-  --color-primary-light:   #00b894;
-  --color-text:            #0f172a;
-  --color-text-secondary:  #475569;
-  --color-text-muted:      #64748b;
-  --border:                rgba(0,0,0,0.10);
-  --color-surface-alpha:   rgba(0,0,0,0.04);
-  --color-nav-glass:       rgba(248, 250, 252, 0.97);
-  --color-nav-border:      rgba(0,0,0,0.08);
-  --shadow-nav:            0 1px 0 rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-nav-bottom:     0 -4px 12px rgba(0,0,0,0.08);
-  --color-glass:           rgba(255, 255, 255, 0.88);
-  --color-glass-light:     rgba(241, 245, 249, 0.65);
-  --color-scrollbar:       rgba(0,0,0,0.15);
-  --color-scrollbar-hover: rgba(0,0,0,0.25);
-  --color-shimmer-1:       #ffffff;
-  --color-shimmer-2:       #f1f5f9;
+  /* Patrón de logo */
+  --logo-pattern-opacity: 0.04;
+  --logo-pattern-size: 52px;
 
-  --overlay-02: rgba(15,23,42,0.03);
-  --overlay-03: rgba(15,23,42,0.04);
-  --overlay-04: rgba(15,23,42,0.05);
-  --overlay-05: rgba(15,23,42,0.06);
-  --overlay-06: rgba(15,23,42,0.07);
-  --overlay-07: rgba(15,23,42,0.08);
-  --overlay-08: rgba(15,23,42,0.10);
-  --overlay-09: rgba(15,23,42,0.11);
-  --overlay-10: rgba(15,23,42,0.12);
-  --overlay-12: rgba(15,23,42,0.14);
-  --overlay-15: rgba(15,23,42,0.18);
-  --overlay-20: rgba(15,23,42,0.22);
-  --overlay-30: rgba(15,23,42,0.32);
-
-  --gradient-card:        linear-gradient(145deg, #ffffff, #f1f5f9);
-  --color-modal-backdrop: rgba(15,23,42,0.4);
-  --color-spinner-track:  rgba(15,23,42,0.18);
+  /* StarField — color de estrellas adaptativo */
+  --star-color: rgba(85,239,196,0.55);
 }
 
 @layer base {
@@ -115,6 +83,7 @@
 
   #root {
     position: relative;
+    z-index: 1;
   }
 
   /* Scrollbar — gris suave */
@@ -244,6 +213,30 @@
     border-color: rgba(255,255,255,0.08);
   }
 
+  /* Button danger (rose) */
+  .btn-danger {
+    @apply bg-gradient-error text-white font-semibold rounded-xl flex items-center
+           justify-center gap-2 hover:opacity-90 active:scale-[0.98]
+           transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 0 4px 16px rgba(244,63,94,0.3);
+  }
+  .btn-danger:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(244,63,94,0.4);
+    transform: translateY(-1px);
+  }
+
+  /* Button subtle (teal-tinted surface) */
+  .btn-subtle {
+    @apply font-medium rounded-xl flex items-center justify-center gap-2
+           hover:opacity-90 active:scale-[0.98] transition-all duration-200;
+    background: rgba(20,184,166,0.12);
+    color: var(--color-teal);
+    border: 1px solid rgba(20,184,166,0.18);
+  }
+  .btn-subtle:hover {
+    background: rgba(20,184,166,0.18);
+  }
+
   /* Card base */
   .card {
     @apply bg-surface rounded-2xl;
@@ -285,6 +278,30 @@
     background: var(--color-surface-alpha);
     color: var(--color-text-muted);
     border: 1px solid var(--border);
+  }
+  .badge-success {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full;
+    background: rgba(16,185,129,0.15);
+    color: var(--color-success);
+    border: 1px solid rgba(16,185,129,0.25);
+  }
+  .badge-warning {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full;
+    background: rgba(245,158,11,0.15);
+    color: var(--color-warning);
+    border: 1px solid rgba(245,158,11,0.25);
+  }
+  .badge-danger {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full;
+    background: rgba(244,63,94,0.15);
+    color: var(--color-error);
+    border: 1px solid rgba(244,63,94,0.25);
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full;
+    background: rgba(59,130,246,0.15);
+    color: var(--color-info);
+    border: 1px solid rgba(59,130,246,0.25);
   }
 
   /* Page header */
@@ -390,3 +407,5 @@
 .animate-float           { animation: float 3s ease-in-out infinite; }
 .animate-count-up        { animation: count-up 0.6s ease-out forwards; }
 .animate-gradient-shift  { animation: gradient-shift 6s ease infinite; background-size: 200% 200%; }
+
+

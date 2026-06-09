@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Usuario, Anuncio } from '../lib/types'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
+import { Spinner } from '../components/ui'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -190,18 +191,18 @@ export default function Admin() {
               className="w-9 h-9 flex items-center justify-center rounded-xl"
               style={{ background: 'rgba(85,239,196,0.12)', border: '1px solid rgba(85,239,196,0.2)' }}
             >
-              <Settings size={15} style={{ color: '#8ff5d6' }} />
+              <Settings size={15} className="text-primary-light" />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight" style={{ color: 'var(--color-text)' }}>Panel Admin</h1>
-              <p className="text-xs" style={{ color: '#64748b' }}>Control de accesos y roles</p>
+              <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Panel Admin</h1>
+              <p className="text-xs text-text-muted">Control de accesos y roles</p>
             </div>
           </div>
           <button
             onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
             disabled={refreshing}
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5"
-            style={{ border: '1px solid var(--overlay-08)', color: '#64748b' }}
+            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted"
+            style={{ border: '1px solid var(--overlay-08)' }}
             aria-label="Actualizar"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -237,7 +238,7 @@ export default function Admin() {
                 <p className="font-extrabold text-xl md:text-2xl tabular-nums leading-none" style={{ color }}>
                   {value}
                 </p>
-                <p className="text-[10px] md:text-xs font-medium uppercase tracking-wide mt-1 truncate" style={{ color: '#4b5563' }}>
+                <p className="text-[10px] md:text-xs font-medium uppercase tracking-wide mt-1 truncate text-text-muted">
                   {label}
                 </p>
               </div>
@@ -258,12 +259,11 @@ export default function Admin() {
             className="px-5 py-3.5 flex items-center gap-2"
             style={{ borderBottom: '1px solid var(--overlay-06)' }}
           >
-            <h2 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Usuarios</h2>
+            <h2 className="font-semibold text-sm text-text-primary">Usuarios</h2>
             <span
-              className="text-xs font-bold px-2 py-0.5 rounded-full"
+              className="text-xs font-bold px-2 py-0.5 rounded-full text-primary-light"
               style={{
                 background: 'rgba(85,239,196,0.12)',
-                color: '#8ff5d6',
                 border: '1px solid rgba(85,239,196,0.2)',
               }}
             >
@@ -294,7 +294,7 @@ export default function Admin() {
                     className="w-9 h-9 flex items-center justify-center"
                     style={{ background: 'rgba(85,239,196,0.12)' }}
                   >
-                    <span className="font-bold text-xs" style={{ color: '#8ff5d6' }}>
+                    <span className="font-bold text-xs text-primary-light">
                       {u.nombre[0]?.toUpperCase() ?? '?'}
                     </span>
                   </div>
@@ -304,13 +304,12 @@ export default function Admin() {
               {/* Name + email */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>{u.nombre}</p>
+                  <p className="font-medium text-sm text-text-primary">{u.nombre}</p>
                   {u.id === usuario?.id && (
                     <span
-                      className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      className="text-xs font-semibold px-2 py-0.5 rounded-full text-primary-light"
                       style={{
                         background: 'rgba(85,239,196,0.1)',
-                        color: '#8ff5d6',
                         border: '1px solid rgba(85,239,196,0.2)',
                       }}
                     >
@@ -318,7 +317,7 @@ export default function Admin() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs truncate mt-0.5" style={{ color: '#4b5563' }}>{u.email}</p>
+                <p className="text-xs truncate mt-0.5 text-text-muted">{u.email}</p>
               </div>
 
               {/* Role toggle */}
@@ -389,11 +388,11 @@ export default function Admin() {
               className="w-8 h-8 flex items-center justify-center rounded-xl"
               style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}
             >
-              <Megaphone size={14} style={{ color: '#f59e0b' }} />
+              <Megaphone size={14} className="text-amber" />
             </div>
             <div>
-              <h2 className="font-bold text-sm" style={{ color: 'var(--color-text)' }}>Anuncios</h2>
-              <p className="text-xs" style={{ color: '#4b5563' }}>
+              <h2 className="font-bold text-sm text-text-primary">Anuncios</h2>
+              <p className="text-xs text-text-muted">
                 El último anuncio activo aparece como modal a todos los usuarios hasta que lo lean
               </p>
             </div>
@@ -408,7 +407,7 @@ export default function Admin() {
               border: '1px solid rgba(245,158,11,0.15)',
             }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
               Nuevo anuncio
             </p>
             <input
@@ -428,24 +427,16 @@ export default function Admin() {
               maxLength={1000}
             />
             <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: '#4b5563' }}>
+              <span className="text-xs text-text-muted">
                 {nuevoContenido.length}/1000
               </span>
               <button
                 type="submit"
                 disabled={guardando || !nuevoTitulo.trim() || !nuevoContenido.trim()}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40"
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                  color: 'white',
-                  boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
-                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40 bg-gradient-warning text-white"
+                style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.3)' }}
               >
-                {guardando ? (
-                  <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-30)', borderTopColor: 'white' }} />
-                ) : (
-                  <Plus size={14} />
-                )}
+                {guardando ? <Spinner size="sm" className="text-white" /> : <Plus size={14} />}
                 Publicar anuncio
               </button>
             </div>
@@ -461,7 +452,7 @@ export default function Admin() {
               }}
             >
               <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--overlay-06)' }}>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#4b5563' }}>
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   Historial
                 </p>
               </div>
@@ -474,20 +465,20 @@ export default function Admin() {
                   {/* Indicador activo */}
                   <div className="mt-1 shrink-0">
                     {a.activo ? (
-                      <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#10b981' }} />
+                      <div className="w-2 h-2 rounded-full animate-pulse bg-success" />
                     ) : (
                       <div className="w-2 h-2 rounded-full" style={{ background: '#374151' }} />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate" style={{ color: a.activo ? '#f1f5f9' : '#4b5563' }}>
+                    <p className={`font-semibold text-sm truncate ${a.activo ? 'text-text-primary' : 'text-text-muted'}`}>
                       {a.titulo}
                     </p>
-                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#4b5563' }}>
+                    <p className="text-xs mt-0.5 line-clamp-2 text-text-muted">
                       {a.contenido}
                     </p>
-                    <p className="text-xs mt-1" style={{ color: '#374151' }}>
+                    <p className="text-xs mt-1 text-text-muted">
                       {new Date(a.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                   </div>
@@ -506,7 +497,7 @@ export default function Admin() {
                       }}
                     >
                       {toggling === a.id ? (
-                        <div className="w-3.5 h-3.5 rounded-full animate-spin" style={{ border: '1.5px solid var(--overlay-20)', borderTopColor: 'currentColor' }} />
+                        <Spinner size="sm" />
                       ) : a.activo ? (
                         <Eye size={13} />
                       ) : (
