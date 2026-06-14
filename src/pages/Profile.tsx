@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays } from 'lucide-react'
+import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays, Users } from 'lucide-react'
 import { supabase, subirAvatar } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
 import { Badge, Button, Spinner } from '../components/ui'
+import { CLASE_GROUPS, claseInfo } from '../constants/clases'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -37,6 +38,8 @@ export default function Profile() {
 
   const [nombre, setNombre] = useState(usuario?.nombre ?? '')
   const [saving, setSaving] = useState(false)
+  const [clase, setClase] = useState(usuario?.clase ?? '')
+  const [savingClase, setSavingClase] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
@@ -58,6 +61,26 @@ export default function Profile() {
       setAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar el nombre.' })
     } else {
       setAlert({ type: 'success', title: 'Guardado', message: 'Tu nombre ha sido actualizado.' })
+    }
+  }
+
+  async function handleSaveClase(e: React.FormEvent) {
+    e.preventDefault()
+    if (!clase) {
+      setAlert({ type: 'error', title: 'Error', message: 'Selecciona una clase.' })
+      return
+    }
+    setSavingClase(true)
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ clase })
+      .eq('id', usuario!.id)
+    await refreshUsuario()
+    setSavingClase(false)
+    if (error) {
+      setAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar la clase.' })
+    } else {
+      setAlert({ type: 'success', title: 'Guardado', message: 'Tu clase ha sido actualizada.' })
     }
   }
 
@@ -107,16 +130,17 @@ export default function Profile() {
   const avatarSrc = preview ?? usuario?.avatar_url ?? null
   const promedio = usuario?.promedio ?? 0
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
+  const grade = gradeColor(promedio)
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
 
       {/* ── Page header ── */}
-      <div className="relative px-4 md:px-6 py-5 overflow-hidden border-b border-border">
+      <div className="relative px-4 md:px-6 py-5 overflow-hidden border-b border-white/[0.08]">
         <div className="max-w-[700px] mx-auto flex items-center gap-3 relative">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted border border-border"
+            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted border border-white/[0.08]"
           >
             <ArrowLeft size={15} />
           </button>
@@ -127,41 +151,17 @@ export default function Profile() {
       <div className="max-w-[700px] mx-auto p-4 md:p-6 flex flex-col gap-4">
 
         {/* ── Hero avatar card ── */}
-        <div
-          className="relative overflow-hidden rounded-2xl"
-          style={{
-            background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-bg) 100%)',
-            border: '1px solid var(--border)',
-          }}
-        >
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">
           {/* Background gradient accent */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(85,239,196,0.12) 0%, transparent 70%)',
-            }}
-          />
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(85,239,196,0.12),transparent_70%)]" />
 
           {/* Top gradient strip */}
-          <div
-            className="h-24 w-full"
-            style={{
-              background: 'linear-gradient(135deg, rgba(85,239,196,0.15) 0%, rgba(0,206,201,0.1) 50%, rgba(85,239,196,0.05) 100%)',
-              borderBottom: '1px solid rgba(85,239,196,0.1)',
-            }}
-          />
+          <div className="h-24 w-full bg-gradient-to-br from-primary/15 via-cyan-400/10 to-primary/5 border-b border-primary/10" />
 
           <div className="relative px-6 pb-6">
             {/* Avatar — overlaps strip */}
             <div className="relative -mt-10 mb-4 w-fit">
-              <div
-                className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl"
-                style={{
-                  background: 'rgba(85,239,196,0.15)',
-                  border: '3px solid var(--color-surface)',
-                  boxShadow: '0 4px 20px rgba(85,239,196,0.25)',
-                }}
-              >
+              <div className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl bg-primary/15 border-[3px] border-surface shadow-primary">
                 {avatarSrc ? (
                   <img src={avatarSrc} alt={usuario?.nombre} className="w-20 h-20 object-cover" />
                 ) : (
@@ -173,7 +173,7 @@ export default function Profile() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="absolute -bottom-1.5 -right-1.5 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-60 shadow-primary bg-gradient-primary"
+                className="absolute -bottom-1.5 -right-1.5 w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-60 shadow-primary bg-gradient-to-br from-primary to-cyan-400"
                 aria-label="Cambiar foto"
               >
                 {uploading ? <Spinner size="sm" className="text-white" /> : <Camera size={13} className="text-white" />}
@@ -202,6 +202,23 @@ export default function Profile() {
                     Alumno
                   </Badge>
                 )}
+                {usuario?.clase ? (
+                  <Badge
+                    style={{
+                      backgroundColor: claseInfo(usuario.clase)?.bg,
+                      borderColor: claseInfo(usuario.clase)?.border,
+                      color: claseInfo(usuario.clase)?.color,
+                    }}
+                  >
+                    <Users size={10} />
+                    {usuario.clase}
+                  </Badge>
+                ) : (
+                  <Badge variant="alumno">
+                    <Users size={10} />
+                    Sin clase
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-text-muted">{usuario?.email}</p>
             </div>
@@ -210,22 +227,16 @@ export default function Profile() {
             <div className="flex flex-wrap gap-2">
               <div
                 className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
-                style={{
-                  background: `${gradeColor(promedio)}12`,
-                  border: `1px solid ${gradeColor(promedio)}28`,
-                }}
+                style={{ '--grade-color': grade } as React.CSSProperties}
               >
-                <TrendingUp size={13} style={{ color: gradeColor(promedio) }} />
-                <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(promedio) }}>
+                <TrendingUp size={13} className="text-[var(--grade-color)]" />
+                <span className="text-sm font-bold tabular-nums text-[var(--grade-color)]">
                   {promedio.toFixed(2)}
                 </span>
                 <span className="text-xs text-text-muted">promedio</span>
               </div>
 
-              <div
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border"
-                style={{ background: 'var(--color-surface-alpha)' }}
-              >
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-white/[0.08] bg-white/[0.04]">
                 <CalendarDays size={13} className="text-primary-light" />
                 <span className="text-xs text-text-secondary">
                   Desde {new Date(usuario?.created_at ?? '').toLocaleDateString('es', { month: 'long', year: 'numeric' })}
@@ -235,12 +246,9 @@ export default function Profile() {
               {promedio > 0 && (
                 <div
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl"
-                  style={{
-                    background: `${gradeColor(promedio)}08`,
-                    border: `1px solid ${gradeColor(promedio)}18`,
-                  }}
+                  style={{ '--grade-color': grade } as React.CSSProperties}
                 >
-                  <span className="text-xs font-semibold" style={{ color: `${gradeColor(promedio)}cc` }}>
+                  <span className="text-xs font-semibold text-[var(--grade-color)]/80">
                     {gradeLabel(promedio)}
                   </span>
                 </div>
@@ -250,18 +258,9 @@ export default function Profile() {
         </div>
 
         {/* ── Edit name ── */}
-        <div
-          className="p-5 rounded-2xl"
-          style={{
-            background: 'linear-gradient(145deg, var(--color-surface), var(--color-bg))',
-            border: '1px solid var(--border)',
-          }}
-        >
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">
           <div className="flex items-center gap-2 mb-4">
-            <div
-              className="w-1.5 h-5 rounded-full"
-              style={{ background: 'linear-gradient(180deg, #55efc4, #00cec9)' }}
-            />
+            <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-primary to-cyan-400" />
             <h2 className="font-semibold text-base text-text-primary">Editar nombre</h2>
           </div>
           <form onSubmit={handleSave} className="flex flex-col gap-3">
@@ -272,7 +271,7 @@ export default function Profile() {
                 value={nombre}
                 onChange={e => setNombre(e.target.value)}
                 placeholder="Tu nombre"
-                className="input-base"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]"
               />
             </div>
             <Button
@@ -286,41 +285,50 @@ export default function Profile() {
           </form>
         </div>
 
-        {/* ── Sesión ── */}
-        <div
-          className="p-5 rounded-2xl"
-          style={{
-            background: 'linear-gradient(145deg, var(--color-surface), var(--color-bg))',
-            border: '1px solid var(--border)',
-          }}
-        >
+        {/* ── Editar clase ── */}
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">
           <div className="flex items-center gap-2 mb-4">
-            <div
-              className="w-1.5 h-5 rounded-full"
-              style={{ background: 'linear-gradient(180deg, #f43f5e, #e11d48)' }}
-            />
+            <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-primary to-cyan-400" />
+            <h2 className="font-semibold text-base text-text-primary">Tu clase</h2>
+          </div>
+          <form onSubmit={handleSaveClase} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-text-secondary">Grupo-clase</label>
+              <select
+                value={clase}
+                onChange={e => setClase(e.target.value)}
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]"
+              >
+                <option value="" disabled>Selecciona tu clase</option>
+                {CLASE_GROUPS.map(({ label, opciones }) => (
+                  <optgroup key={label} label={label}>
+                    {opciones.map(c => (
+                      <option key={c.id} value={c.id}>{c.id}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="submit"
+              disabled={savingClase || !clase || clase === usuario?.clase}
+              icon={<Save size={14} />}
+              className="py-2.5 text-sm"
+            >
+              {savingClase ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          </form>
+        </div>
+
+        {/* ── Sesión ── */}
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-rose-500 to-rose-700" />
             <h2 className="font-semibold text-base text-text-primary">Sesión</h2>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 group"
-            style={{
-              background: 'rgba(244,63,94,0.06)',
-              border: '1px solid rgba(244,63,94,0.15)',
-              color: 'var(--color-text-secondary)',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.color = '#f43f5e'
-              el.style.borderColor = 'rgba(244,63,94,0.35)'
-              el.style.background = 'rgba(244,63,94,0.1)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.color = 'var(--color-text-secondary)'
-              el.style.borderColor = 'rgba(244,63,94,0.15)'
-              el.style.background = 'rgba(244,63,94,0.06)'
-            }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 group bg-rose-500/5 border border-rose-500/15 text-text-secondary hover:bg-rose-500/10 hover:border-rose-500/35 hover:text-rose-500"
           >
             <LogOut size={14} />
             Cerrar sesión

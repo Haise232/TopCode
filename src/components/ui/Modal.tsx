@@ -30,13 +30,12 @@ export function Modal({ open, onClose, children, maxWidthClassName = 'max-w-sm',
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in">
       <div
-        className="absolute inset-0"
-        style={{ background: 'var(--color-modal-backdrop)', backdropFilter: 'blur(8px)' }}
+        className="absolute inset-0 bg-black/70 backdrop-blur-[8px]"
         onClick={onClose}
       />
       <div
         className={cn(
-          'relative w-full overflow-hidden animate-scale-in-modal rounded-[20px] bg-surface border border-border shadow-modal',
+          'relative w-full overflow-hidden animate-scale-in-modal rounded-[20px] bg-surface border border-white/[0.08] shadow-modal',
           maxWidthClassName,
           panelClassName
         )}

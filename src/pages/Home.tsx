@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Calendar, MessageCircle,
-  FolderOpen, RefreshCw, ChevronRight, ArrowUpRight,
-  GraduationCap, Shield, ClipboardCheck, Clock, Newspaper,
+  Calendar,
+  RefreshCw, ChevronRight,
+  GraduationCap, Shield, ClipboardCheck, Clock,
+  ExternalLink, Github, Palette, School,
+  MessageCircle, FolderOpen, BookOpen, Users,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -11,6 +13,7 @@ import { EventoCalendario, Actividad } from '../lib/types'
 import { SkeletonBox, SkeletonCard, SkeletonSchedule, SkeletonQuickActions } from '../components/Skeleton'
 import { cacheGet, cacheSet, cacheInvalidatePrefix } from '../lib/cache'
 import { cn } from '../components/ui/cn'
+import { claseInfo } from '../constants/clases'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -110,8 +113,9 @@ function HomeSkeleton() {
         {/* Horario — 6 filas que reflejan la cantidad real de clases diarias */}
         <SkeletonSchedule rows={6} />
 
-        {/* Acceso rápido — 5 cards (alumno), 6 si admin */}
+        {/* Accesos rápidos — 5 internos (Tu espacio) + 4 externos (Enlaces externos) */}
         <SkeletonQuickActions count={5} />
+        <SkeletonQuickActions count={4} />
 
         {/* Próximamente: actividad + evento */}
         {[1, 2].map(i => (
@@ -131,86 +135,103 @@ function HomeSkeleton() {
 
 // ── Quick actions ─────────────────────────────────────────────────────────────
 
-const QUICK_ACTIONS = [
+const ENLACES_INTERES = [
   {
-    label: 'News',
-    desc: 'Tech',
-    Icon: Newspaper,
-    to: '/news',
-    color: '#8ff5d6',
-    bg: 'rgba(85,239,196,0.1)',
-    border: 'rgba(85,239,196,0.25)',
-    glow: 'rgba(85,239,196,0.2)',
-    gradFrom: 'rgba(85,239,196,0.06)',
-    gradTo: 'rgba(85,239,196,0.02)',
-    badge: null,
+    label: 'GitHub',
+    desc: 'Código',
+    Icon: Github,
+    href: 'https://github.com',
+    color: '#a78bfa',
   },
   {
-    label: 'Eventos',
-    desc: 'Calendario',
-    Icon: Calendar,
-    to: '/calendar',
+    label: 'Campus',
+    desc: 'Virtual',
+    Icon: GraduationCap,
+    href: 'https://www3.gobiernodecanarias.org/educacion/cau_ce/cas/login?service=https%3A%2F%2Fwww3.gobiernodecanarias.org%2Fmedusa%2Feforma%2Fcampus%2Flogin%2Findex.php',
     color: '#fbbf24',
-    bg: 'rgba(245,158,11,0.1)',
-    border: 'rgba(245,158,11,0.25)',
-    glow: 'rgba(245,158,11,0.2)',
-    gradFrom: 'rgba(245,158,11,0.06)',
-    gradTo: 'rgba(245,158,11,0.02)',
-    badge: null,
   },
   {
-    label: 'Chat',
-    desc: 'Mensajes',
-    Icon: MessageCircle,
-    to: '/chat',
-    color: '#2dd4bf',
-    bg: 'rgba(20,184,166,0.1)',
-    border: 'rgba(20,184,166,0.25)',
-    glow: 'rgba(20,184,166,0.2)',
-    gradFrom: 'rgba(20,184,166,0.06)',
-    gradTo: 'rgba(20,184,166,0.02)',
-    badge: null,
+    label: 'Pincel Ekade',
+    desc: 'Diseño',
+    Icon: Palette,
+    href: 'https://www3.gobiernodecanarias.org/educacion/cau_ce/cas/login?service=https%3a%2f%2fwww.gobiernodecanarias.org%2feducacion%2fsinfo%2fcasclientsua%2f',
+    color: '#fb7185',
   },
   {
-    label: 'Apuntes',
-    desc: 'Archivos',
-    Icon: FolderOpen,
-    to: '/apuntes',
-    color: '#00cec9',
-    bg: 'rgba(0,206,201,0.1)',
-    border: 'rgba(0,206,201,0.25)',
-    glow: 'rgba(0,206,201,0.2)',
-    gradFrom: 'rgba(0,206,201,0.06)',
-    gradTo: 'rgba(0,206,201,0.02)',
-    badge: null,
-  },
-  {
-    label: 'Actividades',
-    desc: 'Tareas',
-    Icon: ClipboardCheck,
-    to: '/actividades',
+    label: 'CIFP Villa',
+    desc: 'Agüimes',
+    Icon: School,
+    href: 'https://www3.gobiernodecanarias.org/medusa/edublog/cifpvilladeaguimes/',
     color: '#34d399',
-    bg: 'rgba(16,185,129,0.1)',
-    border: 'rgba(16,185,129,0.25)',
-    glow: 'rgba(16,185,129,0.18)',
-    gradFrom: 'rgba(16,185,129,0.06)',
-    gradTo: 'rgba(16,185,129,0.02)',
-    badge: null, // se sobreescribe dinámicamente en el render
   },
 ]
 
-const ADMIN_ACTION = {
-  label: 'Admin',
-  desc: 'Panel',
-  Icon: Shield,
-  to: '/admin',
-  color: '#fb7185',
-  bg: 'rgba(244,63,94,0.1)',
-  border: 'rgba(244,63,94,0.25)',
-  glow: 'rgba(244,63,94,0.18)',
-  gradFrom: 'rgba(244,63,94,0.06)',
-  gradTo: 'rgba(244,63,94,0.02)',
-  badge: null,
+const ACCESOS_INTERNOS = [
+  { label: 'Chat',        desc: 'General',        Icon: MessageCircle,  to: '/chat',        color: '#55efc4' },
+  { label: 'Apuntes',     desc: 'Archivos',       Icon: FolderOpen,     to: '/apuntes',     color: '#fb923c' },
+  { label: 'Actividades', desc: 'Tareas',         Icon: ClipboardCheck, to: '/actividades', color: '#818cf8' },
+  { label: 'Notas',       desc: 'Calificaciones', Icon: BookOpen,       to: '/notas',       color: '#f472b6' },
+  { label: 'Calendario',  desc: 'Eventos',        Icon: Calendar,       to: '/calendar',    color: '#22d3ee' },
+]
+
+// Tarjeta de acceso rápido — soporta enlace externo (`href`) o navegación interna (`onClick`)
+function QuickActionCard({
+  label, desc, Icon, color, index, onClick, href,
+}: {
+  label: string
+  desc: string
+  Icon: React.ElementType
+  color: string
+  index: number
+  onClick?: () => void
+  href?: string
+}) {
+  const className = cn(
+    "group relative flex flex-col items-center gap-2 rounded-2xl transition-all duration-200 active:scale-[0.96] text-center overflow-hidden animate-fade-in w-full",
+    "py-[18px] px-3 pb-3.5",
+    "bg-gradient-to-br from-surface to-input border border-overlay-7 shadow-card",
+    "hover:-translate-y-1 hover:scale-[1.02] hover:shadow-elevated"
+  )
+  const style = { '--action-color': color, animationDelay: `${index * 60}ms` } as React.CSSProperties
+
+  const content = (
+    <>
+      {/* Shimmer de fondo al hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none bg-gradient-to-br from-[var(--action-color)]/[0.04] to-transparent" />
+
+      {/* Icono con fondo glassmorphism */}
+      <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg] bg-gradient-to-br from-[var(--action-color)]/10 to-[var(--action-color)]/[0.03] border border-white/[0.06] shadow-[0_4px_16px_var(--action-color)]/10">
+        <Icon size={24} className="text-[var(--action-color)]" />
+      </div>
+
+      <div className="flex flex-col items-center gap-0.5 mt-0.5">
+        <span className="text-sm font-bold leading-tight text-slate-200">{label}</span>
+        <span className="text-2xs font-medium text-gray-500">{desc}</span>
+      </div>
+
+      {/* Icono de externo al hover */}
+      {href && (
+        <ExternalLink
+          size={11}
+          className="absolute bottom-2.5 right-2.5 opacity-0 group-hover:opacity-50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[var(--action-color)]"
+        />
+      )}
+    </>
+  )
+
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className} style={style}>
+        {content}
+      </a>
+    )
+  }
+
+  return (
+    <button onClick={onClick} className={className} style={style}>
+      {content}
+    </button>
+  )
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -220,7 +241,6 @@ export default function Home() {
   const navigate = useNavigate()
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
   const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
-  const [actividadesPendientes, setActividadesPendientes] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   // Guardia de montado: evita actualizaciones de estado tras desmontar el componente
@@ -270,7 +290,6 @@ export default function Home() {
     if (acts.data) {
       const doneIds = new Set((estados.data ?? []).map((e: { actividad_id: string }) => e.actividad_id))
       const pendientes = acts.data.filter((a: Actividad) => !doneIds.has(a.id))
-      setActividadesPendientes(pendientes.length)
       setProximaActividad(pendientes[0] ?? null)
     }
   }, [usuario])
@@ -290,7 +309,6 @@ export default function Home() {
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
   const { texto: saludo, emoji } = saludoEmoji()
   const esAdmin = usuario?.rol === 'admin'
-  const quickActions = esAdmin ? [...QUICK_ACTIONS, ADMIN_ACTION] : QUICK_ACTIONS
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
@@ -319,6 +337,27 @@ export default function Home() {
                   <GraduationCap size={10} />
                   ALUMNO
                 </span>
+              )}
+              {usuario?.clase ? (
+                <span
+                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full tracking-wide border"
+                  style={{
+                    backgroundColor: claseInfo(usuario.clase)?.bg,
+                    borderColor: claseInfo(usuario.clase)?.border,
+                    color: claseInfo(usuario.clase)?.color,
+                  }}
+                >
+                  <Users size={10} />
+                  {usuario.clase}
+                </span>
+              ) : (
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full tracking-wide border border-white/[0.08] bg-white/[0.03] text-gray-500 transition-colors duration-150 hover:text-gray-300 hover:border-white/[0.16]"
+                >
+                  <Users size={10} />
+                  Configura tu clase
+                </button>
               )}
             </div>
 
@@ -490,59 +529,53 @@ export default function Home() {
           )
         })()}
 
-        {/* ── Quick access ───────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-3">
+        {/* ── Accesos rápidos ─────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-              Acceso rápido
+              Accesos rápidos
             </h2>
             <div className="h-px flex-1 mx-3 bg-gradient-to-r from-primary/15 to-transparent" />
           </div>
-          <div className={cn("grid gap-3 grid-cols-3", esAdmin ? "sm:grid-cols-6" : "sm:grid-cols-5")}>
-            {quickActions.map(({ label, desc, Icon, to, color }, index) => {
-              const badge = to === '/actividades' && actividadesPendientes > 0
-                ? (actividadesPendientes > 9 ? '9+' : String(actividadesPendientes))
-                : null
-              return (
-              <button
-                key={to}
-                onClick={() => navigate(to)}
-                className={cn(
-                  "group relative flex flex-col items-center gap-2 rounded-2xl transition-all duration-200 active:scale-[0.96] text-center overflow-hidden animate-fade-in",
-                  "py-[18px] px-3 pb-3.5",
-                  "bg-gradient-to-br from-surface to-input border border-overlay-7 shadow-card",
-                  "hover:-translate-y-1 hover:scale-[1.02] hover:shadow-elevated"
-                )}
-                style={{ '--action-color': color, animationDelay: `${index * 60}ms` } as React.CSSProperties}
-              >
-                {/* Shimmer de fondo al hover — línea diagonal sutil */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none bg-gradient-to-br from-[var(--action-color)]/[0.04] to-transparent" />
 
-                {/* Badge de notificación */}
-                {badge && (
-                  <div className="absolute top-2.5 right-2.5 min-w-5 h-5 flex items-center justify-center rounded-full text-2xs font-bold px-1 bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-[0_2px_8px_rgba(244,63,94,0.5)]">
-                    {badge}
-                  </div>
-                )}
-
-                {/* Icono con fondo glassmorphism */}
-                <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg] bg-gradient-to-br from-[var(--action-color)]/10 to-[var(--action-color)]/[0.03] border border-[var(--action-color)]/20 shadow-[0_4px_16px_var(--action-color)]/20">
-                  <Icon size={24} className="text-[var(--action-color)]" />
-                </div>
-
-                <div className="flex flex-col items-center gap-0.5 mt-0.5">
-                  <span className="text-sm font-bold leading-tight text-slate-200">{label}</span>
-                  <span className="text-2xs font-medium text-gray-500">{desc}</span>
-                </div>
-
-                {/* Flecha inferior derecha al hover */}
-                <ArrowUpRight
-                  size={11}
-                  className="absolute bottom-2.5 right-2.5 opacity-0 group-hover:opacity-50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[var(--action-color)]"
+          {/* Tu espacio — navegación interna */}
+          <div className="flex flex-col gap-3">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-gray-600">
+              Tu espacio
+            </span>
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">
+              {ACCESOS_INTERNOS.map(({ label, desc, Icon, to, color }, index) => (
+                <QuickActionCard
+                  key={to}
+                  label={label}
+                  desc={desc}
+                  Icon={Icon}
+                  color={color}
+                  index={index}
+                  onClick={() => navigate(to)}
                 />
-              </button>
-              )
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Enlaces externos */}
+          <div className="flex flex-col gap-3">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-gray-600">
+              Enlaces externos
+            </span>
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+              {ENLACES_INTERES.map(({ label, desc, Icon, href, color }, index) => (
+                <QuickActionCard
+                  key={href}
+                  label={label}
+                  desc={desc}
+                  Icon={Icon}
+                  color={color}
+                  index={index}
+                  href={href}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
@@ -664,7 +697,7 @@ export default function Home() {
 
         <div className="pt-4 pb-2 flex items-center justify-center">
           <span className="text-gray-800 text-[11px] font-medium">
-            TopCode © 2026
+            TopCode © 2026 · Informática — DAM · DAW · ASIR
           </span>
         </div>
 

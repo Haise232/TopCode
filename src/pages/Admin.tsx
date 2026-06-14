@@ -6,7 +6,8 @@ import { useAuth } from '../hooks/useAuth'
 import { Usuario, Anuncio } from '../lib/types'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
-import { Spinner } from '../components/ui'
+import { Badge, Spinner } from '../components/ui'
+import { CLASE_GROUPS, claseInfo } from '../constants/clases'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -63,6 +64,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [updatingClase, setUpdatingClase] = useState<string | null>(null)
+  const [filtroClase, setFiltroClase] = useState('')
   const [alert, setAlert] = useState<AlertState>(null)
 
   // ── Anuncios ──
@@ -171,9 +174,25 @@ export default function Admin() {
     })
   }
 
+  async function handleClaseChange(u: Usuario, nuevaClase: string) {
+    if (!isSuperAdmin) return
+    setUpdatingClase(u.id)
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ clase: nuevaClase })
+      .eq('id', u.id)
+    setUpdatingClase(null)
+    if (error) {
+      setAlert({ type: 'error', title: 'Error', message: 'No se pudo cambiar la clase: ' + error.message })
+    } else {
+      await cargar()
+    }
+  }
+
   const isSuperAdmin = usuario?.es_superadmin === true
   const admins  = users.filter(u => u.rol === 'admin')
   const alumnos = users.filter(u => u.rol === 'alumno')
+  const usersFiltrados = filtroClase ? users.filter(u => u.clase === filtroClase) : users
 
   if (loading) return <AdminSkeleton />
 
@@ -256,28 +275,44 @@ export default function Admin() {
         >
           {/* Table head */}
           <div
-            className="px-5 py-3.5 flex items-center gap-2"
+            className="px-5 py-3.5 flex items-center justify-between gap-2 flex-wrap"
             style={{ borderBottom: '1px solid var(--overlay-06)' }}
           >
-            <h2 className="font-semibold text-sm text-text-primary">Usuarios</h2>
-            <span
-              className="text-xs font-bold px-2 py-0.5 rounded-full text-primary-light"
-              style={{
-                background: 'rgba(85,239,196,0.12)',
-                border: '1px solid rgba(85,239,196,0.2)',
-              }}
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-sm text-text-primary">Usuarios</h2>
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full text-primary-light"
+                style={{
+                  background: 'rgba(85,239,196,0.12)',
+                  border: '1px solid rgba(85,239,196,0.2)',
+                }}
+              >
+                {usersFiltrados.length}
+              </span>
+            </div>
+            <select
+              value={filtroClase}
+              onChange={e => setFiltroClase(e.target.value)}
+              className="text-xs bg-input border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-slate-100 outline-none transition-all duration-150 focus:border-primary/50"
             >
-              {users.length}
-            </span>
+              <option value="">Todas las clases</option>
+              {CLASE_GROUPS.map(({ label, opciones }) => (
+                <optgroup key={label} label={label}>
+                  {opciones.map(c => (
+                    <option key={c.id} value={c.id}>{c.id}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
 
           {/* User rows */}
-          {users.map((u, idx) => (
+          {usersFiltrados.map((u, idx) => (
             <div
               key={u.id}
               className="flex items-center gap-3.5 px-5 py-3.5 transition-colors duration-100"
               style={{
-                borderBottom: idx < users.length - 1 ? '1px solid var(--overlay-04)' : 'none',
+                borderBottom: idx < usersFiltrados.length - 1 ? '1px solid var(--overlay-04)' : 'none',
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--overlay-02)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
@@ -318,6 +353,41 @@ export default function Admin() {
                   )}
                 </div>
                 <p className="text-xs truncate mt-0.5 text-text-muted">{u.email}</p>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {u.clase ? (
+                    <Badge
+                      style={{
+                        backgroundColor: claseInfo(u.clase)?.bg,
+                        borderColor: claseInfo(u.clase)?.border,
+                        color: claseInfo(u.clase)?.color,
+                      }}
+                    >
+                      {u.clase}
+                    </Badge>
+                  ) : (
+                    <Badge variant="alumno">Sin clase</Badge>
+                  )}
+                  {isSuperAdmin && (
+                    updatingClase === u.id ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <select
+                        value={u.clase ?? ''}
+                        onChange={e => handleClaseChange(u, e.target.value)}
+                        className="text-xs bg-input border border-white/[0.08] rounded-lg px-2 py-1 text-slate-100 outline-none transition-all duration-150 focus:border-primary/50"
+                      >
+                        <option value="" disabled>Sin clase</option>
+                        {CLASE_GROUPS.map(({ label, opciones }) => (
+                          <optgroup key={label} label={label}>
+                            {opciones.map(c => (
+                              <option key={c.id} value={c.id}>{c.id}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    )
+                  )}
+                </div>
               </div>
 
               {/* Role toggle */}
@@ -415,7 +485,7 @@ export default function Admin() {
               value={nuevoTitulo}
               onChange={e => setNuevoTitulo(e.target.value)}
               placeholder="Título del anuncio..."
-              className="input-base"
+              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]"
               maxLength={100}
             />
             <textarea
@@ -423,7 +493,7 @@ export default function Admin() {
               onChange={e => setNuevoContenido(e.target.value)}
               placeholder="Escribe aquí el mensaje completo para los alumnos..."
               rows={4}
-              className="input-base resize-none"
+              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]"
               maxLength={1000}
             />
             <div className="flex items-center justify-between">

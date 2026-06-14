@@ -11,10 +11,14 @@
             "id": "8c20dcca4bf9298e",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Plan-Migracion-Tailwind.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "Nueva pestaña"
+              "title": "Plan-Migracion-Tailwind"
             }
           }
         ]
@@ -178,15 +182,21 @@
   },
   "active": "8c20dcca4bf9298e",
   "lastOpenFiles": [
+    "Paginas/Login.md",
+    "Paginas/Home.md",
+    "Paginas/Admin.md",
+    "Paginas/Actividades.md",
+    "Lib-y-Contexts/constants-materias.md",
+    "Lib-y-Contexts/AuthContext.md",
+    "Componentes/AnuncioModal.md",
+    "Componentes/AlertModal.md",
     "Componentes/ErrorBoundary.md",
     "Lib-y-Contexts/lib-supabase.md",
     "Lib-y-Contexts/lib-supabase.md.tmp.8759.5be02c8f205b",
     "Componentes/Loading.md",
-    "Componentes/AnuncioModal.md",
     "Paginas/Apuntes.md",
     "Lib-y-Contexts/ThemeContext.md",
     "Lib-y-Contexts/ThemeContext.md.tmp.8759.812b549b8015",
-    "Lib-y-Contexts/AuthContext.md",
     "Lib-y-Contexts/AuthContext.md.tmp.8759.32026dd8ddb0",
     "00 - Indice.md"
   ]

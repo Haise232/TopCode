@@ -6,10 +6,10 @@ type ButtonVariant = 'primary' | 'ghost' | 'danger' | 'subtle'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
-  primary: 'btn-primary',
-  ghost: 'btn-ghost',
-  danger: 'btn-danger',
-  subtle: 'btn-subtle',
+  primary: 'bg-gradient-to-br from-primary to-cyan-400 text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-primary',
+  ghost: 'bg-surface border text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-slate-200 active:scale-[0.98] transition-all duration-200 border-white/[0.08]',
+  danger: 'bg-gradient-to-br from-rose-500 to-rose-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-rose',
+  subtle: 'font-medium rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 bg-teal-500/10 text-teal border border-teal-500/20 hover:bg-teal-500/15',
 }
 
 const SIZE_CLASS: Record<ButtonSize, string> = {

@@ -112,7 +112,7 @@ export default function AlertModal({
           <>
             <button
               onClick={onClose}
-              className="flex-1 btn-ghost py-2.5 text-sm"
+              className="flex-1 bg-surface border border-white/[0.08] text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-slate-200 active:scale-[0.98] transition-all duration-200 py-2.5 text-sm"
             >
               Cancelar
             </button>

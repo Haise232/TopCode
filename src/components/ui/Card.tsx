@@ -5,9 +5,9 @@ type CardVariant = 'default' | 'teal' | 'rose'
 type CardPadding = 'none' | 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASS: Record<CardVariant, string> = {
-  default: 'card',
-  teal: 'card-teal',
-  rose: 'card-rose',
+  default: 'bg-surface rounded-2xl border border-white/[0.06] shadow-card hover:shadow-card-hover hover:border-white/[0.09]',
+  teal: 'bg-surface rounded-2xl border border-teal-500/20 shadow-card hover:shadow-card-hover hover:border-teal-500/30',
+  rose: 'bg-surface rounded-2xl border border-rose-500/20 shadow-card hover:shadow-card-hover hover:border-rose-500/30',
 }
 
 const PADDING_CLASS: Record<CardPadding, string> = {

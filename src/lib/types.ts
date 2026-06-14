@@ -1,3 +1,5 @@
+import { ClaseId } from '../constants/clases'
+
 export interface Usuario {
   id: string
   nombre: string
@@ -6,6 +8,7 @@ export interface Usuario {
   avatar_url: string | null
   banner_url: string | null
   rol: 'alumno' | 'admin'
+  clase: ClaseId | null
   es_superadmin: boolean
   created_at: string
 }

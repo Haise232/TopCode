@@ -17,7 +17,7 @@ export function Spinner({ size = 'md', className }: SpinnerProps) {
   return (
     <span
       className={cn('inline-block rounded-full animate-spin-smooth', SIZE_CLASS[size], className)}
-      style={{ borderColor: 'var(--color-spinner-track)', borderTopColor: 'currentColor' }}
+      style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'currentColor' }}
       aria-hidden="true"
     />
   )

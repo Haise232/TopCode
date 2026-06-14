@@ -259,7 +259,7 @@ export default function Actividades() {
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             </button>
             {isAdmin && (
-              <button onClick={() => setModalVisible(true)} className="btn-primary px-4 py-2.5 text-sm">
+              <button onClick={() => setModalVisible(true)} className="bg-gradient-to-br from-primary to-cyan-400 text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-primary px-4 py-2.5 text-sm">
                 <Plus size={15} /> Nueva actividad
               </button>
             )}
@@ -377,7 +377,7 @@ export default function Actividades() {
               <form onSubmit={handleCrear} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-text-secondary">Título *</label>
-                  <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej: Práctica 3 — Herencia en Java" className="input-base" autoFocus />
+                  <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej: Práctica 3 — Herencia en Java" className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]" autoFocus />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-text-secondary">Materia</label>
@@ -385,7 +385,7 @@ export default function Actividades() {
                     value={materia}
                     onChange={e => setMateria(e.target.value)}
                     placeholder="Selecciona o escribe..."
-                    className="input-base"
+                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]"
                     list="materias-list"
                   />
                   <datalist id="materias-list">
@@ -394,11 +394,11 @@ export default function Actividades() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-text-secondary">Descripción (opcional)</label>
-                  <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Instrucciones, recursos, etc." rows={3} className="input-base resize-none" />
+                  <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Instrucciones, recursos, etc." rows={3} className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-text-secondary">Fecha y hora límite *</label>
-                  <input type="datetime-local" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} className="input-base [color-scheme:dark]" />
+                  <input type="datetime-local" value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(85,239,196,0.12)]" />
                   {fechaEntrega && (
                     <p className="text-xs capitalize text-text-muted">
                       {new Date(fechaEntrega).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}

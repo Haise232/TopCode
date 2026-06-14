@@ -5,9 +5,9 @@ type IconButtonVariant = 'ghost' | 'surface' | 'glass'
 type IconButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASS: Record<IconButtonVariant, string> = {
-  ghost: 'btn-ghost',
-  surface: 'bg-surface-2 border border-border text-text-secondary hover:text-text-primary',
-  glass: 'glass border border-border text-text-secondary hover:text-text-primary',
+  ghost: 'bg-surface border border-white/[0.08] text-text-secondary hover:bg-surface-2 hover:text-slate-200',
+  surface: 'bg-surface-2 border border-white/[0.08] text-text-secondary hover:text-text-primary',
+  glass: 'bg-surface/95 backdrop-blur-xl border border-white/[0.08] text-text-secondary hover:text-text-primary',
 }
 
 const SIZE_CLASS: Record<IconButtonSize, string> = {

@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
   -- La versión web no usa notificaciones push nativas.
   rol        TEXT NOT NULL DEFAULT 'alumno'
                CHECK (rol IN ('alumno', 'admin')),
+  clase      TEXT DEFAULT NULL
+               CHECK (clase IN (
+                 '1º DAM A','1º DAM B','2º DAM A','2º DAM B',
+                 '1º DAW A','1º DAW B','2º DAW A','2º DAW B',
+                 '1º ASIR A','1º ASIR B','2º ASIR A','2º ASIR B'
+               )),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -51,6 +57,8 @@ COMMENT ON COLUMN public.usuarios.promedio IS
   'Media de todas las notas del alumno. Se recalcula automáticamente desde el frontend tras cada INSERT/DELETE en notas.';
 COMMENT ON COLUMN public.usuarios.rol IS
   'Rol de acceso: alumno (lectura) o admin (gestión de eventos y roles).';
+COMMENT ON COLUMN public.usuarios.clase IS
+  'Grupo-clase del alumno: curso (1º/2º) + ciclo (DAM/DAW/ASIR) + subgrupo (A/B). NULL hasta que el usuario la configure.';
 
 
 -- ────────────────────────────────────────────────────────────
@@ -314,6 +322,24 @@ ALTER TABLE public.usuarios
 -- Normalizar filas con NULL en rol (migración de datos)
 UPDATE public.usuarios SET rol = 'alumno' WHERE rol IS NULL;
 
+-- clase: grupo-clase del alumno (curso + ciclo + subgrupo A/B).
+-- Añadida para soportar Informática 1 y 2 de DAM/DAW/ASIR (12 grupos).
+DO $$ BEGIN
+  ALTER TABLE public.usuarios
+    ADD COLUMN IF NOT EXISTS clase TEXT DEFAULT NULL;
+  ALTER TABLE public.usuarios
+    ADD CONSTRAINT usuarios_clase_check CHECK (clase IN (
+      '1º DAM A','1º DAM B','2º DAM A','2º DAM B',
+      '1º DAW A','1º DAW B','2º DAW A','2º DAW B',
+      '1º ASIR A','1º ASIR B','2º ASIR A','2º ASIR B'
+    ));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Todos los usuarios existentes hasta esta migración son de 1º DAM B
+UPDATE public.usuarios SET clase = '1º DAM B' WHERE clase IS NULL;
+
 -- avatar_url (referenciada en Profile.tsx, Chat.tsx, Admin.tsx)
 ALTER TABLE public.usuarios
   ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT NULL;
@@ -469,13 +495,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.usuarios (id, nombre, email, promedio, rol)
+  INSERT INTO public.usuarios (id, nombre, email, promedio, rol, clase)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'nombre', split_part(NEW.email, '@', 1)),
     NEW.email,
     0,
-    'alumno'
+    'alumno',
+    NEW.raw_user_meta_data->>'clase'
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
@@ -945,6 +972,7 @@ RETURNS TABLE (
   avatar_url    text,
   banner_url    text,
   rol           text,
+  clase         text,
   es_superadmin boolean,
   created_at    timestamptz
 )
@@ -953,7 +981,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT id, nombre, email, promedio, avatar_url, banner_url, rol, es_superadmin, created_at
+  SELECT id, nombre, email, promedio, avatar_url, banner_url, rol, clase, es_superadmin, created_at
   FROM public.usuarios
   WHERE id = auth.uid()
   LIMIT 1;
@@ -976,6 +1004,7 @@ RETURNS TABLE (
   avatar_url    text,
   banner_url    text,
   rol           text,
+  clase         text,
   es_superadmin boolean,
   created_at    timestamptz
 )
@@ -985,7 +1014,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT u.id, u.nombre, u.email, u.promedio, u.avatar_url, u.banner_url,
-         u.rol, u.es_superadmin, u.created_at
+         u.rol, u.clase, u.es_superadmin, u.created_at
   FROM public.usuarios u
   WHERE EXISTS (
     SELECT 1 FROM public.usuarios
