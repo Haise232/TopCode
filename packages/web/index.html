@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="apple-touch-icon" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TopCode — Intranet académica para gestión de notas, apuntes y comunicación del equipo" />
+    <meta name="theme-color" content="#f8fafc" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>TopCode</title>
+    <!--
+      Preconnect al proyecto Supabase: el plugin de Vite inyecta el hint exacto
+      (con el slug del proyecto) durante el build cuando VITE_SUPABASE_URL está
+      definida. Las líneas de abajo cubren el DNS compartido de la plataforma
+      y sirven de fallback si el build corre sin la variable de entorno.
+    -->
+    <link rel="dns-prefetch" href="https://supabase.co" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,64 @@
+.starfield {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.starfield-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent;
+}
+
+/* ── Pequeñas (1px) ── */
+.starfield-small {
+  width: 1px;
+  height: 1px;
+  animation: animStar 50s linear infinite;
+}
+.starfield-small::after {
+  content: " ";
+  position: absolute;
+  top: 2000px;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+}
+
+/* ── Medianas (2px) ── */
+.starfield-medium {
+  width: 2px;
+  height: 2px;
+  animation: animStar 100s linear infinite;
+}
+.starfield-medium::after {
+  content: " ";
+  position: absolute;
+  top: 2000px;
+  width: 2px;
+  height: 2px;
+  background: transparent;
+}
+
+/* ── Grandes (3px) ── */
+.starfield-large {
+  width: 3px;
+  height: 3px;
+  animation: animStar 150s linear infinite;
+}
+.starfield-large::after {
+  content: " ";
+  position: absolute;
+  top: 2000px;
+  width: 3px;
+  height: 3px;
+  background: transparent;
+}
+
+@keyframes animStar {
+  from { transform: translateY(0px); }
+  to   { transform: translateY(-2000px); }
+}
