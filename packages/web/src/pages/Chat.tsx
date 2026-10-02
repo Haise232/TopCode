@@ -129,7 +129,6 @@ function MessageInput({
   onTyping,
   placeholder,
   inputRef,
-  accentColor: _accentColor = '#3d9f89',
   accentGlow = 'rgba(61,159,137,0.08)',
   accentBorder = 'rgba(61,159,137,0.4)',
   gradientFrom = '#3d9f89',

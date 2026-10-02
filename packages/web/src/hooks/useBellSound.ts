@@ -3,7 +3,8 @@ import { useCallback } from 'react'
 export function useBellSound() {
   const play = useCallback(() => {
     try {
-      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
+      const w = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
+      const AudioCtx = w.AudioContext || w.webkitAudioContext
       if (!AudioCtx) return
       const ctx = new AudioCtx()
 

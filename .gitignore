@@ -34,3 +34,11 @@ yarn-error.log*
 .mcp.json
 .expo/
 supabase/.temp/
+.env.*
+!.env.example
+
+# Expo prebuild y firmas
+android/
+ios/
+*.keystore
+*.jks
