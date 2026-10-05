@@ -23,7 +23,7 @@ export function getDb(): SupabaseClient {
   return cliente
 }
 
-export type Paso = 'tipo' | 'materia' | 'fecha' | 'confirmar'
+export type Paso = 'tipo' | 'materia' | 'fecha' | 'confirmar' | 'descripcion'
 
 export interface PayloadPendiente {
   titulo: string
@@ -31,10 +31,12 @@ export interface PayloadPendiente {
   materia: string | null
   fecha: string | null
   hora: string | null
+  /** Opcional; se añade desde el resumen final */
+  descripcion: string | null
   paso: Paso
 }
 
-const PASOS: readonly Paso[] = ['tipo', 'materia', 'fecha', 'confirmar']
+const PASOS: readonly Paso[] = ['tipo', 'materia', 'fecha', 'confirmar', 'descripcion']
 
 /** Normaliza un payload leido de la BD; null si esta corrupto. */
 function leerPayload(raw: unknown): PayloadPendiente | null {
@@ -46,6 +48,7 @@ function leerPayload(raw: unknown): PayloadPendiente | null {
     materia: typeof p.materia === 'string' ? p.materia : null,
     fecha: typeof p.fecha === 'string' ? p.fecha : null,
     hora: typeof p.hora === 'string' ? p.hora : null,
+    descripcion: typeof p.descripcion === 'string' ? p.descripcion : null,
     paso: p.paso as Paso,
   }
 }
@@ -146,7 +149,9 @@ export async function iniciarAsistente(telegramId: number, titulo: string): Prom
   const db = getDb()
   const { error: e0 } = await db.from('telegram_pendientes').delete().eq('telegram_user_id', telegramId)
   if (e0) throw e0
-  const payload: PayloadPendiente = { titulo, tipo: null, materia: null, fecha: null, hora: null, paso: 'tipo' }
+  const payload: PayloadPendiente = {
+    titulo, tipo: null, materia: null, fecha: null, hora: null, descripcion: null, paso: 'tipo',
+  }
   const { data, error } = await db
     .from('telegram_pendientes')
     .insert({ telegram_user_id: telegramId, payload, expira_en: expiraEn() })
@@ -156,15 +161,15 @@ export async function iniciarAsistente(telegramId: number, titulo: string): Prom
   return data.id as string
 }
 
-/** Pendiente mas reciente del usuario en paso 'fecha' y sin caducar. */
-export async function pendienteEnPasoFecha(
+/** Pendiente mas reciente del usuario que espera texto (paso 'fecha' o 'descripcion') y sin caducar. */
+export async function pendienteEsperandoTexto(
   telegramId: number,
 ): Promise<{ id: string; payload: PayloadPendiente } | null> {
   const { data, error } = await getDb()
     .from('telegram_pendientes')
     .select('id, payload')
     .eq('telegram_user_id', telegramId)
-    .eq('payload->>paso', 'fecha')
+    .in('payload->>paso', ['fecha', 'descripcion'])
     .gt('expira_en', new Date().toISOString())
     .order('expira_en', { ascending: false })
     .limit(1)
@@ -247,7 +252,14 @@ export async function descartarPendiente(id: string, telegramId: number): Promis
  */
 export async function crearEventoTelegram(
   telegramId: number,
-  p: { titulo: string; fecha: string; hora: string | null; materia: string | null; tipo: TipoEvento },
+  p: {
+    titulo: string
+    fecha: string
+    hora: string | null
+    materia: string | null
+    tipo: TipoEvento
+    descripcion: string | null
+  },
 ): Promise<string | null> {
   const { data, error } = await getDb().rpc('crear_evento_telegram', {
     p_telegram_id: telegramId,
@@ -256,6 +268,7 @@ export async function crearEventoTelegram(
     p_hora: p.hora,
     p_materia: p.materia,
     p_tipo: p.tipo,
+    p_descripcion: p.descripcion,
   })
   if (error) throw error
   return typeof data === 'string' && data.length > 0 ? data : null

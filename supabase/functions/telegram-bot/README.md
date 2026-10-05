@@ -9,7 +9,9 @@ Archivos: `index.ts` (punto de entrada, solo `Deno.serve(handler)`), `handler.ts
 `db.ts` (acceso a Supabase), `parser.ts` y `materias.ts` (interpretación del texto).
 Requiere aplicar, en este orden, `supabase/migracion_telegram.sql` y después
 `supabase/migracion_telegram_v2.sql` (RPC `crear_evento_telegram`, nueva firma de
-`consumir_codigo_telegram` y columna `telegram_username`).
+`consumir_codigo_telegram` y columna `telegram_username`), luego
+`supabase/migracion_tipos_evento.sql` (columna `tipo`, parámetro `p_tipo`) y por último
+`supabase/migracion_telegram_descripcion.sql` (parámetro `p_descripcion`).
 
 En Vercel (frontend) hay que definir `VITE_TELEGRAM_BOT_USERNAME` con el usuario del
 bot (sin `@`) para que el Perfil muestre el enlace al bot.
@@ -71,7 +73,7 @@ curl -sS "https://api.telegram.org/bot<token-de-botfather>/getWebhookInfo"
 2. En el chat privado con el bot: `/vincular 123456`.
 3. Escribe el evento, p. ej. "entrega 7/11 DPL 23:59", y pulsa "Crear".
 
-Es un asistente paso a paso: (1) escribes el título (texto libre), (2) eliges el tipo (actividad, trabajo, examen teórico, examen práctico, presentación, especial), (3) la asignatura o "Sin asignatura", (4) la fecha de fin (botones Hoy/Mañana/Pasado mañana o escribiéndola, p. ej. "viernes", "22/10", "jueves 23:59"), (5) confirmas con "Crear". Hay un botón Cancelar en cada paso. El estado vive en `telegram_pendientes.payload` (`paso`: tipo | materia | fecha | confirmar) y caduca a los 30 min, renovándose en cada paso; los botones de pasos anteriores se ignoran. `/proximos` muestra el tipo de cada evento.
+Es un asistente paso a paso: (1) escribes el título (texto libre), (2) eliges el tipo (actividad, trabajo, examen teórico, examen práctico, presentación, especial), (3) la asignatura o "Sin asignatura", (4) la fecha de fin (botones Hoy/Mañana/Pasado mañana o escribiéndola, p. ej. "viernes", "22/10", "jueves 23:59"), (5) confirmas con "Crear"; antes, opcionalmente, "Añadir descripción" pide el texto (máx. 1000 caracteres, admite saltos de línea; "Sin descripción" la quita) y vuelve al resumen. Hay un botón Cancelar en cada paso. El estado vive en `telegram_pendientes.payload` (`paso`: tipo | materia | fecha | confirmar | descripcion) y caduca a los 30 min, renovándose en cada paso; los botones de pasos anteriores se ignoran. `/proximos` muestra el tipo de cada evento.
 
 Comandos: `/start`, `/ayuda`, `/vincular <código>`, `/proximos`, `/desvincular`.
 

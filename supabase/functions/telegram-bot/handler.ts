@@ -14,7 +14,7 @@ import {
   descartarPendiente,
   iniciarAsistente,
   obtenerAutorizacion,
-  pendienteEnPasoFecha,
+  pendienteEsperandoTexto,
   proximosEventos,
 } from './db.ts'
 import type { EventoResumen, Paso, PayloadPendiente } from './db.ts'
@@ -25,6 +25,7 @@ import type { TgCallbackQuery, TgMessage, TgUpdate } from './telegram.ts'
 const MAX_BODY_BYTES = 64 * 1024
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ZONA = 'Europe/Madrid'
+const DESCRIPCION_MAX = 1000
 
 const TEXTO_VINCULAR =
   'Hola, soy el bot de TopCode. Para usarlo debes vincular tu cuenta:\n\n' +
@@ -42,7 +43,7 @@ const TEXTO_AYUDA =
   '2. Elige el tipo con los botones (actividad, trabajo, examen teórico, examen práctico, presentación o especial).\n' +
   '3. Elige la asignatura (o "Sin asignatura").\n' +
   '4. Indica la fecha de fin: pulsa Hoy / Mañana / Pasado mañana o escríbela (p. ej. "viernes", "22/10", "jueves 23:59", "mañana a las 10").\n' +
-  '5. Revisa el resumen y pulsa Crear.\n\n' +
+  '5. Revisa el resumen y pulsa Crear. Si quieres, antes pulsa "Añadir descripción" y escríbela (opcional).\n\n' +
   'En cualquier paso puedes pulsar Cancelar. El asistente caduca a los 30 minutos sin actividad.\n\n' +
   'Comandos:\n' +
   '/proximos - próximos 10 eventos de tu clase\n' +
@@ -161,21 +162,34 @@ function tecladoFecha(id: string) {
   }
 }
 
-function tecladoConfirmar(id: string) {
+function tecladoConfirmar(id: string, p: PayloadPendiente) {
   return {
-    inline_keyboard: [[
-      { text: '✅ Crear', callback_data: `ok:${id}` },
-      BTN_CANCELAR(id),
-    ]],
+    inline_keyboard: [
+      [{ text: p.descripcion ? '✏️ Cambiar descripción' : '🗒️ Añadir descripción', callback_data: `d:${id}` }],
+      [{ text: '✅ Crear', callback_data: `ok:${id}` }, BTN_CANCELAR(id)],
+    ],
+  }
+}
+
+function tecladoDescripcion(id: string) {
+  return {
+    inline_keyboard: [
+      [{ text: 'Sin descripción', callback_data: `sd:${id}` }],
+      [BTN_CANCELAR(id)],
+    ],
   }
 }
 
 function resumenCompleto(p: PayloadPendiente, avisos: string[] = []): string {
   const fecha = p.fecha ? fechaLegible(p.fecha) + (p.hora ? ` · ${p.hora}` : '') : ''
   let t = `${p.tipo ? prefijoTipo(p.tipo) : ''}\n📝 ${p.titulo}\n📚 ${p.materia ?? 'Sin asignatura'}\n📅 ${fecha}`
+  if (p.descripcion) t += `\n🗒️ ${p.descripcion}`
   if (avisos.length > 0) t += '\n\n' + avisos.map((a) => '⚠️ ' + a).join('\n')
   return t + '\n\n¿Lo creo en el calendario?'
 }
+
+const TEXTO_DESCRIPCION =
+  `🗒️ Escribe la descripción del evento (máximo ${DESCRIPCION_MAX} caracteres) o pulsa «Sin descripción».`
 
 const TEXTO_FECHA =
   '📅 ¿Fecha de fin? Escríbela (p. ej. «viernes», «22/10», «jueves 23:59», «mañana a las 10») o pulsa un botón.'
@@ -189,8 +203,10 @@ function preguntaPaso(id: string, p: PayloadPendiente): { texto: string; teclado
       return { texto: `📝 ${p.titulo}\n${prefijoTipo(p.tipo)}\n\n📚 ¿De qué asignatura?`, teclado: tecladoMateria(id) }
     case 'fecha':
       return { texto: `📝 ${p.titulo}\n${prefijoTipo(p.tipo)}\n📚 ${p.materia ?? 'Sin asignatura'}\n\n${TEXTO_FECHA}`, teclado: tecladoFecha(id) }
+    case 'descripcion':
+      return { texto: `📝 ${p.titulo}\n\n${TEXTO_DESCRIPCION}`, teclado: tecladoDescripcion(id) }
     default:
-      return { texto: resumenCompleto(p), teclado: tecladoConfirmar(id) }
+      return { texto: resumenCompleto(p), teclado: tecladoConfirmar(id, p) }
   }
 }
 
@@ -207,6 +223,16 @@ const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 function normalizarTitulo(texto: string): string {
   const t = texto.replace(/\p{C}/gu, ' ').replace(/\s+/g, ' ').trim()
   return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+/** Descripcion desde texto libre: conserva saltos de linea, quita otros caracteres de control. */
+function normalizarDescripcion(texto: string): string {
+  return texto
+    .replace(/\r\n?/g, '\n')
+    .replace(/[^\P{C}\n]/gu, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 function hoyMadrid(): string {
@@ -292,13 +318,39 @@ async function manejarTexto(chatId: number, telegramId: number, texto: string): 
     await enviarMensaje(chatId, 'Tu cuenta no tiene permiso para crear eventos (hace falta ser administrador con clase asignada).')
     return
   }
+
+  const esperando = await pendienteEsperandoTexto(telegramId)
+
+  // Si hay un asistente esperando la descripcion, el texto es la descripcion.
+  if (esperando?.payload.paso === 'descripcion') {
+    const descripcion = normalizarDescripcion(texto)
+    if (descripcion.length > DESCRIPCION_MAX) {
+      await enviarMensaje(
+        chatId,
+        `La descripción es demasiado larga (${descripcion.length} caracteres, máximo ${DESCRIPCION_MAX}). Acórtala y vuelve a enviarla.`,
+        tecladoDescripcion(esperando.id),
+      )
+      return
+    }
+    const nuevo = await avanzarPendiente(esperando.id, telegramId, 'descripcion', {
+      descripcion: descripcion || null,
+      paso: 'confirmar',
+    })
+    if (nuevo === null || nuevo === 'otro_paso') {
+      await enviarMensaje(chatId, 'Caducado, vuelve a escribirlo.')
+      return
+    }
+    await enviarMensaje(chatId, resumenCompleto(nuevo), tecladoConfirmar(esperando.id, nuevo))
+    return
+  }
+
   if (texto.length > TEXTO_MAX) {
     await enviarMensaje(chatId, `El mensaje es demasiado largo (máximo ${TEXTO_MAX} caracteres).`)
     return
   }
 
   // Si hay un asistente esperando la fecha, el texto es la fecha.
-  const enFecha = await pendienteEnPasoFecha(telegramId)
+  const enFecha = esperando?.payload.paso === 'fecha' ? esperando : null
   if (enFecha) {
     const r = parseFechaHora(texto, new Date())
     if (!r.ok) {
@@ -314,7 +366,7 @@ async function manejarTexto(chatId: number, telegramId: number, texto: string): 
       await enviarMensaje(chatId, 'Caducado, vuelve a escribirlo.')
       return
     }
-    await enviarMensaje(chatId, resumenCompleto(nuevo, r.avisos), tecladoConfirmar(enFecha.id))
+    await enviarMensaje(chatId, resumenCompleto(nuevo, r.avisos), tecladoConfirmar(enFecha.id, nuevo))
     return
   }
 
@@ -326,7 +378,7 @@ async function manejarTexto(chatId: number, telegramId: number, texto: string): 
     return
   }
   const id = await iniciarAsistente(telegramId, titulo)
-  const q = preguntaPaso(id, { titulo, tipo: null, materia: null, fecha: null, hora: null, paso: 'tipo' })
+  const q = preguntaPaso(id, { titulo, tipo: null, materia: null, fecha: null, hora: null, descripcion: null, paso: 'tipo' })
   await enviarMensaje(chatId, q.texto, q.teclado)
 }
 
@@ -372,6 +424,24 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
     return
   }
 
+  // Descripcion: d:<uuid> (pedirla desde el resumen), sd:<uuid> (volver sin descripcion).
+  const desc = /^(d|sd):([^:]+)$/.exec(cb.data ?? '')
+  if (desc) {
+    const [, accion, id] = desc
+    if (!UUID_RE.test(id)) return
+    const nuevo = accion === 'd'
+      ? await avanzarPendiente(id, telegramId, 'confirmar', { paso: 'descripcion' })
+      : await avanzarPendiente(id, telegramId, 'descripcion', { descripcion: null, paso: 'confirmar' })
+    if (nuevo === 'otro_paso') return
+    if (!nuevo) {
+      await editarMensaje(chatId, mensajeId, 'Caducado, vuelve a escribirlo.')
+      return
+    }
+    const q = preguntaPaso(id, nuevo)
+    await editarMensaje(chatId, mensajeId, q.texto, q.teclado)
+    return
+  }
+
   const m = /^(ok|no):(.+)$/.exec(cb.data ?? '')
   if (!m || !UUID_RE.test(m[2])) return
   const [, accion, id] = m
@@ -390,11 +460,12 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
   }
 
   // Revalidacion del payload completo antes de crear.
-  const { titulo, tipo, fecha, hora, materia } = pendiente
+  const { titulo, tipo, fecha, hora, materia, descripcion } = pendiente
   const materiaOk = materia === null || MATERIAS.some((x) => x.nombreCorto === materia)
   if (
     !titulo || titulo.length > TITULO_MAX || !esTipoEvento(tipo) || !materiaOk ||
-    !fecha || !FECHA_RE.test(fecha) || (hora !== null && !HORA_RE.test(hora))
+    !fecha || !FECHA_RE.test(fecha) || (hora !== null && !HORA_RE.test(hora)) ||
+    (descripcion !== null && descripcion.length > DESCRIPCION_MAX)
   ) {
     await editarMensaje(chatId, mensajeId, 'Faltan datos del evento. Vuelve a escribirlo.')
     return
@@ -403,7 +474,7 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
   // La RPC revalida admin, clase y aprobado e inserta de forma atomica.
   let eventoId: string | null
   try {
-    eventoId = await crearEventoTelegram(telegramId, { titulo, tipo, fecha, hora, materia })
+    eventoId = await crearEventoTelegram(telegramId, { titulo, tipo, fecha, hora, materia, descripcion })
   } catch (err) {
     console.error('Error al insertar evento:', msgError(err))
     await editarMensaje(chatId, mensajeId, 'No se ha podido crear el evento. Vuelve a escribirlo.')
@@ -413,7 +484,9 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
     await editarMensaje(chatId, mensajeId, 'No tienes permiso para crear eventos')
     return
   }
-  await editarMensaje(chatId, mensajeId, '✅ Evento creado:\n' + lineaConTipo({ titulo, tipo, fecha, hora, materia }))
+  let creado = '✅ Evento creado:\n' + lineaConTipo({ titulo, tipo, fecha, hora, materia })
+  if (descripcion) creado += `\n🗒️ ${descripcion}`
+  await editarMensaje(chatId, mensajeId, creado)
 }
 
 async function manejarMensaje(msg: TgMessage): Promise<void> {
