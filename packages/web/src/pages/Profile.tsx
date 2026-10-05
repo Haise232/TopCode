@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, KeyboardEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays, Users, Github, Globe, Link2, Code, X as XIcon } from 'lucide-react'
+import { Camera, Save, ArrowLeft, LogOut, Shield, GraduationCap, TrendingUp, CalendarDays, Users, Github, Globe, Link2, Code, X as XIcon, Send, Copy, Check, ExternalLink } from 'lucide-react'
 import { supabase, subirAvatar } from '../lib/supabase'
+import { useTelegramVinculo, type CodigoTelegram } from '@topcode/shared'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
 import { Badge, Button, Spinner } from '../components/ui'
@@ -101,6 +102,145 @@ function PublicProfile({ userId }: { userId: string }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function TelegramSection() {
+  const { vinculado, vinculadoDesde, telegramUserId, telegramUsername, loading, error, generarCodigo, desvincular, refresh } = useTelegramVinculo()
+  const [codigo, setCodigo] = useState<CodigoTelegram | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [unlinking, setUnlinking] = useState(false)
+  const [confirmUnlink, setConfirmUnlink] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [restante, setRestante] = useState(0)
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME?.replace(/^@/, '').trim()
+
+  const expiraMs = codigo ? new Date(codigo.expiraEn).getTime() : null
+
+  useEffect(() => {
+    if (expiraMs === null) return
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((expiraMs - Date.now()) / 1000))
+      setRestante(left)
+      if (left === 0) setCodigo(null)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [expiraMs])
+
+  // Mientras hay un código activo se consulta el estado para detectar que el vínculo se ha completado en Telegram.
+  const hayCodigo = codigo !== null
+  useEffect(() => {
+    if (!hayCodigo) return
+    const id = setInterval(() => { void refresh() }, 5000)
+    return () => clearInterval(id)
+  }, [hayCodigo, refresh])
+
+  useEffect(() => { if (vinculado) setCodigo(null) }, [vinculado])
+
+  async function handleGenerar() {
+    setGenerating(true)
+    setCopied(false)
+    const res = await generarCodigo()
+    setCodigo(res)
+    setGenerating(false)
+  }
+
+  async function handleDesvincular() {
+    setUnlinking(true)
+    const { error: err } = await desvincular()
+    setUnlinking(false)
+    setConfirmUnlink(false)
+    if (!err) setCodigo(null)
+  }
+
+  const comando = codigo ? `/vincular ${codigo.codigo}` : ''
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(comando)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  const mm = String(Math.floor(restante / 60)).padStart(2, '0')
+  const ss = String(restante % 60).padStart(2, '0')
+
+  return (
+    <div className="p-5 rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-primary to-primary-dark" />
+        <h2 className="font-semibold text-base text-text-primary">Telegram</h2>
+      </div>
+
+      {loading && !codigo && !vinculado ? (
+        <Spinner size="sm" />
+      ) : vinculado ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="admin"><Send size={10} />Vinculado</Badge>
+            {vinculadoDesde && (
+              <span className="text-xs text-text-muted">
+                desde {new Date(vinculadoDesde).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-text-primary">
+            Cuenta vinculada:{' '}
+            <span className="font-medium">
+              {telegramUsername ? `@${telegramUsername}` : telegramUserId ? `ID de Telegram ${telegramUserId}` : 'cuenta de Telegram'}
+            </span>
+          </p>
+          <p className="text-sm text-text-secondary">Puedes crear eventos del calendario escribiéndole al bot.</p>
+          <p className="text-xs text-text-muted">Si no reconoces esta cuenta, desvincúlala.</p>
+          {confirmUnlink ? (
+            <div className="flex gap-2">
+              <Button variant="danger" size="sm" loading={unlinking} onClick={handleDesvincular}>Confirmar</Button>
+              <Button variant="ghost" size="sm" disabled={unlinking} onClick={() => setConfirmUnlink(false)}>Cancelar</Button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className="w-fit" onClick={() => setConfirmUnlink(true)}>Desvincular</Button>
+          )}
+        </div>
+      ) : codigo ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-text-secondary">Envía este mensaje al bot de Telegram:</p>
+          <div className="text-center text-3xl font-extrabold tracking-[0.3em] tabular-nums text-primary-light" aria-label="Código de vinculación">
+            {codigo.codigo}
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-slate-100">{comando}</code>
+            <Button variant="ghost" size="sm" onClick={handleCopy} icon={copied ? <Check size={14} /> : <Copy size={14} />}>
+              {copied ? 'Copiado' : 'Copiar'}
+            </Button>
+          </div>
+          <p className="text-xs text-text-muted" role="timer">Caduca en {mm}:{ss}</p>
+          {botUsername && (
+            <a
+              href={`https://t.me/${encodeURIComponent(botUsername)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-primary-light hover:underline w-fit"
+            >
+              <ExternalLink size={13} /> Abrir @{botUsername}
+            </a>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-text-secondary">Vincula tu cuenta de Telegram para crear eventos del calendario desde el bot.</p>
+          <Button onClick={handleGenerar} loading={generating} icon={<Send size={14} />} className="py-2.5 text-sm">
+            Vincular Telegram
+          </Button>
+        </div>
+      )}
+
+      {error && <p className="mt-3 text-xs text-rose-500" role="alert">{error}</p>}
     </div>
   )
 }
@@ -485,6 +625,8 @@ function OwnProfile() {
             </Button>
           </form>
         </div>
+
+        {usuario?.rol === 'admin' && usuario.clase && usuario.estado_acceso === 'aprobado' && <TelegramSection />}
 
         {/* ── Sesión ── */}
         <div className="p-5 rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">

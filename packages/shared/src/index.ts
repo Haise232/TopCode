@@ -31,6 +31,8 @@ export { MATERIAS } from './constants/materias'
 // Hooks
 export { useDataInit } from './hooks/useDataInit'
 export { useEventos } from './hooks/useEventos'
+export { useTelegramVinculo } from './hooks/useTelegramVinculo'
+export type { CodigoTelegram } from './hooks/useTelegramVinculo'
 export { useActividades } from './hooks/useActividades'
 export { useHomeDatos } from './hooks/useHomeDatos'
 export { useHorario } from './hooks/useHorario'
