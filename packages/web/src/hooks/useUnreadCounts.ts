@@ -6,7 +6,7 @@ export interface UnreadCounts {
   chat: number        // mensajes públicos (último día)
   dm: number          // DMs no leídos desde última visita a /chat
   dmSenders: string[] // nombres de los remitentes con DMs no leídos
-  actividades: number // actividades creadas desde última visita a /actividades
+  actividades: number // actividades/trabajos creados desde última visita a la vista Actividades del calendario
   docs: number        // páginas de documentación creadas desde última visita a /docs
 }
 
@@ -26,8 +26,11 @@ export function markChatVisited(uid: string) {
   } catch { /* ignore */ }
 }
 
-export function markActividadesVisited(uid: string) {
-  try { localStorage.setItem(LAST_ACTS_KEY(uid), new Date().toISOString()) } catch { /* ignore */ }
+export function markCalendarioActividadesVisited(uid: string) {
+  try {
+    localStorage.setItem(LAST_ACTS_KEY(uid), new Date().toISOString())
+    notifyUnreadCountsChanged()
+  } catch { /* ignore */ }
 }
 
 export function markDocsVisited(uid: string) {
@@ -64,10 +67,11 @@ export function useUnreadCounts() {
           .eq('para_id', uid)
           .gt('created_at', lastChatVisit),
         supabase
-          .from('actividades')
+          .from('eventos')
           .select('id', { count: 'exact', head: true })
+          .in('tipo', ['actividad', 'trabajo'])
           .gt('created_at', lastActsVisit)
-          .gte('fecha_entrega', new Date().toISOString()),
+          .gte('fecha', new Date().toISOString().slice(0, 10)),
         supabase
           .from('docs_paginas')
           .select('id', { count: 'exact', head: true })

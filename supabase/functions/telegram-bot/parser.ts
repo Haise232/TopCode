@@ -1,7 +1,8 @@
 // Parser de eventos en español natural. Puro: sin I/O ni Date.now().
 // Zona horaria de referencia: Europe/Madrid (el "hoy" se calcula con Intl).
 
-import { buscarMateriaEnPalabras, conservaMateria, normalizarPalabra } from './materias.ts'
+import { buscarMateriaEnPalabras, normalizarPalabra } from './materias.ts'
+import { etiquetaTipo, type TipoEvento } from './tipos.ts'
 
 export type ParseResult =
   | {
@@ -13,6 +14,8 @@ export type ParseResult =
     hora: string | null
     /** nombreCorto de MATERIAS o null */
     materia: string | null
+    /** Tipo de evento deducido de las palabras clave (por defecto 'actividad') */
+    tipo: TipoEvento
     /** Notas no bloqueantes para mostrar al usuario */
     avisos: string[]
   }
@@ -454,6 +457,7 @@ function resolverFecha(
   usados: Set<number>,
   hoy: Ymd,
   avisos: string[],
+  msgSinFecha = `No he encontrado la fecha. ${AYUDA}`,
 ): Ymd {
   // Dos dias de la semana distintos ("jueves 22 y viernes 23").
   const dows = new Set<number>()
@@ -487,7 +491,7 @@ function resolverFecha(
     if (delta === 0 && sem.estricto) delta = 7
     fecha = desdeDia(dia(hoy) + delta)
   } else {
-    throw new ErrorParseo(`No he encontrado la fecha. ${AYUDA}`)
+    throw new ErrorParseo(msgSinFecha)
   }
 
   if (sem !== null && diaSemana(fecha) !== sem.dow) {
@@ -535,6 +539,72 @@ function componerTitulo(toks: Tok[], usados: Set<number>): string {
   return titulo.charAt(0).toUpperCase() + titulo.slice(1)
 }
 
+// ---------------------------------------------------------------- tipo
+
+const PALABRAS_TEORICO = new Set(['examen', 'parcial', 'prueba', 'test', 'control'])
+const PALABRAS_PRESENTACION = new Set(['presentacion', 'exposicion', 'expo', 'defensa'])
+const PALABRAS_ESPECIAL = new Set(['especial', 'excursion', 'charla', 'evento', 'salida', 'visita'])
+const PALABRAS_TRABAJO = new Set(['trabajo', 'proyecto'])
+// Palabras que solo indican el tipo y se retiran del titulo.
+const PALABRAS_QUITAR = new Set(['entrega', 'examen', 'presentacion', 'especial'])
+
+/**
+ * Deduce el tipo a partir de las palabras libres (no usadas por fecha/hora/materia)
+ * y devuelve los indices que hay que retirar del titulo.
+ */
+function detectarTipo(toks: Tok[], usados: Set<number>): { tipo: TipoEvento; quitar: Set<number> } {
+  const libre = (i: number): boolean => i >= 0 && i < toks.length && !usados.has(i)
+  const quitar = new Set<number>()
+  let practico = false
+  let teorico = false
+  let presentacion = false
+  let especial = false
+  let trabajo = false
+
+  for (let i = 0; i < toks.length; i++) {
+    if (!libre(i)) continue
+    const n = toks[i].n
+    if (PALABRAS_QUITAR.has(n)) quitar.add(i)
+    if (PALABRAS_TEORICO.has(n)) teorico = true
+    else if (PALABRAS_PRESENTACION.has(n)) presentacion = true
+    else if (PALABRAS_ESPECIAL.has(n)) especial = true
+    else if (PALABRAS_TRABAJO.has(n)) trabajo = true
+
+    if (n === 'examen' || n === 'prueba') {
+      // "examen practico", "examen de practicas", "prueba practica", "practico examen"
+      let j = i + 1
+      let conDe = false
+      if (libre(j) && toks[j].n === 'de') { j++; conDe = true }
+      const t = libre(j) ? toks[j].n : ''
+      if (t === 'practico' || t === 'practicos' || t === 'practicas' || (t === 'practica' && n === 'prueba' && !conDe)) {
+        practico = true
+        if (n === 'examen') for (let k = i + 1; k <= j; k++) quitar.add(k)
+      } else if (n === 'examen' && !conDe && (t === 'teorico' || t === 'teoricos')) {
+        quitar.add(j)
+      }
+      if (libre(i - 1) && (toks[i - 1].n === 'practico' || toks[i - 1].n === 'practicos')) {
+        practico = true
+        if (n === 'examen') quitar.add(i - 1)
+      } else if (n === 'examen' && libre(i - 1) && toks[i - 1].n === 'teorico') {
+        quitar.add(i - 1)
+      }
+    }
+  }
+
+  const tipo: TipoEvento = practico
+    ? 'examen_practico'
+    : teorico
+    ? 'examen_teorico'
+    : presentacion
+    ? 'presentacion'
+    : especial
+    ? 'especial'
+    : trabajo
+    ? 'trabajo'
+    : 'actividad'
+  return { tipo, quitar }
+}
+
 // ---------------------------------------------------------------- API
 
 /**
@@ -579,36 +649,62 @@ export function parseEvento(texto: string, ahora: Date): ParseResult {
       avisos.push('La hora indicada ya ha pasado hoy.')
     }
 
-    // 4) titulo y materia. Como la web, la materia solo se conserva en examenes y entregas.
-    const sinMateria = componerTitulo(toks, usados)
-    if (sinMateria === '') {
-      return { ok: false, error: `Falta el título del evento. ${AYUDA}` }
-    }
-    let titulo = sinMateria
-    let materia: string | null = null
-    if (coin) {
-      const usadosConMateria = new Set([...usados].filter((i) => !idxMateria.has(i)))
-      const conMateria = componerTitulo(toks, usadosConMateria)
-      const nombreCorto = coin.materia.nombreCorto
-      const esCodigo = coin.fin - coin.inicio === 1 && toks[coin.inicio].n === normalizarPalabra(coin.materia.codigo)
-      if (esCodigo) {
-        if (conservaMateria(sinMateria)) {
-          materia = nombreCorto
-          const yaEsta = normalizarPalabra(sinMateria).includes(normalizarPalabra(nombreCorto))
-          titulo = yaEsta ? sinMateria : `${sinMateria} ${nombreCorto}`
-        } else {
-          titulo = conMateria // el codigo se queda en el titulo
-        }
-      } else {
-        titulo = conMateria // el nombre largo se queda tal cual se escribio
-        if (conservaMateria(conMateria)) materia = nombreCorto
-      }
-    }
+    // 4) tipo, titulo y materia
+    const { tipo, quitar } = detectarTipo(toks, usados)
+    // Con codigo (AED) se quita del titulo; con nombre largo se queda tal cual se escribio.
+    const esCodigo = coin !== null && coin.fin - coin.inicio === 1 &&
+      toks[coin.inicio].n === normalizarPalabra(coin.materia.codigo)
+    const usadosTitulo = new Set([...usados, ...quitar])
+    if (coin && !esCodigo) for (const i of idxMateria) usadosTitulo.delete(i)
+    const materia = coin ? coin.materia.nombreCorto : null
+    let titulo = componerTitulo(toks, usadosTitulo)
+    if (titulo === '') titulo = materia ?? etiquetaTipo(tipo)
     if (titulo.length > TITULO_MAX) {
       return { ok: false, error: `El título es demasiado largo (${titulo.length} caracteres, máximo ${TITULO_MAX}).` }
     }
 
-    return { ok: true, titulo, fecha: iso(fecha), hora, materia, avisos }
+    return { ok: true, titulo, fecha: iso(fecha), hora, materia, tipo, avisos }
+  } catch (e) {
+    if (e instanceof ErrorParseo) return { ok: false, error: e.message }
+    throw e
+  }
+}
+
+export type ParseFechaHoraResult =
+  | { ok: true; fecha: string; hora: string | null; avisos: string[] }
+  | { ok: false; error: string }
+
+const AYUDA_FECHA = 'Ejemplos: «viernes», «22/10», «el 22 de octubre», «mañana a las 10» o «jueves 23:59».'
+
+/**
+ * Interpreta solo la fecha (y hora opcional) de un mensaje. Ignora el texto sobrante.
+ * @param texto  p. ej. "mañana a las 10", "22/10", "el 22".
+ * @param ahora  Instante actual (inyectado); el "hoy" se calcula en Europe/Madrid.
+ */
+export function parseFechaHora(texto: string, ahora: Date): ParseFechaHoraResult {
+  const sinFecha = `No he entendido la fecha. ${AYUDA_FECHA}`
+  try {
+    if (typeof texto !== 'string' || texto.trim() === '') return { ok: false, error: sinFecha }
+    if (texto.length > TEXTO_MAX) {
+      return { ok: false, error: `El mensaje es demasiado largo (máximo ${TEXTO_MAX} caracteres).` }
+    }
+    if (!(ahora instanceof Date) || Number.isNaN(ahora.getTime())) {
+      return { ok: false, error: 'No se pudo determinar la fecha actual.' }
+    }
+    const { hoy, minutos } = ahoraMadrid(ahora)
+    const toks = tokenizar(texto)
+    const usados = new Set<number>()
+    const avisos: string[] = []
+    if (hayRelativaNoSoportada(toks)) return { ok: false, error: MSG_RELATIVA }
+
+    const hm = extraerHora(toks, usados)
+    const fecha = resolverFecha(toks, usados, hoy, avisos, sinFecha)
+    const hora = hm ? `${pad(hm.h)}:${pad(hm.min)}` : null
+    if (hm?.rango) avisos.push(`Solo se guarda la hora de inicio (${hora}); he ignorado la hora de fin.`)
+    if (hm && dia(fecha) === dia(hoy) && hm.h * 60 + hm.min < minutos) {
+      avisos.push('La hora indicada ya ha pasado hoy.')
+    }
+    return { ok: true, fecha: iso(fecha), hora, avisos }
   } catch (e) {
     if (e instanceof ErrorParseo) return { ok: false, error: e.message }
     throw e

@@ -119,23 +119,3 @@ export function resolverMateria(texto: string): Materia | null {
 export function nombreCortoDeMateria(texto: string): string | null {
   return resolverMateria(texto)?.nombreCorto ?? null
 }
-
-export type CategoriaEvento = 'examen' | 'entrega' | 'clase' | 'general'
-
-/**
- * Copia de inferirCategoria de packages/web/src/pages/Calendar.tsx.
- * MANTENER SINCRONIZADA con ese archivo.
- */
-export function inferirCategoria(titulo: string): CategoriaEvento {
-  const t = titulo.toLowerCase()
-  if (t.includes('examen') || t.includes('parcial') || t.includes('final') || t.includes('quiz') || t.includes('evaluacion') || t.includes('evaluación')) return 'examen'
-  if (t.includes('entrega') || t.includes('practica') || t.includes('práctica') || t.includes('tarea') || t.includes('proyecto') || t.includes('tp') || t.includes('trabajo')) return 'entrega'
-  if (t.includes('clase') || t.includes('taller') || t.includes('seminario') || t.includes('charla')) return 'clase'
-  return 'general'
-}
-
-/** La web solo conserva la materia en examenes y entregas (Calendar.tsx: mostrarMateria). */
-export function conservaMateria(titulo: string): boolean {
-  const c = inferirCategoria(titulo)
-  return c === 'examen' || c === 'entrega'
-}

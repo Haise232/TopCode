@@ -2,19 +2,23 @@
 // Webhook de Telegram para crear eventos del calendario de TopCode.
 // Se despliega con verify_jwt desactivado: la autenticacion es el secret_token.
 
-import { parseEvento, TEXTO_MAX } from './parser.ts'
+import { parseFechaHora, TEXTO_MAX, TITULO_MAX } from './parser.ts'
+import { MATERIAS } from './materias.ts'
 import {
+  avanzarPendiente,
   claseDeVinculado,
   consumirCodigo,
   consumirPendiente,
   crearEventoTelegram,
   desvincular,
   descartarPendiente,
-  guardarPendiente,
+  iniciarAsistente,
   obtenerAutorizacion,
+  pendienteEnPasoFecha,
   proximosEventos,
 } from './db.ts'
-import type { EventoResumen, PayloadPendiente } from './db.ts'
+import type { EventoResumen, Paso, PayloadPendiente } from './db.ts'
+import { esTipoEvento, etiquetaTipo, TIPOS_EVENTO } from './tipos.ts'
 import { editarMensaje, enviarMensaje, responderCallback } from './telegram.ts'
 import type { TgCallbackQuery, TgMessage, TgUpdate } from './telegram.ts'
 
@@ -33,12 +37,13 @@ const AVISO_VINCULO_NUEVO =
   'Si no has sido tú, desvincula desde el Perfil de la web'
 
 const TEXTO_AYUDA =
-  'Puedo crear eventos en el calendario de tu clase. Escríbeme una frase y te pediré confirmación.\n\n' +
-  'Ejemplos:\n' +
-  '• examen jueves 22 AED\n' +
-  '• entrega 7/11 DPL 23:59\n' +
-  '• tutoría mañana a las 10\n' +
-  '• examen lunes que viene\n\n' +
+  'Te guío paso a paso para crear un evento en el calendario de tu clase:\n\n' +
+  '1. Escríbeme el título del evento (texto libre, p. ej. "Entrega proyecto final").\n' +
+  '2. Elige el tipo con los botones (actividad, trabajo, examen teórico, examen práctico, presentación o especial).\n' +
+  '3. Elige la asignatura (o "Sin asignatura").\n' +
+  '4. Indica la fecha de fin: pulsa Hoy / Mañana / Pasado mañana o escríbela (p. ej. "viernes", "22/10", "jueves 23:59", "mañana a las 10").\n' +
+  '5. Revisa el resumen y pulsa Crear.\n\n' +
+  'En cualquier paso puedes pulsar Cancelar. El asistente caduca a los 30 minutos sin actividad.\n\n' +
   'Comandos:\n' +
   '/proximos - próximos 10 eventos de tu clase\n' +
   '/vincular <código> - vincular tu cuenta\n' +
@@ -102,11 +107,106 @@ function fechaLegible(iso: string): string {
   return `${dia} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`
 }
 
+function emojiTipo(t: string | null | undefined): string {
+  return TIPOS_EVENTO.find((x) => x.id === t)?.emoji ?? ''
+}
+
 function lineaEvento(e: { titulo: string; fecha: string; hora: string | null; materia: string | null }): string {
   const partes = [e.titulo, fechaLegible(e.fecha)]
   if (e.hora) partes.push(e.hora)
   if (e.materia) partes.push(e.materia)
   return partes.join(' · ')
+}
+
+/** Prefijo "<emoji> <Etiqueta>" del tipo (vacio si el tipo no es valido). */
+function prefijoTipo(t: string | null | undefined): string {
+  if (!esTipoEvento(t)) return ''
+  return `${emojiTipo(t)} ${etiquetaTipo(t)}`
+}
+
+function lineaConTipo(e: { titulo: string; fecha: string; hora: string | null; materia: string | null; tipo?: string | null }): string {
+  const p = prefijoTipo(e.tipo)
+  return p ? `${p} · ${lineaEvento(e)}` : lineaEvento(e)
+}
+
+const BTN_CANCELAR = (id: string) => ({ text: '❌ Cancelar', callback_data: `no:${id}` })
+
+function fila<T>(items: T[], n: number): T[][] {
+  const filas: T[][] = []
+  for (let i = 0; i < items.length; i += n) filas.push(items.slice(i, i + n))
+  return filas
+}
+
+function tecladoTipo(id: string) {
+  const botones = TIPOS_EVENTO.map((t, i) => ({ text: `${t.emoji} ${t.label}`, callback_data: `t:${id}:${i}` }))
+  return { inline_keyboard: [...fila(botones, 2), [BTN_CANCELAR(id)]] }
+}
+
+function tecladoMateria(id: string) {
+  const botones = MATERIAS.map((m, i) => ({ text: m.nombreCorto, callback_data: `m:${id}:${i}` }))
+  botones.push({ text: 'Sin asignatura', callback_data: `m:${id}:${MATERIAS.length}` })
+  return { inline_keyboard: [...fila(botones, 2), [BTN_CANCELAR(id)]] }
+}
+
+function tecladoFecha(id: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Hoy', callback_data: `f:${id}:0` },
+        { text: 'Mañana', callback_data: `f:${id}:1` },
+        { text: 'Pasado mañana', callback_data: `f:${id}:2` },
+      ],
+      [BTN_CANCELAR(id)],
+    ],
+  }
+}
+
+function tecladoConfirmar(id: string) {
+  return {
+    inline_keyboard: [[
+      { text: '✅ Crear', callback_data: `ok:${id}` },
+      BTN_CANCELAR(id),
+    ]],
+  }
+}
+
+function resumenCompleto(p: PayloadPendiente, avisos: string[] = []): string {
+  const fecha = p.fecha ? fechaLegible(p.fecha) + (p.hora ? ` · ${p.hora}` : '') : ''
+  let t = `${p.tipo ? prefijoTipo(p.tipo) : ''}\n📝 ${p.titulo}\n📚 ${p.materia ?? 'Sin asignatura'}\n📅 ${fecha}`
+  if (avisos.length > 0) t += '\n\n' + avisos.map((a) => '⚠️ ' + a).join('\n')
+  return t + '\n\n¿Lo creo en el calendario?'
+}
+
+const TEXTO_FECHA =
+  '📅 ¿Fecha de fin? Escríbela (p. ej. «viernes», «22/10», «jueves 23:59», «mañana a las 10») o pulsa un botón.'
+
+/** Pregunta (texto + teclado) correspondiente al paso del pendiente. */
+function preguntaPaso(id: string, p: PayloadPendiente): { texto: string; teclado: ReturnType<typeof tecladoTipo> } {
+  switch (p.paso) {
+    case 'tipo':
+      return { texto: `📝 Título: ${p.titulo}\n\n¿Qué es?`, teclado: tecladoTipo(id) }
+    case 'materia':
+      return { texto: `📝 ${p.titulo}\n${prefijoTipo(p.tipo)}\n\n📚 ¿De qué asignatura?`, teclado: tecladoMateria(id) }
+    case 'fecha':
+      return { texto: `📝 ${p.titulo}\n${prefijoTipo(p.tipo)}\n📚 ${p.materia ?? 'Sin asignatura'}\n\n${TEXTO_FECHA}`, teclado: tecladoFecha(id) }
+    default:
+      return { texto: resumenCompleto(p), teclado: tecladoConfirmar(id) }
+  }
+}
+
+function sumarDias(iso: string, dias: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const f = new Date(Date.UTC(y, m - 1, d + dias))
+  return f.toISOString().slice(0, 10)
+}
+
+const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/
+const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+
+/** Titulo desde texto libre: trim, espacios colapsados, sin control, primera en mayuscula. */
+function normalizarTitulo(texto: string): string {
+  const t = texto.replace(/\p{C}/gu, ' ').replace(/\s+/g, ' ').trim()
+  return t.charAt(0).toUpperCase() + t.slice(1)
 }
 
 function hoyMadrid(): string {
@@ -173,7 +273,7 @@ async function manejarComando(
         chatId,
         eventos.length === 0
           ? 'No hay eventos próximos en tu clase.'
-          : 'Próximos eventos:\n\n' + eventos.map((e) => '• ' + lineaEvento(e)).join('\n'),
+          : 'Próximos eventos:\n\n' + eventos.map((e) => '• ' + lineaConTipo(e)).join('\n'),
       )
       return
     }
@@ -197,25 +297,37 @@ async function manejarTexto(chatId: number, telegramId: number, texto: string): 
     return
   }
 
-  const r = parseEvento(texto, new Date())
-  if (!r.ok) {
-    await enviarMensaje(chatId, r.error)
+  // Si hay un asistente esperando la fecha, el texto es la fecha.
+  const enFecha = await pendienteEnPasoFecha(telegramId)
+  if (enFecha) {
+    const r = parseFechaHora(texto, new Date())
+    if (!r.ok) {
+      await enviarMensaje(chatId, r.error + '\n\nEscribe otra fecha o pulsa Cancelar.', { inline_keyboard: [[BTN_CANCELAR(enFecha.id)]] })
+      return
+    }
+    const nuevo = await avanzarPendiente(enFecha.id, telegramId, 'fecha', {
+      fecha: r.fecha,
+      hora: r.hora,
+      paso: 'confirmar',
+    })
+    if (nuevo === null || nuevo === 'otro_paso') {
+      await enviarMensaje(chatId, 'Caducado, vuelve a escribirlo.')
+      return
+    }
+    await enviarMensaje(chatId, resumenCompleto(nuevo, r.avisos), tecladoConfirmar(enFecha.id))
     return
   }
 
-  const payload: PayloadPendiente = { titulo: r.titulo, fecha: r.fecha, hora: r.hora, materia: r.materia }
-  const id = await guardarPendiente(telegramId, payload)
-
-  let resumen = '📅 ' + lineaEvento(payload)
-  if (r.avisos.length > 0) resumen += '\n\n' + r.avisos.map((a) => '⚠️ ' + a).join('\n')
-  resumen += '\n\n¿Lo creo en el calendario?'
-
-  await enviarMensaje(chatId, resumen, {
-    inline_keyboard: [[
-      { text: '✅ Crear', callback_data: `ok:${id}` },
-      { text: '❌ Cancelar', callback_data: `no:${id}` },
-    ]],
-  })
+  // Nuevo asistente: el texto es el titulo.
+  const titulo = normalizarTitulo(texto)
+  if (!titulo) return
+  if (titulo.length > TITULO_MAX) {
+    await enviarMensaje(chatId, `El título es demasiado largo (máximo ${TITULO_MAX} caracteres).`)
+    return
+  }
+  const id = await iniciarAsistente(telegramId, titulo)
+  const q = preguntaPaso(id, { titulo, tipo: null, materia: null, fecha: null, hora: null, paso: 'tipo' })
+  await enviarMensaje(chatId, q.texto, q.teclado)
 }
 
 async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
@@ -228,6 +340,38 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
   const mensajeId = msg.message_id
   const telegramId = cb.from.id
 
+  // Pasos: t:<uuid>:<i> (tipo), m:<uuid>:<i> (materia), f:<uuid>:<0|1|2> (fecha rapida).
+  const paso = /^([tmf]):([^:]+):(\d{1,2})$/.exec(cb.data ?? '')
+  if (paso) {
+    const [, clase, id, idxTxt] = paso
+    const idx = Number(idxTxt)
+    if (!UUID_RE.test(id)) return
+    let esperado: Paso
+    let cambios: Partial<Omit<PayloadPendiente, 'titulo'>>
+    if (clase === 't') {
+      if (idx >= TIPOS_EVENTO.length) return
+      esperado = 'tipo'
+      cambios = { tipo: TIPOS_EVENTO[idx].id, paso: 'materia' }
+    } else if (clase === 'm') {
+      if (idx > MATERIAS.length) return
+      esperado = 'materia'
+      cambios = { materia: idx === MATERIAS.length ? null : MATERIAS[idx].nombreCorto, paso: 'fecha' }
+    } else {
+      if (idx > 2) return
+      esperado = 'fecha'
+      cambios = { fecha: sumarDias(hoyMadrid(), idx), hora: null, paso: 'confirmar' }
+    }
+    const nuevo = await avanzarPendiente(id, telegramId, esperado, cambios)
+    if (nuevo === 'otro_paso') return
+    if (!nuevo) {
+      await editarMensaje(chatId, mensajeId, 'Caducado, vuelve a escribirlo.')
+      return
+    }
+    const q = preguntaPaso(id, nuevo)
+    await editarMensaje(chatId, mensajeId, q.texto, q.teclado)
+    return
+  }
+
   const m = /^(ok|no):(.+)$/.exec(cb.data ?? '')
   if (!m || !UUID_RE.test(m[2])) return
   const [, accion, id] = m
@@ -238,17 +382,28 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
     return
   }
 
-  // Consumo atomico: un doble clic solo obtiene el pendiente una vez.
+  // Consumo atomico (solo en paso 'confirmar'): un doble clic solo lo obtiene una vez.
   const pendiente = await consumirPendiente(id, telegramId)
   if (!pendiente) {
     await editarMensaje(chatId, mensajeId, 'Caducado, vuelve a escribirlo.')
     return
   }
 
+  // Revalidacion del payload completo antes de crear.
+  const { titulo, tipo, fecha, hora, materia } = pendiente
+  const materiaOk = materia === null || MATERIAS.some((x) => x.nombreCorto === materia)
+  if (
+    !titulo || titulo.length > TITULO_MAX || !esTipoEvento(tipo) || !materiaOk ||
+    !fecha || !FECHA_RE.test(fecha) || (hora !== null && !HORA_RE.test(hora))
+  ) {
+    await editarMensaje(chatId, mensajeId, 'Faltan datos del evento. Vuelve a escribirlo.')
+    return
+  }
+
   // La RPC revalida admin, clase y aprobado e inserta de forma atomica.
   let eventoId: string | null
   try {
-    eventoId = await crearEventoTelegram(telegramId, pendiente)
+    eventoId = await crearEventoTelegram(telegramId, { titulo, tipo, fecha, hora, materia })
   } catch (err) {
     console.error('Error al insertar evento:', msgError(err))
     await editarMensaje(chatId, mensajeId, 'No se ha podido crear el evento. Vuelve a escribirlo.')
@@ -258,7 +413,7 @@ async function manejarCallback(cb: TgCallbackQuery): Promise<void> {
     await editarMensaje(chatId, mensajeId, 'No tienes permiso para crear eventos')
     return
   }
-  await editarMensaje(chatId, mensajeId, '✅ Evento creado:\n' + lineaEvento(pendiente))
+  await editarMensaje(chatId, mensajeId, '✅ Evento creado:\n' + lineaConTipo({ titulo, tipo, fecha, hora, materia }))
 }
 
 async function manejarMensaje(msg: TgMessage): Promise<void> {

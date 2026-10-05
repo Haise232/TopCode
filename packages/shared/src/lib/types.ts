@@ -1,4 +1,5 @@
 import { ClaseId } from '../constants/clases'
+import type { TipoEvento } from '../constants/tiposEvento'
 
 export interface Usuario {
   id: string
@@ -75,6 +76,7 @@ export interface EventoCalendario {
   titulo: string
   descripcion: string | null
   materia: string | null
+  tipo: TipoEvento
   fecha: string
   hora: string | null
   created_by: string

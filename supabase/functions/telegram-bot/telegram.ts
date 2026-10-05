@@ -68,13 +68,13 @@ export function enviarMensaje(chatId: number, texto: string, teclado?: Teclado):
   })
 }
 
-/** Edita el mensaje y quita los botones (inline_keyboard vacio). */
-export function editarMensaje(chatId: number, messageId: number, texto: string): Promise<void> {
+/** Edita el mensaje; sin teclado, quita los botones (inline_keyboard vacio). */
+export function editarMensaje(chatId: number, messageId: number, texto: string, teclado?: Teclado): Promise<void> {
   return llamar('editMessageText', {
     chat_id: chatId,
     message_id: messageId,
     text: texto,
-    reply_markup: { inline_keyboard: [] },
+    reply_markup: teclado ?? { inline_keyboard: [] },
   })
 }
 

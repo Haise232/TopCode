@@ -1,5 +1,5 @@
 import { assertEquals, assertStringIncludes } from 'jsr:@std/assert@1'
-import { parseEvento, TEXTO_MAX, TITULO_MAX } from './parser.ts'
+import { parseEvento, parseFechaHora, TEXTO_MAX, TITULO_MAX } from './parser.ts'
 
 // Lunes 2026-10-05 10:00 en Madrid (CEST, UTC+2).
 const AHORA = new Date('2026-10-05T08:00:00Z')
@@ -22,7 +22,8 @@ Deno.test('ejemplo: examen jueves 22 AED', () => {
   assertEquals(r.fecha, '2026-10-22')
   assertEquals(r.materia, 'Acceso a datos')
   assertEquals(r.hora, null)
-  assertEquals(r.titulo, 'Examen Acceso a datos')
+  assertEquals(r.titulo, 'Acceso a datos')
+  assertEquals(r.tipo, 'examen_teorico')
 })
 
 Deno.test('ejemplo: entrega sabado 7/11 DPL 23:59', () => {
@@ -30,7 +31,7 @@ Deno.test('ejemplo: entrega sabado 7/11 DPL 23:59', () => {
   assertEquals(r.fecha, '2026-11-07')
   assertEquals(r.hora, '23:59')
   assertEquals(r.materia, 'Despliegue apps web')
-  assertEquals(r.titulo, 'Entrega Despliegue apps web')
+  assertEquals(r.titulo, 'Despliegue apps web')
 })
 
 Deno.test('relativas: hoy, mañana, pasado mañana', () => {
@@ -39,7 +40,7 @@ Deno.test('relativas: hoy, mañana, pasado mañana', () => {
   assertEquals(ok('tutoría mañana a las 10').hora, '10:00')
   assertEquals(ok('tutoría mañana a las 10').titulo, 'Tutoría')
   assertEquals(ok('revisión pasado mañana').fecha, '2026-10-07')
-  assertEquals(ok('Mañana examen').titulo, 'Examen')
+  assertEquals(ok('Mañana examen').titulo, 'Examen teórico')
 })
 
 Deno.test('"de la mañana" no se confunde con la fecha mañana', () => {
@@ -98,7 +99,7 @@ Deno.test('fechas con mes escrito', () => {
   assertEquals(ok('examen 22 oct').fecha, '2026-10-22')
   assertEquals(ok('examen jueves 22 de octubre').fecha, '2026-10-22')
   assertEquals(ok('examen el 22 de octubre de 2027').fecha, '2027-10-22')
-  assertEquals(ok('examen el 22 de octubre').titulo, 'Examen')
+  assertEquals(ok('examen el 22 de octubre').titulo, 'Examen teórico')
   assertEquals(ok('examen 3 de septiembre').fecha, '2027-09-03')
   assertEquals(ok('examen 3 de septiembre').avisos.length, 1)
 })
@@ -152,7 +153,7 @@ Deno.test('hora no se mezcla con titulo ni fecha', () => {
   const r = ok('entrega 23:59 mañana DPL')
   assertEquals(r.hora, '23:59')
   assertEquals(r.fecha, '2026-10-06')
-  assertEquals(r.titulo, 'Entrega Despliegue apps web')
+  assertEquals(r.titulo, 'Despliegue apps web')
 })
 
 Deno.test('hora invalida -> ok:false', () => {
@@ -180,14 +181,14 @@ Deno.test('desajuste entre dia de la semana y numero -> ok:false', () => {
 Deno.test('materia desconocida (BBDD): null y la palabra queda en el titulo', () => {
   const r = ok('examen jueves 22 BBDD')
   assertEquals(r.materia, null)
-  assertEquals(r.titulo, 'Examen BBDD')
+  assertEquals(r.titulo, 'BBDD')
   assertEquals(r.fecha, '2026-10-22')
 })
 
 Deno.test('materia por nombre completo, nombre corto y minusculas/tildes', () => {
   assertEquals(ok('examen mañana acceso a datos').materia, 'Acceso a datos')
   // el nombre largo se queda en el titulo tal cual se escribio
-  assertEquals(ok('examen mañana acceso a datos').titulo, 'Examen acceso a datos')
+  assertEquals(ok('examen mañana acceso a datos').titulo, 'Acceso a datos')
   assertEquals(ok('examen mañana aed').materia, 'Acceso a datos')
   assertEquals(ok('examen mañana Prog. multimedia').materia, 'Prog. multimedia')
   assertEquals(ok('examen mañana programación multimedia y dispositivos móviles').materia, 'Prog. multimedia')
@@ -200,9 +201,13 @@ Deno.test('varias materias -> aviso y se usa la primera', () => {
 })
 
 Deno.test('titulo vacio y mensajes vacios', () => {
-  assertStringIncludes(err('mañana'), 'Falta el título')
-  assertStringIncludes(err('jueves 22 AED'), 'Falta el título')
-  assertStringIncludes(err('el mañana a las 10'), 'Falta el título')
+  // sin titulo: nombreCorto de la materia o, si no, la etiqueta del tipo
+  assertEquals(ok('mañana').titulo, 'Actividad')
+  assertEquals(ok('jueves 22 AED').titulo, 'Acceso a datos')
+  assertEquals(ok('el mañana a las 10').titulo, 'Actividad')
+  assertEquals(ok('entrega mañana').titulo, 'Actividad')
+  assertEquals(ok('presentacion mañana').titulo, 'Presentación')
+  assertEquals(ok('especial mañana').titulo, 'Especial')
   assertStringIncludes(err(''), 'vacío')
   assertStringIncludes(err('   \n '), 'vacío')
 })
@@ -289,9 +294,9 @@ Deno.test('año bisiesto', () => {
 })
 
 Deno.test('titulo: capitaliza, limpia puntuacion y rellenos de borde', () => {
-  assertEquals(ok('examen, jueves 22 AED.').titulo, 'Examen Acceso a datos')
-  assertEquals(ok('  EXAMEN   final   mañana  ').titulo, 'EXAMEN final')
-  assertEquals(ok('para el examen de teoría el viernes').titulo, 'Examen de teoría')
+  assertEquals(ok('examen, jueves 22 AED.').titulo, 'Acceso a datos')
+  assertEquals(ok('  EXAMEN   final   mañana  ').titulo, 'Final')
+  assertEquals(ok('para el examen de teoría el viernes').titulo, 'Teoría')
 })
 
 Deno.test('no hay efectos de borde: la misma entrada da la misma salida', () => {
@@ -305,10 +310,10 @@ Deno.test('no hay efectos de borde: la misma entrada da la misma salida', () => 
 Deno.test('numero suelto: prioridad al numero tras el/dia/del/para/hasta', () => {
   const r = ok('entrega 3 ejercicios el 22')
   assertEquals(r.fecha, '2026-10-22')
-  assertEquals(r.titulo, 'Entrega 3 ejercicios')
+  assertEquals(r.titulo, '3 ejercicios')
   assertEquals(r.materia, null)
   assertEquals(ok('examen tema 3 y 4 el 22').fecha, '2026-10-22')
-  assertEquals(ok('examen tema 3 y 4 el 22').titulo, 'Examen tema 3 y 4')
+  assertEquals(ok('examen tema 3 y 4 el 22').titulo, 'Tema 3 y 4')
   assertEquals(ok('entrega para el 25 con 2 ejercicios').fecha, '2026-10-25')
   assertEquals(ok('entrega hasta 25').fecha, '2026-10-25')
   assertEquals(ok('entrega del 25').fecha, '2026-10-25')
@@ -317,8 +322,8 @@ Deno.test('numero suelto: prioridad al numero tras el/dia/del/para/hasta', () =>
 Deno.test('un numero seguido de una unidad no es una fecha', () => {
   const r = ok('examen 2 parciales viernes')
   assertEquals(r.fecha, '2026-10-09')
-  assertEquals(r.titulo, 'Examen 2 parciales')
-  assertEquals(ok('examen 3 temas viernes').titulo, 'Examen 3 temas')
+  assertEquals(r.titulo, '2 parciales')
+  assertEquals(ok('examen 3 temas viernes').titulo, '3 temas')
   assertStringIncludes(err('entrega 3 ejercicios'), 'No he encontrado la fecha')
 })
 
@@ -339,12 +344,12 @@ Deno.test('minutos con "y N", "menos N" y punto', () => {
   const r = ok('examen viernes a las 10 y 15')
   assertEquals(r.fecha, '2026-10-09')
   assertEquals(r.hora, '10:15')
-  assertEquals(r.titulo, 'Examen')
+  assertEquals(r.titulo, 'Examen teórico')
   const r2 = ok('examen 22 a las 9 y 30')
   assertEquals(r2.hora, '09:30')
-  assertEquals(r2.titulo, 'Examen')
+  assertEquals(r2.titulo, 'Examen teórico')
   assertEquals(ok('examen viernes 9.30').hora, '09:30')
-  assertEquals(ok('examen viernes 9.30').titulo, 'Examen')
+  assertEquals(ok('examen viernes 9.30').titulo, 'Examen teórico')
   assertEquals(ok('examen viernes a las 10 menos 5').hora, '09:55')
   assertEquals(ok('examen viernes a las 9 y 45 de la noche').hora, '21:45')
 })
@@ -356,7 +361,7 @@ Deno.test('12 de la noche / mañana / mediodia', () => {
   assertEquals(ok('examen viernes a las 12 de la mañana').hora, '12:00')
   assertEquals(ok('examen viernes a las 12 de la mañana').fecha, '2026-10-09')
   assertEquals(ok('examen viernes a las 12 del mediodía').hora, '12:00')
-  assertEquals(ok('examen viernes a las 12 del mediodía').titulo, 'Examen')
+  assertEquals(ok('examen viernes a las 12 del mediodía').titulo, 'Examen teórico')
 })
 
 Deno.test('dos fechas distintas -> ok:false', () => {
@@ -378,43 +383,116 @@ Deno.test('año fuera de rango', () => {
 
 Deno.test('abreviaturas de mes: 22-oct, 22 oct', () => {
   assertEquals(ok('examen 22-oct').fecha, '2026-10-22')
-  assertEquals(ok('examen 22-oct').titulo, 'Examen')
+  assertEquals(ok('examen 22-oct').titulo, 'Examen teórico')
   assertEquals(ok('examen 22/oct').fecha, '2026-10-22')
   assertEquals(ok('examen 22 oct').fecha, '2026-10-22')
   assertEquals(ok('examen 22-nov-2027').fecha, '2027-11-22')
   assertEquals(ok('examen 22 oct.').fecha, '2026-10-22')
 })
 
-Deno.test('materia solo en examenes y entregas (regla de inferirCategoria)', () => {
-  // no es examen/entrega: materia null y el texto se queda en el titulo
+Deno.test('materia ya no depende del tipo', () => {
   const c = ok('charla sobre sostenibilidad viernes')
-  assertEquals(c.materia, null)
+  assertEquals(c.materia, 'Sostenibilidad')
   assertEquals(c.titulo, 'Charla sobre sostenibilidad')
+  assertEquals(c.tipo, 'especial')
+  // codigo: se quita del titulo, materia = nombreCorto, sin añadirlo al final
   const t = ok('tutoría mañana AED')
-  assertEquals(t.materia, null)
-  assertEquals(t.titulo, 'Tutoría AED')
-  // examen/entrega por codigo: se quita el codigo y se anade nombreCorto
-  const e = ok('examen jueves 22 AED')
-  assertEquals(e.titulo, 'Examen Acceso a datos')
-  assertEquals(e.materia, 'Acceso a datos')
-  // nombre largo: se deja como se escribio, materia se conserva
+  assertEquals(t.materia, 'Acceso a datos')
+  assertEquals(t.titulo, 'Tutoría')
+  assertEquals(ok('práctica 3 viernes DPL').titulo, 'Práctica 3')
+  assertEquals(ok('práctica 3 viernes DPL').materia, 'Despliegue apps web')
+  // nombre largo: se queda en el titulo
   const n = ok('entrega viernes Sostenibilidad')
-  assertEquals(n.titulo, 'Entrega Sostenibilidad')
+  assertEquals(n.titulo, 'Sostenibilidad')
   assertEquals(n.materia, 'Sostenibilidad')
-  // palabras clave de la web: practica, tarea, proyecto, trabajo, quiz, parcial, final
-  assertEquals(ok('práctica viernes DPL').materia, 'Despliegue apps web')
-  assertEquals(ok('quiz viernes DPL').materia, 'Despliegue apps web')
-  assertEquals(ok('tarea viernes DPL').titulo, 'Tarea Despliegue apps web')
-  assertEquals(ok('clase viernes DPL').materia, null)
-  // un titulo que solo es el codigo sigue siendo un error
-  assertStringIncludes(err('jueves 22 AED'), 'Falta el título')
+  assertEquals(ok('clase viernes DPL').materia, 'Despliegue apps web')
+})
+
+// ---------------------------------------------------------------------------
+// Tipo de evento
+// ---------------------------------------------------------------------------
+
+Deno.test('tipo: ejemplos del producto', () => {
+  const a = ok('examen jueves 22 AED')
+  assertEquals([a.tipo, a.titulo, a.materia], ['examen_teorico', 'Acceso a datos', 'Acceso a datos'])
+  const b = ok('entrega actividad 2 informatica viernes')
+  assertEquals([b.tipo, b.titulo, b.materia], ['actividad', 'Actividad 2 informatica', null])
+  const c = ok('examen practico DPL 7/11')
+  assertEquals([c.tipo, c.titulo, c.materia, c.fecha], ['examen_practico', 'Despliegue apps web', 'Despliegue apps web', '2026-11-07'])
+  const d = ok('presentacion proyecto final lunes')
+  assertEquals([d.tipo, d.titulo], ['presentacion', 'Proyecto final'])
+  const e = ok('excursion al museo 22')
+  assertEquals([e.tipo, e.titulo, e.fecha], ['especial', 'Excursion al museo', '2026-10-22'])
+})
+
+Deno.test('tipo: examen practico en sus variantes', () => {
+  for (const t of ['examen práctico viernes', 'examen de prácticas viernes', 'prueba práctica viernes', 'práctico examen viernes']) {
+    assertEquals(ok(t).tipo, 'examen_practico', t)
+  }
+  assertEquals(ok('examen práctico viernes').titulo, 'Examen práctico')
+  assertEquals(ok('examen de prácticas viernes').titulo, 'Examen práctico')
+  assertEquals(ok('prueba práctica viernes').titulo, 'Prueba práctica')
+  assertEquals(ok('examen práctico AED viernes').titulo, 'Acceso a datos')
+})
+
+Deno.test('tipo: examen teorico y sinonimos', () => {
+  for (const t of ['examen viernes', 'examen teórico viernes', 'parcial viernes', 'prueba viernes', 'test viernes', 'control viernes']) {
+    assertEquals(ok(t).tipo, 'examen_teorico', t)
+  }
+  assertEquals(ok('examen teórico viernes AED').titulo, 'Acceso a datos')
+  assertEquals(ok('examen teórico viernes').titulo, 'Examen teórico')
+  assertEquals(ok('parcial tema 3 viernes').titulo, 'Parcial tema 3')
+  assertEquals(ok('control viernes').titulo, 'Control')
+  // la posicion no importa
+  assertEquals(ok('AED viernes examen').tipo, 'examen_teorico')
+})
+
+Deno.test('tipo: presentacion y especial', () => {
+  for (const t of ['presentación viernes', 'exposición viernes', 'expo viernes', 'defensa viernes']) {
+    assertEquals(ok(t).tipo, 'presentacion', t)
+  }
+  assertEquals(ok('exposición viernes').titulo, 'Exposición')
+  assertEquals(ok('defensa TFG viernes').titulo, 'Defensa TFG')
+  for (const t of ['especial viernes', 'excursión viernes', 'charla viernes', 'evento viernes', 'salida viernes', 'visita viernes']) {
+    assertEquals(ok(t).tipo, 'especial', t)
+  }
+  assertEquals(ok('visita al museo viernes').titulo, 'Visita al museo')
+  assertEquals(ok('charla de ciberseguridad viernes').titulo, 'Charla de ciberseguridad')
+  assertEquals(ok('especial viernes').titulo, 'Especial')
+})
+
+Deno.test('tipo: actividad, por palabra o por defecto', () => {
+  for (const t of ['actividad viernes', 'entrega viernes', 'tarea viernes', 'práctica viernes', 'tutoría viernes', 'reunión 20']) {
+    assertEquals(ok(t).tipo, 'actividad', t)
+  }
+  const p = ok('práctica 3 viernes')
+  assertEquals([p.tipo, p.titulo], ['actividad', 'Práctica 3'])
+  assertEquals(ok('actividad 2 informática viernes').titulo, 'Actividad 2 informática')
+  assertEquals(ok('tarea viernes').titulo, 'Tarea')
+  assertEquals(ok('entrega 7/11 DPL 23:59').titulo, 'Despliegue apps web')
+  assertEquals(ok('entrega viernes').tipo, 'actividad')
+})
+
+Deno.test('tipo: prioridades y casos limite', () => {
+  // examen gana a practica sola/entrega
+  assertEquals(ok('entrega examen viernes').tipo, 'examen_teorico')
+  assertEquals(ok('práctica examen viernes').tipo, 'examen_teorico')
+  // "practica" sola no es examen practico
+  assertEquals(ok('práctica viernes').tipo, 'actividad')
+  // practico gana a teorico
+  assertEquals(ok('examen práctico parcial viernes').tipo, 'examen_practico')
+  // la materia por nombre largo no aporta palabras clave
+  assertEquals(ok('viernes Proyecto intermodular').tipo, 'actividad')
+  // mayusculas y tildes
+  assertEquals(ok('EXAMEN PRÁCTICO viernes').tipo, 'examen_practico')
+  assertEquals(ok('Presentación viernes').tipo, 'presentacion')
 })
 
 Deno.test('rango horario: solo se guarda la hora de inicio, con aviso', () => {
   const r = ok('examen viernes de 10 a 12')
   assertEquals(r.fecha, '2026-10-09')
   assertEquals(r.hora, '10:00')
-  assertEquals(r.titulo, 'Examen')
+  assertEquals(r.titulo, 'Examen teórico')
   assertEquals(r.avisos.length, 1)
   assertStringIncludes(r.avisos[0], 'hora de inicio')
   assertEquals(ok('examen viernes de las 10:30 a las 12').hora, '10:30')
@@ -424,4 +502,71 @@ Deno.test('rango horario: solo se guarda la hora de inicio, con aviso', () => {
 Deno.test('palabras como constructor no rompen el parser', () => {
   assertEquals(ok('constructor viernes').titulo, 'Constructor')
   assertEquals(ok('examen 22 toString').fecha, '2026-10-22')
+})
+
+Deno.test('tipo: trabajo y proyecto se conservan en el titulo', () => {
+  const a = ok('trabajo de redes viernes')
+  assertEquals([a.tipo, a.titulo], ['trabajo', 'Trabajo de redes'])
+  const b = ok('proyecto final viernes')
+  assertEquals([b.tipo, b.titulo], ['trabajo', 'Proyecto final'])
+  assertEquals(ok('entrega proyecto viernes').titulo, 'Proyecto')
+  assertEquals(ok('entrega proyecto viernes').tipo, 'trabajo')
+  // otros tipos ganan
+  assertEquals(ok('presentacion proyecto viernes').tipo, 'presentacion')
+  assertEquals(ok('examen proyecto viernes').tipo, 'examen_teorico')
+})
+
+Deno.test('TIPOS_EVENTO: orden y etiquetas', async () => {
+  const { TIPOS_EVENTO, esTipoEvento, etiquetaTipo } = await import('./tipos.ts')
+  assertEquals(TIPOS_EVENTO.map((t) => t.id), [
+    'actividad', 'trabajo', 'examen_teorico', 'examen_practico', 'presentacion', 'especial',
+  ])
+  assertEquals(etiquetaTipo('trabajo'), 'Trabajo')
+  assertEquals(esTipoEvento('trabajo'), true)
+  assertEquals(esTipoEvento('clase'), false)
+})
+
+function fh(texto: string, ahora = AHORA) {
+  const r = parseFechaHora(texto, ahora)
+  if (!r.ok) throw new Error(`Se esperaba ok:true para «${texto}»: ${r.error}`)
+  return r
+}
+function fhErr(texto: string, ahora = AHORA): string {
+  const r = parseFechaHora(texto, ahora)
+  if (r.ok) throw new Error(`Se esperaba ok:false para «${texto}» pero dio ${JSON.stringify(r)}`)
+  return r.error
+}
+
+Deno.test('parseFechaHora: formas validas', () => {
+  assertEquals(fh('viernes'), { ok: true, fecha: '2026-10-09', hora: null, avisos: [] })
+  assertEquals(fh('22/10').fecha, '2026-10-22')
+  const j = fh('jueves 23:59')
+  assertEquals([j.fecha, j.hora], ['2026-10-08', '23:59'])
+  const m = fh('mañana a las 10')
+  assertEquals([m.fecha, m.hora], ['2026-10-06', '10:00'])
+  assertEquals(fh('el 22').fecha, '2026-10-22')
+  assertEquals(fh('22').fecha, '2026-10-22')
+  assertEquals(fh('hoy').fecha, '2026-10-05')
+  assertEquals(fh('el 22 de octubre').fecha, '2026-10-22')
+  assertEquals(fh('para el viernes').fecha, '2026-10-09')
+  assertEquals(fh('viernes de 10 a 12').avisos.length, 1)
+  assertEquals(fh('pasado mañana').fecha, '2026-10-07')
+})
+
+Deno.test('parseFechaHora: texto sobrante se ignora', () => {
+  assertEquals(fh('viernes por favor').fecha, '2026-10-09')
+})
+
+Deno.test('parseFechaHora: errores', () => {
+  assertStringIncludes(fhErr('hola'), 'No he entendido la fecha')
+  assertStringIncludes(fhErr('hola'), 'Ejemplos')
+  assertStringIncludes(fhErr(''), 'No he entendido la fecha')
+  assertStringIncludes(fhErr('10:00'), 'No he entendido la fecha')
+  assertStringIncludes(fhErr('1/10/2026'), 'ya ha pasado')
+  assertStringIncludes(fhErr('7/11/2029'), 'demasiado lejos')
+  assertStringIncludes(fhErr('31/02'), 'no existe')
+  assertStringIncludes(fhErr('mañana 7/11'), 'más de una fecha')
+  assertStringIncludes(fhErr('en 3 días'), 'relativas')
+  assertStringIncludes(fhErr('mañana 25:00'), 'hora')
+  assertStringIncludes(fhErr('lunes 22'), 'No coinciden')
 })

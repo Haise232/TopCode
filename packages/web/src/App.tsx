@@ -17,7 +17,6 @@ const Apuntes     = lazy(() => import('./pages/Apuntes'))
 const CalendarPage = lazy(() => import('./pages/Calendar'))
 const Admin       = lazy(() => import('./pages/Admin'))
 const Profile     = lazy(() => import('./pages/Profile'))
-const Actividades = lazy(() => import('./pages/Actividades'))
 const Recursos    = lazy(() => import('./pages/Recursos'))
 const Foro        = lazy(() => import('./pages/Foro'))
 const ForoPost    = lazy(() => import('./pages/ForoPost'))
@@ -120,7 +119,7 @@ function AppRoutes() {
         <Route path="/chat"     element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/apuntes"  element={<ProtectedRoute><Apuntes /></ProtectedRoute>} />
         <Route path="/calendar"    element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
-        <Route path="/actividades" element={<ProtectedRoute><Actividades /></ProtectedRoute>} />
+        <Route path="/actividades" element={<Navigate to="/calendar?vista=actividades" replace />} />
         <Route path="/recursos"    element={<ProtectedRoute><Recursos /></ProtectedRoute>} />
         <Route path="/foro"        element={<ProtectedRoute><Foro /></ProtectedRoute>} />
         <Route path="/foro/:id"    element={<ProtectedRoute><ForoPost /></ProtectedRoute>} />

@@ -62,21 +62,23 @@ export function useHomeDatos(usuarioId: string | undefined): UseHomeDatosReturn 
           .abortSignal(signal),
         supabase
           .from('eventos')
-          .select('id, titulo, descripcion, materia, fecha, created_by, created_at')
+          .select('id, clase, titulo, descripcion, materia, tipo, fecha, hora, created_by, created_at')
+          .not('tipo', 'in', '(actividad,trabajo)')
           .gte('fecha', new Date().toISOString().slice(0, 10))
           .order('fecha', { ascending: true })
           .limit(1)
           .abortSignal(signal),
         supabase
-          .from('actividades')
-          .select('id, titulo, descripcion, materia, fecha_entrega, created_by, created_at')
-          .gte('fecha_entrega', now)
-          .order('fecha_entrega', { ascending: true })
+          .from('eventos')
+          .select('id, clase, titulo, descripcion, materia, tipo, fecha, hora, created_by, created_at')
+          .in('tipo', ['actividad', 'trabajo'])
+          .gte('fecha', now.slice(0, 10))
+          .order('fecha', { ascending: true })
           .limit(50)
           .abortSignal(signal),
         supabase
-          .from('actividades_estado')
-          .select('actividad_id')
+          .from('eventos_estado')
+          .select('evento_id')
           .eq('usuario_id', usuarioId)
           .eq('completada', true)
           .abortSignal(signal),
@@ -93,9 +95,21 @@ export function useHomeDatos(usuarioId: string | undefined): UseHomeDatosReturn 
 
       if (actsRes.data) {
         const doneIds = new Set(
-          (estadosRes.data ?? []).map((e: { actividad_id: string }) => e.actividad_id)
+          (estadosRes.data ?? []).map((e: { evento_id: string }) => e.evento_id)
         )
-        const pendientes = (actsRes.data as Actividad[]).filter(a => !doneIds.has(a.id))
+        // Se adapta el evento a la forma Actividad (fecha_entrega) para compatibilidad con mobile
+        const pendientes: Actividad[] = (actsRes.data as EventoCalendario[])
+          .filter(ev => !doneIds.has(ev.id))
+          .map(ev => ({
+            id: ev.id,
+            clase: ev.clase,
+            titulo: ev.titulo,
+            descripcion: ev.descripcion,
+            materia: ev.materia,
+            fecha_entrega: `${ev.fecha}T${ev.hora ? ev.hora.slice(0, 5) : '23:59'}:00`,
+            created_by: ev.created_by,
+            created_at: ev.created_at,
+          }))
         actividadesPendientes = pendientes.length
         proximaActividad = pendientes[0] ?? null
       }

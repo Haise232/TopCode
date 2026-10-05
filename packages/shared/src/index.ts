@@ -25,12 +25,16 @@ export { cacheGet, cacheSet, cacheInvalidate, cacheInvalidatePrefix } from './li
 // Constants
 export type { ClaseId, ClaseInfo } from './constants/clases'
 export { CLASES, CLASE_UNICA, claseInfo } from './constants/clases'
+export type { TipoEvento } from './constants/tiposEvento'
+export { TIPOS_EVENTO, TIPOS_ACTIVIDAD, TIPOS_EXAMEN, esTipoActividad, fechaLimiteEvento } from './constants/tiposEvento'
 export type { Materia } from './constants/materias'
 export { MATERIAS } from './constants/materias'
 
 // Hooks
 export { useDataInit } from './hooks/useDataInit'
 export { useEventos } from './hooks/useEventos'
+export { useEventosEstado } from './hooks/useEventosEstado'
+export type { UseEventosEstadoReturn } from './hooks/useEventosEstado'
 export { useTelegramVinculo } from './hooks/useTelegramVinculo'
 export type { CodigoTelegram } from './hooks/useTelegramVinculo'
 export { useActividades } from './hooks/useActividades'

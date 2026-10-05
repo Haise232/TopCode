@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { useHorario, type EventoCalendario, type Actividad, type HorarioClase, cacheGet, cacheSet, cacheInvalidatePrefix, claseInfo } from '@topcode/shared'
+import { TipoEventoBadge } from '../lib/tiposEvento'
+import { useHorario, type EventoCalendario, type HorarioClase, cacheGet, cacheSet, cacheInvalidatePrefix, claseInfo, fechaLimiteEvento as fechaLimite } from '@topcode/shared'
 import { SkeletonBox, SkeletonCard, SkeletonSchedule, SkeletonQuickActions } from '../components/Skeleton'
 import { cn } from '../components/ui/cn'
 import { Modal } from '../components/ui/Modal'
@@ -224,7 +225,7 @@ const ACCESOS_INTERNOS = [
   { label: 'Docs',        desc: 'Documentación',  Icon: BookMarked,     to: '/docs',        color: '#fbbf24' },
   { label: 'Chat',        desc: 'General',        Icon: MessageCircle,  to: '/chat',        color: '#3d9f89' },
   { label: 'Apuntes',     desc: 'Archivos',       Icon: FolderOpen,     to: '/apuntes',     color: '#fb923c' },
-  { label: 'Actividades', desc: 'Tareas',         Icon: ClipboardCheck, to: '/actividades', color: '#818cf8' },
+  { label: 'Actividades', desc: 'Tareas',         Icon: ClipboardCheck, to: '/calendar?vista=actividades', color: '#818cf8' },
   { label: 'Calendario',  desc: 'Eventos',        Icon: Calendar,       to: '/calendar',    color: '#22d3ee' },
   { label: 'Foro de dudas', desc: 'Preguntas',     Icon: HelpCircle,     to: '/foro',       color: '#60a5fa' },
   { label: 'Recursos',    desc: 'Enlaces',        Icon: BookOpen,       to: '/recursos',    color: '#a78bfa' },
@@ -314,7 +315,7 @@ export default function Home() {
   const { usuario, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
-  const [proximaActividad, setProximaActividad] = useState<Actividad | null>(null)
+  const [proximaActividad, setProximaActividad] = useState<EventoCalendario | null>(null)
   const [dudasRecientes, setDudasRecientes] = useState<DudaInicio[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -329,8 +330,7 @@ export default function Home() {
 
   const cargarDatos = useCallback(async (forzar = false) => {
     if (!usuario) return
-    const now = new Date().toISOString()
-    const hoy = now.slice(0, 10)
+    const hoy = new Date().toISOString().slice(0, 10)
 
     // Claves de caché para datos globales (no dependen del usuario)
     const CACHE_EVENTO = 'home:proximo-evento'
@@ -341,17 +341,17 @@ export default function Home() {
 
     // Leer caché para las dos queries globales; si hay miss, ir a Supabase
     const cachedEvento = cacheGet<EventoCalendario[]>(CACHE_EVENTO)
-    const cachedActs   = cacheGet<Actividad[]>(CACHE_ACTS)
+    const cachedActs   = cacheGet<EventoCalendario[]>(CACHE_ACTS)
 
     const [evento, acts, estados, dudas] = await Promise.all([
       cachedEvento !== null
         ? Promise.resolve({ data: cachedEvento, error: null })
-        : supabase.from('eventos').select('*').gte('fecha', hoy).order('fecha', { ascending: true }).limit(1),
+        : supabase.from('eventos').select('*').not('tipo', 'in', '(actividad,trabajo)').gte('fecha', hoy).order('fecha', { ascending: true }).limit(1),
       cachedActs !== null
         ? Promise.resolve({ data: cachedActs, error: null })
-        : supabase.from('actividades').select('*').gte('fecha_entrega', now).order('fecha_entrega', { ascending: true }),
-      // actividades_estado es usuario-específico: siempre fresco
-      supabase.from('actividades_estado').select('actividad_id').eq('usuario_id', usuario.id).eq('completada', true),
+        : supabase.from('eventos').select('*').in('tipo', ['actividad', 'trabajo']).gte('fecha', hoy).order('fecha', { ascending: true }).limit(50),
+      // eventos_estado es usuario-específico: siempre fresco
+      supabase.from('eventos_estado').select('evento_id').eq('usuario_id', usuario.id).eq('completada', true),
       supabase.from('foro_posts').select('id, titulo, autor, created_at, foro_respuestas(id)').eq('resuelto', false).order('created_at', { ascending: false }).limit(3),
     ])
 
@@ -366,8 +366,8 @@ export default function Home() {
     else setProximoEvento(null)
 
     if (acts.data) {
-      const doneIds = new Set((estados.data ?? []).map((e: { actividad_id: string }) => e.actividad_id))
-      const pendientes = acts.data.filter((a: Actividad) => !doneIds.has(a.id))
+      const doneIds = new Set((estados.data ?? []).map((e: { evento_id: string }) => e.evento_id))
+      const pendientes = acts.data.filter((a: EventoCalendario) => !doneIds.has(a.id))
       setProximaActividad(pendientes[0] ?? null)
     }
     setDudasRecientes((dudas.data ?? []) as DudaInicio[])
@@ -723,7 +723,7 @@ export default function Home() {
 
               {/* Próxima actividad pendiente */}
               {proximaActividad && (() => {
-                const diff = new Date(proximaActividad.fecha_entrega).getTime() - Date.now()
+                const diff = fechaLimite(proximaActividad).getTime() - Date.now()
                 const dias = diff / 86400000
                 const urgColor = dias < 1 ? '#f43f5e' : dias < 3 ? '#f59e0b' : '#61ae98'
                 const urgBorder= dias < 1 ? 'rgba(244,63,94,0.2)'  : dias < 3 ? 'rgba(245,158,11,0.2)'  : 'rgba(16,185,129,0.2)'
@@ -731,10 +731,10 @@ export default function Home() {
                   ? `${Math.floor(diff / 3600000)}h restantes`
                   : dias < 2 ? 'Mañana'
                   : `En ${Math.floor(dias)} días`
-                const fechaEvento = new Date(proximaActividad.fecha_entrega)
+                const fechaEvento = fechaLimite(proximaActividad)
                 return (
                   <button
-                    onClick={() => navigate('/actividades')}
+                    onClick={() => navigate('/calendar?vista=actividades')}
                     className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden bg-gradient-to-br from-surface to-input border shadow-card hover:-translate-y-0.5 hover:shadow-card-hover"
                     style={{ borderColor: urgBorder, '--urg-color': urgColor } as React.CSSProperties}
                   >
@@ -808,9 +808,7 @@ export default function Home() {
                           <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
                             {evtLabel}
                           </span>
-                          <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500">
-                            Evento
-                          </span>
+                          <TipoEventoBadge tipo={proximoEvento.tipo} />
                         </div>
                         <p className="text-sm font-semibold truncate text-text-primary">{proximoEvento.titulo}</p>
                         <p className="text-xs mt-0.5 capitalize text-gray-500">

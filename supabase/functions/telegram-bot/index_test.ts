@@ -209,3 +209,29 @@ Deno.test('callback_query con datos invalidos -> 200', async () => {
     assertEquals(llamadasFetch.filter((u) => u.includes('supabase')).length, 0)
   })
 })
+
+Deno.test('callbacks "t:", "m:" y "f:" malformados -> 200 sin tocar la BD', async () => {
+  await conEntorno(async (h) => {
+    const uuid = '00000000-0000-0000-0000-000000000000'
+    const malos: string[] = []
+    for (const c of ['t', 'm', 'f']) {
+      malos.push(`${c}:no-es-uuid:1`, `${c}:${uuid}:99`, `${c}:${uuid}:-1`, `${c}:${uuid}:x`, `${c}:${uuid}`)
+    }
+    malos.push(`t:${uuid}:6`, `m:${uuid}:10`, `f:${uuid}:3`)
+    for (const data of malos) {
+      const upd = {
+        update_id: 4,
+        callback_query: {
+          id: 'c2',
+          from: { id: 5 },
+          data,
+          message: { message_id: 9, chat: { id: 5, type: 'private' } },
+        },
+      }
+      const r = await h(post(upd, { [CABECERA]: SECRETO }))
+      assertEquals(r.status, 200, data)
+      await r.body?.cancel()
+    }
+    assertEquals(llamadasFetch.filter((u) => u.includes('supabase')).length, 0)
+  })
+})

@@ -3,7 +3,7 @@ import { getSupabase } from '../lib/supabase'
 import { EventoCalendario } from '../lib/types'
 
 type EventoInput = Omit<EventoCalendario, 'id' | 'created_at'>
-type EventoUpdate = Partial<Pick<EventoCalendario, 'titulo' | 'descripcion' | 'materia' | 'fecha' | 'hora'>>
+type EventoUpdate = Partial<Pick<EventoCalendario, 'titulo' | 'descripcion' | 'materia' | 'tipo' | 'fecha' | 'hora'>>
 
 interface UseEventosReturn {
   eventos: EventoCalendario[]
@@ -44,7 +44,7 @@ export function useEventos(): UseEventosReturn {
     try {
       const { data, error: fetchError } = await supabase
         .from('eventos')
-        .select('id, clase, titulo, descripcion, materia, fecha, hora, created_by, created_at')
+        .select('id, clase, titulo, descripcion, materia, tipo, fecha, hora, created_by, created_at')
         .order('fecha', { ascending: true })
         .limit(200)
         .abortSignal(controller.signal)

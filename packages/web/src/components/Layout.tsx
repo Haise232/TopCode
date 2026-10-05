@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   Home, BookMarked, MessageCircle, FolderOpen, Calendar, Shield,
-  GraduationCap, ClipboardCheck, HelpCircle, BookOpen, Search,
+  GraduationCap, HelpCircle, BookOpen, Search,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useUnreadCounts, type UnreadCounts } from '../hooks/useUnreadCounts'
@@ -18,7 +18,6 @@ const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
   '/docs':        () => import('../pages/Docs'),
   '/chat':        () => import('../pages/Chat'),
   '/apuntes':     () => import('../pages/Apuntes'),
-  '/actividades': () => import('../pages/Actividades'),
   '/calendar':    () => import('../pages/Calendar'),
   '/foro':        () => import('../pages/Foro'),
   '/recursos':    () => import('../pages/Recursos'),
@@ -35,8 +34,7 @@ type NavItem = { to: string; label: string; Icon: React.ElementType; badgeKey?: 
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/',            label: 'Inicio',      Icon: Home,           group: 'curso' },
-  { to: '/actividades', label: 'Actividades', Icon: ClipboardCheck, badgeKey: 'actividades', group: 'curso' },
-  { to: '/calendar',    label: 'Calendario',  Icon: Calendar,       group: 'curso' },
+  { to: '/calendar',    label: 'Calendario',  Icon: Calendar,       badgeKey: 'actividades', group: 'curso' },
   { to: '/explorar',    label: 'Explorar',    Icon: Search,         group: 'comunidad' },
   { to: '/docs',        label: 'Docs',        Icon: BookMarked,     badgeKey: 'docs', group: 'comunidad' },
   { to: '/apuntes',     label: 'Apuntes',     Icon: FolderOpen,     group: 'comunidad' },

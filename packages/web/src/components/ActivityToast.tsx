@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
 import { useBellSound } from '../hooks/useBellSound'
-import { Actividad } from '@topcode/shared'
+import { type EventoCalendario } from '@topcode/shared'
+
+const RUTA_ACTIVIDADES = '/calendar?vista=actividades'
 
 export default function ActivityToast() {
   const { usuario } = useAuth()
@@ -13,8 +15,10 @@ export default function ActivityToast() {
   const location = useLocation()
   const { notify } = useNotifications()
   const playBell = useBellSound()
+  const miId = usuario?.id
+  const miClase = usuario?.clase
 
-  const [toast, setToast] = useState<Actividad | null>(null)
+  const [toast, setToast] = useState<EventoCalendario | null>(null)
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pathnameRef = useRef(location.pathname)
@@ -28,7 +32,7 @@ export default function ActivityToast() {
     setTimeout(() => setToast(null), 300)
   }, [])
 
-  const show = useCallback((item: Actividad) => {
+  const show = useCallback((item: EventoCalendario) => {
     if (timerRef.current) clearTimeout(timerRef.current)
     setToast(item)
     setVisible(true)
@@ -40,24 +44,26 @@ export default function ActivityToast() {
   }, [playBell])
 
   useEffect(() => {
-    if (!usuario) return
+    if (!miId) return
 
     const channel = supabase
       .channel('activity-toast')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'actividades' },
+        { event: 'INSERT', schema: 'public', table: 'eventos' },
         payload => {
-          const item = payload.new as Actividad
+          const item = payload.new as EventoCalendario
+          if (item.tipo !== 'actividad' && item.tipo !== 'trabajo') return
+          if (item.clase && miClase && item.clase !== miClase) return
 
           notify('Nueva actividad en TopCode', {
             body: `${item.titulo}`,
             icon: '/favicon.png',
             tag: `act-${item.id}`,
-            onClick: () => navigate('/actividades'),
+            onClick: () => navigate(RUTA_ACTIVIDADES),
           })
 
-          if (pathnameRef.current.startsWith('/actividades')) return
+          if (pathnameRef.current.startsWith('/calendar') && window.location.search.includes('vista=actividades')) return
           show(item)
         }
       )
@@ -66,7 +72,7 @@ export default function ActivityToast() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [usuario?.id, show, notify, navigate])
+  }, [miId, miClase, show, notify, navigate])
 
   useEffect(() => {
     return () => {
@@ -119,7 +125,7 @@ export default function ActivityToast() {
             {toast.titulo}
           </p>
           <p className="text-[10px] leading-snug mt-0.5 truncate" style={{ color: 'var(--color-text-muted)' }}>
-            {toast.materia} — {toast.fecha_entrega}
+            {toast.materia ? `${toast.materia} — ` : ''}{toast.fecha}
           </p>
         </div>
 
@@ -134,7 +140,7 @@ export default function ActivityToast() {
             <X size={11} />
           </button>
           <button
-            onClick={() => { navigate('/actividades'); dismiss() }}
+            onClick={() => { navigate(RUTA_ACTIVIDADES); dismiss() }}
             className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
             style={{
               background: 'rgba(61,159,137,0.15)',

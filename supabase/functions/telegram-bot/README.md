@@ -71,6 +71,8 @@ curl -sS "https://api.telegram.org/bot<token-de-botfather>/getWebhookInfo"
 2. En el chat privado con el bot: `/vincular 123456`.
 3. Escribe el evento, p. ej. "entrega 7/11 DPL 23:59", y pulsa "Crear".
 
+Es un asistente paso a paso: (1) escribes el título (texto libre), (2) eliges el tipo (actividad, trabajo, examen teórico, examen práctico, presentación, especial), (3) la asignatura o "Sin asignatura", (4) la fecha de fin (botones Hoy/Mañana/Pasado mañana o escribiéndola, p. ej. "viernes", "22/10", "jueves 23:59"), (5) confirmas con "Crear". Hay un botón Cancelar en cada paso. El estado vive en `telegram_pendientes.payload` (`paso`: tipo | materia | fecha | confirmar) y caduca a los 30 min, renovándose en cada paso; los botones de pasos anteriores se ignoran. `/proximos` muestra el tipo de cada evento.
+
 Comandos: `/start`, `/ayuda`, `/vincular <código>`, `/proximos`, `/desvincular`.
 
 ## Seguridad
