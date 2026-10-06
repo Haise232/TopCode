@@ -673,8 +673,8 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative w-full md:w-64">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:shrink-0">
+            <div className="relative flex-1 min-w-[160px] md:flex-none md:w-64">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               <input
                 type="text"
@@ -1144,9 +1144,9 @@ function EventCard({
     >
       <div className="w-1 shrink-0" style={{ background: past ? 'var(--overlay-06)' : mainColor, opacity: past ? 1 : 0.8 }} />
 
-      <div className="flex gap-3.5 flex-1 min-w-0" style={{ padding: '14px 16px' }}>
+      <div className="flex gap-2.5 sm:gap-3.5 flex-1 min-w-0 px-3 py-3 sm:px-4 sm:py-3.5">
         {/* Date block */}
-        <div className="w-12 h-12 flex flex-col items-center justify-center shrink-0 rounded-xl"
+        <div className="w-11 h-11 sm:w-12 sm:h-12 flex flex-col items-center justify-center shrink-0 rounded-xl"
           style={{
             background: isToday ? `linear-gradient(135deg, ${mainColor}, ${mainColor}cc)` : past ? 'var(--overlay-04)' : mainBg,
             border: isToday ? 'none' : past ? '1px solid var(--overlay-05)' : `1px solid ${mainBorder}`,
@@ -1164,7 +1164,7 @@ function EventCard({
 
         {/* Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
             <div className="flex flex-col gap-1.5 min-w-0">
               {!past ? <TipoEventoBadge tipo={evento.tipo} className="w-fit" /> : (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium w-fit text-text-muted">
@@ -1176,7 +1176,7 @@ function EventCard({
                 {evento.titulo}
               </p>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center justify-end flex-wrap sm:flex-nowrap gap-1.5 sm:shrink-0">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex items-center gap-1 ${isToday ? 'animate-pulse-soft' : ''}`}
                 style={badgeStyle}>
                 {completada ? <Check size={10} /> : vencida ? <AlertTriangle size={10} /> : isToday && <Zap size={9} />}
@@ -1185,7 +1185,7 @@ function EventCard({
               {estado && (
                 <button onClick={estado.onToggle} disabled={estado.toggling}
                   role="checkbox" aria-checked={estado.completada}
-                  className="w-6 h-6 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
+                  className="w-8 h-8 sm:w-6 sm:h-6 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
                   style={{
                     background: estado.completada ? '#2f8f75' : 'transparent',
                     border: `2px solid ${estado.completada ? '#2f8f75' : 'var(--overlay-20)'}`,
@@ -1198,7 +1198,7 @@ function EventCard({
               {isAdmin && !past && (
                 <>
                   <button onClick={onEdit}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150"
+                    className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg transition-all duration-150"
                     style={{ color: 'var(--color-text-muted)', border: '1px solid transparent' }}
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement
@@ -1216,7 +1216,7 @@ function EventCard({
                     <Pencil size={12} />
                   </button>
                   <button onClick={onDelete}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150"
+                    className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg transition-all duration-150"
                     style={{ color: 'var(--color-text-muted)', border: '1px solid transparent' }}
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement
@@ -1262,7 +1262,7 @@ function EventCard({
             </div>
             {estado && estado.adminCount !== null && estado.totalAlumnos > 0 && (
               <span className="flex items-center gap-2 text-[10px] font-medium text-text-muted">
-                <span className="h-1 w-16 rounded-full overflow-hidden" style={{ background: 'var(--overlay-06)' }}>
+                <span className="h-1 w-16 shrink-0 rounded-full overflow-hidden" style={{ background: 'var(--overlay-06)' }}>
                   <span className="block h-full rounded-full bg-success" style={{ width: `${(estado.adminCount / estado.totalAlumnos) * 100}%` }} />
                 </span>
                 {estado.adminCount} de {estado.totalAlumnos} alumnos la han completado
