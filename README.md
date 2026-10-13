@@ -26,17 +26,38 @@ Todo en un solo sitio, con acceso aprobado por administradores y permisos por cl
 
 <br />
 
-**[Demo](https://topcode-chi.vercel.app)** · **[Características](#-características)** · **[Arquitectura](#-arquitectura)** · **[Seguridad](#-seguridad)** · **[Instalación](#-puesta-en-marcha-local)** · **[Despliegue](#-despliegue-en-vercel)**
+**[Demo](https://topcode-chi.vercel.app)** · **[Capturas](#-capturas)** · **[Características](#-características)** · **[Arquitectura](#-arquitectura)** · **[Seguridad](#-seguridad)** · **[Instalación](#-puesta-en-marcha-local)** · **[Despliegue](#-despliegue-en-vercel)**
+
+<br />
+
+<img src="docs/screenshots/inicio.png" alt="Panel de inicio de TopCode con el horario del día y accesos rápidos" width="100%" />
+
+<sub><b>Inicio</b> · horario del día con la clase en curso, dudas abiertas del foro y accesos rápidos</sub>
 
 </div>
 
-<!-- Añade capturas en docs/screenshots y enlázalas aquí -->
+## 📸 Capturas
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/login.png" alt="Pantalla de inicio de sesión" />
+      <br /><sub><b>Inicio de sesión</b> · acceso con aprobación de un administrador</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/calendario.png" alt="Calendario con exámenes y actividades" />
+      <br /><sub><b>Calendario</b> · exámenes y actividades filtrados por tipo</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
 ## Índice
 
+- [Capturas](#-capturas)
 - [Características](#-características)
+- [Bot de Telegram](#-bot-de-telegram)
 - [Arquitectura](#-arquitectura)
 - [Seguridad](#-seguridad)
 - [Stack tecnológico](#-stack-tecnológico)
@@ -67,7 +88,7 @@ Todo en un solo sitio, con acceso aprobado por administradores y permisos por cl
 |---|---------|------|-------------|
 | 🏠 | **Inicio** | `/` | Panel principal con acceso al horario semanal de la clase |
 | ✅ | **Actividades** | `/actividades` | Seguimiento con filtros: todas, pendientes y completadas |
-| 📅 | **Calendario** | `/calendar` | Eventos académicos |
+| 📅 | **Calendario** | `/calendar` | Exámenes y actividades de la clase, con tipos de evento (examen teórico, examen práctico, presentación, trabajo, especial), búsqueda y "marcar como hecha" por alumno |
 
 ### 📚 Contenido
 
@@ -87,11 +108,33 @@ Todo en un solo sitio, con acceso aprobado por administradores y permisos por cl
 | 📢 | **Anuncios** | Modal de anuncios para todos los usuarios; solo el superadministrador puede crearlos (política RLS en `migracion_permisos_por_clase.sql`) |
 | 🏫 | **Permisos por clase** | La gestión de apuntes, eventos y horario se limita a la clase del administrador |
 
+### 🤖 Bot de Telegram
+
+Los administradores de clase pueden crear eventos del calendario desde Telegram con un asistente paso a paso (título, tipo, asignatura, fecha y descripción opcional) y confirmación con botones antes de insertar. Ver la [sección del bot](#-bot-de-telegram).
+
 ### 📱 App móvil (`packages/mobile`)
 
 Cliente Expo / React Native con inicio de sesión y cuatro pestañas: **Inicio**, **Chat**, **Notas** y **Tareas**.
 
 > Las notas solo existen en la app móvil; la web no tiene ruta de notas.
+
+---
+
+## 🤖 Bot de Telegram
+
+Edge Function de Supabase (Deno) en [`supabase/functions/telegram-bot`](supabase/functions/telegram-bot) que recibe el webhook del bot.
+
+1. Un admin con clase asignada genera un código en **Perfil → Telegram** (caduca en 10 minutos).
+2. En el chat privado con el bot envía `/vincular 123456`.
+3. Escribe el evento (p. ej. `entrega 7/11 DPL 23:59`), completa los pasos y pulsa **Crear**.
+
+Comandos: `/start`, `/ayuda`, `/vincular <código>`, `/proximos`, `/desvincular`.
+
+- Solo responde en chats privados.
+- La autenticación del webhook usa la cabecera `X-Telegram-Bot-Api-Secret-Token`, comparada en tiempo constante.
+- La RPC `crear_evento_telegram` (solo `service_role`) revalida vínculo, rol, acceso aprobado y clase antes de insertar.
+
+Instrucciones de BotFather, secretos, despliegue y registro del webhook en su [README](supabase/functions/telegram-bot/README.md).
 
 ---
 
@@ -173,6 +216,7 @@ Medidas verificadas en el SQL y la configuración del repositorio:
 | Móvil | Expo, React Native, Expo Router | ~53.0.0, 0.76.9, ~4.0.20 |
 | Backend | Supabase (PostgreSQL, Auth, Realtime, Storage) con `@supabase/supabase-js` | ^2.47.10 |
 | Calidad | ESLint, Prettier | ^9.39.4, ^3.8.1 |
+| Bot | Supabase Edge Functions (Deno) + Telegram Bot API | — |
 | Hosting | Vercel | — |
 
 ---
@@ -187,7 +231,7 @@ Monorepo gestionado con npm workspaces (`packages/*`).
 │   ├── web/       # Aplicación web (React + Vite + TypeScript)
 │   ├── mobile/    # Aplicación móvil (Expo / React Native)
 │   └── shared/    # Código compartido (lib, hooks, constantes)
-├── supabase/      # Esquema y migraciones SQL
+├── supabase/      # Esquema, migraciones SQL y Edge Function del bot de Telegram
 ├── .github/       # Plantillas de issues
 ├── .env.example   # Plantilla de variables de entorno
 └── vercel.json    # Configuración de despliegue
@@ -236,8 +280,9 @@ Vite sirve la web en `http://localhost:5173` por defecto. El archivo `.env.local
 |----------|-------------|
 | `VITE_SUPABASE_URL` | URL de tu proyecto de Supabase |
 | `VITE_SUPABASE_ANON_KEY` | Clave pública (`anon`) de Supabase |
+| `VITE_TELEGRAM_BOT_USERNAME` | Opcional. Usuario del bot sin `@`, para mostrar el enlace en el Perfil |
 
-Ambas se obtienen en **Supabase Dashboard → Settings → API**.
+Las dos primeras se obtienen en **Supabase Dashboard → Settings → API**.
 
 </details>
 
@@ -276,6 +321,12 @@ Los scripts SQL están en `supabase/` y se ejecutan en **Supabase → SQL Editor
    4. `supabase/migracion_documentacion.sql`: biblioteca de documentación en Markdown (requiere las funciones `tc_usuario_*` de la migración de permisos; elimina la antigua sección de Noticias).
    5. `supabase/migracion_foro_recursos.sql`: tablas del foro de dudas (`foro_posts`, `foro_respuestas`) y de recursos compartidos.
    6. `supabase/migracion_seguridad.sql`: protege las columnas sensibles de `usuarios` (rol, superadmin, promedio, clase) y ajusta las políticas de Storage.
+3. Bot de Telegram y tipos de evento (opcional, en este orden):
+   1. `supabase/migracion_telegram.sql`: tablas `telegram_*` con RLS y códigos de vinculación.
+   2. `supabase/migracion_telegram_v2.sql`: RPC `crear_evento_telegram`, límite de intentos y `telegram_username`.
+   3. `supabase/migracion_tipos_evento.sql`: columna `eventos.tipo` (actividad, trabajo, examen teórico, examen práctico, presentación, especial).
+   4. `supabase/migracion_telegram_descripcion.sql`: descripción opcional en los eventos creados desde el bot.
+   5. `supabase/migracion_calendario_actividades.sql`: tabla `eventos_estado` para marcar actividades como hechas y Realtime en `eventos`.
 
 </details>
 
