@@ -20,8 +20,10 @@ const Profile     = lazy(() => import('./pages/Profile'))
 const Recursos    = lazy(() => import('./pages/Recursos'))
 const Foro        = lazy(() => import('./pages/Foro'))
 const ForoPost    = lazy(() => import('./pages/ForoPost'))
+const Juegos      = lazy(() => import('./juegos/Juegos'))
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+// bare: a pantalla completa, sin el menú de TopCode (la sección de juegos trae su propia navegación).
+function ProtectedRoute({ children, bare = false }: { children: React.ReactNode; bare?: boolean }) {
   const { session, usuario, loading, perfilError } = useAuth()
   const location = useLocation()
   if (loading) return <Loading />
@@ -30,7 +32,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // lugar de asumir que la solicitud está pendiente.
   if (!usuario) return perfilError ? <ProfileError /> : <Loading />
   if (usuario.estado_acceso !== 'aprobado') return <AccessPending />
-  return <Layout>{children}</Layout>
+  return bare ? <>{children}</> : <Layout>{children}</Layout>
 }
 
 function ProfileError() {
@@ -123,6 +125,7 @@ function AppRoutes() {
         <Route path="/recursos"    element={<ProtectedRoute><Recursos /></ProtectedRoute>} />
         <Route path="/foro"        element={<ProtectedRoute><Foro /></ProtectedRoute>} />
         <Route path="/foro/:id"    element={<ProtectedRoute><ForoPost /></ProtectedRoute>} />
+        <Route path="/juegos"   element={<ProtectedRoute bare><Juegos /></ProtectedRoute>} />
         <Route path="/profile"  element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/admin"    element={

@@ -168,9 +168,9 @@ function HomeSkeleton() {
         {/* Horario — 6 filas que reflejan la cantidad real de clases diarias */}
         <SkeletonSchedule rows={6} />
 
-        {/* Accesos rápidos — 8 internos (Tu espacio) + 4 externos (Enlaces externos) */}
-        <SkeletonQuickActions count={8} />
-        <SkeletonQuickActions count={4} />
+        {/* Accesos rápidos — 7 internos (Tu espacio) + 5 externos (Enlaces externos) */}
+        <SkeletonQuickActions count={7} />
+        <SkeletonQuickActions count={5} />
 
         {/* Próximamente: actividad + evento */}
         {[1, 2].map(i => (
@@ -219,6 +219,13 @@ const ENLACES_INTERES = [
     href: 'https://www3.gobiernodecanarias.org/medusa/edublog/cifpvilladeaguimes/',
     color: '#61ae98',
   },
+  {
+    label: 'Juegos',
+    desc: 'Cartas',
+    Icon: Dices,
+    href: '/juegos',
+    color: '#c8a24b',
+  },
 ]
 
 const ACCESOS_INTERNOS = [
@@ -230,18 +237,6 @@ const ACCESOS_INTERNOS = [
   { label: 'Foro de dudas', desc: 'Preguntas',     Icon: HelpCircle,     to: '/foro',       color: '#60a5fa' },
   { label: 'Recursos',    desc: 'Enlaces',        Icon: BookOpen,       to: '/recursos',    color: '#a78bfa' },
 ]
-
-// Casino de la comunidad (proyecto aparte). Sin VITE_CASINO_URL no se muestra el acceso.
-const CASINO_URL = import.meta.env.VITE_CASINO_URL
-
-// Abre el casino con la sesión de TopCode: el access token viaja en el fragmento (#), que no llega a ningún
-// servidor; el casino lo quita de la barra de direcciones al cargar. El refresh token no se comparte.
-async function abrirCasino() {
-  if (!CASINO_URL) return
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
-  window.location.assign(token ? `${CASINO_URL}#tc_token=${encodeURIComponent(token)}` : CASINO_URL)
-}
 
 // Tarjeta de acceso rápido — navegación interna ("Tu espacio")
 function QuickActionCard({
@@ -698,16 +693,6 @@ export default function Home() {
                   onClick={() => navigate(to)}
                 />
               ))}
-              {CASINO_URL && (
-                <QuickActionCard
-                  label="Casino"
-                  desc="Juegos"
-                  Icon={Dices}
-                  color="#c8a24b"
-                  index={ACCESOS_INTERNOS.length}
-                  onClick={() => { void abrirCasino() }}
-                />
-              )}
             </div>
           </div>
 

@@ -1,0 +1,347 @@
+/* Generado desde el proyecto de juegos con scripts/scope-css.cjs: no editar aquí. */
+.juegos-root .score__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: clamp(16px, 2.5vw, 32px);
+}
+
+.juegos-root .score__board {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.juegos-root .score__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.juegos-root .score__row {
+  display: grid;
+  grid-template-columns: 34px 36px minmax(0, 1fr) 96px minmax(118px, auto);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 14px;
+  border: 1px solid rgba(241, 233, 214, 0.18);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.24);
+  text-align: left;
+  color: var(--ivory);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.juegos-root .score__row:hover {
+    border-color: rgba(241, 233, 214, 0.45);
+  }
+
+.juegos-root .score__row.is-selected {
+    border-color: var(--brass);
+    background: rgba(200, 162, 75, 0.1);
+  }
+
+.juegos-root .score__row:focus-visible {
+    outline: 3px solid var(--brass);
+    outline-offset: 2px;
+  }
+
+.juegos-root .score__row--me .score__name {
+  color: var(--brass);
+}
+
+.juegos-root .score__rank {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--muted);
+}
+/* Podio: oro, plata y bronce, con el número siempre visible. */
+.juegos-root .score__rank--1 {
+  background: #c8a24b;
+  color: #1b1405;
+}
+.juegos-root .score__rank--2 {
+  background: #b9c2c9;
+  color: #1b1d20;
+}
+.juegos-root .score__rank--3 {
+  background: #a8683d;
+  color: #fff;
+}
+
+.juegos-root .score__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.juegos-root .score__name small {
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+.juegos-root .score__money {
+  display: grid;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.juegos-root .score__money b {
+    font-family: var(--display);
+    font-size: 21px;
+    font-weight: 400;
+    color: var(--ivory);
+  }
+
+.juegos-root .score__money small {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+/* Ganancia y pérdida: el color acompaña al signo y la flecha, nunca va solo. */
+.juegos-root .up {
+  color: #5fd38d;
+}
+.juegos-root .down {
+  color: #ff9c94;
+}
+
+.juegos-root .spark {
+  width: 96px;
+  height: 28px;
+  overflow: visible;
+}
+
+.juegos-root .spark polyline {
+    fill: none;
+    stroke: var(--brass);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+.juegos-root .spark circle {
+    fill: var(--brass);
+  }
+
+.juegos-root .score__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.juegos-root .score__card {
+  padding: 16px;
+  border: 1px solid rgba(241, 233, 214, 0.2);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.juegos-root .score__card h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 17px;
+  }
+
+.juegos-root .score__reset {
+  font-variant-numeric: tabular-nums;
+}
+
+.juegos-root .score__empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* --- Gráfica de la semana --- */
+
+.juegos-root .week-chart {
+  margin: 0;
+}
+
+.juegos-root .week-chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: pan-y;
+  }
+
+.juegos-root .week-chart__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 1.6em;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.juegos-root .week-chart__head b {
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ivory);
+  }
+
+.juegos-root .week-chart__head small {
+    margin-left: 6px;
+    font-size: 13px;
+  }
+
+.juegos-root .week-chart__grid line {
+    stroke: rgba(241, 233, 214, 0.1);
+  }
+
+.juegos-root .week-chart__grid text {
+    font-size: 12px;
+    fill: var(--muted);
+  }
+
+.juegos-root .week-chart__base {
+  stroke: rgba(241, 233, 214, 0.45);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.juegos-root .week-chart__day {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--muted);
+}
+
+.juegos-root .week-chart__cross {
+  stroke: rgba(241, 233, 214, 0.35);
+}
+
+.juegos-root .week-chart__line {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.juegos-root .week-chart__dot {
+  fill: var(--brass);
+  stroke: var(--baize-deep);
+  stroke-width: 2;
+}
+
+.juegos-root .week-chart__hit {
+  fill: transparent;
+}
+
+/* --- Podio de la semana pasada: 2º, 1º, 3º --- */
+
+.juegos-root .podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.juegos-root .podium__step {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 10px 6px 0;
+  text-align: center;
+}
+
+.juegos-root .podium__step b {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+.juegos-root .podium__name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.juegos-root .podium__place {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 8px 8px 0 0;
+  font-family: var(--display);
+  font-size: 22px;
+  color: #1b1405;
+}
+
+.juegos-root .podium__step--1 {
+  order: 2;
+}
+
+.juegos-root .podium__step--1 .podium__place {
+    height: 64px;
+    background: #c8a24b;
+  }
+.juegos-root .podium__step--2 {
+  order: 1;
+}
+.juegos-root .podium__step--2 .podium__place {
+    height: 44px;
+    background: #b9c2c9;
+  }
+.juegos-root .podium__step--3 {
+  order: 3;
+}
+.juegos-root .podium__step--3 .podium__place {
+    height: 32px;
+    background: #a8683d;
+    color: #fff;
+  }
+
+@media (max-width: 1000px) {
+  .juegos-root .score {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+  .juegos-root .score__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .juegos-root .score__side {
+    order: -1;
+  }
+  .juegos-root .score__board, .juegos-root .score__side {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .juegos-root .score__row {
+    grid-template-columns: 28px 32px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .juegos-root .score__row .spark {
+    display: none;
+  }
+  .juegos-root .score__money b {
+    font-size: 17px;
+  }
+}

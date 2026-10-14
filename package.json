@@ -11,5 +11,8 @@
     "preview": "npm run preview --workspace=packages/web",
     "mobile": "npm run start --workspace=packages/mobile",
     "lint": "npm run lint --workspace=packages/web"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   }
 }
