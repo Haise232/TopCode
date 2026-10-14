@@ -6,7 +6,7 @@ import {
   GraduationCap, Shield, ClipboardCheck, Clock,
   ExternalLink, Github, Palette, School,
   MessageCircle, FolderOpen, BookOpen, Users,
-  BookMarked, HelpCircle, CalendarDays, X,
+  BookMarked, HelpCircle, CalendarDays, X, Dices,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -230,6 +230,18 @@ const ACCESOS_INTERNOS = [
   { label: 'Foro de dudas', desc: 'Preguntas',     Icon: HelpCircle,     to: '/foro',       color: '#60a5fa' },
   { label: 'Recursos',    desc: 'Enlaces',        Icon: BookOpen,       to: '/recursos',    color: '#a78bfa' },
 ]
+
+// Casino de la comunidad (proyecto aparte). Sin VITE_CASINO_URL no se muestra el acceso.
+const CASINO_URL = import.meta.env.VITE_CASINO_URL
+
+// Abre el casino con la sesión de TopCode: el access token viaja en el fragmento (#), que no llega a ningún
+// servidor; el casino lo quita de la barra de direcciones al cargar. El refresh token no se comparte.
+async function abrirCasino() {
+  if (!CASINO_URL) return
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  window.location.assign(token ? `${CASINO_URL}#tc_token=${encodeURIComponent(token)}` : CASINO_URL)
+}
 
 // Tarjeta de acceso rápido — navegación interna ("Tu espacio")
 function QuickActionCard({
@@ -674,7 +686,7 @@ export default function Home() {
             <span className="text-2xs font-semibold uppercase tracking-wider text-gray-600">
               Tu espacio
             </span>
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8">
               {ACCESOS_INTERNOS.map(({ label, desc, Icon, to, color }, index) => (
                 <QuickActionCard
                   key={to}
@@ -686,6 +698,16 @@ export default function Home() {
                   onClick={() => navigate(to)}
                 />
               ))}
+              {CASINO_URL && (
+                <QuickActionCard
+                  label="Casino"
+                  desc="Juegos"
+                  Icon={Dices}
+                  color="#c8a24b"
+                  index={ACCESOS_INTERNOS.length}
+                  onClick={() => { void abrirCasino() }}
+                />
+              )}
             </div>
           </div>
 
