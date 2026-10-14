@@ -6,7 +6,7 @@ import AlertModal from '../components/AlertModal'
 import { Button, Card, Input } from '../components/ui'
 import { CLASE_UNICA } from '@topcode/shared'
 
-function traducirError(msg: string): string {
+function traducirError(msg: string, code?: string): string {
   const m = msg.toLowerCase()
   if (m.includes('already registered') || m.includes('user already exists'))
     return 'Ya existe una cuenta con ese email.'
@@ -14,6 +14,12 @@ function traducirError(msg: string): string {
     return 'La contraseña debe tener al menos 6 caracteres.'
   if (m.includes('invalid email'))
     return 'El formato del email no es válido.'
+  // Supabase: "For security purposes, you can only request this after N seconds."
+  const segundos = m.match(/after (\d+) seconds?/)?.[1]
+  if (segundos)
+    return `Ya se envió un correo a este email hace poco. Espera ${segundos} s y revisa tu bandeja (y spam) antes de reintentar.`
+  if (code === 'over_email_send_rate_limit' || m.includes('email rate limit'))
+    return 'El servidor ha alcanzado el límite de correos de verificación. Inténtalo más tarde o avisa a un administrador.'
   if (m.includes('too many requests') || m.includes('rate limit'))
     return 'Demasiados intentos. Espera unos minutos.'
   if (m.includes('network') || m.includes('fetch'))
@@ -55,7 +61,7 @@ export default function Register() {
     })
     setLoading(false)
     if (error) {
-      setModal({ type: 'error', title: 'Error al registrarse', message: traducirError(error.message) })
+      setModal({ type: 'error', title: 'Error al registrarse', message: traducirError(error.message, error.code) })
     } else {
       setModal({
         type: 'success',
