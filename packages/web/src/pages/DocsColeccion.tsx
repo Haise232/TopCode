@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth'
 import { markDocsVisited } from '../hooks/useUnreadCounts'
 import {
   useDocColeccion, fetchPagina, createPagina, savePagina, deletePagina, fetchRevisiones,
-  updateColeccion, deleteColeccion, materiaLabel,
+  updateColeccion, deleteColeccion, fetchPaginasCompletas, materiaLabel,
   type DocPagina, type DocRevision, type ColeccionInput,
 } from '../hooks/useDocs'
 import MarkdownView from '../components/docs/MarkdownView'
@@ -18,6 +18,7 @@ import AlertModal from '../components/AlertModal'
 import { Button, Input, Modal } from '../components/ui'
 import { cn } from '../components/ui/cn'
 import { slugify } from '../lib/markdown'
+import { crearZip } from '../lib/zip'
 
 type AlertState = {
   type?: 'error' | 'warning' | 'info'
@@ -32,13 +33,21 @@ function formatFechaHora(iso: string) {
   return new Date(iso).toLocaleString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-function descargar(nombre: string, contenido: string) {
-  const url = URL.createObjectURL(new Blob([contenido], { type: 'text/markdown;charset=utf-8' }))
+function nombreArchivo(nombre: string) {
+  return nombre.replace(/[\\/:*?"<>|]/g, '_').trim() || 'sin-titulo'
+}
+
+function descargarBlob(nombre: string, blob: Blob) {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${nombre.replace(/[\\/:*?"<>|]/g, '_')}.md`
+  a.download = nombre
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function descargar(nombre: string, contenido: string) {
+  descargarBlob(`${nombreArchivo(nombre)}.md`, new Blob([contenido], { type: 'text/markdown;charset=utf-8' }))
 }
 
 export default function DocsColeccion() {
@@ -56,6 +65,8 @@ export default function DocsColeccion() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [filtroPaginas, setFiltroPaginas] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuColeccionOpen, setMenuColeccionOpen] = useState(false)
+  const [descargandoZip, setDescargandoZip] = useState(false)
   const [alert, setAlert] = useState<AlertState>(null)
   const [nuevaTitulo, setNuevaTitulo] = useState<string | null>(null)
   const [nuevaError, setNuevaError] = useState<string | null>(null)
@@ -239,9 +250,31 @@ export default function DocsColeccion() {
     })
   }
 
+  async function descargarColeccion() {
+    if (!coleccion || descargandoZip) return
+    setMenuColeccionOpen(false)
+    setDescargandoZip(true)
+    const { paginas: completas, error: err } = await fetchPaginasCompletas(coleccion.id)
+    setDescargandoZip(false)
+    if (err) { setAlert({ type: 'error', title: 'No se pudo descargar la colección', message: err }); return }
+    if (completas.length === 0) { setAlert({ type: 'info', title: 'La colección está vacía', message: 'No hay páginas que descargar.' }); return }
+
+    const carpeta = nombreArchivo(coleccion.titulo)
+    const usados = new Set<string>()
+    const archivos = completas.map(p => {
+      const base = nombreArchivo(p.titulo)
+      let nombre = base
+      for (let i = 2; usados.has(nombre.toLowerCase()); i++) nombre = `${base} (${i})`
+      usados.add(nombre.toLowerCase())
+      return { nombre: `${carpeta}/${nombre}.md`, contenido: p.contenido }
+    })
+    descargarBlob(`${carpeta}.zip`, crearZip(archivos))
+  }
+
   function confirmarBorrarColeccion() {
     if (!coleccion) return
     setMenuOpen(false)
+    setMenuColeccionOpen(false)
     setAlert({
       type: 'warning',
       title: `¿Borrar la colección «${coleccion.titulo}»?`,
@@ -380,14 +413,31 @@ export default function DocsColeccion() {
             {coleccion.descripcion ? ` · ${coleccion.descripcion}` : ''}
           </p>
         </div>
-        {puedeGestionar(coleccion.created_by) && (
+        <div className="relative shrink-0">
           <button
-            onClick={() => setShowEditColeccion(true)}
-            className="hidden sm:flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text-muted hover:bg-white/5 hover:text-text-secondary"
+            onClick={() => setMenuColeccionOpen(o => !o)}
+            disabled={descargandoZip}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text-muted hover:bg-white/5 hover:text-text-secondary disabled:opacity-60"
+            aria-label="Opciones de la colección"
           >
-            <Settings2 size={13} /> Colección
+            {descargandoZip ? <Loader2 size={13} className="animate-spin" /> : <Settings2 size={13} />}
+            <span className="hidden sm:inline">Colección</span>
           </button>
-        )}
+          {menuColeccionOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuColeccionOpen(false)} />
+              <div className="absolute right-0 top-9 z-30 w-56 rounded-xl border border-white/[0.1] bg-surface-2 p-1 shadow-modal">
+                <MenuItem Icon={Download} label="Descargar colección (.zip)" onClick={() => void descargarColeccion()} />
+                {puedeGestionar(coleccion.created_by) && (
+                  <>
+                    <MenuItem Icon={Pencil} label="Editar colección" onClick={() => { setMenuColeccionOpen(false); setShowEditColeccion(true) }} />
+                    <MenuItem Icon={Trash2} label="Borrar colección" danger onClick={confirmarBorrarColeccion} />
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 flex min-h-0 relative">
@@ -494,15 +544,9 @@ export default function DocsColeccion() {
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                       <div className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-white/[0.1] bg-surface-2 p-1 shadow-modal">
                         <MenuItem Icon={History} label="Historial de cambios" onClick={() => void abrirHistorial()} />
-                        <MenuItem Icon={Download} label="Descargar .md" onClick={() => { setMenuOpen(false); descargar(pagina.titulo, pagina.contenido) }} />
-                        {puedeGestionar(coleccion.created_by) && (
-                          <MenuItem Icon={Settings2} label="Editar colección" onClick={() => { setMenuOpen(false); setShowEditColeccion(true) }} />
-                        )}
+                        <MenuItem Icon={Download} label="Descargar página (.md)" onClick={() => { setMenuOpen(false); descargar(pagina.titulo, pagina.contenido) }} />
                         {puedeGestionar(pagina.created_by) && (
                           <MenuItem Icon={Trash2} label="Borrar página" danger onClick={confirmarBorrarPagina} />
-                        )}
-                        {puedeGestionar(coleccion.created_by) && (
-                          <MenuItem Icon={Trash2} label="Borrar colección" danger onClick={confirmarBorrarColeccion} />
                         )}
                       </div>
                     </>

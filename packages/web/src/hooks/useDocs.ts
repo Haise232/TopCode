@@ -150,6 +150,18 @@ export async function deleteColeccion(id: string) {
   return { error: error?.message ?? null }
 }
 
+/** Todas las páginas de una colección con su contenido, para descargarla entera. */
+export async function fetchPaginasCompletas(coleccionId: string) {
+  const { data, error } = await supabase
+    .from('docs_paginas')
+    .select('titulo, contenido, orden')
+    .eq('coleccion_id', coleccionId)
+  return {
+    paginas: sortPaginas((data ?? []) as { titulo: string; contenido: string; orden: number }[]),
+    error: error?.message ?? null,
+  }
+}
+
 // ── Páginas ───────────────────────────────────────────────────────────────────
 
 export async function fetchPagina(id: string) {
