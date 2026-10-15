@@ -60,7 +60,7 @@ const SOLO = [
   {
     id: 'slots',
     name: 'Tragamonedas',
-    blurb: 'Tres rodillos, cinco líneas y giro automático.',
+    blurb: 'Cinco rodillos, diez líneas y giro automático.',
     art: (
       <span className="game__reels">
         <SlotSymbol name="seven" />
@@ -118,7 +118,7 @@ function ScoreCard({ scores, me, resetAt, online, onOpen }) {
               <b>#{mine.rank}</b> de {scores.players.length} · {eur(mine.balance)}
             </>
           ) : me ? (
-            <>Juega en una mesa para entrar en la clasificación.</>
+            <>Juega una mano o una tirada para entrar en la clasificación.</>
           ) : (
             <>Conectando…</>
           )}

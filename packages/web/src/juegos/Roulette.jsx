@@ -151,7 +151,7 @@ function Table({ totals, result, lucky, disabled, onPlace }) {
 
 // La tirada la sortea el servidor con el saldo semanal (cuenta en el Score); aquí solo se apuesta y se anima la rueda.
 function Roulette({ onExit, juegos }) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(reducer, juegos.me?.balance ?? 0, (bank) => ({ ...initialState, bank }))
   const [wheel, setWheel] = useState({ disc: 0, ball: 0, ms: 4000 })
   const [turbo, setTurbo] = useState(false)
   // En móvil la rueda sale encima de la mesa mientras gira y un momento después.

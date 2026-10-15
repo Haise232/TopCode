@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useEffectEvent } from '../useEffectEvent.js'
 import Avatar from '../Avatar.jsx'
 import { eur } from '../money.js'
 import FeltPrint from '../FeltPrint.jsx'
@@ -146,6 +147,47 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
     else if (myOutcome !== 'push') playLose()
   }, [myOutcome, state.round])
 
+  const canDouble = myTurn && mine.cards.length === 2 && mine.balance >= mine.bet
+  const canBet = Boolean(mine && betting && !mine.locked)
+  const hit = () => send({ t: 'action', kind: 'hit' })
+  const stand = () => send({ t: 'action', kind: 'stand' })
+  const double = () => send({ t: 'action', kind: 'double' })
+  const addChip = (value) => {
+    if (mine.bet + value > mine.balance) return
+    playChip()
+    send({ t: 'bet', amount: mine.bet + value })
+  }
+  const confirmBet = () => send({ t: 'ready' })
+
+  // Teclas, como en el póker: P pedir, M me planto, D doblar; al apostar, 1-4 fichas, B borrar y Espacio confirmar.
+  // Mientras escribes en el chat no hacen nada.
+  const onKey = useEffectEvent((event) => {
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
+    if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable="true"]')) return
+    if (myTurn) {
+      if (event.code === 'KeyP') hit()
+      else if (event.code === 'KeyM') stand()
+      else if (event.code === 'KeyD' && canDouble) double()
+      return
+    }
+    if (!canBet) return
+    const chip = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[event.code]
+    if (chip !== undefined) addChip(CHIPS[chip])
+    else if (event.code === 'KeyB' && mine.bet > 0) send({ t: 'bet', amount: 0 })
+    else if (event.code === 'Space' || event.code === 'Enter') {
+      // Si el foco está en un botón por teclado, se respeta su acción.
+      if (event.target instanceof Element && event.target.matches('button:focus-visible')) return
+      event.preventDefault()
+      if (!broke && mine.bet > 0) confirmBet()
+    }
+  })
+
+  useEffect(() => {
+    const listener = (event) => onKey(event)
+    window.addEventListener('keydown', listener)
+    return () => window.removeEventListener('keydown', listener)
+  }, [])
+
   const players = state.seats.filter(Boolean).length
   let status = 'Esperando jugadores…'
   if (conn !== 'open') status = 'Conexión perdida. Reconectando…'
@@ -201,6 +243,10 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
               <p>
                 Cada jugador empieza la semana con 10.000 € (se reinicia el domingo a las 23:59). Pon tus fichas y confirma la apuesta: la ronda
                 empieza cuando todos están listos o se acaba el tiempo. En tu turno puedes pedir, plantarte y doblar.
+              </p>
+              <p className="hint">
+                Teclas: <kbd>1</kbd>–<kbd>4</kbd> fichas · <kbd>B</kbd> borrar · <kbd>Espacio</kbd> apostar · <kbd>P</kbd> pedir ·{' '}
+                <kbd>M</kbd> me planto · <kbd>D</kbd> doblar.
               </p>
             </Help>
           </div>
@@ -267,34 +313,29 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
       <div className="controls">
         {myTurn && (
           <div className="actions">
-            <button type="button" className="primary" onClick={() => send({ t: 'action', kind: 'hit' })}>
-              Pedir
+            <button type="button" className="primary" onClick={hit}>
+              Pedir <kbd>P</kbd>
             </button>
-            <button type="button" onClick={() => send({ t: 'action', kind: 'stand' })}>
-              Me planto
+            <button type="button" onClick={stand}>
+              Me planto <kbd>M</kbd>
             </button>
-            <button
-              type="button"
-              disabled={mine.cards.length !== 2 || mine.balance < mine.bet}
-              onClick={() => send({ t: 'action', kind: 'double' })}
-            >
-              Doblar
+            <button type="button" disabled={!canDouble} onClick={double}>
+              Doblar <kbd>D</kbd>
             </button>
           </div>
         )}
-        {mine && betting && !mine.locked && (
+        {canBet && (
           <>
             <div className="chips" role="group" aria-label="Añadir fichas a la apuesta">
-              {CHIPS.map((value) => (
+              {CHIPS.map((value, i) => (
                 <button
                   key={value}
                   type="button"
                   className={`chip chip--bj${value}`}
                   disabled={mine.bet + value > mine.balance}
-                  onClick={() => {
-                    playChip()
-                    send({ t: 'bet', amount: mine.bet + value })
-                  }}
+                  aria-keyshortcuts={String(i + 1)}
+                  title={`Tecla ${i + 1}`}
+                  onClick={() => addChip(value)}
                 >
                   {value}
                 </button>
@@ -302,11 +343,11 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
             </div>
             <div className="actions">
               <button type="button" disabled={mine.bet === 0} onClick={() => send({ t: 'bet', amount: 0 })}>
-                Borrar
+                Borrar <kbd>B</kbd>
               </button>
               {!broke && (
-                <button type="button" className="primary" disabled={mine.bet <= 0} onClick={() => send({ t: 'ready' })}>
-                  Apostar {eur(mine.bet)}
+                <button type="button" className="primary" disabled={mine.bet <= 0} onClick={confirmBet}>
+                  Apostar {eur(mine.bet)} <kbd>Espacio</kbd>
                 </button>
               )}
               <button type="button" onClick={() => send({ t: 'stand_up' })}>

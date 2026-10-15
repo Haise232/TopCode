@@ -145,7 +145,7 @@ function Scoreboard({ juegos, onExit }) {
     status = players.length
       ? `${players.length} ${players.length === 1 ? 'jugador' : 'jugadores'} esta semana. Todos empiezan con ${eur(starting)}.`
       : `Nadie ha jugado todavía esta semana. Todos empiezan con ${eur(starting)}.`
-    if (!mine && players.length) status += ' Juega una mano en una mesa para entrar en el score.'
+    if (!mine && players.length) status += ' Juega una mano o una tirada (mesas o solo) para entrar en el score.'
   }
 
   return (

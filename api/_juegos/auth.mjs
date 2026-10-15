@@ -4,6 +4,7 @@ import { safeAvatar, shortName } from './engine/names.mjs'
 import { JuegosError } from './game.mjs'
 
 const TTL_MS = 60000
+const STALE_MS = 10 * 60000 // si Supabase Auth no responde, se acepta un token comprobado en estos últimos minutos
 const cache = new Map()
 
 export function supabaseEnv() {
@@ -20,11 +21,19 @@ export async function verifyUser(authorization, db) {
   if (hit && hit.until > Date.now()) return hit.user
 
   const { url, anonKey } = supabaseEnv()
-  const res = await fetch(`${url}/auth/v1/user`, {
-    headers: { apikey: anonKey, authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(5000),
-  })
-  if (!res.ok) throw new JuegosError('AUTH_INVALID')
+  let res
+  try {
+    res = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: anonKey, authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    })
+  } catch (error) {
+    // Supabase Auth tarda o no responde: si este token ya se comprobó hace poco, se sigue con él.
+    if (hit && hit.until + STALE_MS > Date.now()) return hit.user
+    throw error
+  }
+  if (res.status >= 500 && hit && hit.until + STALE_MS > Date.now()) return hit.user
+  if (!res.ok) throw new JuegosError(res.status >= 500 ? 'AUTH_DOWN' : 'AUTH_INVALID')
   const { id } = await res.json()
   const perfil = (await db.query(`select nombre, avatar_url, estado_acceso from public.usuarios where id = $1`, [id])).rows[0]
   if (!perfil) throw new JuegosError('AUTH_INVALID')

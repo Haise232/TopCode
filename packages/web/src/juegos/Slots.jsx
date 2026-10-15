@@ -67,7 +67,7 @@ function Rules() {
 
 // La tirada la sortea el servidor con el saldo semanal (cuenta en el Score); aquí se anima y se pintan los premios.
 function Slots({ onExit, juegos }) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(reducer, juegos.me?.balance ?? 0, (bank) => ({ ...initialState, bank }))
   const [turbo, setTurbo] = useState(false)
   const [auto, setAuto] = useState(false)
   const [sound, setSound] = useState(() => !isMuted())
@@ -77,7 +77,7 @@ function Slots({ onExit, juegos }) {
 
   const spinning = phase === 'spinning'
   const busy = phase !== 'idle'
-  const broke = !busy && bank < BETS[0]
+  const broke = !busy && balance !== undefined && bank < BETS[0]
   const won = !spinning && (tier === 'win' || tier === 'big')
   const big = won && tier === 'big'
   const shownBank = useCountUp(bank)

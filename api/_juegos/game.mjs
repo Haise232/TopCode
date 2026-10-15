@@ -47,6 +47,7 @@ export const ERRORS = {
   AUTH_REQUIRED: 'Inicia sesión en TopCode.',
   AUTH_INVALID: 'Tu sesión de TopCode caducó. Recarga la página.',
   AUTH_PENDING: 'Tu cuenta de TopCode aún no está aprobada.',
+  AUTH_DOWN: 'No se pudo comprobar tu sesión. Reintentando…',
 }
 
 export class JuegosError extends Error {
@@ -421,7 +422,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
       const out = SOLO_PLAY[game](msg, balance, saved, randomInt)
       if (out.error) return out
-      if (out.delta !== 0) accounts.adjust(user.id, out.delta)
+      // Toda jugada cuenta para el Score, también la que te deja igual (entras en la clasificación y se anota el día).
+      accounts.adjust(user.id, out.delta)
       for (const token of accounts.dirty) {
         const acc = accounts.get(token)
         await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [token, acc.balance, pgArray(acc.days), acc.played])
