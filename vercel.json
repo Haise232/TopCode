@@ -3,7 +3,7 @@
   "outputDirectory": "packages/web/dist",
   "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
-    { "source": "/((?!api/.*).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
