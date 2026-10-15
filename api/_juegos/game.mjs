@@ -10,7 +10,7 @@ import { storedTimers } from './engine/timers.mjs'
 import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
-import { SOLO_GAMES, SOLO_PLAY } from './solo.mjs'
+import { SOLO_GAMES, SOLO_PLAY, rouletteDue, rouletteView } from './solo.mjs'
 
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -38,6 +38,7 @@ export const ERRORS = {
   BAD_PHASE: 'No puedes hacer eso ahora.',
   NOT_YOUR_TURN: 'No es tu turno.',
   INSUFFICIENT_FUNDS: 'Saldo insuficiente.',
+  BETS_CLOSED: 'No va más: la bola ya está en marcha. Apuesta en la siguiente ronda.',
   SEAT_TAKEN: 'Ese asiento está ocupado.',
   NOT_HOST: 'Las mesas públicas no tienen anfitrión.',
   ROOM_NOT_FOUND: 'Esa mesa ya no existe.',
@@ -153,8 +154,8 @@ const cleanText = (value) =>
         .slice(0, 200)
     : ''
 
-// db: { query(sql, params), tx(fn) } · ping(topic) avisa por Realtime · now() reloj
-export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
+// db: { query(sql, params), tx(fn) } · ping(topic) avisa por Realtime · now() reloj · secret: semilla de la ruleta en vivo
+export function createJuegos({ db, ping = async () => {}, now = Date.now, secret = 'topcode-juegos' }) {
   let schemaReady = null
   let knownWeek = null
 
@@ -418,7 +419,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
   // Una jugada en solitario: se bloquea tu cuenta, se sortea en el servidor y se guarda el saldo (cuenta en el Score).
   async function playSolo(user, msg) {
     const game = SOLO_GAMES[msg.t]
-    const week = weekOf(now())
+    const t = now()
+    const week = weekOf(t)
+    const ctx = { now: t, secret, week: week.key }
     return db.tx(async (q) => {
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
       const accounts = new TxAccounts(accRows, week.day)
@@ -427,10 +430,10 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
         game === 'slots'
           ? null
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
-      const out = SOLO_PLAY[game](msg, balance, saved, randomInt)
+      const out = SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
       if (out.error) return out
       // Toda jugada cuenta para el Score, también la que te deja igual (entras en la clasificación y se anota el día).
-      accounts.adjust(user.id, out.delta)
+      if (out.played || out.delta) accounts.adjust(user.id, out.delta)
       for (const token of accounts.dirty) {
         const acc = accounts.get(token)
         await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [token, acc.balance, pgArray(acc.days), acc.played])
@@ -444,6 +447,16 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
       }
       return out
     })
+  }
+
+  // Jugadores con fichas en una ronda de la ruleta en vivo (la ronda se queda anotada aunque ya se haya pagado).
+  async function roulettePlayers(round) {
+    const { rows } = await db.query(
+      `select count(*)::int as n from public.juegos_solo where juego = 'roulette' and estado->>'round' = $1
+         and (jsonb_array_length(coalesce(estado->'bets', '[]'::jsonb)) > 0 or estado->'last'->>'round' = $1)`,
+      [String(round)],
+    )
+    return rows[0].n
   }
 
   // Acciones que se aplican a la mesa en la que estás.
@@ -510,12 +523,24 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
         return reply
       }
       case 'solo_roulette':
+        // Ponerse al día con la ruleta en vivo (una vez por ronda) no bloquea nada si no hay apuesta que pagar.
+        if (msg.a === 'sync') {
+          const saved = (await db.query(`select estado from public.juegos_solo where usuario_id = $1 and juego = 'roulette'`, [user.id])).rows[0]?.estado
+          const t = now()
+          if (!rouletteDue(saved, t)) {
+            reply.solo = rouletteView(saved, account.saldo, { now: t, secret })
+            reply.solo.players = await roulettePlayers(reply.solo.round)
+            return reply
+          }
+        }
+      // falls through
       case 'solo_slots':
       case 'solo_blackjack': {
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
+        if (msg.t === 'solo_roulette' && reply.solo) reply.solo.players = await roulettePlayers(reply.solo.round)
         return reply
       }
       case 'solo_state': {

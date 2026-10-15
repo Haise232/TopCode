@@ -479,9 +479,8 @@ CREATE INDEX IF NOT EXISTS idx_anuncios_activo
   ON public.anuncios (activo)
   WHERE activo = TRUE;
 
--- Query de Admin.tsx: .order('created_at', desc)
-CREATE INDEX IF NOT EXISTS idx_anuncios_created
-  ON public.anuncios (created_at DESC);
+-- Query de Admin.tsx: .order('created_at', desc) → la cubre idx_anuncios_created_at (antes había un duplicado).
+DROP INDEX IF EXISTS public.idx_anuncios_created;
 
 -- ── horario ──────────────────────────────────────────────────
 -- Query de Home.tsx/AdminHorario: .eq('clase', X).order('dia_semana').order('hora_inicio')

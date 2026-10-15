@@ -1,26 +1,40 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import {
+  BETS_MS,
   CHIPS,
+  ROUND_MS,
+  SECTORS,
   SEGMENT,
+  SPIN_MS,
   STRAIGHT_PAYS,
   WHEEL,
   colorOf,
   initialState,
+  neighbours,
+  phaseAt,
   reducer,
   streakBonus,
   totalOf,
   totalsById,
+  unconfirmed,
 } from './roulette.js'
 import { eur } from './money.js'
 import { isMuted, playChip, playLose, playSpin, playWin, playZap, setMuted } from './sound.js'
 import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
 import Help from './Help.jsx'
+import './Roulette.css'
 
-const COLOR_NAMES = { red: 'rojo', black: 'negro', green: 'verde' }
-const mod = (a, n) => ((a % n) + n) % n
+const COLOR_NAMES = { red: 'Rojo', black: 'Negro', green: 'Verde' }
+const REVEAL_WAIT_MS = 700 // tras el «no va más», lo que se espera para pedir el número (el servidor lo suelta a los 600 ms)
+const SEND_MS = 300 // las fichas se mandan al servidor un momento después de dejar de tocar la mesa
+const LAST_CALL_MS = 3000
+const WHEEL_TURN_MS = 9000 // la rueda nunca se para: una vuelta cada 9 s
+const BALL_REVS = 5
+const MIN_BALL_MS = 2500
 const listOf = (items) =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}` : `${items[0]}`
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
 // Cada casilla lleva su posición en la mesa horizontal (c, r) y la columna
 // que ocupa cuando la mesa se gira a vertical en pantallas estrechas (mc).
@@ -68,25 +82,59 @@ function pocketPath(index) {
   return `M ${polar(from, 84)} A 84 84 0 0 1 ${polar(to, 84)} L ${polar(to, 46)} A 46 46 0 0 0 ${polar(from, 46)} Z`
 }
 
-function Wheel({ disc, ball, ms, spinning }) {
+const mix = (a, b, k) => a + (b - a) * Math.min(1, Math.max(0, k))
+// Altura de la bola (top, en % de la rueda) según lo que lleva de giro: corre por la pista y cae a la casilla.
+function ballTop(p) {
+  if (p < 0.62) return 5.25
+  if (p < 0.82) return mix(5.25, 25, (p - 0.62) / 0.2)
+  if (p < 0.9) return mix(25, 21.5, (p - 0.82) / 0.08)
+  return mix(21.5, 23, (p - 0.9) / 0.1)
+}
+
+// Rueda en directo: gira siempre con el reloj del servidor (todos la ven igual) y la bola sale tras el «no va más».
+// spin: { number, launch, land } (instantes del reloj del servidor) · rest: número donde descansa la bola.
+function Wheel({ clock, spin, rest, reduced }) {
+  const disc = useRef(null)
+  const orbit = useRef(null)
+  const ball = useRef(null)
+  const props = useRef({ spin, rest })
+  props.current = { spin, rest }
+
+  useEffect(() => {
+    let frame
+    const draw = () => {
+      const t = clock()
+      const { spin, rest } = props.current
+      const discDeg = reduced ? 0 : ((t % WHEEL_TURN_MS) / WHEEL_TURN_MS) * 360
+      disc.current.style.transform = `rotate(${discDeg}deg)`
+      let ballDeg = null
+      let top = 23
+      if (spin && t >= spin.launch) {
+        const pocket = discDeg + WHEEL.indexOf(spin.number) * SEGMENT
+        const u = reduced ? 0 : Math.max(0, (spin.land - t) / (spin.land - spin.launch))
+        // Respecto a la rueda, la bola va en sentido contrario y frena hasta quedarse en su casilla.
+        ballDeg = pocket + BALL_REVS * 360 * u * u
+        top = ballTop(1 - u)
+      } else if (rest !== null) {
+        ballDeg = discDeg + WHEEL.indexOf(rest) * SEGMENT
+      }
+      orbit.current.style.transform = `rotate(${ballDeg ?? 0}deg)`
+      ball.current.style.opacity = ballDeg === null ? '0' : '1'
+      ball.current.style.top = `${top}%`
+      frame = requestAnimationFrame(draw)
+    }
+    frame = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(frame)
+  }, [clock, reduced])
+
   return (
-    <div
-      className={`wheel ${spinning ? 'wheel--spinning' : ''}`}
-      style={{ '--spin': `${ms}ms` }}
-      role="img"
-      aria-label="Rueda de la ruleta"
-    >
+    <div className="wheel wheel--live" role="img" aria-label="Rueda de la ruleta">
       <svg viewBox="-100 -100 200 200" aria-hidden="true">
         <circle r="100" className="wheel__wood" />
         <circle r="90" className="wheel__track" />
         <circle r="97" className="wheel__trim" />
       </svg>
-      <svg
-        viewBox="-100 -100 200 200"
-        className="wheel__disc"
-        style={{ transform: `rotate(${disc}deg)` }}
-        aria-hidden="true"
-      >
+      <svg ref={disc} viewBox="-100 -100 200 200" className="wheel__disc" aria-hidden="true">
         {WHEEL.map((n, i) => (
           <g key={n}>
             <path d={pocketPath(i)} className={`pocket pocket--${colorOf(n)}`} />
@@ -103,20 +151,20 @@ function Wheel({ disc, ball, ms, spinning }) {
         ))}
         <circle r="11" className="wheel__knob" />
       </svg>
-      <div className="wheel__orbit" style={{ transform: `rotate(${ball}deg)` }}>
-        <span className="wheel__ball" />
+      <div ref={orbit} className="wheel__orbit">
+        <span ref={ball} className="wheel__ball" />
       </div>
     </div>
   )
 }
 
-function Table({ totals, result, lucky, disabled, onPlace }) {
+function Table({ totals, hit, lucky, disabled, onPlace }) {
   const luckyOrder = Object.keys(lucky)
   return (
     <div className="felt">
       {CELLS.map((cell) => {
         const amount = totals[cell.id]
-        const hit = result !== null && cell.n === result
+        const isHit = hit !== null && cell.n === hit
         const boost = cell.n !== undefined ? lucky[cell.n] : undefined
         const name = cell.name ?? cell.label
         return (
@@ -125,7 +173,7 @@ function Table({ totals, result, lucky, disabled, onPlace }) {
             type="button"
             className={`cell ${cell.tone ? `cell--${cell.tone}` : 'cell--outside'} ${
               cell.id.startsWith('col:') ? 'cell--column' : ''
-            } ${hit ? 'cell--hit' : ''} ${boost ? 'cell--lucky' : ''}`}
+            } ${isHit ? 'cell--hit' : ''} ${boost ? 'cell--lucky' : ''}`}
             style={{
               '--c': cell.c,
               '--r': cell.r,
@@ -136,7 +184,7 @@ function Table({ totals, result, lucky, disabled, onPlace }) {
             }}
             disabled={disabled}
             aria-label={amount ? `${name}, apostado ${eur(amount)}` : name}
-            onClick={() => onPlace(cell.id)}
+            onClick={() => onPlace([cell.id])}
           >
             {cell.diamond && <span className={`diamond diamond--${cell.diamond}`} />}
             <span className="cell__label">{cell.label}</span>
@@ -149,117 +197,347 @@ function Table({ totals, result, lucky, disabled, onPlace }) {
   )
 }
 
-// La tirada la sortea el servidor con el saldo semanal (cuenta en el Score); aquí solo se apuesta y se anima la rueda.
+// Pista (racetrack): los números en el orden de la rueda. Tocar uno apuesta a él y a sus dos vecinos de cada lado;
+// los sectores ponen una ficha a pleno en cada número del sector.
+const TRACK = { w: 640, h: 200, r: 74, pad: 26 }
+function trackPoint(k) {
+  const { w, h, r, pad } = TRACK
+  const straight = w - 2 * pad - 2 * r
+  const perimeter = 2 * straight + 2 * Math.PI * r
+  // Empieza arriba a la izquierda y va en sentido horario, como la rueda.
+  let s = (k / WHEEL.length) * perimeter
+  const top = pad + 0
+  const left = pad + r
+  const right = w - pad - r
+  if (s < straight) return [left + s, top]
+  s -= straight
+  if (s < Math.PI * r) {
+    const a = s / r
+    return [right + r * Math.sin(a), h / 2 - r * Math.cos(a)]
+  }
+  s -= Math.PI * r
+  if (s < straight) return [right - s, h - pad]
+  s -= straight
+  const a = s / r
+  return [left - r * Math.sin(a), h / 2 + r * Math.cos(a)]
+}
+
+// Se empieza por el 19 para que el cero quede en el centro de la curva de la izquierda, como en las mesas reales.
+const TRACK_ORDER = WHEEL.map((_, k) => WHEEL[(k + 3) % WHEEL.length])
+
+function Racetrack({ totals, hit, disabled, onPlace }) {
+  return (
+    <div className="track">
+      <svg viewBox={`0 0 ${TRACK.w} ${TRACK.h}`} role="group" aria-label="Pista de vecinos">
+        <rect
+          x={TRACK.pad}
+          y={TRACK.pad}
+          width={TRACK.w - 2 * TRACK.pad}
+          height={TRACK.h - 2 * TRACK.pad}
+          rx={TRACK.r}
+          className="track__ring"
+        />
+        {TRACK_ORDER.map((n, k) => {
+          const [x, y] = trackPoint(k)
+          const amount = totals[`n:${n}`]
+          return (
+            <g
+              key={n}
+              className={`track__num track__num--${colorOf(n)} ${hit === n ? 'track__num--hit' : ''}`}
+              role="button"
+              tabIndex={disabled ? -1 : 0}
+              aria-disabled={disabled}
+              aria-label={`${n} y sus vecinos`}
+              onClick={() => !disabled && onPlace(neighbours(n).map((v) => `n:${v}`))}
+              onKeyDown={(event) => {
+                if (!disabled && (event.key === 'Enter' || event.key === ' ')) {
+                  event.preventDefault()
+                  onPlace(neighbours(n).map((v) => `n:${v}`))
+                }
+              }}
+            >
+              <circle cx={x} cy={y} r="17" />
+              <text x={x} y={y}>
+                {n}
+              </text>
+              {amount && (
+                <text x={x} y={y - 22} className="track__stack">
+                  {amount}
+                </text>
+              )}
+            </g>
+          )
+        })}
+      </svg>
+      <div className="track__sectors">
+        {SECTORS.map((sector) => (
+          <button
+            key={sector.id}
+            type="button"
+            disabled={disabled}
+            title={`Una ficha a pleno en ${sector.numbers.join(', ')}`}
+            onClick={() => onPlace(sector.numbers.map((n) => `n:${n}`))}
+          >
+            {sector.name}
+            <small>{plural(sector.numbers.length, 'ficha', 'fichas')}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Estadísticas de las últimas tiradas, como en las mesas en directo.
+function Stats({ numbers }) {
+  const stats = useMemo(() => {
+    const counts = new Map(WHEEL.map((n) => [n, 0]))
+    for (const n of numbers) counts.set(n, counts.get(n) + 1)
+    const sorted = [...counts].sort((a, b) => b[1] - a[1] || a[0] - b[0])
+    const share = (test) => Math.round((numbers.filter(test).length / Math.max(numbers.length, 1)) * 100)
+    return {
+      hot: sorted.slice(0, 4),
+      cold: sorted.slice(-4).reverse(),
+      bars: [
+        [
+          { label: 'Rojo', tone: 'red', pct: share((n) => colorOf(n) === 'red') },
+          { label: '0', tone: 'green', pct: share((n) => n === 0) },
+          { label: 'Negro', tone: 'black', pct: share((n) => colorOf(n) === 'black') },
+        ],
+        [
+          { label: 'Par', tone: 'plain', pct: share((n) => n > 0 && n % 2 === 0) },
+          { label: '0', tone: 'green', pct: share((n) => n === 0) },
+          { label: 'Impar', tone: 'plain', pct: share((n) => n % 2 === 1) },
+        ],
+        [
+          { label: '1-18', tone: 'plain', pct: share((n) => n > 0 && n <= 18) },
+          { label: '0', tone: 'green', pct: share((n) => n === 0) },
+          { label: '19-36', tone: 'plain', pct: share((n) => n >= 19) },
+        ],
+      ],
+    }
+  }, [numbers])
+  if (numbers.length === 0) return null
+  return (
+    <div className="stats">
+      <h2>Últimas {numbers.length} tiradas</h2>
+      <div className="stats__hc">
+        {[
+          ['Calientes', stats.hot],
+          ['Fríos', stats.cold],
+        ].map(([title, list]) => (
+          <div key={title}>
+            <h3>{title}</h3>
+            <ol>
+              {list.map(([n, count]) => (
+                <li key={n} className={`tile tile--${colorOf(n)}`} title={`${n}: ${plural(count, 'vez', 'veces')}`}>
+                  {n}
+                  <small>{count}</small>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
+      {stats.bars.map((bar) => (
+        <div key={bar[0].label} className="stats__bar">
+          {bar.map((part) => (
+            <span key={part.label} className={`stats__part stats__part--${part.tone}`} style={{ flexGrow: Math.max(part.pct, 0.5) }}>
+              {part.pct >= 8 ? `${part.label} ${part.pct}%` : ''}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Cuenta atrás de la ronda: un aro que se vacía mientras se puede apostar.
+function Countdown({ phase, offset }) {
+  const left = phase === 'betting' ? Math.ceil((BETS_MS - offset) / 1000) : 0
+  const fraction = phase === 'betting' ? 1 - offset / BETS_MS : 0
+  return (
+    <div
+      className={`countdown countdown--${phase} ${phase === 'betting' && left <= LAST_CALL_MS / 1000 ? 'countdown--last' : ''}`}
+      style={{ '--left': fraction }}
+      aria-hidden="true"
+    >
+      <span>{phase === 'betting' ? left : phase === 'spinning' ? '•' : '✓'}</span>
+    </div>
+  )
+}
+
+// La ruleta en vivo: una sola rueda para todos que gira cada 25 s. El servidor sortea la ronda y paga; aquí se
+// apuesta mientras la mesa está abierta y se anima la rueda con el reloj del servidor.
 function Roulette({ onExit, juegos }) {
-  const [state, dispatch] = useReducer(reducer, juegos.me?.balance ?? 0, (bank) => ({ ...initialState, bank }))
-  const [wheel, setWheel] = useState({ disc: 0, ball: 0, ms: 4000 })
-  const [turbo, setTurbo] = useState(false)
-  // En móvil la rueda sale encima de la mesa mientras gira y un momento después.
-  const [wheelUp, setWheelUp] = useState(false)
+  const [state, dispatch] = useReducer(reducer, initialState)
+  const [view, setView] = useState('table')
   const [sound, setSound] = useState(() => !isMuted())
-  const { bank, chip, placed, lastPlaced, phase, lucky, result, net, bonus, boosted, streak, spins, history } = state
+  const [live, setLive] = useState(null) // última respuesta del servidor (ronda, número, historial, jugadores)
+  const [sending, setSending] = useState(false)
+  const [, setTick] = useState(0)
+  const skew = useRef(null)
+  const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
   const { request } = juegos
-  const balance = juegos.me?.balance
+  const balance = juegos.me?.balance ?? 0
+  const { chip, placed, confirmed, lastPlaced } = state
 
-  const spinning = phase !== 'betting'
+  // Reloj del servidor (con la diferencia medida en cada respuesta).
+  const clock = useCallback(() => Date.now() + (skew.current ?? 0), [])
+  const { round, offset, phase } = phaseAt(clock())
+  const ready = skew.current !== null
+
+  const ask = useCallback(
+    async (message) => {
+      const sent = Date.now()
+      const body = await request({ t: 'solo_roulette', ...message })
+      const got = Date.now()
+      if (body?.solo) {
+        // La diferencia de reloj se mide en el punto medio del viaje; con un viaje lento se mantiene la anterior.
+        if (skew.current === null || got - sent < 1500) skew.current = body.solo.now - (sent + got) / 2
+        setLive((before) => ({ ...body.solo, receivedAt: before?.round === body.solo.round && before.number !== null && body.solo.number !== null ? before.receivedAt : clock() }))
+      }
+      return body
+    },
+    [request, clock],
+  )
+
+  // Cuatro veces por segundo: cuenta atrás y cambio de fase.
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 250)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (ready) dispatch({ type: 'ROUND', round })
+  }, [ready, round])
+
+  // Al entrar, y una vez por ronda cuando el servidor suelta el número (si la pestaña está a la vista).
+  useEffect(() => {
+    ask({ a: 'sync' })
+  }, [ask])
+  useEffect(() => {
+    if (!ready) return
+    const due = round * ROUND_MS + BETS_MS + REVEAL_WAIT_MS
+    const wait = due - clock()
+    if (wait < 0) return
+    const timer = setTimeout(() => {
+      if (document.visibilityState === 'visible') ask({ a: 'sync' })
+    }, wait)
+    return () => clearTimeout(timer)
+  }, [ready, round, ask, clock])
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') ask({ a: 'sync' })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [ask])
+
+  // Fichas que el servidor ya tenía para esta ronda (por ejemplo, tras recargar).
+  useEffect(() => {
+    if (live) dispatch({ type: 'SERVER', round: live.round, bets: live.bets })
+  }, [live])
+
+  // Las fichas se confirman con el servidor poco después de ponerlas (y al momento si se acaba el tiempo).
+  const dirty = placed !== confirmed
+  useEffect(() => {
+    if (!dirty || phase !== 'betting' || state.round !== round) return
+    const bets = placed
+    const wait = Math.max(0, Math.min(SEND_MS, BETS_MS - offset - 150))
+    const timer = setTimeout(async () => {
+      setSending(true)
+      const body = await ask({ a: 'bet', round, bets })
+      setSending(false)
+      if (body?.solo) dispatch({ type: 'CONFIRMED', round, bets })
+      else dispatch({ type: 'REJECTED', round })
+    }, wait)
+    return () => clearTimeout(timer)
+    // offset cambia cuatro veces por segundo: solo se vuelve a programar si cambian las fichas o la ronda.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, placed, phase, round, state.round, ask])
+
+  // Lo que se puede apostar todavía: el saldo del servidor (ya sin lo confirmado) menos lo pendiente de confirmar.
+  const available = Math.max(0, balance - unconfirmed(state))
   const onTable = totalOf(placed)
-  const lastTotal = totalOf(lastPlaced)
-  const canRepeat = placed.length === 0 && lastTotal > 0 && lastTotal <= bank
-  const broke = !spinning && bank === 0 && onTable === 0
-  const won = !spinning && result !== null && net > 0
-  const big = won && net >= lastTotal * 10
-  // Cuanto mayor es el premio respecto a lo apostado, más fichas saltan.
-  const coins = Math.min(70, Math.round(24 + (net / Math.max(lastTotal, 1)) * 6))
+  const betting = ready && phase === 'betting' && state.round === round
+
+  // Resultado de esta ronda (si ya se conoce) y tu jugada en ella.
+  const draw = live?.round === round && live.number !== null ? live : null
+  const spin = draw
+    ? (() => {
+        const launch = Math.max(round * ROUND_MS + BETS_MS, draw.receivedAt)
+        const stop = round * ROUND_MS + BETS_MS + SPIN_MS
+        // Si entras con la bola ya parada, se ve directamente en su casilla.
+        const land = launch >= stop ? launch : Math.max(stop, launch + MIN_BALL_MS)
+        return { number: draw.number, launch, land }
+      })()
+    : null
+  const landed = spin !== null && clock() >= spin.land
+  const mine = live?.last && live.last.round === round ? live.last : null
+  // Hasta que la bola cae no se ve lo ganado: el saldo del servidor ya lo incluye.
+  const hidden = mine && !landed ? mine.payout + mine.bonus : 0
+  const shownBank = useCountUp(Math.max(0, available - hidden))
+
+  // Últimos números: el de esta ronda aparece cuando la bola se para.
+  const numbers = useMemo(() => {
+    if (!live) return []
+    return live.history.last === round && !landed ? live.history.numbers.slice(1) : live.history.numbers
+  }, [live, round, landed])
+  const rest = numbers[0] ?? null
+  const lucky = draw?.lucky ?? {}
+  const streak = live?.streak ?? 0
   const nextBonus = Math.round(streakBonus(streak + 1) * 100)
-  const shownBank = useCountUp(bank)
 
+  // Sonidos: tictac de la bola al salir, relámpago y, al caer, si ganaste o perdiste.
+  const launched = spin !== null && clock() >= spin.launch
+  const spinKey = launched ? round : null
   useEffect(() => {
-    if (!spinning) return
-    const timer = setTimeout(() => dispatch({ type: 'SETTLE' }), wheel.ms + 350)
-    return () => clearTimeout(timer)
-  }, [spinning, wheel.ms])
-
-  useEffect(() => {
-    if (spinning || !wheelUp) return
-    const timer = setTimeout(() => setWheelUp(false), 1600)
-    return () => clearTimeout(timer)
-  }, [spinning, wheelUp])
-
-  useEffect(() => {
-    if (spins === 0) return
-    if (net > 0) playWin(big)
-    else playLose()
-  }, [spins, net, big])
-
-  // Saldo de la semana y racha guardada en el servidor.
-  useEffect(() => {
-    if (balance !== undefined) dispatch({ type: 'SYNC', balance })
-  }, [balance])
-  useEffect(() => {
-    request({ t: 'solo_state' }).then((body) => {
-      if (body?.soloState) dispatch({ type: 'SYNC', balance: body.me.balance, streak: body.soloState.streak })
-    })
-  }, [request])
-
-  async function spin() {
-    if (spinning) return
-    const bets = placed.length > 0 ? placed : canRepeat ? lastPlaced : null
-    if (!bets) return
-    dispatch({ type: 'ASK' })
-    const body = await request({ t: 'solo_roulette', bets })
-    if (!body?.solo) {
-      dispatch({ type: 'REJECTED' })
-      return
-    }
-    const { number } = body.solo
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const ms = reduced ? 300 : turbo ? 1800 : 4000
-    // La rueda gira en sentido horario y la bola en el contrario; la bola
-    // termina sobre el ángulo que ocupa la casilla ganadora al detenerse.
-    const disc = wheel.disc + (turbo ? 360 : 720) + Math.random() * 360
-    const target = mod(disc + WHEEL.indexOf(number) * SEGMENT, 360)
-    const base = wheel.ball - (turbo ? 720 : 1440)
-    setWheel({ disc, ball: base - mod(base - target, 360), ms })
-    dispatch({ type: 'SPIN', result: body.solo })
-    setWheelUp(true)
-    playSpin(ms)
+    if (spinKey === null || !spin) return
+    playSpin(spin.land - clock())
     playZap()
-  }
-
-  function place(id) {
-    if (bank >= chip) playChip()
-    dispatch({ type: 'PLACE', id })
-  }
-
-  // Espacio gira. Si el foco está en un botón por teclado, se respeta su acción.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spinKey])
+  const landKey = landed ? round : null
   useEffect(() => {
-    const onKey = (event) => {
-      if (event.code !== 'Space' || event.repeat) return
-      if (event.target instanceof Element && event.target.matches('button:focus-visible')) return
-      event.preventDefault()
-      if (event.type === 'keydown') spin()
-    }
-    window.addEventListener('keydown', onKey)
-    window.addEventListener('keyup', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      window.removeEventListener('keyup', onKey)
-    }
-  })
+    if (landKey === null || !mine) return
+    if (mine.net > 0) playWin(mine.net >= mine.stake * 10)
+    else playLose()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [landKey])
 
-  let status = 'Elige una ficha y toca la mesa para apostar.'
-  if (phase === 'waiting') status = 'No va más…'
-  else if (spinning) status = `No va más. Relámpago en ${listOf(Object.keys(lucky))}.`
-  else if (juegos.error) status = juegos.error
-  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
-  else if (onTable > 0) status = `Tienes ${eur(onTable)} en la mesa.`
-  else if (result !== null) {
-    const outcome = net > 0 ? `Ganaste ${eur(net)}.` : net < 0 ? `Perdiste ${eur(-net)}.` : 'Quedaste igual.'
-    status = `Salió el ${result}, ${COLOR_NAMES[colorOf(result)]}. ${outcome}`
+  function place(ids) {
+    if (!betting) return
+    if (state.chip * ids.length <= available) playChip()
+    dispatch({ type: 'PLACE', ids, available })
+  }
+
+  const canRepeat = betting && placed.length === 0 && totalOf(lastPlaced) > 0 && totalOf(lastPlaced) <= available
+  const broke = balance === 0 && onTable === 0
+  const won = landed && mine && mine.net > 0
+  const players = live?.round === round ? (live.players ?? 0) : 0
+
+  let call = 'Conectando con la mesa…'
+  let detail = ''
+  if (ready) {
+    if (phase === 'betting') {
+      call = BETS_MS - offset <= LAST_CALL_MS ? 'Últimas apuestas' : 'Hagan sus apuestas'
+      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+      else if (onTable > 0) detail = sending || dirty ? `Enviando ${eur(onTable)}…` : `Apuesta aceptada: ${eur(onTable)}.`
+      else detail = 'Elige una ficha y toca la mesa.'
+    } else if (!landed) {
+      call = 'No va más'
+      const flashes = Object.keys(lucky)
+      detail = flashes.length ? `Relámpago en ${listOf(flashes)}.` : onTable > 0 ? `Juegas ${eur(onTable)}.` : 'La bola está en marcha.'
+    } else {
+      call = `${COLOR_NAMES[colorOf(spin.number)]} ${spin.number}`
+      if (mine) detail = mine.net > 0 ? `Ganaste ${eur(mine.net)}.` : mine.net < 0 ? `Perdiste ${eur(-mine.net)}.` : 'Quedaste igual.'
+      else detail = 'Prepárate para la siguiente ronda.'
+    }
+    if (juegos.error) detail = juegos.error
   }
 
   return (
-    <main className="app">
+    <main className="app roulette-live">
       <header className="top">
         <h1>Ruleta</h1>
         <div className="hud">
@@ -284,9 +562,6 @@ function Roulette({ onExit, juegos }) {
             <button type="button" onClick={onExit}>
               Juegos
             </button>
-            <button type="button" aria-pressed={turbo} onClick={() => setTurbo(!turbo)}>
-              Turbo
-            </button>
             <button
               type="button"
               aria-pressed={sound}
@@ -299,11 +574,17 @@ function Roulette({ onExit, juegos }) {
             </button>
             <Help title="Cómo se juega">
               <p>
-                Elige una ficha y toca la mesa para apostar; pulsa <kbd>Espacio</kbd> o «Girar» para lanzar la bola.
+                Es una mesa en vivo: la rueda es la misma para todos y lanza la bola cada 25 segundos. Tienes 15 segundos para
+                apostar; con el «no va más» la mesa se cierra y la bola gira.
               </p>
               <p>
-                En cada tirada caen de 1 a 3 números relámpago: si aciertas uno a pleno, paga entre 50 y 150 a 1.
+                Tus fichas se envían solas al servidor. Mientras la mesa esté abierta puedes cambiarlas o quitarlas.
               </p>
+              <p>
+                En la pista, tocar un número apuesta a él y a sus dos vecinos de la rueda (5 fichas). Los sectores ponen una
+                ficha a pleno en cada número: Vecinos del cero (17), Tercio (12), Huérfanos (8) y Juego cero (7).
+              </p>
+              <p>En cada tirada caen de 1 a 3 números relámpago: si aciertas uno a pleno, paga entre 50 y 150 a 1.</p>
               <p>Cada victoria seguida en la que al menos duplicas lo apostado suma un 5% extra a la siguiente, hasta un 15%.</p>
               <p>Juegas con tu saldo de la semana: lo que ganes o pierdas cuenta en el Score.</p>
               <h3>Pagos</h3>
@@ -315,37 +596,56 @@ function Roulette({ onExit, juegos }) {
         </div>
       </header>
 
-      <div className={`floor fill ${big ? 'floor--shake' : ''}`}>
-        <section className={`side ${wheelUp ? 'side--up' : ''}`}>
-          <Wheel disc={wheel.disc} ball={wheel.ball} ms={wheel.ms} spinning={spinning} />
+      <div className="floor fill">
+        <section className={`side ${ready && phase !== 'betting' ? 'side--up' : ''}`}>
+          <Wheel clock={clock} spin={spin} rest={rest} reduced={reduced} />
           <div className="recent">
             <h2>Últimos números</h2>
-            {history.length === 0 ? (
+            {numbers.length === 0 ? (
               <p>Todavía no ha salido ninguno.</p>
             ) : (
               <ol>
-                {history.map((n, i) => (
-                  <li key={spins - i} className={`tile tile--${colorOf(n)}`}>
+                {numbers.slice(0, 12).map((n, i) => (
+                  <li key={`${round}-${i}`} className={`tile tile--${colorOf(n)}`}>
                     {n}
                   </li>
                 ))}
               </ol>
             )}
           </div>
+          <Stats numbers={numbers} />
         </section>
 
         <section className="play">
-          <p className={`status ${won && onTable === 0 ? 'status--win' : ''}`} aria-live="polite">
-            {status}
-          </p>
+          <div className="dealer">
+            <Countdown phase={ready ? phase : 'spinning'} offset={offset} />
+            <p className={`status ${won ? 'status--win' : ''}`} aria-live="polite">
+              <strong>{call}</strong>
+              {detail && <span>{detail}</span>}
+            </p>
+            <p className="dealer__players">{players > 0 ? `${plural(players, 'jugador', 'jugadores')} en esta tirada` : 'Mesa en vivo'}</p>
+          </div>
 
-          <Table
-            totals={totalsById(placed)}
-            result={result}
-            lucky={lucky}
-            disabled={spinning || broke}
-            onPlace={place}
-          />
+          <div className="views" role="tablist" aria-label="Tipo de apuesta">
+            <button type="button" role="tab" aria-selected={view === 'table'} onClick={() => setView('table')}>
+              Mesa
+            </button>
+            <button type="button" role="tab" aria-selected={view === 'track'} onClick={() => setView('track')}>
+              Pista
+            </button>
+          </div>
+
+          {view === 'table' ? (
+            <Table
+              totals={totalsById(placed)}
+              hit={landed ? spin.number : null}
+              lucky={lucky}
+              disabled={!betting || broke}
+              onPlace={place}
+            />
+          ) : (
+            <Racetrack totals={totalsById(placed)} hit={landed ? spin.number : null} disabled={!betting || broke} onPlace={place} />
+          )}
 
           <div className="controls">
             <div className="chips" role="group" aria-label="Valor de la ficha">
@@ -355,7 +655,7 @@ function Roulette({ onExit, juegos }) {
                   type="button"
                   className={`chip chip--${value}`}
                   aria-pressed={chip === value}
-                  disabled={spinning || bank < value}
+                  disabled={available < value}
                   onClick={() => dispatch({ type: 'SELECT_CHIP', chip: value })}
                 >
                   {value}
@@ -364,63 +664,42 @@ function Roulette({ onExit, juegos }) {
             </div>
 
             <div className="actions">
-              {broke ? null : (
+              {canRepeat ? (
+                <button type="button" className="primary" onClick={() => dispatch({ type: 'REPEAT', available })}>
+                  Repetir apuesta
+                </button>
+              ) : (
                 <>
-                  {canRepeat ? (
-                    <button type="button" disabled={spinning} onClick={() => dispatch({ type: 'REPEAT' })}>
-                      Repetir apuesta
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        disabled={spinning || placed.length === 0}
-                        onClick={() => dispatch({ type: 'UNDO' })}
-                      >
-                        Deshacer
-                      </button>
-                      <button
-                        type="button"
-                        disabled={spinning || placed.length === 0}
-                        onClick={() => dispatch({ type: 'CLEAR' })}
-                      >
-                        Quitar todo
-                      </button>
-                      <button
-                        type="button"
-                        disabled={spinning || onTable === 0 || onTable > bank}
-                        onClick={() => dispatch({ type: 'DOUBLE' })}
-                      >
-                        Doblar
-                      </button>
-                    </>
-                  )}
+                  <button type="button" disabled={!betting || placed.length === 0} onClick={() => dispatch({ type: 'UNDO' })}>
+                    Deshacer
+                  </button>
+                  <button type="button" disabled={!betting || placed.length === 0} onClick={() => dispatch({ type: 'CLEAR' })}>
+                    Quitar todo
+                  </button>
                   <button
                     type="button"
-                    className="primary"
-                    disabled={spinning || (placed.length === 0 && !canRepeat)}
-                    onClick={spin}
+                    disabled={!betting || onTable === 0 || onTable > available}
+                    onClick={() => dispatch({ type: 'DOUBLE', available })}
                   >
-                    {canRepeat ? 'Repetir y girar' : 'Girar'}
+                    Doblar
                   </button>
                 </>
               )}
             </div>
           </div>
-
         </section>
       </div>
 
       {won && (
         <WinBurst
-          key={spins}
-          amount={net}
-          caption={`Ganaste con el ${result}`}
-          coins={coins}
-          big={big}
+          key={round}
+          amount={mine.net}
+          caption={`Ganaste con el ${spin.number}`}
+          coins={Math.min(70, Math.round(24 + (mine.net / Math.max(mine.stake, 1)) * 6))}
+          big={mine.net >= mine.stake * 10}
           tags={[
-            boosted && `Relámpago ×${boosted}`,
-            bonus > 0 && `Racha de ${streak}: +${eur(bonus)} extra`,
+            mine.boosted && `Relámpago ×${mine.boosted}`,
+            mine.bonus > 0 && `Racha de ${mine.streak}: +${eur(mine.bonus)} extra`,
           ].filter(Boolean)}
         />
       )}

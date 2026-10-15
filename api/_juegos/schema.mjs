@@ -42,6 +42,7 @@ create table if not exists public.juegos_chat (
   creado     timestamptz not null default now()
 );
 create index if not exists juegos_chat_mesa_idx on public.juegos_chat (mesa, id desc);
+create index if not exists juegos_chat_usuario_idx on public.juegos_chat (usuario_id, creado desc);
 
 -- Partida en curso de los juegos en solitario (racha de la ruleta, mano del blackjack).
 create table if not exists public.juegos_solo (

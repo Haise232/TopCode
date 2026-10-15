@@ -108,99 +108,91 @@ export function totalsById(placed) {
   return totals
 }
 
+// --- Mesa en vivo: una ronda cada ROUND_MS para todos (el servidor y la pantalla usan los mismos tiempos). ---
+export const ROUND_MS = 25000
+export const BETS_MS = 15000 // «hagan sus apuestas»
+export const SPIN_MS = 8000 // la bola gira; los 2 s que quedan se ve el número ganador
+
+// Sectores de la pista (racetrack) de la rueda europea. Aquí cada número del sector lleva una ficha a pleno.
+export const SECTORS = [
+  { id: 'tiers', name: 'Tercio', numbers: [27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33] },
+  { id: 'orphelins', name: 'Huérfanos', numbers: [17, 34, 6, 1, 20, 14, 31, 9] },
+  { id: 'voisins', name: 'Vecinos del cero', numbers: [22, 18, 29, 7, 28, 12, 35, 3, 26, 0, 32, 15, 19, 4, 21, 2, 25] },
+  { id: 'zero', name: 'Juego cero', numbers: [12, 35, 3, 26, 0, 32, 15] },
+]
+
+// El número y sus `count` vecinos a cada lado en la rueda.
+export function neighbours(n, count = 2) {
+  const i = WHEEL.indexOf(n)
+  return Array.from({ length: count * 2 + 1 }, (_, k) => WHEEL[(i - count + k + WHEEL.length) % WHEEL.length])
+}
+
+// Fase de la ronda según el reloj del servidor.
+export function phaseAt(t) {
+  const round = Math.floor(t / ROUND_MS)
+  const offset = t - round * ROUND_MS
+  const phase = offset < BETS_MS ? 'betting' : offset < BETS_MS + SPIN_MS ? 'spinning' : 'result'
+  return { round, offset, phase }
+}
+
 export const initialState = {
-  bank: 0, // saldo semanal que queda fuera de la mesa (el del servidor menos las fichas puestas)
   chip: 25,
+  round: null, // ronda a la que pertenecen las fichas
   placed: [], // una entrada por ficha puesta, en orden, para poder deshacer
+  confirmed: [], // las que ya tiene el servidor (su importe ya salió del saldo)
   lastPlaced: [],
-  phase: 'betting', // betting | waiting (preguntando al servidor) | spinning
-  pending: null, // resultado del servidor mientras gira la rueda
-  lucky: {},
-  result: null,
-  net: 0,
-  bonus: 0,
-  boosted: null,
-  streak: 0,
-  spins: 0,
-  history: [],
+  synced: null, // ronda de la que ya se recogieron las fichas guardadas en el servidor
 }
 
-function repeatLast(state) {
-  const total = totalOf(state.lastPlaced)
-  if (state.placed.length > 0 || total === 0 || total > state.bank) return state
-  return { ...state, bank: state.bank - total, placed: state.lastPlaced }
-}
+// Lo que cuestan las fichas que aún no ha confirmado el servidor.
+export const unconfirmed = (state) => totalOf(state.placed) - totalOf(state.confirmed)
 
+// action.available: saldo libre (el del servidor menos lo que está por confirmar).
 export function reducer(state, action) {
   switch (action.type) {
-    // Saldo y racha del servidor (al entrar y cuando cambian fuera de esta pantalla).
-    case 'SYNC': {
-      if (state.phase !== 'betting') return state
-      return { ...state, bank: Math.max(0, action.balance - totalOf(state.placed)), streak: action.streak ?? state.streak }
+    // Empieza otra ronda: lo apostado en la anterior queda para «Repetir».
+    case 'ROUND': {
+      if (state.round === action.round) return state
+      const played = state.confirmed.length > 0 ? state.confirmed : state.lastPlaced
+      return { ...state, round: action.round, placed: [], confirmed: [], lastPlaced: played }
+    }
+    // Fichas que el servidor tiene guardadas para esta ronda (al entrar o tras recargar).
+    // Solo la primera respuesta de cada ronda: después, lo que manda es lo que haces en esta pantalla.
+    case 'SERVER': {
+      if (state.round !== action.round || state.synced === action.round) return state
+      const next = { ...state, synced: action.round }
+      if (state.placed.length === 0 && action.bets.length > 0) return { ...next, placed: action.bets, confirmed: action.bets }
+      return next
+    }
+    case 'CONFIRMED': {
+      if (state.round !== action.round) return state
+      return { ...state, confirmed: action.bets }
+    }
+    // El servidor no aceptó el cambio: la mesa vuelve a lo confirmado.
+    case 'REJECTED': {
+      if (state.round !== action.round) return state
+      return { ...state, placed: state.confirmed }
     }
     case 'SELECT_CHIP':
       return { ...state, chip: action.chip }
     case 'PLACE': {
-      if (state.phase !== 'betting' || state.bank < state.chip) return state
-      return {
-        ...state,
-        bank: state.bank - state.chip,
-        placed: [...state.placed, { id: action.id, amount: state.chip }],
-      }
+      const chips = action.ids.map((id) => ({ id, amount: state.chip }))
+      if (totalOf(chips) > action.available || state.placed.length + chips.length > MAX_CHIPS) return state
+      return { ...state, placed: [...state.placed, ...chips] }
     }
-    case 'UNDO': {
-      if (state.phase !== 'betting' || state.placed.length === 0) return state
-      const last = state.placed[state.placed.length - 1]
-      return { ...state, bank: state.bank + last.amount, placed: state.placed.slice(0, -1) }
-    }
-    case 'CLEAR': {
-      if (state.phase !== 'betting') return state
-      return { ...state, bank: state.bank + totalOf(state.placed), placed: [] }
-    }
+    case 'UNDO':
+      return { ...state, placed: state.placed.slice(0, -1) }
+    case 'CLEAR':
+      return { ...state, placed: [] }
     case 'DOUBLE': {
       const total = totalOf(state.placed)
-      if (state.phase !== 'betting' || total === 0 || total > state.bank) return state
-      return { ...state, bank: state.bank - total, placed: [...state.placed, ...state.placed] }
+      if (total === 0 || total > action.available || state.placed.length * 2 > MAX_CHIPS) return state
+      return { ...state, placed: [...state.placed, ...state.placed] }
     }
     case 'REPEAT': {
-      if (state.phase !== 'betting') return state
-      return repeatLast(state)
-    }
-    // Se pregunta al servidor: con la mesa vacía, girar repite la última apuesta.
-    case 'ASK': {
-      if (state.phase !== 'betting') return state
-      const next = repeatLast(state)
-      if (next.placed.length === 0) return state
-      return { ...next, phase: 'waiting' }
-    }
-    // El servidor no aceptó la tirada: las fichas vuelven a estar disponibles.
-    case 'REJECTED': {
-      if (state.phase !== 'waiting') return state
-      return { ...state, phase: 'betting' }
-    }
-    case 'SPIN': {
-      if (state.phase !== 'waiting') return state
-      return { ...state, phase: 'spinning', pending: action.result, lucky: action.result.lucky, result: null }
-    }
-    case 'SETTLE': {
-      if (state.phase !== 'spinning') return state
-      const { number, net, bonus, boosted, streak, balance } = state.pending
-      return {
-        ...state,
-        phase: 'betting',
-        pending: null,
-        lucky: {},
-        result: number,
-        net,
-        bonus,
-        boosted,
-        streak,
-        bank: balance,
-        spins: state.spins + 1,
-        history: [number, ...state.history].slice(0, 12),
-        lastPlaced: state.placed,
-        placed: [],
-      }
+      const total = totalOf(state.lastPlaced)
+      if (state.placed.length > 0 || total === 0 || total > action.available) return state
+      return { ...state, placed: state.lastPlaced }
     }
     default:
       return state

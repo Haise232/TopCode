@@ -54,7 +54,7 @@ const SOLO = [
   {
     id: 'roulette',
     name: 'Ruleta',
-    blurb: 'Europea, con números relámpago y rachas.',
+    blurb: 'En vivo: una tirada cada 25 s para todos, con relámpagos y pista.',
     art: <span className="game__wheel" />,
   },
   {

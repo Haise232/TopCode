@@ -1,10 +1,17 @@
 // Función de Vercel de juegos: POST /api/juegos con { t: 'hello' | 'lobby' | 'join_public' | 'bet' | … }.
 import { createJuegos, JuegosError } from './_juegos/game.mjs'
 import { createDb } from './_juegos/db.mjs'
+import { createHash } from 'node:crypto'
 import { health, ping, verifyUser } from './_juegos/auth.mjs'
 
+// Semilla de la ruleta en vivo: JUEGOS_RULETA_SECRET si existe; si no, una derivada de la cadena de conexión (también
+// secreta y la misma en todas las instancias de la función), para que funcione sin configurar nada más.
+const secret = createHash('sha256')
+  .update(`ruleta:${process.env.JUEGOS_RULETA_SECRET || process.env.JUEGOS_DATABASE_URL || ''}`)
+  .digest()
+
 const db = createDb()
-const juegos = createJuegos({ db, ping })
+const juegos = createJuegos({ db, ping, secret })
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 'no-store')
