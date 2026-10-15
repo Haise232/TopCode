@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 // Fuentes de juegos, servidas por la propia app.
 import '@fontsource/abril-fatface/latin.css'
 import '@fontsource-variable/instrument-sans/index.css'
@@ -147,8 +147,14 @@ function LiveGame({ game, tables, online, onJoin }) {
   const players = tables.reduce((sum, t) => sum + t.players, 0)
   const watching = tables.reduce((sum, t) => sum + t.spectators, 0)
   const people = tables.flatMap((t) => t.people)
+  // En el póker la mano empieza con dos: si alguien espera solo, se dice quién para que se anime otro.
+  const alone = game === 'poker' ? tables.find((t) => t.players === 1 && t.phase === 'waiting') : null
   let pulse = 'Conectando…'
-  if (online) pulse = players > 0 ? `${players} jugando${watching ? ` · ${watching} mirando` : ''}` : 'Mesa libre: siéntate el primero'
+  if (online) {
+    if (alone) pulse = `${alone.people[0]?.name ?? 'Alguien'} espera rival${players > 1 ? ` · ${players} jugando` : ''}`
+    else if (players > 0) pulse = `${players} jugando${watching ? ` · ${watching} mirando` : ''}`
+    else pulse = 'Mesa libre: siéntate el primero'
+  }
   return (
     <article className={`live ${players > 0 ? 'live--busy' : ''}`}>
       <span className="game__art live__art" aria-hidden="true">
@@ -167,7 +173,7 @@ function LiveGame({ game, tables, online, onJoin }) {
             {tables.map((t) => (
               <li key={t.code}>
                 <button type="button" disabled={!online || t.players >= t.seats} onClick={() => onJoin(game, 'player', t.code)}>
-                  {t.label} <small>{t.players}/{t.seats}</small>
+                  {t.label} <small>{t.players === 1 && game === 'poker' && t.phase === 'waiting' ? 'espera rival' : `${t.players}/${t.seats}`}</small>
                 </button>
               </li>
             ))}
@@ -341,8 +347,17 @@ function Notice({ title, children, actions }) {
 function JuegosScreens() {
   const navigate = useNavigate()
   // screen: lobby | roulette | slots | blackjack | join | score
-  const [view, setView] = useState({ screen: 'lobby' })
+  const [params, setParams] = useSearchParams()
+  // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
+  const [view, setView] = useState(() => {
+    const game = params.get('juego')
+    if (!Object.hasOwn(LIVE, game)) return { screen: 'lobby' }
+    return { screen: 'join', game, as: 'player', code: params.get('mesa') ?? undefined }
+  })
   const juegos = useJuegos()
+  useEffect(() => {
+    if (params.has('juego') || params.has('mesa')) setParams({}, { replace: true })
+  }, [params, setParams])
   const exit = () => setView({ screen: 'lobby' })
   const home = () => navigate('/')
 

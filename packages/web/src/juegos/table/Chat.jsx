@@ -12,7 +12,7 @@ function Chat({ messages, me, send }) {
   const list = useRef(null)
   const input = useRef(null)
   const last = messages.at(-1)?.id ?? 0
-  const unread = open ? 0 : messages.filter((m) => m.id > seen && m.from !== me?.id).length
+  const unread = open ? 0 : messages.filter((m) => m.id > seen && m.from !== null && m.from !== me?.id).length
 
   // Siempre al último mensaje.
   useEffect(() => {

@@ -3,10 +3,11 @@ import Avatar from '../Avatar.jsx'
 import { eur } from '../money.js'
 import FeltPrint from '../FeltPrint.jsx'
 import PlayingCard from '../PlayingCard.jsx'
-import { playCard, playChip, playLose, playWin } from '../sound.js'
+import { playCard, playChip, playLose, playTurn, playWin } from '../sound.js'
 import { useCountdown } from './useCountdown.js'
 import Help from '../Help.jsx'
 import Chat from './Chat.jsx'
+import Invite from './Invite.jsx'
 import '../Blackjack.css'
 
 // Fichas de la mesa (las mismas que valida el servidor en server/room.js).
@@ -127,12 +128,25 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
     if (cards > 0) playCard()
   }, [cards])
 
+  // Tu turno se oye, vibra (en el móvil) y se ve en la pestaña aunque estés en otra, igual que en el póker.
+  useEffect(() => {
+    if (!myTurn) return
+    playTurn()
+    navigator.vibrate?.(150)
+    const title = document.title
+    document.title = '● Tu turno · Blackjack'
+    return () => {
+      document.title = title
+    }
+  }, [myTurn])
+
   useEffect(() => {
     if (!myOutcome) return
     if (myOutcome === 'win' || myOutcome === 'blackjack') playWin(myOutcome === 'blackjack')
     else if (myOutcome !== 'push') playLose()
   }, [myOutcome, state.round])
 
+  const players = state.seats.filter(Boolean).length
   let status = 'Esperando jugadores…'
   if (conn !== 'open') status = 'Conexión perdida. Reconectando…'
   else if (error) status = error
@@ -140,7 +154,7 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
     if (!mine) status = 'Estás mirando. Elige un asiento libre para jugar.'
     else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
     else if (mine.locked) status = 'Apuesta lista. Esperando al resto de la mesa…'
-    else status = 'Pon tus fichas y confirma la apuesta.'
+    else status = `Pon tus fichas y confirma la apuesta.${players === 1 ? ' Juegas solo contra el crupier: invita a alguien con «Invitar».' : ''}`
   } else if (state.phase === 'playing') {
     const who = state.seats[state.turn]
     status = myTurn ? `Tu turno: tienes ${mine.total}. ¿Pides o te plantas?` : `Juega ${who?.name ?? '…'}.`
@@ -175,6 +189,7 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
             <button type="button" onClick={onLeave}>
               Salir de la sala
             </button>
+            <Invite game="blackjack" code={state.code} name="Blackjack" />
             <Help title="Mesa online">
               {state.label ? (
                 <p>Es una mesa pública: cualquiera con cuenta puede sentarse desde el selector de juegos, sin código.</p>

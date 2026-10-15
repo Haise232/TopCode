@@ -5,6 +5,7 @@ import Avatar from '../Avatar.jsx'
 import Help from '../Help.jsx'
 import { eur } from '../money.js'
 import Chat from '../table/Chat.jsx'
+import Invite from '../table/Invite.jsx'
 import PlayingCard from '../PlayingCard.jsx'
 import WinBurst from '../WinBurst.jsx'
 import { playCard, playChip, playLose, playTurn, playWin } from '../sound.js'
@@ -543,7 +544,7 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
     else if (!mine) status = 'Estás mirando. Elige un asiento libre para jugar.'
     else if (broke) status = 'Te quedaste sin fichas hasta el domingo a las 23:59.'
     else if (ready >= 2) status = 'Preparando la mano…'
-    else status = state.label ? 'Esperando a otro jugador…' : 'Esperando a otro jugador. Comparte el código de la sala.'
+    else status = 'Esperando a otro jugador: la mano empieza con dos. Invita a alguien con «Invitar».'
   } else if (live) {
     const who = state.seats[state.turn]
     if (state.turn === null || state.deadlineIn === null) status = 'Se reparten las cartas…'
@@ -578,6 +579,7 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
             <Help label="Jugadas" title="Jugadas del póker" wide>
               <PokerGuide current={myHand ?? mine?.handName} state={state} />
             </Help>
+            <Invite game="poker" code={state.code} name="Póker" />
             <button type="button" onClick={onLeave}>
               Salir
             </button>

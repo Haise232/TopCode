@@ -37,15 +37,15 @@ export async function verifyUser(authorization, db) {
 }
 
 // Aviso por Supabase Realtime (broadcast): solo dice «algo cambió»; cada cliente pide su propia vista.
-// Canal público y sin datos, así que basta la clave pública de TopCode.
-export async function ping(topic) {
+// Canal público y sin datos, así que basta la clave pública de TopCode. event: «cambio» (la mesa) o «chat».
+export async function ping(topic, event = 'cambio') {
   const { url, anonKey } = supabaseEnv()
   if (!url || !anonKey) return 0
   try {
     const res = await fetch(`${url}/realtime/v1/api/broadcast`, {
       method: 'POST',
       headers: { apikey: anonKey, authorization: `Bearer ${anonKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ messages: [{ topic, event: 'cambio', payload: { at: Date.now() } }] }),
+      body: JSON.stringify({ messages: [{ topic, event, payload: { at: Date.now() } }] }),
       signal: AbortSignal.timeout(3000),
     })
     return res.status

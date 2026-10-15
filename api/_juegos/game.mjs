@@ -16,6 +16,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_PUBLIC_PER_GAME = 6
 const AWAY_MS = 45000 // sin noticias del navegador: se le da por desconectado
 const GONE_MS = 3 * 60000 // y pasado este rato, fuera de la mesa
+const SEEN_SAVE_MS = 15000 // el latido se guarda aunque la mesa no cambie, como mucho una vez cada este rato
 const ONLINE_MS = 60000
 const CHAT_KEEP = 50
 const CHAT_GAP_MS = 700
@@ -101,18 +102,32 @@ function tokensOf(estado) {
   return tokens
 }
 
+// Asientos tal y como los verá quien entre ahora: quien lleva más de GONE_MS sin dar señales sale al abrir la mesa
+// (null) y quien lleva más de AWAY_MS se marca como ausente. Así el selector no muestra fantasmas.
+function liveSeats(estado, now) {
+  const seen = new Map(estado.members.map((m) => [m.id, m.seen]))
+  return estado.room.seats.map((seat) => {
+    if (!seat) return null
+    const idle = seen.has(seat.sid) ? now - seen.get(seat.sid) : Infinity
+    if (idle > GONE_MS) return null
+    return { ...seat, away: idle > AWAY_MS }
+  })
+}
+
 // Resumen de una mesa para el selector (sin abrirla).
 function summary(row, now) {
   const { room, members } = row.estado
-  const seated = room.seats.filter(Boolean)
+  const seated = liveSeats(row.estado, now).filter(Boolean)
+  const present = seated.filter((seat) => !seat.away)
   return {
     code: row.codigo,
     game: row.juego,
     label: row.etiqueta,
     seats: room.seats.length,
-    players: seated.length,
+    players: present.length,
+    away: seated.length - present.length,
     spectators: members.filter((m) => m.seat === null && now - m.seen < AWAY_MS).length,
-    people: seated.map((seat) => ({ name: seat.name, avatar: seat.avatar ?? null })),
+    people: present.map((seat) => ({ name: seat.name, avatar: seat.avatar ?? null })),
     phase: room.phase,
   }
 }
@@ -217,6 +232,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
       }
 
       let session = room.members.get(user.id)
+      // Latido: si lo guardado ya es viejo se escribe aunque no cambie nada más, para que quien espera solo no
+      // parezca ausente cuando llegue otra persona.
+      const touch = Boolean(session && t - session.seen > SEEN_SAVE_MS)
       if (session) {
         Object.assign(session, { name: user.name, avatar: user.avatar, seen: t })
         if (session.away) {
@@ -231,7 +249,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
       const error = fn(room, session) ?? null
 
       const changed = room.rev !== revBefore || presence
-      if (changed) {
+      if (changed || touch) {
         await q(`update public.juegos_mesas set estado = $2, version = version + 1, actualizado = now() where codigo = $1`, [code, serialize(room)])
         for (const token of accounts.dirty) {
           const acc = accounts.get(token)
@@ -251,6 +269,26 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
       await Promise.all([ping(`juegos-mesa-${code}`), ping('juegos-lobby')])
     }
     return outcome
+  }
+
+  // Vista sin bloquear la mesa, para los latidos y los «tick» que llegan cuando no hay nada que hacer. Devuelve null
+  // si hay que abrirla con bloqueo: un temporizador vencido, alguien a quien marcar como ausente o sacar, tu propio
+  // latido por guardar, o si no estás en la mesa.
+  async function peekTable(code, user) {
+    const t = now()
+    const row = (await db.query(`select * from public.juegos_mesas where codigo = $1`, [code])).rows[0]
+    if (!row) return null
+    const me = row.estado.members.find((m) => m.id === user.id)
+    if (!me || me.away || t - me.seen > SEEN_SAVE_MS) return null
+    if (row.estado.room.pending && row.estado.room.pending.at <= t) return null
+    for (const m of row.estado.members) {
+      const idle = t - m.seen
+      if (m.id !== user.id && (idle > GONE_MS || (idle > AWAY_MS && !m.away))) return null
+    }
+    const tokens = [...tokensOf(row.estado)]
+    const accRows = (await db.query(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = any($1::uuid[])`, [tokens])).rows
+    const room = restore(row, new TxAccounts(accRows, weekOf(t).day), () => now())
+    return { error: null, changed: false, view: viewFor(room, user.id) }
   }
 
   function viewFor(room, userId) {
@@ -318,9 +356,11 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
     if (current) await withTable(current, user, (room, session) => room.leave(session)).catch(() => {})
     const play = msg.as !== 'spectator'
     const all = (await db.query(`select codigo, juego, numero, estado from public.juegos_mesas`)).rows
+    const t = now()
+    // Los asientos de quien ya se fue cuentan como libres (salen de la mesa al entrar).
     const tables = all
       .filter((r) => r.juego === msg.game)
-      .map((r) => ({ code: r.codigo, number: r.numero, seats: r.estado.room.seats }))
+      .map((r) => ({ code: r.codigo, number: r.numero, seats: liveSeats(r.estado, t) }))
     let target = typeof msg.code === 'string' ? tables.find((r) => r.code === msg.code) : null
     if (target && play && !target.seats.some((s) => !s)) target = null
     target ??= pickTable(tables, play)
@@ -360,7 +400,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
     )
     if (rows[0].busy) return 'RATE_LIMIT'
     await db.query(`insert into public.juegos_chat (mesa, usuario_id, nombre, avatar, texto) values ($1, $2, $3, $4, $5)`, [code, user.id, user.name, user.avatar, clean])
-    await ping(`juegos-mesa-${code}`)
+    // Aviso propio del chat: los demás piden solo los mensajes nuevos, no la mesa entera.
+    await ping(`juegos-mesa-${code}`, 'chat')
     return null
   }
 
@@ -423,10 +464,13 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
       case 'chat': {
         if (!account.mesa) throw new JuegosError('BAD_PHASE')
         const error = await postChat(user, account.mesa, msg.text)
-        await tableReply(await withTable(account.mesa, user, () => null), account.mesa)
+        reply.chat = await chatSince(account.mesa, msg.chatAfter)
         if (error) reply.error = { code: error, message: ERRORS[error] }
         return reply
       }
+      case 'chat_poll':
+        reply.chat = await chatSince(account.mesa, msg.chatAfter)
+        return reply
       default: {
         const action = Object.hasOwn(TABLE_ACTIONS, msg.t) ? TABLE_ACTIONS[msg.t] : null
         if (!action) throw new JuegosError('BAD_MESSAGE')
@@ -436,7 +480,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
           reply.lobby = await lobby(user)
           return reply
         }
-        const outcome = await withTable(account.mesa, user, (room, session) => action(room, session, msg))
+        const quiet = msg.t === 'view' || msg.t === 'tick'
+        const outcome = (quiet && (await peekTable(account.mesa, user))) || (await withTable(account.mesa, user, (room, session) => action(room, session, msg)))
         if (msg.t === 'leave_room') {
           reply.state = null
           reply.lobby = await lobby(user)
