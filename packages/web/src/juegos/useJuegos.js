@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 const HEARTBEAT_MS = 20000
 const LOBBY_POLL_MS = 30000
 const RETRY_MS = 3000
+const RETRY_MAX_MS = 30000
 const ERROR_MS = 3500
 
 // Quién se ha sentado o se ha ido entre dos vistas de la mesa (sin contarte a ti).
@@ -132,11 +133,16 @@ export function useJuegos() {
     }
   }, [call, attempt])
 
+  // Reintento cada vez más espaciado (3 s, 6 s, 12 s… hasta 30 s) y con azar: si el servidor va lento, que no le lleguen
+  // todos los navegadores a la vez cada pocos segundos.
+  const failures = useRef(0)
   useEffect(() => {
+    if (conn === 'open') failures.current = 0
     if (conn !== 'closed') return
-    const timer = setTimeout(() => setAttempt((a) => a + 1), RETRY_MS)
+    const wait = Math.min(RETRY_MAX_MS, RETRY_MS * 2 ** failures.current++) * (0.75 + Math.random() * 0.5)
+    const timer = setTimeout(() => setAttempt((a) => a + 1), wait)
     return () => clearTimeout(timer)
-  }, [conn])
+  }, [conn, attempt])
 
   const code = room?.state.code ?? null
 
