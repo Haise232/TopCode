@@ -83,7 +83,7 @@ const SOLO = [
 ]
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
-const SCORES_MS = 15000
+const SCORES_MS = 30000
 
 // Fotos de quien está sentado (las de TopCode; si no hay, iniciales).
 function Faces({ people }) {

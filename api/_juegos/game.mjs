@@ -19,6 +19,7 @@ const AWAY_MS = 45000 // sin noticias del navegador: se le da por desconectado
 const GONE_MS = 3 * 60000 // y pasado este rato, fuera de la mesa
 const SEEN_SAVE_MS = 15000 // el latido se guarda aunque la mesa no cambie, como mucho una vez cada este rato
 const ONLINE_MS = 60000
+const TOUCH_S = 20
 const CHAT_KEEP = 50
 const CHAT_GAP_MS = 700
 const MAX_SCORES = 200
@@ -191,14 +192,20 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
     knownWeek = week.key
   }
 
+  // Cuenta del jugador. «visto» (para el contador de conectados) se escribe como mucho cada TOUCH_S: antes cada
+  // petición reescribía la fila y, con todos jugando, las escrituras se acumulaban en la base de datos.
   async function touchAccount(user) {
     const { rows } = await db.query(
       `insert into public.juegos_cuentas (usuario_id, nombre, avatar) values ($1, $2, $3)
        on conflict (usuario_id) do update set nombre = excluded.nombre, avatar = excluded.avatar, visto = now()
+       where juegos_cuentas.visto < now() - make_interval(secs => $4::int)
+          or juegos_cuentas.nombre is distinct from excluded.nombre
+          or juegos_cuentas.avatar is distinct from excluded.avatar
        returning saldo, mesa`,
-      [user.id, user.name, user.avatar],
+      [user.id, user.name, user.avatar, TOUCH_S],
     )
-    return rows[0]
+    if (rows[0]) return rows[0]
+    return (await db.query(`select saldo, mesa from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0]
   }
 
   // Abre la mesa con bloqueo, aplica fn(room, session) y la guarda si cambió algo.

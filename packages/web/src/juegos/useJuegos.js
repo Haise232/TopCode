@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 // Los temporizadores de la mesa (turnos, crupier) los hace avanzar el propio navegador con «tick» cuando vencen.
 // conn: connecting | open | closed (sin red; reintenta) | denied (cuenta no aprobada o sesión caducada)
 const HEARTBEAT_MS = 20000
-const LOBBY_POLL_MS = 15000
+const LOBBY_POLL_MS = 30000
 const RETRY_MS = 3000
 const ERROR_MS = 3500
 

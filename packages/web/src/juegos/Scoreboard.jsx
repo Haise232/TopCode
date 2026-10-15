@@ -6,7 +6,7 @@ import './Scoreboard.css'
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const SHORT = ['Inicio', 'L', 'M', 'X', 'J', 'V', 'S', 'D']
 const compact = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 })
-const REFRESH_MS = 10000
+const REFRESH_MS = 30000
 
 // Serie de la semana: el saldo inicial y cómo cerró cada día (null = día que aún no llegó).
 const seriesOf = (player, starting) => [starting, ...player.days]
