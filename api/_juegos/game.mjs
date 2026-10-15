@@ -459,6 +459,18 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return rows[0].n
   }
 
+  // Quién ganó en una ronda ya jugada de la ruleta en vivo (para anunciarlo a toda la mesa), de más a menos.
+  async function rouletteWinners(round, userId) {
+    const { rows } = await db.query(
+      `select c.nombre as name, (s.estado->'last'->>'net')::bigint as amount, s.usuario_id = $2 as me
+       from public.juegos_solo s join public.juegos_cuentas c on c.usuario_id = s.usuario_id
+       where s.juego = 'roulette' and s.estado->'last'->>'round' = $1 and (s.estado->'last'->>'net')::bigint > 0
+       order by amount desc limit 5`,
+      [String(round), userId],
+    )
+    return rows.map((r) => ({ name: r.name, amount: Number(r.amount), me: r.me }))
+  }
+
   // Acciones que se aplican a la mesa en la que estás.
   const TABLE_ACTIONS = {
     view: () => null,
@@ -530,6 +542,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           if (!rouletteDue(saved, t)) {
             reply.solo = rouletteView(saved, account.saldo, { now: t, secret })
             reply.solo.players = await roulettePlayers(reply.solo.round)
+            if (Number.isSafeInteger(msg.winners)) reply.solo.winners = await rouletteWinners(msg.winners, user.id)
             return reply
           }
         }
@@ -540,7 +553,10 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
-        if (msg.t === 'solo_roulette' && reply.solo) reply.solo.players = await roulettePlayers(reply.solo.round)
+        if (msg.t === 'solo_roulette' && reply.solo) {
+          reply.solo.players = await roulettePlayers(reply.solo.round)
+          if (Number.isSafeInteger(msg.winners)) reply.solo.winners = await rouletteWinners(msg.winners, user.id)
+        }
         return reply
       }
       case 'solo_state': {

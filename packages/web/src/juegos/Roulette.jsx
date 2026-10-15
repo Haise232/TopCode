@@ -22,11 +22,13 @@ import { eur } from './money.js'
 import { isMuted, playChip, playLose, playSpin, playWin, playZap, setMuted } from './sound.js'
 import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
+import WinToast from './WinToast.jsx'
 import Help from './Help.jsx'
 import './Roulette.css'
 
 const COLOR_NAMES = { red: 'Rojo', black: 'Negro', green: 'Verde' }
 const REVEAL_WAIT_MS = 700 // tras el «no va más», lo que se espera para pedir el número (el servidor lo suelta a los 600 ms)
+const WINNERS_WAIT_MS = 400 // tras caer la bola, para preguntar quién ganó (para entonces ya se han pagado las apuestas)
 const SEND_MS = 300 // las fichas se mandan al servidor un momento después de dejar de tocar la mesa
 const LAST_CALL_MS = 3000
 const WHEEL_TURN_MS = 9000 // la rueda nunca se para: una vuelta cada 9 s
@@ -374,6 +376,7 @@ function Roulette({ onExit, juegos }) {
   const [sound, setSound] = useState(() => !isMuted())
   const [live, setLive] = useState(null) // última respuesta del servidor (ronda, número, historial, jugadores)
   const [sending, setSending] = useState(false)
+  const [winners, setWinners] = useState({ round: null, list: [] })
   const [, setTick] = useState(0)
   const skew = useRef(null)
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
@@ -394,6 +397,7 @@ function Roulette({ onExit, juegos }) {
       if (body?.solo) {
         // La diferencia de reloj se mide en el punto medio del viaje; con un viaje lento se mantiene la anterior.
         if (skew.current === null || got - sent < 1500) skew.current = body.solo.now - (sent + got) / 2
+        if (body.solo.winners && Number.isSafeInteger(message.winners)) setWinners({ round: message.winners, list: body.solo.winners })
         setLive((before) => ({ ...body.solo, receivedAt: before?.round === body.solo.round && before.number !== null && body.solo.number !== null ? before.receivedAt : clock() }))
       }
       return body
@@ -422,6 +426,17 @@ function Roulette({ onExit, juegos }) {
     if (wait < 0) return
     const timer = setTimeout(() => {
       if (document.visibilityState === 'visible') ask({ a: 'sync' })
+    }, wait)
+    return () => clearTimeout(timer)
+  }, [ready, round, ask, clock])
+  // Cuando la bola cae se pregunta quién ganó en la tirada, para anunciarlo a toda la mesa.
+  useEffect(() => {
+    if (!ready) return
+    const due = round * ROUND_MS + BETS_MS + SPIN_MS + WINNERS_WAIT_MS
+    const wait = due - clock()
+    if (wait < 0) return
+    const timer = setTimeout(() => {
+      if (document.visibilityState === 'visible') ask({ a: 'sync', winners: round })
     }, wait)
     return () => clearTimeout(timer)
   }, [ready, round, ask, clock])
@@ -515,6 +530,13 @@ function Roulette({ onExit, juegos }) {
   const broke = balance === 0 && onTable === 0
   const won = landed && mine && mine.net > 0
   const players = live?.round === round ? (live.players ?? 0) : 0
+  const othersWon = useMemo(
+    () =>
+      winners.list
+        .filter((w) => !w.me)
+        .map((w) => ({ key: `${winners.round}-${w.name}`, name: w.name, amount: w.amount, detail: 'en la ruleta' })),
+    [winners],
+  )
 
   let call = 'Conectando con la mesa…'
   let detail = ''
@@ -530,7 +552,7 @@ function Roulette({ onExit, juegos }) {
       detail = flashes.length ? `Relámpago en ${listOf(flashes)}.` : onTable > 0 ? `Juegas ${eur(onTable)}.` : 'La bola está en marcha.'
     } else {
       call = `${COLOR_NAMES[colorOf(spin.number)]} ${spin.number}`
-      if (mine) detail = mine.net > 0 ? `Ganaste ${eur(mine.net)}.` : mine.net < 0 ? `Perdiste ${eur(-mine.net)}.` : 'Quedaste igual.'
+      if (mine) detail = mine.net > 0 ? `¡Has ganado ${eur(mine.net)}! Felicidades.` : mine.net < 0 ? `Perdiste ${eur(-mine.net)}.` : 'Quedaste igual.'
       else detail = 'Prepárate para la siguiente ronda.'
     }
     if (juegos.error) detail = juegos.error
@@ -697,12 +719,14 @@ function Roulette({ onExit, juegos }) {
           caption={`Ganaste con el ${spin.number}`}
           coins={Math.min(70, Math.round(24 + (mine.net / Math.max(mine.stake, 1)) * 6))}
           big={mine.net >= mine.stake * 10}
+          who={juegos.me?.name}
           tags={[
             mine.boosted && `Relámpago ×${mine.boosted}`,
             mine.bonus > 0 && `Racha de ${mine.streak}: +${eur(mine.bonus)} extra`,
           ].filter(Boolean)}
         />
       )}
+      <WinToast wins={othersWon} />
     </main>
   )
 }

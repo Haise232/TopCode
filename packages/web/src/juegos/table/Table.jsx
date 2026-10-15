@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useEffectEvent } from '../useEffectEvent.js'
 import Avatar from '../Avatar.jsx'
 import { eur } from '../money.js'
@@ -9,6 +9,8 @@ import { useCountdown } from './useCountdown.js'
 import Help from '../Help.jsx'
 import Chat from './Chat.jsx'
 import Invite from './Invite.jsx'
+import WinBurst from '../WinBurst.jsx'
+import WinToast from '../WinToast.jsx'
 import '../Blackjack.css'
 
 // Fichas de la mesa (las mismas que valida el servidor en server/room.js).
@@ -204,11 +206,29 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
   else if (state.phase === 'settle') {
     if (mine?.outcome) {
       const net = mine.paid - mine.bet
-      status = net > 0 ? `Ganas ${eur(net)}.` : net < 0 ? `Pierdes ${eur(-net)}.` : 'Empate: recuperas tu apuesta.'
+      status = net > 0 ? `¡Has ganado ${eur(net)}! Felicidades.` : net < 0 ? `Pierdes ${eur(-net)}.` : 'Empate: recuperas tu apuesta.'
     } else status = 'Ronda terminada.'
   }
 
   const showClock = clock && (betting || state.phase === 'playing')
+
+  // Al cobrar: tu celebración y, para el resto de la mesa, un aviso con lo que ganó cada uno.
+  const settled = state.phase === 'settle'
+  const myNet = settled && mine?.outcome ? mine.paid - mine.bet : 0
+  const othersWon = useMemo(
+    () =>
+      settled
+        ? state.seats
+            .filter((seat) => seat && seat.id !== me?.id && seat.paid > seat.bet)
+            .map((seat) => ({
+              key: `${state.round}-${seat.id}`,
+              name: seat.name,
+              amount: seat.paid - seat.bet,
+              detail: seat.outcome === 'blackjack' ? 'con blackjack' : '',
+            }))
+        : [],
+    [settled, state.seats, state.round, me?.id],
+  )
 
   return (
     <main className="app">
@@ -358,6 +378,18 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
         )}
       </div>
 
+      {myNet > 0 && (
+        <WinBurst
+          key={state.round}
+          amount={myNet}
+          caption={myOutcome === 'blackjack' ? '¡Blackjack!' : `Con ${eur(mine.bet)} de apuesta`}
+          coins={Math.min(70, Math.round(24 + (myNet / Math.max(mine.bet, 1)) * 12))}
+          big={myOutcome === 'blackjack' || myNet >= 1000}
+          who={me?.name}
+          tags={myOutcome === 'blackjack' ? ['Blackjack'] : []}
+        />
+      )}
+      <WinToast wins={othersWon} />
       <Chat messages={chat ?? []} me={me} send={send} />
     </main>
   )

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEffectEvent } from '../useEffectEvent.js'
 import { bestHand } from '../shared/poker-core.js'
 import Avatar from '../Avatar.jsx'
@@ -8,9 +8,11 @@ import Chat from '../table/Chat.jsx'
 import Invite from '../table/Invite.jsx'
 import PlayingCard from '../PlayingCard.jsx'
 import WinBurst from '../WinBurst.jsx'
+import WinToast from '../WinToast.jsx'
 import { playCard, playChip, playLose, playTurn, playWin } from '../sound.js'
 import { useCountdown } from '../table/useCountdown.js'
 import './poker.css'
+import './bet-slider.css'
 
 const STREETS = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River' }
 const LIVE = new Set(Object.keys(STREETS))
@@ -407,8 +409,21 @@ function ActionBar({ state, mine, send }) {
   const canRaise = maxTo > state.currentBet && owed < mine.balance
   const minTo = Math.min(state.currentBet + state.minRaise, maxTo)
   const [raiseTo, setRaiseTo] = useState(minTo)
+  const [draft, setDraft] = useState(null) // lo que se está escribiendo en la casilla de la cantidad
   const onTable = state.pot + state.seats.reduce((sum, s) => sum + (s?.bet ?? 0), 0)
   const clamp = (n) => Math.max(minTo, Math.min(maxTo, Math.round(n)))
+  // La barra avanza de ciega grande en ciega grande (salvo en los extremos); la casilla acepta cualquier cantidad exacta.
+  const step = Math.max(1, state.blinds.big)
+  const snap = (n) => (n >= maxTo ? maxTo : n <= minTo ? minTo : clamp(Math.round(n / step) * step))
+  const choose = (n) => {
+    setDraft(null)
+    setRaiseTo(clamp(n))
+  }
+  const commitDraft = () => {
+    if (draft === null) return
+    const value = Number(draft.replace(/[^\d]/g, ''))
+    choose(Number.isFinite(value) && draft.trim() !== '' ? value : raiseTo)
+  }
   const potRaise = (part) => clamp(state.currentBet + (onTable + owed) * part)
   const opening = state.currentBet === 0
 
@@ -443,23 +458,70 @@ function ActionBar({ state, mine, send }) {
         <div className="pbar__raise">
           <div className="pbar__presets">
             {presets.map(([label, value]) => (
-              <button key={label} type="button" aria-pressed={raiseTo === value} onClick={() => setRaiseTo(value)}>
+              <button key={label} type="button" aria-pressed={raiseTo === value} onClick={() => choose(value)}>
                 {label}
               </button>
             ))}
           </div>
-          <label className="pbar__slider">
-            <span className="sr-only">Cantidad de la subida</span>
-            <input
-              type="range"
-              min={minTo}
-              max={maxTo}
-              step={1}
-              value={raiseTo}
-              style={{ '--fill': maxTo > minTo ? (raiseTo - minTo) / (maxTo - minTo) : 1 }}
-              onChange={(event) => setRaiseTo(Number(event.target.value))}
-            />
-          </label>
+          <div className="pslide">
+            <button
+              type="button"
+              className="pslide__step"
+              aria-label={`Bajar ${money(step)}`}
+              disabled={raiseTo <= minTo}
+              onClick={() => choose(snap(raiseTo - step))}
+            >
+              −
+            </button>
+            <label className="pbar__slider pslide__bar">
+              <span className="sr-only">Cantidad de la apuesta</span>
+              <input
+                type="range"
+                min={minTo}
+                max={maxTo}
+                step={1}
+                value={raiseTo}
+                aria-valuetext={money(raiseTo)}
+                style={{ '--fill': maxTo > minTo ? (raiseTo - minTo) / (maxTo - minTo) : 1 }}
+                onChange={(event) => choose(snap(Number(event.target.value)))}
+              />
+              <span className="pslide__ends" aria-hidden="true">
+                <span>{money(minTo)}</span>
+                <span>{money(maxTo)}</span>
+              </span>
+            </label>
+            <button
+              type="button"
+              className="pslide__step"
+              aria-label={`Subir ${money(step)}`}
+              disabled={raiseTo >= maxTo}
+              onClick={() => choose(snap(raiseTo + step))}
+            >
+              +
+            </button>
+            <label className="pslide__amount">
+              <span className="sr-only">Escribe la cantidad exacta</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={draft ?? String(raiseTo)}
+                onFocus={(event) => event.target.select()}
+                onChange={(event) => setDraft(event.target.value)}
+                onBlur={commitDraft}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    commitDraft()
+                    event.currentTarget.blur()
+                  } else if (event.key === 'Escape') {
+                    setDraft(null)
+                    event.currentTarget.blur()
+                  }
+                }}
+              />
+              <span aria-hidden="true">€</span>
+            </label>
+          </div>
         </div>
       ) : (
         <p className="pbar__note">{owed >= mine.balance ? 'Para seguir tienes que ir all-in.' : 'No puedes subir más.'}</p>
@@ -505,6 +567,16 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
   const chipsOut = state.seats.reduce((sum, seat) => sum + (seat?.bet ?? 0), 0)
   const myWin = showdown && mine ? mine.won - mine.total : 0
   const lost = showdown && mine?.inHand && mine.won === 0
+  // Quién más se lleva el bote: se anuncia a toda la mesa.
+  const othersWon = useMemo(
+    () =>
+      showdown && result
+        ? result.winners
+            .filter((w) => state.seats[w.seat]?.id !== me?.id && w.amount > 0)
+            .map((w) => ({ key: `${state.hand}-${w.seat}`, name: w.name, amount: w.amount, detail: w.hand ? `con ${w.hand}` : '' }))
+        : [],
+    [showdown, result, state.seats, state.hand, me?.id],
+  )
 
   useEffect(() => {
     if (cardsOut > 0) playCard()
@@ -713,8 +785,10 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
           caption={mine.handName ? `Con ${mine.handName}` : 'Todos se retiraron'}
           coins={Math.min(70, 20 + Math.round(myWin / 10))}
           big={myWin >= 500}
+          who={me?.name}
         />
       )}
+      <WinToast wins={othersWon} />
       <Chat messages={chat ?? []} me={me} send={send} />
     </main>
   )

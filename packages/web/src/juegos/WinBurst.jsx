@@ -1,5 +1,6 @@
 import { eur } from './money.js'
 import { useCountUp } from './useCountUp.js'
+import './celebrate.css'
 
 const COIN_TONES = ['brass', 'ivory', 'green', 'purple', 'red']
 const PARTY_TONES = ['#ffe27a', '#ff7a6b', '#7fe0b0', '#c9a2ff', '#f1e9d6']
@@ -11,8 +12,9 @@ const noise = (i, salt) => {
   return x - Math.floor(x)
 }
 
-// Celebración a pantalla completa que comparten todos los juegos.
-function WinBurst({ amount, caption, coins, big, tags = [] }) {
+// Celebración a pantalla completa que comparten todos los juegos: «¡Felicidades! Has ganado …».
+// who: tu nombre, en las mesas en vivo (así se nota que el aviso es para ti y no para otro jugador).
+function WinBurst({ amount, caption, coins, big, tags = [], who = '' }) {
   const shown = useCountUp(amount, 900, 0)
   const fireworks = big ? 7 : 3
   const confetti = big ? 90 : 40
@@ -73,7 +75,8 @@ function WinBurst({ amount, caption, coins, big, tags = [] }) {
         />
       ))}
       <p className="win__banner">
-        {big && <em className="win__title">¡Premio gordo!</em>}
+        <em className="win__title">{big ? '¡Premio gordo!' : `¡Felicidades${who ? `, ${who}` : ''}!`}</em>
+        <b className="win__lead">{big && who ? `¡Felicidades, ${who}! Has ganado` : 'Has ganado'}</b>
         <strong>+{eur(shown)}</strong>
         <span>{caption}</span>
         {tags.map((tag) => (
