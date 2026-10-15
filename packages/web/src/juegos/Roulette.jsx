@@ -2,17 +2,16 @@ import { useEffect, useReducer, useState } from 'react'
 import {
   CHIPS,
   SEGMENT,
-  STARTING_BANK,
+  STRAIGHT_PAYS,
   WHEEL,
   colorOf,
-  init,
-  pickLucky,
+  initialState,
   reducer,
-  save,
   streakBonus,
   totalOf,
   totalsById,
 } from './roulette.js'
+import { eur } from './money.js'
 import { isMuted, playChip, playLose, playSpin, playWin, playZap, setMuted } from './sound.js'
 import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
@@ -136,7 +135,7 @@ function Table({ totals, result, lucky, disabled, onPlace }) {
               '--z': boost ? luckyOrder.indexOf(`${cell.n}`) : 0,
             }}
             disabled={disabled}
-            aria-label={amount ? `${name}, apostado $${amount}` : name}
+            aria-label={amount ? `${name}, apostado ${eur(amount)}` : name}
             onClick={() => onPlace(cell.id)}
           >
             {cell.diamond && <span className={`diamond diamond--${cell.diamond}`} />}
@@ -150,17 +149,19 @@ function Table({ totals, result, lucky, disabled, onPlace }) {
   )
 }
 
-function Roulette({ onExit }) {
-  const [state, dispatch] = useReducer(reducer, undefined, init)
+// La tirada la sortea el servidor con el saldo semanal (cuenta en el Score); aquí solo se apuesta y se anima la rueda.
+function Roulette({ onExit, juegos }) {
+  const [state, dispatch] = useReducer(reducer, initialState)
   const [wheel, setWheel] = useState({ disc: 0, ball: 0, ms: 4000 })
   const [turbo, setTurbo] = useState(false)
   // En móvil la rueda sale encima de la mesa mientras gira y un momento después.
   const [wheelUp, setWheelUp] = useState(false)
   const [sound, setSound] = useState(() => !isMuted())
-  const { bank, best, chip, placed, lastPlaced, phase, lucky, result, net, bonus, boosted, streak, spins, history } =
-    state
+  const { bank, chip, placed, lastPlaced, phase, lucky, result, net, bonus, boosted, streak, spins, history } = state
+  const { request } = juegos
+  const balance = juegos.me?.balance
 
-  const spinning = phase === 'spinning'
+  const spinning = phase !== 'betting'
   const onTable = totalOf(placed)
   const lastTotal = totalOf(lastPlaced)
   const canRepeat = placed.length === 0 && lastTotal > 0 && lastTotal <= bank
@@ -190,13 +191,27 @@ function Roulette({ onExit }) {
     else playLose()
   }, [spins, net, big])
 
+  // Saldo de la semana y racha guardada en el servidor.
   useEffect(() => {
-    save({ bank, best, placed })
-  }, [bank, best, placed])
+    if (balance !== undefined) dispatch({ type: 'SYNC', balance })
+  }, [balance])
+  useEffect(() => {
+    request({ t: 'solo_state' }).then((body) => {
+      if (body?.soloState) dispatch({ type: 'SYNC', balance: body.me.balance, streak: body.soloState.streak })
+    })
+  }, [request])
 
-  function spin() {
-    if (spinning || (placed.length === 0 && !canRepeat)) return
-    const number = Math.floor(Math.random() * WHEEL.length)
+  async function spin() {
+    if (spinning) return
+    const bets = placed.length > 0 ? placed : canRepeat ? lastPlaced : null
+    if (!bets) return
+    dispatch({ type: 'ASK' })
+    const body = await request({ t: 'solo_roulette', bets })
+    if (!body?.solo) {
+      dispatch({ type: 'REJECTED' })
+      return
+    }
+    const { number } = body.solo
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const ms = reduced ? 300 : turbo ? 1800 : 4000
     // La rueda gira en sentido horario y la bola en el contrario; la bola
@@ -205,7 +220,7 @@ function Roulette({ onExit }) {
     const target = mod(disc + WHEEL.indexOf(number) * SEGMENT, 360)
     const base = wheel.ball - (turbo ? 720 : 1440)
     setWheel({ disc, ball: base - mod(base - target, 360), ms })
-    dispatch({ type: 'SPIN', number, lucky: pickLucky() })
+    dispatch({ type: 'SPIN', result: body.solo })
     setWheelUp(true)
     playSpin(ms)
     playZap()
@@ -233,11 +248,13 @@ function Roulette({ onExit }) {
   })
 
   let status = 'Elige una ficha y toca la mesa para apostar.'
-  if (spinning) status = `No va más. Relámpago en ${listOf(Object.keys(lucky))}.`
-  else if (broke) status = 'Te quedaste sin saldo.'
-  else if (onTable > 0) status = `Tienes $${onTable} en la mesa.`
+  if (phase === 'waiting') status = 'No va más…'
+  else if (spinning) status = `No va más. Relámpago en ${listOf(Object.keys(lucky))}.`
+  else if (juegos.error) status = juegos.error
+  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+  else if (onTable > 0) status = `Tienes ${eur(onTable)} en la mesa.`
   else if (result !== null) {
-    const outcome = net > 0 ? `Ganaste $${net}.` : net < 0 ? `Perdiste $${-net}.` : 'Quedaste igual.'
+    const outcome = net > 0 ? `Ganaste ${eur(net)}.` : net < 0 ? `Perdiste ${eur(-net)}.` : 'Quedaste igual.'
     status = `Salió el ${result}, ${COLOR_NAMES[colorOf(result)]}. ${outcome}`
   }
 
@@ -248,16 +265,12 @@ function Roulette({ onExit }) {
         <div className="hud">
           <dl className="money">
             <div>
-              <dt>Saldo</dt>
-              <dd className={won ? 'money__up' : ''}>${shownBank}</dd>
+              <dt>Saldo de la semana</dt>
+              <dd className={won ? 'money__up' : ''}>{eur(shownBank)}</dd>
             </div>
             <div>
               <dt>En la mesa</dt>
-              <dd>${onTable}</dd>
-            </div>
-            <div>
-              <dt>Récord</dt>
-              <dd>${best}</dd>
+              <dd>{eur(onTable)}</dd>
             </div>
             <div>
               <dt>Racha</dt>
@@ -291,9 +304,12 @@ function Roulette({ onExit }) {
               <p>
                 En cada tirada caen de 1 a 3 números relámpago: si aciertas uno a pleno, paga entre 50 y 150 a 1.
               </p>
-              <p>Cada victoria seguida suma un 10% extra a la siguiente, hasta un 50%.</p>
+              <p>Cada victoria seguida en la que al menos duplicas lo apostado suma un 5% extra a la siguiente, hasta un 15%.</p>
+              <p>Juegas con tu saldo de la semana: lo que ganes o pierdas cuenta en el Score.</p>
               <h3>Pagos</h3>
-              <p>Pleno 35 a 1 · Docena y columna 2 a 1 · Rojo, negro, par, impar, 1-18 y 19-36: 1 a 1.</p>
+              <p>
+                Pleno {STRAIGHT_PAYS} a 1 · Docena y columna 2 a 1 · Rojo, negro, par, impar, 1-18 y 19-36: 1 a 1.
+              </p>
             </Help>
           </div>
         </div>
@@ -348,11 +364,7 @@ function Roulette({ onExit }) {
             </div>
 
             <div className="actions">
-              {broke ? (
-                <button type="button" className="primary" onClick={() => dispatch({ type: 'RESET' })}>
-                  Empezar de nuevo con ${STARTING_BANK}
-                </button>
-              ) : (
+              {broke ? null : (
                 <>
                   {canRepeat ? (
                     <button type="button" disabled={spinning} onClick={() => dispatch({ type: 'REPEAT' })}>
@@ -408,7 +420,7 @@ function Roulette({ onExit }) {
           big={big}
           tags={[
             boosted && `Relámpago ×${boosted}`,
-            bonus > 0 && `Racha de ${streak}: +$${bonus} extra`,
+            bonus > 0 && `Racha de ${streak}: +${eur(bonus)} extra`,
           ].filter(Boolean)}
         />
       )}

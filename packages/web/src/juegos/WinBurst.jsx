@@ -1,3 +1,4 @@
+import { eur } from './money.js'
 import { useCountUp } from './useCountUp.js'
 
 const COIN_TONES = ['brass', 'ivory', 'green', 'purple', 'red']
@@ -73,7 +74,7 @@ function WinBurst({ amount, caption, coins, big, tags = [] }) {
       ))}
       <p className="win__banner">
         {big && <em className="win__title">¡Premio gordo!</em>}
-        <strong>+${shown}</strong>
+        <strong>+{eur(shown)}</strong>
         <span>{caption}</span>
         {tags.map((tag) => (
           <b key={tag} className="win__tag">

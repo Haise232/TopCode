@@ -1,4 +1,5 @@
-import { STARTING_BANK, loadWallet } from './wallet.js'
+// Reglas puras del blackjack contra el crupier. El servidor (api/_juegos) guarda la partida y aplica este mismo
+// reducer con su propio zapato; la pantalla solo recibe la vista (sin el zapato ni la carta tapada).
 import { DEALER_STANDS, cardValue, createShoe, handValue, isNatural } from './shared/blackjack-core.js'
 
 export { DECKS, DEALER_STANDS, cardValue, handValue, isNatural } from './shared/blackjack-core.js'
@@ -7,8 +8,8 @@ export const CHIPS = [10, 50, 100, 500]
 // Al bajar de esta cantidad de cartas el zapato se vuelve a barajar antes de repartir.
 export const CUT = 78
 
-// Zapato de seis barajas mezclado con Math.random.
-export const newShoe = () => createShoe((n) => Math.floor(Math.random() * n))
+// Zapato de seis barajas. rand(n): entero de 0 a n-1 (en el servidor, randomInt de node:crypto).
+export const newShoe = (rand) => createShoe(rand)
 
 export function canDouble(state) {
   const hand = state.hands[state.active]
@@ -28,8 +29,7 @@ export function canSplit(state) {
 }
 
 export const initialState = {
-  bank: STARTING_BANK,
-  best: STARTING_BANK,
+  bank: 0,
   bet: 50,
   shoe: [],
   shuffled: false,
@@ -43,9 +43,14 @@ export const initialState = {
   round: 0,
 }
 
-export function init() {
-  return { ...initialState, ...loadWallet(), shoe: newShoe() }
+// Lo que ve el jugador: sin el zapato y sin la carta tapada del crupier mientras juega.
+export function viewOf(state) {
+  const { shoe, ...rest } = state
+  const hidden = state.phase === 'player' && !state.revealed
+  return { ...rest, shoeLeft: shoe.length, dealer: hidden ? [state.dealer[0], null] : state.dealer }
 }
+
+export const validBet = (bet, bank) => Number.isInteger(bet) && bet > 0 && bet % CHIPS[0] === 0 && bet <= bank
 
 // Pasa a la siguiente mano sin terminar; si no queda ninguna, juega el crupier.
 function advance(state) {
@@ -158,10 +163,8 @@ export function reducer(state, action) {
       const bank = state.bank + payout
       // Si no alcanza para repetir la apuesta, se deja la mayor posible.
       const bet = Math.min(state.bet, bank - (bank % CHIPS[0]))
-      return { ...state, hands, payout, bank, bet, best: Math.max(state.best, bank), phase: 'idle' }
+      return { ...state, hands, payout, bank, bet, phase: 'idle' }
     }
-    case 'RESET':
-      return { ...initialState, best: state.best, shoe: action.shoe }
     default:
       return state
   }

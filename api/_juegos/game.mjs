@@ -10,6 +10,7 @@ import { storedTimers } from './engine/timers.mjs'
 import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
+import { SOLO_GAMES, SOLO_PLAY } from './solo.mjs'
 
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -157,7 +158,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
 
   function ensureSchema() {
     schemaReady ??= (async () => {
-      const { rows } = await db.query(`select to_regclass('public.juegos_chat') is not null as ok`)
+      const { rows } = await db.query(`select to_regclass('public.juegos_solo') is not null as ok`)
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
     })().catch((error) => {
@@ -182,6 +183,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
         await q(`update public.juegos_meta set semana = $1, semana_pasada = $2 where id = 1`, [week.key, lastWeek])
         await q(`update public.juegos_cuentas set saldo = $1, dias = $2::bigint[], jugado = false`, [STARTING_BALANCE, pgArray(NO_DAYS)])
         await q(`delete from public.juegos_chat where creado < now() - interval '7 days'`)
+        await q(`delete from public.juegos_solo`)
       })
       await ping('juegos-lobby')
     }
@@ -405,6 +407,36 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
     return null
   }
 
+  // Una jugada en solitario: se bloquea tu cuenta, se sortea en el servidor y se guarda el saldo (cuenta en el Score).
+  async function playSolo(user, msg) {
+    const game = SOLO_GAMES[msg.t]
+    const week = weekOf(now())
+    return db.tx(async (q) => {
+      const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
+      const accounts = new TxAccounts(accRows, week.day)
+      const balance = accounts.get(user.id).balance
+      const saved =
+        game === 'slots'
+          ? null
+          : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
+      const out = SOLO_PLAY[game](msg, balance, saved, randomInt)
+      if (out.error) return out
+      if (out.delta !== 0) accounts.adjust(user.id, out.delta)
+      for (const token of accounts.dirty) {
+        const acc = accounts.get(token)
+        await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [token, acc.balance, pgArray(acc.days), acc.played])
+      }
+      if (out.saved) {
+        await q(
+          `insert into public.juegos_solo (usuario_id, juego, estado) values ($1, $2, $3)
+           on conflict (usuario_id, juego) do update set estado = excluded.estado, actualizado = now()`,
+          [user.id, game, out.saved],
+        )
+      }
+      return out
+    })
+  }
+
   // Acciones que se aplican a la mesa en la que estás.
   const TABLE_ACTIONS = {
     view: () => null,
@@ -466,6 +498,25 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now }) {
         const error = await postChat(user, account.mesa, msg.text)
         reply.chat = await chatSince(account.mesa, msg.chatAfter)
         if (error) reply.error = { code: error, message: ERRORS[error] }
+        return reply
+      }
+      case 'solo_roulette':
+      case 'solo_slots':
+      case 'solo_blackjack': {
+        const out = await playSolo(user, msg)
+        if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
+        else reply.solo = out.result
+        me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
+        return reply
+      }
+      case 'solo_state': {
+        // Racha de la ruleta y mano de blackjack a medias, para retomarlas al entrar en la pantalla.
+        const { rows } = await db.query(`select juego, estado from public.juegos_solo where usuario_id = $1`, [user.id])
+        const saved = Object.fromEntries(rows.map((r) => [r.juego, r.estado]))
+        reply.soloState = {
+          streak: saved.roulette?.streak ?? 0,
+          blackjack: saved.blackjack ? SOLO_PLAY.blackjack({ a: 'view' }, account.saldo, saved.blackjack, randomInt).result : null,
+        }
         return reply
       }
       case 'chat_poll':

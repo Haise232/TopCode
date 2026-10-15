@@ -14,7 +14,6 @@ import { useJuegos } from './useJuegos.js'
 import Scoreboard from './Scoreboard.jsx'
 import Avatar from './Avatar.jsx'
 import { eur, until } from './money.js'
-import { loadWallet } from './wallet.js'
 import './reset.css'
 import './index.css'
 import './App.css'
@@ -193,7 +192,6 @@ function LiveGame({ game, tables, online, onJoin }) {
 }
 
 function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
-  const [wallet] = useState(loadWallet)
   const { me, lobby, conn, scores, send } = juegos
   const online = conn === 'open' && Boolean(me) && Boolean(lobby)
 
@@ -207,9 +205,9 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
   const tablesOf = (game) => lobby?.tables.filter((t) => t.game === game) ?? []
 
   let status = 'Elige un juego.'
-  if (!online) status = conn === 'connecting' ? 'Conectando con las mesas…' : 'Sin conexión con las mesas en vivo; los juegos individuales siguen disponibles.'
+  if (!online) status = conn === 'connecting' ? 'Conectando con las mesas…' : 'Sin conexión con los juegos. Reintentando…'
   else if (juegos.error) status = juegos.error
-  else status = `${plural(lobby.online, 'persona conectada', 'personas conectadas')}. Entra a una mesa en vivo sin código o juega solo.`
+  else status = `${plural(lobby.online, 'persona conectada', 'personas conectadas')}. Entra a una mesa en vivo sin código o juega solo: todo cuenta en el Score.`
 
   return (
     <main className="app app--lobby">
@@ -227,12 +225,6 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
               </dl>
             </div>
           )}
-          <dl className="money">
-            <div>
-              <dt>Saldo solo</dt>
-              <dd>${wallet.bank}</dd>
-            </div>
-          </dl>
           <div className="toggles">
             <button type="button" onClick={onHome}>
               TopCode
@@ -263,11 +255,11 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
           </h2>
           <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
           <h2 id="solo-title" className="picker__title picker__title--gap">
-            Solo <small>saldo de este navegador</small>
+            Solo <small>con tu saldo de la semana</small>
           </h2>
           <div className="picker__list">
             {SOLO.map(({ id, name, blurb, art }) => (
-              <button key={id} type="button" className="game game--row" onClick={() => onPick(id)}>
+              <button key={id} type="button" className="game game--row" disabled={!online} onClick={() => onPick(id)}>
                 <span className="game__art" aria-hidden="true">
                   {art}
                 </span>
@@ -401,9 +393,9 @@ function JuegosScreens() {
   }
 
   const { screen } = view
-  if (screen === 'roulette') return <Roulette onExit={exit} />
-  if (screen === 'slots') return <Slots onExit={exit} />
-  if (screen === 'blackjack') return <Blackjack onExit={exit} />
+  if (screen === 'roulette') return <Roulette onExit={exit} juegos={juegos} />
+  if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
+  if (screen === 'blackjack') return <Blackjack onExit={exit} juegos={juegos} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />
   return (

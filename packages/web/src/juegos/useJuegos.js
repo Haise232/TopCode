@@ -117,6 +117,7 @@ export function useJuegos() {
       }
       setConn('open')
       apply(body, n)
+      return body
     },
     [apply, showError],
   )
@@ -212,5 +213,8 @@ export function useJuegos() {
     setAttempt((a) => a + 1)
   }, [])
 
-  return { conn, me, room, lobby, chat, scores, error, denied, send, leave, reconnect }
+  // Para los juegos en solitario: devuelve la respuesta del servidor (o undefined si no hubo conexión).
+  const request = useCallback((message) => call(message), [call])
+
+  return { conn, me, room, lobby, chat, scores, error, denied, send, request, leave, reconnect }
 }

@@ -43,8 +43,18 @@ create table if not exists public.juegos_chat (
 );
 create index if not exists juegos_chat_mesa_idx on public.juegos_chat (mesa, id desc);
 
+-- Partida en curso de los juegos en solitario (racha de la ruleta, mano del blackjack).
+create table if not exists public.juegos_solo (
+  usuario_id  uuid not null references public.usuarios(id) on delete cascade,
+  juego       text not null check (juego in ('roulette', 'blackjack')),
+  estado      jsonb not null,
+  actualizado timestamptz not null default now(),
+  primary key (usuario_id, juego)
+);
+
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;
 alter table public.juegos_mesas   enable row level security;
 alter table public.juegos_chat    enable row level security;
+alter table public.juegos_solo    enable row level security;
 `

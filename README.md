@@ -140,14 +140,15 @@ Instrucciones de BotFather, secretos, despliegue y registro del webhook en su [R
 
 ## 🃏 Juegos
 
-Acceso directo **Juegos** en el inicio (`/juegos`). Blackjack y póker en mesas públicas para todos los usuarios
+Acceso **Juegos** en «Enlaces externos» del inicio (`/juegos`). Blackjack y póker en mesas públicas para todos los usuarios
 aprobados, sin códigos: se entra con el nombre y la foto de TopCode.
 
 - **10.000 € por semana** para cada uno; el domingo a las 23:59 (hora de Canarias) se reinician los saldos y el score,
   y se guarda el podio. Sin recargas.
 - **Score** con la clasificación de la semana y la evolución día a día de cada jugador.
 - **Chat** dentro de cada mesa.
-- Ruleta, tragamonedas y blackjack solo usan el saldo del navegador y no cuentan en el score.
+- **Solo**: ruleta, tragamonedas y blackjack contra el crupier con el mismo saldo semanal; los sortea el servidor y
+  cuentan en el score.
 
 Cómo funciona sin servidor propio: la función de Vercel `api/juegos.mjs` guarda cada mesa en Postgres
 (`juegos_mesas`) y la bloquea mientras aplica cada jugada; los temporizadores (turnos, crupier) los hacen avanzar los
@@ -157,6 +158,19 @@ de Supabase de TopCode (Supabase → Connect). Ojo: `POSTGRES_URL` de la integra
 proyecto y no se usa. Crea sus tablas al primer uso (`supabase/migracion_juegos.sql`, solo de referencia).
 `GET /api/juegos` comprueba la configuración. El motor de juego viene del proyecto de juegos
 (`api/_juegos/engine/`, generado con su `scripts/export-topcode.mjs`).
+
+**Quitar Juegos** sin tocar el resto de TopCode (todo su código vive en `api/juegos.mjs`, `api/_juegos/` y
+`packages/web/src/juegos/`):
+
+1. Borrar esas tres rutas y `supabase/migracion_juegos.sql`.
+2. `packages/web/src/App.tsx`: quitar el `lazy(() => import('./juegos/Juegos'))` y la ruta `/juegos` (el prop `bare` de
+   `ProtectedRoute` puede quedarse).
+3. `packages/web/src/pages/Home.tsx`: quitar la entrada «Juegos» de `ENLACES_INTERES` (y el icono `Dices` si no se usa).
+4. Dependencias: `pg` en el `package.json` raíz y las dos `@fontsource` de `packages/web/package.json`.
+5. Fuera del código: la variable `JUEGOS_DATABASE_URL` de Vercel y, en Supabase, el rol `juegos_api` con sus tablas
+   `juegos_*` (son suyas): `drop owned by juegos_api; drop role juegos_api;`.
+
+Juegos no modifica ninguna tabla de TopCode: solo lee `usuarios` (nombre, foto y estado de la cuenta).
 
 ## 🏗️ Arquitectura
 

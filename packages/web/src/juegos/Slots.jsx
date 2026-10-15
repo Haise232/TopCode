@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useState } from 'react'
 import { useEffectEvent } from './useEffectEvent.js'
-import { BETS, LINES, MIN_RUN, PAYS, REELS, init, lineRun, reducer, windowOf } from './slots.js'
-import { STARTING_BANK, saveWallet } from './wallet.js'
+import { BETS, LINES, MIN_RUN, PAYS, REELS, initialState, lineRun, reducer, windowOf } from './slots.js'
+import { eur } from './money.js'
 import { isMuted, playChip, playClunk, playWin, setMuted } from './sound.js'
 import { useCountUp } from './useCountUp.js'
 import SlotSymbol from './SlotSymbol.jsx'
@@ -40,7 +40,7 @@ function Paytable({ lineBet }) {
               <SlotSymbol name={name} />
             </th>
             {PAYS[name].map((mult, i) => (
-              <td key={i}>${mult * lineBet}</td>
+              <td key={i}>{eur(mult * lineBet)}</td>
             ))}
           </tr>
         ))}
@@ -65,15 +65,19 @@ function Rules() {
 }
 
 
-function Slots({ onExit }) {
-  const [state, dispatch] = useReducer(reducer, undefined, init)
+// La tirada la sortea el servidor con el saldo semanal (cuenta en el Score); aquí se anima y se pintan los premios.
+function Slots({ onExit, juegos }) {
+  const [state, dispatch] = useReducer(reducer, initialState)
   const [turbo, setTurbo] = useState(false)
   const [auto, setAuto] = useState(false)
   const [sound, setSound] = useState(() => !isMuted())
-  const { bank, best, bet, stops, landed, phase, wins, payout, paidBet, tier, spins } = state
+  const { bank, bet, stops, landed, phase, wins, payout, paidBet, tier, spins } = state
+  const { request } = juegos
+  const balance = juegos.me?.balance
 
   const spinning = phase === 'spinning'
-  const broke = !spinning && bank < BETS[0]
+  const busy = phase !== 'idle'
+  const broke = !busy && bank < BETS[0]
   const won = !spinning && (tier === 'win' || tier === 'big')
   const big = won && tier === 'big'
   const shownBank = useCountUp(bank)
@@ -107,23 +111,31 @@ function Slots({ onExit }) {
     playWin(tier === 'big')
   }, [spins, tier])
 
+  // Saldo de la semana (del servidor).
   useEffect(() => {
-    saveWallet({ bank, best })
-  }, [bank, best])
+    if (balance !== undefined) dispatch({ type: 'SYNC', balance })
+  }, [balance])
 
-  function spin() {
-    if (spinning || bank < bet) return
+  async function spin() {
+    if (busy || bank < bet) return
     playChip()
-    dispatch({ type: 'SPIN', stops: REELS.map((strip) => Math.floor(Math.random() * strip.length)) })
+    dispatch({ type: 'ASK' })
+    const body = await request({ t: 'solo_slots', bet })
+    if (!body?.solo) {
+      setAuto(false)
+      dispatch({ type: 'REJECTED' })
+      return
+    }
+    dispatch({ type: 'SPIN', result: body.solo })
   }
   const onSpin = useEffectEvent(spin)
 
   // Giro automático: vuelve a tirar solo, dejando ver los premios.
   useEffect(() => {
-    if (!auto || spinning || bank < bet) return
+    if (!auto || busy || bank < bet) return
     const timer = setTimeout(onSpin, tier === 'win' || tier === 'big' ? 1800 : 450)
     return () => clearTimeout(timer)
-  }, [auto, spinning, bank, bet, tier])
+  }, [auto, busy, bank, bet, tier])
 
   // Espacio gira. Si el foco está en un botón por teclado, se respeta su acción.
   useEffect(() => {
@@ -142,12 +154,13 @@ function Slots({ onExit }) {
   }, [])
 
   let status = 'Elige tu apuesta y gira.'
-  if (spinning) status = tease ? '¡Casi! Falta un rodillo…' : 'Girando…'
-  else if (broke) status = 'Te quedaste sin saldo.'
+  if (busy) status = tease ? '¡Casi! Falta un rodillo…' : 'Girando…'
+  else if (juegos.error) status = juegos.error
+  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
   else if (bank < bet) status = 'No te alcanza para esta apuesta: elige una menor.'
   else if (payout > 0) {
     const lines = wins.map((win) => `${win.count} ${SYMBOL_NAMES[win.symbol]} (línea ${win.line + 1})`)
-    status = `Ganaste $${payout}: ${lines.join('; ')}.`
+    status = `Ganaste ${eur(payout)}: ${lines.join('; ')}.`
   } else if (spins > 0) status = 'Nada esta vez.'
 
   return (
@@ -157,16 +170,12 @@ function Slots({ onExit }) {
         <div className="hud">
           <dl className="money">
             <div>
-              <dt>Saldo</dt>
-              <dd className={won ? 'money__up' : ''}>${shownBank}</dd>
+              <dt>Saldo de la semana</dt>
+              <dd className={won ? 'money__up' : ''}>{eur(shownBank)}</dd>
             </div>
             <div>
               <dt>Apuesta</dt>
-              <dd>${bet}</dd>
-            </div>
-            <div>
-              <dt>Récord</dt>
-              <dd>${best}</dd>
+              <dd>{eur(bet)}</dd>
             </div>
           </dl>
           <div className="toggles">
@@ -189,7 +198,7 @@ function Slots({ onExit }) {
             >
               Sonido
             </button>
-            <Help label="Premios" title={`Premios con $${bet} de apuesta`} className="only-narrow">
+            <Help label="Premios" title={`Premios con ${eur(bet)} de apuesta`} className="only-narrow">
               <div className="paytable">
                 <Paytable lineBet={lineBet} />
               </div>
@@ -261,20 +270,16 @@ function Slots({ onExit }) {
                   key={value}
                   type="button"
                   aria-pressed={bet === value}
-                  disabled={spinning || bank < value}
+                  disabled={busy || bank < value}
                   onClick={() => dispatch({ type: 'SET_BET', bet: value })}
                 >
-                  ${value}
+                  {value}
                 </button>
               ))}
             </div>
             <div className="actions">
-              {broke ? (
-                <button type="button" className="primary" onClick={() => dispatch({ type: 'RESET' })}>
-                  Empezar de nuevo con ${STARTING_BANK}
-                </button>
-              ) : (
-                <button type="button" className="primary" disabled={spinning || bank < bet} onClick={spin}>
+              {!broke && (
+                <button type="button" className="primary" disabled={busy || bank < bet} onClick={spin}>
                   Girar
                 </button>
               )}
@@ -283,7 +288,7 @@ function Slots({ onExit }) {
         </section>
 
         <aside className="paytable">
-          <h2>Premios con ${bet} de apuesta</h2>
+          <h2>Premios con {eur(bet)} de apuesta</h2>
           <Paytable lineBet={lineBet} />
         </aside>
       </div>
@@ -292,7 +297,7 @@ function Slots({ onExit }) {
         <WinBurst
           key={spins}
           amount={payout}
-          caption={`Con $${paidBet} de apuesta`}
+          caption={`Con ${eur(paidBet)} de apuesta`}
           coins={Math.min(70, Math.round(24 + (payout / Math.max(paidBet, 1)) * 3))}
           big={big}
         />

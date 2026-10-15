@@ -1,5 +1,4 @@
-import { STARTING_BANK, loadWallet } from './wallet.js'
-
+// Reglas puras: las usa la pantalla para pintar y el servidor (api/_juegos) para resolver la tirada con el saldo semanal.
 // Pago por 3, 4 y 5 iguales seguidos desde la izquierda, en veces la apuesta de esa línea.
 export const PAYS = {
   cherry: [1, 5, 20],
@@ -76,14 +75,18 @@ export function evaluate(stops, bet) {
   return { wins, payout: wins.reduce((sum, win) => sum + win.amount, 0) }
 }
 
+export const validBet = (bet) => BETS.includes(bet)
+
+// Tirada: un tope por rodillo. rand(n): entero de 0 a n-1 (en el servidor, randomInt de node:crypto).
+export const spinStops = (rand) => REELS.map((strip) => rand(strip.length))
+
 export const initialState = {
-  bank: STARTING_BANK,
-  best: STARTING_BANK,
+  bank: 0, // saldo semanal (del servidor), sin la apuesta de la tirada en curso
   bet: 20,
   stops: [2, 9, 5, 11, 7],
-  pending: null,
+  pending: null, // resultado del servidor mientras giran los rodillos
   landed: REELS.length, // rodillos ya detenidos en la tirada en curso
-  phase: 'idle', // idle | spinning
+  phase: 'idle', // idle | waiting (preguntando al servidor) | spinning
   wins: [],
   payout: 0,
   paidBet: 0,
@@ -91,23 +94,31 @@ export const initialState = {
   spins: 0,
 }
 
-export function init() {
-  return { ...initialState, ...loadWallet() }
-}
-
 export function reducer(state, action) {
   switch (action.type) {
+    case 'SYNC': {
+      if (state.phase !== 'idle') return state
+      return { ...state, bank: action.balance }
+    }
     case 'SET_BET': {
       if (state.phase !== 'idle') return state
       return { ...state, bet: action.bet }
     }
-    case 'SPIN': {
+    case 'ASK': {
       if (state.phase !== 'idle' || state.bank < state.bet) return state
+      return { ...state, phase: 'waiting' }
+    }
+    case 'REJECTED': {
+      if (state.phase !== 'waiting') return state
+      return { ...state, phase: 'idle' }
+    }
+    case 'SPIN': {
+      if (state.phase !== 'waiting') return state
       return {
         ...state,
         bank: state.bank - state.bet,
         phase: 'spinning',
-        pending: action.stops,
+        pending: action.result,
         landed: 0,
         wins: [],
         payout: 0,
@@ -116,12 +127,12 @@ export function reducer(state, action) {
     }
     case 'LAND': {
       if (state.phase !== 'spinning') return state
-      const stops = state.stops.with(state.landed, state.pending[state.landed])
+      const stops = state.stops.with(state.landed, state.pending.stops[state.landed])
       const landed = state.landed + 1
       if (landed < REELS.length) return { ...state, stops, landed }
 
-      const { wins, payout } = evaluate(stops, state.bet)
-      const bank = state.bank + payout
+      const { wins } = evaluate(stops, state.bet)
+      const { payout, balance } = state.pending
       let tier = 'none'
       if (payout >= state.bet * 15) tier = 'big'
       else if (payout > state.bet) tier = 'win'
@@ -136,13 +147,10 @@ export function reducer(state, action) {
         payout,
         paidBet: state.bet,
         tier,
-        bank,
-        best: Math.max(state.best, bank),
+        bank: balance,
         spins: state.spins + 1,
       }
     }
-    case 'RESET':
-      return { ...initialState, best: state.best }
     default:
       return state
   }

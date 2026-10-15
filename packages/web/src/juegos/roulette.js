@@ -1,5 +1,3 @@
-import { STARTING_BANK, loadWallet, saveWallet } from './wallet.js'
-
 // Orden de los números en una rueda europea (un solo cero), en sentido horario.
 export const WHEEL = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14,
@@ -11,9 +9,17 @@ const REDS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32,
 
 export const colorOf = (n) => (n === 0 ? 'green' : REDS.has(n) ? 'red' : 'black')
 
-export { STARTING_BANK }
+// Reglas puras: las usa la pantalla para pintar y el servidor (api/_juegos) para resolver la tirada con el saldo semanal.
 export const CHIPS = [5, 25, 100, 500]
 const LUCKY_MULTIPLIERS = [50, 50, 75, 75, 100, 150]
+// Pagos ajustados para que la casa conserve un poco de ventaja (retorno < 100 % con relámpagos y rachas): con el
+// saldo compartido del Score, una ruleta que devuelva más de lo apostado se podría «cultivar».
+export const STRAIGHT_PAYS = 30
+const STREAK_STEP = 0.05
+const STREAK_STEPS = 3
+const BET_ID = /^(n:([0-9]|[12][0-9]|3[0-6])|red|black|even|odd|low|high|dozen:[123]|col:[123])$/
+const MAX_CHIPS = 300
+const mathInt = (n) => Math.floor(Math.random() * n)
 
 // Identificadores de apuesta: n:17, red, black, even, odd, low, high, dozen:1-3, col:1-3
 export function wins(id, n) {
@@ -44,26 +50,55 @@ export function wins(id, n) {
 // Pago por cada unidad apostada, sin contar la apuesta devuelta.
 export function multiplier(id) {
   const kind = id.split(':')[0]
-  if (kind === 'n') return 35
+  if (kind === 'n') return STRAIGHT_PAYS
   if (kind === 'dozen' || kind === 'col') return 2
   return 1
 }
 
 // Números relámpago de una tirada: de 1 a 3, cada uno con su pago especial
 // para las apuestas a pleno. Devuelve { número: multiplicador }.
-export function pickLucky() {
+// rand(n): entero de 0 a n-1 (en el servidor, randomInt de node:crypto).
+export function pickLucky(rand = mathInt) {
   const lucky = {}
-  const count = 1 + Math.floor(Math.random() * 3)
+  const count = 1 + rand(3)
   while (Object.keys(lucky).length < count) {
-    const n = Math.floor(Math.random() * WHEEL.length)
-    lucky[n] = LUCKY_MULTIPLIERS[Math.floor(Math.random() * LUCKY_MULTIPLIERS.length)]
+    const n = rand(WHEEL.length)
+    lucky[n] = LUCKY_MULTIPLIERS[rand(LUCKY_MULTIPLIERS.length)]
   }
   return lucky
 }
 
-// Extra sobre la ganancia según las victorias seguidas: +10% por cada una
-// a partir de la segunda, hasta +50%.
-export const streakBonus = (streak) => Math.min(Math.max(streak - 1, 0), 5) * 0.1
+// Extra sobre la ganancia según las victorias seguidas (en las que al menos duplicas lo apostado): +5% por
+// cada una a partir de la segunda, hasta +15%.
+export const streakBonus = (streak) => Math.min(Math.max(streak - 1, 0), STREAK_STEPS) * STREAK_STEP
+
+// Fichas válidas: casillas que existen y cantidades de fichas enteras.
+export const validBets = (placed) =>
+  Array.isArray(placed) &&
+  placed.length > 0 &&
+  placed.length <= MAX_CHIPS &&
+  placed.every((bet) => typeof bet?.id === 'string' && BET_ID.test(bet.id) && CHIPS.includes(bet.amount))
+
+// Resultado de una tirada con el número n, los relámpago y la racha que traía el jugador.
+export function settle(placed, n, lucky, streak) {
+  const boost = lucky[n]
+  let payout = 0
+  let boosted = null
+  for (const bet of placed) {
+    if (!wins(bet.id, n)) continue
+    const straight = bet.id.startsWith('n:')
+    if (straight && boost) boosted = boost
+    payout += bet.amount * ((straight && boost ? boost : multiplier(bet.id)) + 1)
+  }
+  const stake = totalOf(placed)
+  const profit = payout - stake
+  // Solo cuentan para la racha las tiradas en las que al menos duplicas lo apostado: cubrir media mesa para ganar
+  // poco y casi siempre no da extra.
+  const doubled = profit >= stake
+  const nextStreak = doubled ? streak + 1 : 0
+  const bonus = doubled ? Math.round(profit * streakBonus(nextStreak)) : 0
+  return { payout, bonus, boosted, streak: nextStreak, net: profit + bonus }
+}
 
 export const totalOf = (placed) => placed.reduce((sum, bet) => sum + bet.amount, 0)
 
@@ -74,13 +109,12 @@ export function totalsById(placed) {
 }
 
 export const initialState = {
-  bank: STARTING_BANK,
-  best: STARTING_BANK,
+  bank: 0, // saldo semanal que queda fuera de la mesa (el del servidor menos las fichas puestas)
   chip: 25,
   placed: [], // una entrada por ficha puesta, en orden, para poder deshacer
   lastPlaced: [],
-  phase: 'betting', // betting | spinning
-  pending: null,
+  phase: 'betting', // betting | waiting (preguntando al servidor) | spinning
+  pending: null, // resultado del servidor mientras gira la rueda
   lucky: {},
   result: null,
   net: 0,
@@ -91,15 +125,6 @@ export const initialState = {
   history: [],
 }
 
-export function init() {
-  return { ...initialState, ...loadWallet() }
-}
-
-export function save({ bank, best, placed }) {
-  // Las fichas que siguen en la mesa se devuelven al salir o recargar.
-  saveWallet({ bank: bank + totalOf(placed), best })
-}
-
 function repeatLast(state) {
   const total = totalOf(state.lastPlaced)
   if (state.placed.length > 0 || total === 0 || total > state.bank) return state
@@ -108,6 +133,11 @@ function repeatLast(state) {
 
 export function reducer(state, action) {
   switch (action.type) {
+    // Saldo y racha del servidor (al entrar y cuando cambian fuera de esta pantalla).
+    case 'SYNC': {
+      if (state.phase !== 'betting') return state
+      return { ...state, bank: Math.max(0, action.balance - totalOf(state.placed)), streak: action.streak ?? state.streak }
+    }
     case 'SELECT_CHIP':
       return { ...state, chip: action.chip }
     case 'PLACE': {
@@ -136,55 +166,42 @@ export function reducer(state, action) {
       if (state.phase !== 'betting') return state
       return repeatLast(state)
     }
-    case 'SPIN': {
+    // Se pregunta al servidor: con la mesa vacía, girar repite la última apuesta.
+    case 'ASK': {
       if (state.phase !== 'betting') return state
-      // Con la mesa vacía, girar repite la última apuesta.
       const next = repeatLast(state)
       if (next.placed.length === 0) return state
-      return {
-        ...next,
-        phase: 'spinning',
-        pending: action.number,
-        lucky: action.lucky,
-        result: null,
-      }
+      return { ...next, phase: 'waiting' }
+    }
+    // El servidor no aceptó la tirada: las fichas vuelven a estar disponibles.
+    case 'REJECTED': {
+      if (state.phase !== 'waiting') return state
+      return { ...state, phase: 'betting' }
+    }
+    case 'SPIN': {
+      if (state.phase !== 'waiting') return state
+      return { ...state, phase: 'spinning', pending: action.result, lucky: action.result.lucky, result: null }
     }
     case 'SETTLE': {
       if (state.phase !== 'spinning') return state
-      const n = state.pending
-      const boost = state.lucky[n]
-      let payout = 0
-      let boosted = null
-      for (const bet of state.placed) {
-        if (!wins(bet.id, n)) continue
-        const straight = bet.id.startsWith('n:')
-        if (straight && boost) boosted = boost
-        payout += bet.amount * ((straight && boost ? boost : multiplier(bet.id)) + 1)
-      }
-      const profit = payout - totalOf(state.placed)
-      const streak = profit > 0 ? state.streak + 1 : 0
-      const bonus = profit > 0 ? Math.round(profit * streakBonus(streak)) : 0
-      const bank = state.bank + payout + bonus
+      const { number, net, bonus, boosted, streak, balance } = state.pending
       return {
         ...state,
         phase: 'betting',
         pending: null,
         lucky: {},
-        result: n,
-        net: profit + bonus,
+        result: number,
+        net,
         bonus,
         boosted,
         streak,
-        bank,
-        best: Math.max(state.best, bank),
+        bank: balance,
         spins: state.spins + 1,
-        history: [n, ...state.history].slice(0, 12),
+        history: [number, ...state.history].slice(0, 12),
         lastPlaced: state.placed,
         placed: [],
       }
     }
-    case 'RESET':
-      return { ...initialState, best: state.best }
     default:
       return state
   }
