@@ -1,0 +1,198 @@
+/* Escrito a mano (no generado), se carga el último: ajustes para móvil y tablet de las mesas en vivo y el Score. */
+
+/* --- Score: en pantallas estrechas, primero la clasificación y después tu semana y el podio. --- */
+@media (max-width: 1000px) {
+  .juegos-root .score__side {
+    order: 0;
+  }
+}
+
+/* --- Blackjack en vivo --- */
+
+/* Tablet: asientos algo más anchos para que no se corten los nombres. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .juegos-root .ptable .pseat {
+    width: clamp(128px, 17.5vw, 160px);
+  }
+}
+
+/* Móvil: el arco no cabe y los asientos se pisaban con las cartas. Debajo del crupier, en una rejilla de tres. */
+@media (max-width: 640px) {
+  /* Si la pantalla es baja, la página baja con el dedo en vez de cortar la mesa. */
+  .juegos-root .app:has(.ptable) {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+  .juegos-root .app:has(.ptable) .ptable {
+    flex: 1 0 auto;
+  }
+  .juegos-root .ptable {
+    --seat-card: clamp(30px, 8.6vw, 40px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 8px 22px;
+    border-radius: 20px 20px 34% 34% / 20px 20px 10% 10%;
+  }
+  .juegos-root .ptable .placard {
+    position: static;
+    justify-self: start;
+    align-self: flex-start;
+    grid-auto-flow: column;
+    align-items: baseline;
+    gap: 8px;
+    padding: 2px 10px;
+  }
+  .juegos-root .ptable .placard__code {
+    font-size: 16px;
+  }
+  .juegos-root .ptable .placard__label {
+    display: none;
+  }
+  /* El cartel de la mesa va arriba a la izquierda, en la misma franja que el título del crupier. */
+  .juegos-root .ptable__dealer {
+    margin-top: -30px;
+  }
+
+  .juegos-root .ptable__dealer h2 {
+    font-size: 13px;
+  }
+  .juegos-root .ptable .felt-print {
+    display: none;
+  }
+  .juegos-root .ptable__seats {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: center;
+    gap: 14px 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+    pointer-events: auto;
+  }
+  .juegos-root .ptable .pseat {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: auto;
+    min-width: 0;
+    translate: none;
+  }
+  .juegos-root .ptable .pseat__cards {
+    min-height: calc(var(--seat-card) * 1.4);
+  }
+  /* Mientras se apuesta no hay cartas: ni hueco para ellas ni el «0» del total. */
+  .juegos-root .ptable .pseat__cards:not(:has(.card)) {
+    min-height: 0;
+  }
+  .juegos-root .ptable .pseat__cards:not(:has(.card)) .pseat__total {
+    display: none;
+  }
+  .juegos-root .ptable .pseat__total {
+    top: -8px;
+    right: -14px;
+    font-size: 12px;
+  }
+  /* El círculo de apuesta, pequeño y pegado a las cartas. */
+  .juegos-root .ptable .pseat__spot {
+    width: 30px;
+    margin-top: -12px;
+    border-width: 1px;
+  }
+  .juegos-root .ptable .pseat--empty .pseat__spot {
+    margin-top: 0;
+  }
+  .juegos-root .ptable .pseat .stack {
+    scale: 0.7;
+  }
+  .juegos-root .ptable .pseat__number {
+    font-size: 14px;
+  }
+  .juegos-root .ptable .pseat__plate {
+    margin-top: 2px;
+    padding: 3px 4px 4px;
+  }
+  .juegos-root .ptable .pseat__name {
+    font-size: 11px;
+  }
+  .juegos-root .ptable .pseat__name .pseat__avatar {
+    display: none;
+  }
+  .juegos-root .ptable .pseat__state {
+    font-size: 11px;
+  }
+  .juegos-root .ptable .pseat__sit,
+  .juegos-root .ptable .pseat__plate--free {
+    margin-top: 2px;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+}
+
+/* --- Póker en vivo --- */
+
+/* La barra para elegir la apuesta, con sitio de verdad en pantallas anchas. */
+@media (min-width: 1101px) {
+  .juegos-root .pbar {
+    width: min(100%, 1240px);
+  }
+  .juegos-root .pbar__raise {
+    grid-template-columns: auto minmax(240px, 1fr);
+  }
+  .juegos-root .pbar .pbtn {
+    min-width: 0;
+  }
+}
+
+/* Mesa de pie (móvil en vertical): placa de sala fuera y asientos más compactos para que no se pisen. */
+@container pkfloor (aspect-ratio < 1.15) {
+  .juegos-root .pplaque {
+    display: none;
+  }
+  .juegos-root .pstage {
+    --pod-w: clamp(76px, 23cqw, 100px);
+    --bottom-room: calc(var(--size) / 2 + 46px);
+  }
+  .juegos-root .pod__plate {
+    margin-top: -8px;
+    padding: 3px 6px 4px;
+  }
+  .juegos-root .pod__name {
+    font-size: 11px;
+  }
+  .juegos-root .pod__stack {
+    font-size: 12px;
+  }
+  .juegos-root .pod__badge {
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+  .juegos-root .pod__hand {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+}
+
+/* --- Chat de las mesas: que el botón no tape la barra de decisiones ni las fichas. --- */
+@media (max-width: 1100px) {
+  .juegos-root .poker .chat {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 124px + 8px);
+  }
+}
+@media (max-width: 640px) {
+  .juegos-root .poker .chat {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 132px + 8px);
+  }
+  .juegos-root .poker:has(.pslide) .chat {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 164px + 8px);
+  }
+  /* Blackjack: encima de los controles (fichas y botones o los de tu turno). */
+  .juegos-root .app:has(.ptable) .chat {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 76px);
+  }
+  .juegos-root .app:has(.ptable):has(.controls .chips) .chat {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 142px);
+  }
+}

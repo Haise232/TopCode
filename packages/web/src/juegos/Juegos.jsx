@@ -3,6 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 // Fuentes de juegos, servidas por la propia app.
 import '@fontsource/abril-fatface/latin.css'
 import '@fontsource-variable/instrument-sans/index.css'
+// Primero los estilos base y después los de cada juego, para que las reglas de un juego (por ejemplo, las de pantallas
+// estrechas) puedan cambiar las comunes. Al revés, App.css las pisaba y algunas pantallas no se adaptaban al móvil.
+import './reset.css'
+import './index.css'
+import './App.css'
 import Roulette from './Roulette.jsx'
 import Slots from './Slots.jsx'
 import Blackjack from './Blackjack.jsx'
@@ -14,11 +19,9 @@ import { useJuegos } from './useJuegos.js'
 import Scoreboard from './Scoreboard.jsx'
 import Avatar from './Avatar.jsx'
 import { eur, until } from './money.js'
-import './reset.css'
-import './index.css'
-import './App.css'
 import './Lobby.css'
 import './table/table.css'
+import './responsive.css'
 
 const LIVE = {
   blackjack: {
