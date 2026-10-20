@@ -9,6 +9,7 @@ import { useCountdown } from './useCountdown.js'
 import Help from '../Help.jsx'
 import Chat from './Chat.jsx'
 import Invite from './Invite.jsx'
+import SeatBubble from './SeatBubble.jsx'
 import WinBurst from '../WinBurst.jsx'
 import WinToast from '../WinToast.jsx'
 import '../Blackjack.css'
@@ -57,7 +58,7 @@ function placement(index, count) {
   return { '--cos': Math.cos(rad), '--sin': Math.sin(rad) }
 }
 
-function Seat({ seat, index, count, mine, active, fraction, round, canSit, canKick, onSit, onKick }) {
+function Seat({ bubble, seat, index, count, mine, active, fraction, round, canSit, canKick, onSit, onKick }) {
   const style = placement(index, count)
   if (!seat) {
     return (
@@ -82,6 +83,7 @@ function Seat({ seat, index, count, mine, active, fraction, round, canSit, canKi
       className={`pseat ${mine ? 'pseat--me' : ''} ${active ? 'pseat--turn' : ''} ${seat.connected ? '' : 'pseat--away'} ${seat.outcome ? `pseat--${seat.outcome}` : ''}`}
       style={{ ...style, '--p': active ? fraction : 0 }}
     >
+      <SeatBubble bubble={bubble} side="top" />
       <div className="pseat__cards">
         {seat.cards.map((card, i) => (
           <PlayingCard key={`${round}-${card.id}`} {...card} index={i} />
@@ -115,7 +117,7 @@ function Seat({ seat, index, count, mine, active, fraction, round, canSit, canKi
   )
 }
 
-function Table({ room, me, conn, error, send, onLeave, chat }) {
+function Table({ room, me, conn, error, send, onLeave, chat, bubbles, pending }) {
   const { state, at } = room
   const mySeat = state.seats.findIndex((seat) => seat?.id === me?.id)
   const mine = mySeat >= 0 ? state.seats[mySeat] : null
@@ -151,15 +153,17 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
 
   const canDouble = myTurn && mine.cards.length === 2 && mine.balance >= mine.bet
   const canBet = Boolean(mine && betting && !mine.locked)
-  const hit = () => send({ t: 'action', kind: 'hit' })
-  const stand = () => send({ t: 'action', kind: 'stand' })
-  const double = () => send({ t: 'action', kind: 'double' })
+  // Mientras hay una jugada en camino no se envía otra: un doble clic no puede mandarla dos veces.
+  const busy = Boolean(pending)
+  const hit = () => !busy && send({ t: 'action', kind: 'hit' })
+  const stand = () => !busy && send({ t: 'action', kind: 'stand' })
+  const double = () => !busy && send({ t: 'action', kind: 'double' })
   const addChip = (value) => {
-    if (mine.bet + value > mine.balance) return
+    if (busy || mine.bet + value > mine.balance) return
     playChip()
     send({ t: 'bet', amount: mine.bet + value })
   }
-  const confirmBet = () => send({ t: 'ready' })
+  const confirmBet = () => !busy && send({ t: 'ready' })
 
   // Teclas, como en el póker: P pedir, M me planto, D doblar; al apostar, 1-4 fichas, B borrar y Espacio confirmar.
   // Mientras escribes en el chat no hacen nada.
@@ -175,7 +179,7 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
     if (!canBet) return
     const chip = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[event.code]
     if (chip !== undefined) addChip(CHIPS[chip])
-    else if (event.code === 'KeyB' && mine.bet > 0) send({ t: 'bet', amount: 0 })
+    else if (event.code === 'KeyB' && mine.bet > 0 && !busy) send({ t: 'bet', amount: 0 })
     else if (event.code === 'Space' || event.code === 'Enter') {
       // Si el foco está en un botón por teclado, se respeta su acción.
       if (event.target instanceof Element && event.target.matches('button:focus-visible')) return
@@ -314,6 +318,7 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
           {state.seats.map((seat, i) => (
             <Seat
               key={i}
+              bubble={seat ? bubbles?.[seat.id] : undefined}
               seat={seat}
               index={i}
               count={state.seats.length}
@@ -333,13 +338,13 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
       <div className="controls">
         {myTurn && (
           <div className="actions">
-            <button type="button" className="primary" onClick={hit}>
-              Pedir <kbd>P</kbd>
+            <button type="button" className="primary" disabled={busy} onClick={hit}>
+              {busy ? 'Enviando…' : <>Pedir <kbd>P</kbd></>}
             </button>
-            <button type="button" onClick={stand}>
+            <button type="button" disabled={busy} onClick={stand}>
               Me planto <kbd>M</kbd>
             </button>
-            <button type="button" disabled={!canDouble} onClick={double}>
+            <button type="button" disabled={!canDouble || busy} onClick={double}>
               Doblar <kbd>D</kbd>
             </button>
           </div>
@@ -352,7 +357,7 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
                   key={value}
                   type="button"
                   className={`chip chip--bj${value}`}
-                  disabled={mine.bet + value > mine.balance}
+                  disabled={busy || mine.bet + value > mine.balance}
                   aria-keyshortcuts={String(i + 1)}
                   title={`Tecla ${i + 1}`}
                   onClick={() => addChip(value)}
@@ -362,15 +367,15 @@ function Table({ room, me, conn, error, send, onLeave, chat }) {
               ))}
             </div>
             <div className="actions">
-              <button type="button" disabled={mine.bet === 0} onClick={() => send({ t: 'bet', amount: 0 })}>
+              <button type="button" disabled={busy || mine.bet === 0} onClick={() => send({ t: 'bet', amount: 0 })}>
                 Borrar <kbd>B</kbd>
               </button>
               {!broke && (
-                <button type="button" className="primary" disabled={mine.bet <= 0} onClick={confirmBet}>
-                  Apostar {eur(mine.bet)} <kbd>Espacio</kbd>
+                <button type="button" className="primary" disabled={busy || mine.bet <= 0} onClick={confirmBet}>
+                  {busy ? 'Enviando…' : <>Apostar {eur(mine.bet)} <kbd>Espacio</kbd></>}
                 </button>
               )}
-              <button type="button" onClick={() => send({ t: 'stand_up' })}>
+              <button type="button" disabled={busy} onClick={() => send({ t: 'stand_up' })}>
                 Dejar el asiento
               </button>
             </div>

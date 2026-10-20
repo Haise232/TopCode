@@ -19,58 +19,36 @@ import PokerTable from './poker/PokerTable.jsx'
 import { useJuegos } from './useJuegos.js'
 import Scoreboard from './Scoreboard.jsx'
 import Avatar from './Avatar.jsx'
-import { eur, until } from './money.js'
+import { delta, eur, until } from './money.js'
 import './Lobby.css'
 import './table/table.css'
 import './responsive.css'
+import './hub.css'
 
 const LIVE = {
-  blackjack: {
-    name: 'Blackjack',
-    blurb: 'Mesa compartida contra el crupier. Apuesta, pide y dobla en tu turno.',
-    art: (
-      <span className="game__cards">
-        <PlayingCard rank="A" suit="spades" />
-        <PlayingCard rank="K" suit="hearts" />
-      </span>
-    ),
-  },
-  poker: {
-    name: 'Póker',
-    blurb: "Texas Hold'em sin límite, ciegas de 50 € y 100 €. La mano empieza con dos jugadores.",
-    art: (
-      <span className="game__poker">
-        <span className="game__cards">
-          <PlayingCard rank="A" suit="hearts" />
-          <PlayingCard rank="A" suit="spades" />
-        </span>
-        <span className="game__pile">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <i key={i} style={{ '--n': i }} />
-          ))}
-        </span>
-      </span>
-    ),
-  },
+  blackjack: { name: 'Blackjack' },
+  poker: { name: 'Póker' },
 }
 
 const SOLO = [
   {
     id: 'roulette',
     name: 'Ruleta',
-    blurb: 'En vivo: una tirada cada 25 s para todos, con relámpagos y pista.',
+    blurb: 'Una tirada cada 25 s para todos.',
+    live: true,
     art: <span className="game__wheel" />,
   },
   {
     id: 'crash',
     name: 'Cohete',
-    blurb: 'En vivo: sube para todos cada 30 s. Retira antes de que explote.',
+    blurb: 'Sube para todos cada 30 s. Retira a tiempo.',
+    live: true,
     art: <span className="game__rocket" />,
   },
   {
     id: 'slots',
     name: 'Tragamonedas',
-    blurb: 'Cinco rodillos, diez líneas y giro automático.',
+    blurb: 'Cinco rodillos y diez líneas.',
     art: (
       <span className="game__reels">
         <SlotSymbol name="seven" />
@@ -82,7 +60,7 @@ const SOLO = [
   {
     id: 'blackjack',
     name: 'Blackjack solo',
-    blurb: 'Tú contra el crupier, seis barajas, paga 3 a 2.',
+    blurb: 'Tú contra el crupier.',
     art: (
       <span className="game__cards">
         <PlayingCard rank="Q" suit="diamonds" />
@@ -92,110 +70,224 @@ const SOLO = [
   },
 ]
 
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 const SCORES_MS = 30000
+// Asientos de las mesas públicas (igual que en el servidor) para dibujar la mesa antes de que llegue el lobby.
+const SEATS = { blackjack: 7, poker: 6 }
+const CAPTION = { blackjack: 'Contra el crupier', poker: 'Ciegas de 50 y 100 €' }
 
-// Fotos de quien está sentado (las de TopCode; si no hay, iniciales).
+// Posición de cada asiento en la mini mesa, en % del recuadro. Póker: óvalo completo. Blackjack: arco bajo el crupier.
+function seatSpot(i, n, game) {
+  const [from, span] = game === 'blackjack' ? [162, -144] : [90, 360]
+  const deg = game === 'blackjack' ? from + (span * i) / (n - 1) : from + (span * i) / n
+  const rad = (deg * Math.PI) / 180
+  const cy = game === 'blackjack' ? 34 : 50
+  const ry = game === 'blackjack' ? 54 : 46
+  return { left: `${50 + 45 * Math.cos(rad)}%`, top: `${cy + ry * Math.sin(rad)}%` }
+}
+
+// Texto y tono del estado de una mesa.
+function tableState(game, t) {
+  if (!t || t.players === 0) return { tone: 'free', text: 'Mesa libre' }
+  if (game === 'poker' && t.phase === 'waiting') {
+    return t.players === 1 ? { tone: 'wait', text: `Espera rival ${t.players}/${t.seats}` } : { tone: 'on', text: `${t.players} jugando` }
+  }
+  if (t.phase !== 'waiting' && t.phase !== 'betting') return { tone: 'hand', text: 'Mano en curso' }
+  return { tone: 'on', text: `${t.players} jugando` }
+}
+
+// La mesa que se dibuja: la elegida, o la que tiene gente y sitio (así quien llega se sienta con alguien).
+function bestTable(tables, picked) {
+  const chosen = tables.find((t) => t.code === picked)
+  if (chosen) return chosen
+  const open = tables.filter((t) => t.players < t.seats)
+  return [...open].sort((a, b) => b.players - a.players)[0] ?? tables[0]
+}
+
+// Fotos de quien está en las mesas (las de TopCode; si no hay, iniciales), solapadas.
 function Faces({ people }) {
   if (people.length === 0) return null
   const shown = people.slice(0, 5)
   return (
-    <span className="faces" aria-label={`En la mesa: ${people.map((p) => p.name).join(', ')}`}>
+    <span className="hub-faces" role="img" aria-label={`En las mesas: ${people.map((p) => p.name).join(', ')}`}>
       {shown.map((p, i) => (
         <span key={`${p.name}-${i}`} title={p.name}>
-          <Avatar name={p.name} src={p.avatar} size={26} />
+          <Avatar name={p.name} src={p.avatar} size={30} />
         </span>
       ))}
-      {people.length > shown.length && <i className="faces__more">+{people.length - shown.length}</i>}
+      {people.length > shown.length && <i>+{people.length - shown.length}</i>}
     </span>
   )
 }
 
-// Acceso al score desde el selector: tu puesto, tu saldo y cuánto falta para el reinicio.
+// Delta de hoy y distancia al siguiente puesto, solo con los datos del Score.
+function standing(scores, me) {
+  const list = scores?.players ?? []
+  const mine = list.find((p) => p.me)
+  if (!mine) return { mine: null, count: list.length, today: null, gap: null }
+  const day = scores.week?.day ?? 0
+  const known = mine.days.slice(0, day + 1).filter((v) => v !== null)
+  const base = day > 0 ? (mine.days[day - 1] ?? scores.starting) : scores.starting
+  const today = known.length ? mine.balance - base : 0
+  const ahead = list[mine.rank - 2]
+  const behind = list[mine.rank]
+  let gap = null
+  if (ahead) gap = { text: `A ${eur(ahead.balance - mine.balance)} del puesto ${ahead.rank}`, up: true }
+  else if (behind) gap = { text: `Vas primero, ${eur(mine.balance - behind.balance)} por delante`, up: false }
+  return { mine, count: list.length, today, gap }
+}
+
+// Acceso al score: una placa de latón con tu puesto, tu saldo, lo de hoy y lo que falta para subir.
 function ScoreCard({ scores, me, resetAt, online, onOpen }) {
+  const { mine, count, today, gap } = standing(scores, me)
   const top = scores?.players.slice(0, 3) ?? []
-  const mine = scores?.players.find((p) => p.me)
+  const stale = !online && Boolean(scores)
+  const usable = Boolean(scores) || online
   return (
-    <button type="button" className="score-card" disabled={!online} onClick={onOpen}>
-      <span className="score-card__head">
-        <span className="game__name">Score</span>
-        {resetAt && <span className="score-card__reset">Reinicio en {until(resetAt)}</span>}
-      </span>
-      <span className="score-card__body">
-        <span className="score-card__me">
-          {mine ? (
-            <>
-              <b>#{mine.rank}</b> de {scores.players.length} · {eur(mine.balance)}
-            </>
-          ) : me ? (
-            <>Juega una mano o una tirada para entrar en la clasificación.</>
-          ) : (
-            <>Conectando…</>
-          )}
-        </span>
-        {top.length > 0 && (
-          <span className="score-card__top">
-            {top.map((p) => (
-              <span key={p.rank} className="score-card__leader">
-                <i>{p.rank}</i>
-                <Avatar name={p.name} src={p.avatar} size={24} />
-                <span>{p.name}</span>
-                <b>{eur(p.balance)}</b>
-              </span>
-            ))}
-          </span>
+    <button type="button" className={`hub-plaque ${stale ? 'hub-plaque--stale' : ''}`} disabled={!usable} onClick={onOpen}>
+      <span className="hub-plaque__rank" aria-hidden={!mine}>
+        {mine ? (
+          <>
+            <b>{mine.rank}</b>
+            <small>de {count}</small>
+          </>
+        ) : scores ? (
+          <b>–</b>
+        ) : (
+          <i className="hub-skel hub-skel--rank" />
         )}
+      </span>
+      <span className="hub-plaque__body">
+        {mine ? (
+          <>
+            <span className="hub-plaque__line">
+              <span className="hub-plaque__label">Puesto {mine.rank} · tu saldo</span>
+              <span className="hub-plaque__money">{eur(mine.balance)}</span>
+            </span>
+            <span className="hub-plaque__facts">
+              <span className={`hub-plaque__delta ${today > 0 ? 'is-up' : today < 0 ? 'is-down' : ''}`}>{delta(today)} hoy</span>
+              {gap && <span>{gap.text}</span>}
+            </span>
+          </>
+        ) : scores ? (
+          <span className="hub-plaque__line">
+            <span className="hub-plaque__label">Clasificación semanal</span>
+            <span className="hub-plaque__hint">Juega una mano o una tirada para entrar.</span>
+          </span>
+        ) : (
+          <>
+            <i className="hub-skel hub-skel--line" />
+            <i className="hub-skel hub-skel--short" />
+          </>
+        )}
+        <span className="hub-plaque__foot">
+          {top.length > 0 && (
+            <span className="hub-plaque__top" aria-label={`Líderes: ${top.map((p) => p.name).join(', ')}`}>
+              {top.map((p) => (
+                <span key={p.rank} title={`${p.rank}. ${p.name}`}>
+                  <Avatar name={p.name} src={p.avatar} size={24} />
+                </span>
+              ))}
+            </span>
+          )}
+          <span className="hub-plaque__meta">
+            {stale ? 'Último dato guardado' : resetAt ? `Reinicio en ${until(resetAt)}` : 'Ver clasificación'}
+          </span>
+          <span className="hub-plaque__go" aria-hidden="true">
+            Ver →
+          </span>
+        </span>
       </span>
     </button>
   )
 }
 
-// Tarjeta de un juego en vivo: cuántos juegan ahora y botones para sentarse o mirar, sin códigos.
-function LiveGame({ game, tables, online, onJoin }) {
-  const { name, blurb, art } = LIVE[game]
+// Mini mesa: el tapete con un punto por asiento (cara = ocupado, anillo = libre, atenuado = ausente).
+function MiniTable({ game, table, name }) {
+  const n = table?.seats ?? SEATS[game]
+  const present = table?.people ?? []
+  const away = table?.away ?? 0
+  const seats = Array.from({ length: n }, (_, i) => {
+    if (i < present.length) return { kind: 'on', person: present[i] }
+    if (i < present.length + away) return { kind: 'away' }
+    return { kind: 'free' }
+  })
+  const free = seats.filter((s) => s.kind === 'free').length
+  const label = `${name}: ${present.length} de ${n} asientos ocupados${present.length ? ` (${present.map((p) => p.name).join(', ')})` : ''}${away ? `, ${away} ausente${away > 1 ? 's' : ''}` : ''}, ${free} libre${free === 1 ? '' : 's'}`
+  return (
+    <div className={`hub-table hub-table--${game}`} role="img" aria-label={label}>
+      <span className="hub-table__felt" aria-hidden="true">
+        {game === 'blackjack' && <em className="hub-table__dealer">Crupier</em>}
+        <span className="hub-table__caption">{CAPTION[game]}</span>
+      </span>
+      {seats.map((seat, i) => (
+        <span key={i} className={`hub-seat hub-seat--${seat.kind}`} style={seatSpot(i, n, game)} title={seat.person?.name}>
+          {seat.kind === 'on' && <Avatar name={seat.person.name} src={seat.person.avatar} size={36} />}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function LiveSkeleton({ name }) {
+  return (
+    <article className="hub-live hub-live--skel" aria-busy="true" aria-label={`${name}: cargando`}>
+      <div className="hub-live__head">
+        <h3>{name}</h3>
+        <i className="hub-skel hub-skel--chip" />
+      </div>
+      <div className="hub-skel hub-skel--table" />
+      <div className="hub-skel hub-skel--line" />
+      <div className="hub-skel hub-skel--btn" />
+    </article>
+  )
+}
+
+// Tarjeta de un juego en vivo: la mesa en miniatura, su estado y un botón para sentarse (o mirar), sin códigos.
+function LiveGame({ game, tables, loaded, online, onJoin }) {
+  const { name } = LIVE[game]
+  const [picked, setPicked] = useState(null)
+  if (!loaded) return <LiveSkeleton name={name} />
+  const featured = bestTable(tables, picked)
+  const state = tableState(game, featured)
   const players = tables.reduce((sum, t) => sum + t.players, 0)
   const watching = tables.reduce((sum, t) => sum + t.spectators, 0)
   const people = tables.flatMap((t) => t.people)
-  // En el póker la mano empieza con dos: si alguien espera solo, se dice quién para que se anime otro.
-  const alone = game === 'poker' ? tables.find((t) => t.players === 1 && t.phase === 'waiting') : null
-  let pulse = 'Conectando…'
-  if (online) {
-    if (alone) pulse = `${alone.people[0]?.name ?? 'Alguien'} espera rival${players > 1 ? ` · ${players} jugando` : ''}`
-    else if (players > 0) pulse = `${players} jugando${watching ? ` · ${watching} mirando` : ''}`
-    else pulse = 'Mesa libre: siéntate el primero'
-  }
+  const full = featured ? featured.players >= featured.seats : false
+  const code = picked && featured?.code === picked ? picked : undefined
+  const meta = [players ? `${players} jugando` : 'Nadie jugando', watching ? `${watching} mirando` : null].filter(Boolean).join(' · ')
   return (
-    <article className={`live ${players > 0 ? 'live--busy' : ''}`}>
-      <span className="game__art live__art" aria-hidden="true">
-        {art}
-      </span>
-      <div className="live__body">
-        <p className="live__pulse">
-          <span className={`dot ${online ? (players > 0 ? 'dot--on' : '') : 'dot--off'}`} aria-hidden="true" />
-          {pulse}
-          <Faces people={people} />
-        </p>
-        <h3 className="game__name">{name}</h3>
-        <p className="game__blurb">{blurb}</p>
-        {tables.length > 1 && (
-          <ul className="live__tables">
-            {tables.map((t) => (
-              <li key={t.code}>
-                <button type="button" disabled={!online || t.players >= t.seats} onClick={() => onJoin(game, 'player', t.code)}>
-                  {t.label} <small>{t.players === 1 && game === 'poker' && t.phase === 'waiting' ? 'espera rival' : `${t.players}/${t.seats}`}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="actions live__actions">
-          <button type="button" className="primary" disabled={!online} onClick={() => onJoin(game, 'player')}>
-            Jugar
-          </button>
-          <button type="button" disabled={!online} onClick={() => onJoin(game, 'spectator')}>
-            Mirar
-          </button>
+    <article className={`hub-live ${players > 0 ? 'is-busy' : ''} ${online ? '' : 'is-stale'}`}>
+      <div className="hub-live__head">
+        <h3>{name}</h3>
+        <span className={`hub-chip hub-chip--${online ? state.tone : 'free'}`}>
+          <i aria-hidden="true" />
+          {online ? state.text : 'Sin conexión'}
+        </span>
+      </div>
+      <MiniTable game={game} table={featured} name={name} />
+      <div className="hub-live__meta">
+        <span>{meta}</span>
+        {tables.length > 1 && <Faces people={people} />}
+      </div>
+      {tables.length > 1 && (
+        <div className="hub-segs" role="group" aria-label={`Mesas de ${name}`}>
+          {tables.map((t) => (
+            <button key={t.code} type="button" className="hub-seg" aria-pressed={featured?.code === t.code} onClick={() => setPicked(t.code)}>
+              <span>{t.label}</span>
+              <small>
+                {t.players}/{t.seats}
+              </small>
+            </button>
+          ))}
         </div>
+      )}
+      <div className="hub-live__actions">
+        <button type="button" className="hub-btn hub-btn--primary" disabled={!online || full} onClick={() => onJoin(game, 'player', code)}>
+          {full ? 'Mesa llena' : 'Jugar'}
+        </button>
+        <button type="button" className="hub-btn" disabled={!online} onClick={() => onJoin(game, 'spectator', code)}>
+          Mirar
+        </button>
       </div>
     </article>
   )
@@ -203,7 +295,8 @@ function LiveGame({ game, tables, online, onJoin }) {
 
 function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
   const { me, lobby, conn, scores, send } = juegos
-  const online = conn === 'open' && Boolean(me) && Boolean(lobby)
+  const connected = conn === 'open' && Boolean(me)
+  const online = connected && Boolean(lobby)
 
   // El resumen del score se refresca mientras se está en el selector.
   useEffect(() => {
@@ -214,73 +307,82 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
   }, [conn, me, send])
   const tablesOf = (game) => lobby?.tables.filter((t) => t.game === game) ?? []
 
-  let status = 'Elige un juego.'
-  if (!online) status = conn === 'connecting' ? 'Conectando con las mesas…' : 'Sin conexión con los juegos. Reintentando…'
-  else if (juegos.error) status = juegos.error
-  else status = `${plural(lobby.online, 'persona conectada', 'personas conectadas')}. Entra a una mesa en vivo sin código o juega solo: todo cuenta en el Score.`
+  let status = { tone: 'off', text: 'Sin conexión · reintentando' }
+  if (juegos.error) status = { tone: 'err', text: juegos.error }
+  else if (online) status = { tone: 'on', text: `${lobby.online} ${lobby.online === 1 ? 'conectado' : 'conectados'}` }
+  else if (conn === 'connecting' || (connected && !lobby)) status = { tone: 'wait', text: 'Conectando…' }
 
   return (
-    <main className="app app--lobby">
-      <header className="top">
+    <main className="app app--lobby hub">
+      <header className="hub-top">
         <h1>Juegos</h1>
-        <div className="hud">
+        <p className={`hub-status hub-status--${status.tone}`} role="status" aria-live="polite">
+          <i aria-hidden="true" />
+          {status.text}
+        </p>
+        <div className="hub-top__who">
           {me && (
-            <div className="whoami">
+            <div className="hub-me">
               <Avatar name={me.name} src={me.avatar} size={44} />
-              <dl className="money">
-                <div>
-                  <dt>{me.name} · esta semana</dt>
-                  <dd>{eur(me.balance)}</dd>
-                </div>
-              </dl>
+              <span className="hub-me__text">
+                <small>{me.name}</small>
+                <b>{eur(me.balance)}</b>
+              </span>
             </div>
           )}
-          <div className="toggles">
-            <button type="button" onClick={onHome}>
-              TopCode
-            </button>
-          </div>
+          <button type="button" className="hub-btn hub-btn--ghost" onClick={onHome}>
+            TopCode
+          </button>
         </div>
       </header>
 
-      <p className="status" aria-live="polite">
-        {status}
-      </p>
-
-      <div className="picker fill">
-        <section className="picker__live" aria-labelledby="live-title">
-          <h2 id="live-title" className="picker__title">
-            En vivo <small>con la gente de TopCode</small>
+      <div className="hub-grid">
+        <section className="hub-live-sec" aria-labelledby="live-title">
+          <h2 id="live-title" className="hub-title">
+            Mesas en vivo <small>con la gente de TopCode</small>
           </h2>
-          <div className="picker__cards">
+          <div className="hub-cards">
             {Object.keys(LIVE).map((game) => (
-              <LiveGame key={game} game={game} tables={tablesOf(game)} online={online} onJoin={onJoin} />
+              <LiveGame key={game} game={game} tables={tablesOf(game)} loaded={Boolean(lobby)} online={online} onJoin={onJoin} />
             ))}
           </div>
         </section>
 
-        <section className="picker__solo" aria-labelledby="solo-title">
-          <h2 className="picker__title">
-            Clasificación <small>se reinicia el domingo a las 23:59</small>
-          </h2>
-          <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
-          <h2 id="solo-title" className="picker__title picker__title--gap">
-            Solo <small>con tu saldo de la semana</small>
-          </h2>
-          <div className="picker__list">
-            {SOLO.map(({ id, name, blurb, art }) => (
-              <button key={id} type="button" className="game game--row" disabled={!online} onClick={() => onPick(id)}>
-                <span className="game__art" aria-hidden="true">
-                  {art}
-                </span>
-                <span className="game__text">
-                  <span className="game__name">{name}</span>
-                  <span className="game__blurb">{blurb}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <div className="hub-side">
+          <section aria-labelledby="score-title">
+            <h2 id="score-title" className="hub-title">
+              Clasificación <small>se reinicia el domingo a las 23:59</small>
+            </h2>
+            <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
+          </section>
+
+          <section aria-labelledby="solo-title">
+            <h2 id="solo-title" className="hub-title">
+              Para jugar solo <small>con tu saldo de la semana</small>
+            </h2>
+            <ul className="hub-solo">
+              {SOLO.map(({ id, name, blurb, art, live }) => (
+                <li key={id}>
+                  <button type="button" className="hub-row" disabled={!connected} onClick={() => onPick(id)}>
+                    <span className="hub-row__art" aria-hidden="true">
+                      {art}
+                    </span>
+                    <span className="hub-row__text">
+                      <span className="hub-row__name">
+                        {name}
+                        {live && <em className="hub-pill">En vivo</em>}
+                      </span>
+                      <span className="hub-row__blurb">{blurb}</span>
+                    </span>
+                    <span className="hub-row__go" aria-hidden="true">
+                      ›
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       </div>
     </main>
   )
@@ -398,6 +500,8 @@ function JuegosScreens() {
           exit()
         }}
         chat={juegos.chat}
+        bubbles={juegos.bubbles}
+        pending={juegos.pending}
       />
     )
   }

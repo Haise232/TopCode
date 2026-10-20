@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Avatar from '../Avatar.jsx'
+import { useBubblesEnabled } from './SeatBubble.jsx'
 import './chat.css'
 
 const time = (at) => new Date(at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
@@ -8,6 +9,7 @@ const time = (at) => new Date(at).toLocaleTimeString('es-ES', { hour: '2-digit',
 function Chat({ messages, me, send }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
+  const [bubbles, setBubbles] = useBubblesEnabled()
   const [seen, setSeen] = useState(messages.length ? messages.at(-1).id : 0)
   const list = useRef(null)
   const input = useRef(null)
@@ -50,6 +52,15 @@ function Chat({ messages, me, send }) {
         >
           <header className="chat__head">
             <h2>Chat de la sala</h2>
+            <button
+              type="button"
+              className="chat__bubbles"
+              aria-pressed={bubbles}
+              title="Mostrar los mensajes en un globo sobre cada jugador"
+              onClick={() => setBubbles(!bubbles)}
+            >
+              Globos
+            </button>
             <button type="button" className="chat__close" aria-label="Cerrar el chat" onClick={() => toggle(false)}>
               ×
             </button>

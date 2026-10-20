@@ -132,62 +132,16 @@
 }
 
 /* --- Póker en vivo --- */
-
-/* La barra para elegir la apuesta, con sitio de verdad en pantallas anchas. */
-@media (min-width: 1101px) {
-  .juegos-root .pbar {
-    width: min(100%, 1240px);
-  }
-  .juegos-root .pbar__raise {
-    grid-template-columns: auto minmax(240px, 1fr);
-  }
-  .juegos-root .pbar .pbtn {
-    min-width: 0;
-  }
-}
-
-/* Mesa de pie (móvil en vertical): placa de sala fuera y asientos más compactos para que no se pisen. */
-@container pkfloor (aspect-ratio < 1.15) {
-  .juegos-root .pplaque {
-    display: none;
-  }
-  .juegos-root .pstage {
-    --pod-w: clamp(76px, 23cqw, 100px);
-    --bottom-room: calc(var(--size) / 2 + 46px);
-  }
-  .juegos-root .pod__plate {
-    margin-top: -8px;
-    padding: 3px 6px 4px;
-  }
-  .juegos-root .pod__name {
-    font-size: 11px;
-  }
-  .juegos-root .pod__stack {
-    font-size: 12px;
-  }
-  .juegos-root .pod__badge {
-    padding: 1px 6px;
-    font-size: 10px;
-  }
-  .juegos-root .pod__hand {
-    margin-top: 2px;
-    font-size: 11px;
-  }
-}
+/* Casi todo el aspecto de la mesa vive en poker/poker-ui.css; aquí solo queda lo que depende de la ventana. */
 
 /* --- Chat de las mesas: que el botón no tape la barra de decisiones ni las fichas. --- */
-@media (max-width: 1100px) {
+/* El pie de póker publica su alto en --pk-foot-h (PokerTable.jsx), así no hay números fijos. */
+@media (max-width: 1500px) {
   .juegos-root .poker .chat {
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 124px + 8px);
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--pk-foot-h, 96px) + 8px);
   }
 }
 @media (max-width: 640px) {
-  .juegos-root .poker .chat {
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 132px + 8px);
-  }
-  .juegos-root .poker:has(.pslide) .chat {
-    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 164px + 8px);
-  }
   /* Blackjack: encima de los controles (fichas y botones o los de tu turno). */
   .juegos-root .app:has(.ptable) .chat {
     bottom: calc(max(12px, env(safe-area-inset-bottom)) + 76px);

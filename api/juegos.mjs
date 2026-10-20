@@ -18,7 +18,8 @@ export default async function handler(req, res) {
   if (req.method === 'GET') return res.status(200).json(await health(db, { sendPing: req.query?.ping === '1' }))
   if (req.method !== 'POST') return res.status(405).json({ error: { code: 'BAD_MESSAGE', message: 'Usa POST.' } })
   try {
-    const user = await verifyUser(req.headers.authorization, db)
+    // En frío, el arranque de la base de datos y la comprobación del usuario van a la vez (después quedan en caché).
+    const [user] = await Promise.all([verifyUser(req.headers.authorization, db), juegos.warm()])
     const msg = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
     return res.status(200).json(await juegos.handle(user, msg))
   } catch (error) {

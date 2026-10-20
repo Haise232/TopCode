@@ -198,20 +198,28 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     knownWeek = week.key
   }
 
-  // Cuenta del jugador. «visto» (para el contador de conectados) se escribe como mucho cada TOUCH_S: antes cada
-  // petición reescribía la fila y, con todos jugando, las escrituras se acumulaban en la base de datos.
+  // Cuenta del jugador. «visto» (para el contador de conectados) se escribe como mucho cada TOUCH_S. Una lectura ligera
+  // basta casi siempre; solo se escribe si la cuenta es nueva, pasaron TOUCH_S o cambió el nombre o el avatar.
   async function touchAccount(user) {
     const { rows } = await db.query(
+      `select saldo, mesa, nombre, avatar, visto < now() - make_interval(secs => $2::int) as viejo
+       from public.juegos_cuentas where usuario_id = $1`,
+      [user.id, TOUCH_S],
+    )
+    const row = rows[0]
+    if (row && !row.viejo && row.nombre === user.name && (row.avatar ?? null) === (user.avatar ?? null)) return { saldo: row.saldo, mesa: row.mesa }
+    const written = await db.query(
       `insert into public.juegos_cuentas (usuario_id, nombre, avatar) values ($1, $2, $3)
        on conflict (usuario_id) do update set nombre = excluded.nombre, avatar = excluded.avatar, visto = now()
-       where juegos_cuentas.visto < now() - make_interval(secs => $4::int)
-          or juegos_cuentas.nombre is distinct from excluded.nombre
-          or juegos_cuentas.avatar is distinct from excluded.avatar
        returning saldo, mesa`,
-      [user.id, user.name, user.avatar, TOUCH_S],
+      [user.id, user.name, user.avatar],
     )
-    if (rows[0]) return rows[0]
-    return (await db.query(`select saldo, mesa from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0]
+    return written.rows[0]
+  }
+
+  // Lo que el selector enseña de una mesa, como texto para comparar antes y después de una jugada.
+  function lobbyKey(code, row, estado, t) {
+    return JSON.stringify(summary({ codigo: code, juego: row.juego, etiqueta: row.etiqueta, estado }, t))
   }
 
   // Abre la mesa con bloqueo, aplica fn(room, session) y la guarda si cambió algo.
@@ -221,6 +229,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     const outcome = await db.tx(async (q) => {
       const row = (await q(`select * from public.juegos_mesas where codigo = $1 for update`, [code])).rows[0]
       if (!row) throw new JuegosError('ROOM_NOT_FOUND')
+      const lobbyBefore = lobbyKey(code, row, row.estado, t) // antes de restaurar: el motor puede tocar los asientos en su sitio
       const tokens = tokensOf(row.estado)
       tokens.add(user.id)
       const accRows = (
@@ -265,8 +274,10 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       const error = fn(room, session) ?? null
 
       const changed = room.rev !== revBefore || presence
+      let saved = null
       if (changed || touch) {
-        await q(`update public.juegos_mesas set estado = $2, version = version + 1, actualizado = now() where codigo = $1`, [code, serialize(room)])
+        saved = serialize(room)
+        await q(`update public.juegos_mesas set estado = $2, version = version + 1, actualizado = now() where codigo = $1`, [code, saved])
         for (const token of accounts.dirty) {
           const acc = accounts.get(token)
           await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [token, acc.balance, pgArray(acc.days), acc.played])
@@ -276,13 +287,19 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       const inRoom = room.members.has(user.id)
       if (inRoom !== wasIn) await q(`update public.juegos_cuentas set mesa = $2 where usuario_id = $1`, [user.id, inRoom ? code : null])
       // Mesas extra vacías: se borran (la «Mesa 1» de cada juego se queda siempre).
+      let deleted = false
       if (!row.persistente && room.members.size === 0 && room.seats.every((s) => !s)) {
         await q(`delete from public.juegos_mesas where codigo = $1`, [code])
+        deleted = true
       }
-      return { error, changed, view: inRoom ? viewFor(room, user.id) : null }
+      // El selector solo muestra asientos, presencia, fase y mirones: si eso no cambió no hace falta avisarle.
+      const lobbyChanged = deleted || (saved !== null && lobbyKey(code, row, saved, t) !== lobbyBefore)
+      return { error, changed, lobbyChanged, code, balance: accounts.get(user.id)?.balance, view: inRoom ? viewFor(room, user.id) : null }
     })
+    // Ya con el commit hecho se avisa, sin esperar: quien llama lo espera (outcome.sent) junto a sus otras consultas.
+    // Nunca rechaza: si el aviso falla, los clientes se ponen al día con su latido.
     if (outcome.changed) {
-      await Promise.all([ping(`juegos-mesa-${code}`), ping('juegos-lobby')])
+      outcome.sent = Promise.all([ping(`juegos-mesa-${code}`), outcome.lobbyChanged ? ping('juegos-lobby') : null]).catch(() => {})
     }
     return outcome
   }
@@ -303,8 +320,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     }
     const tokens = [...tokensOf(row.estado)]
     const accRows = (await db.query(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = any($1::uuid[])`, [tokens])).rows
-    const room = restore(row, new TxAccounts(accRows, weekOf(t).day), () => now())
-    return { error: null, changed: false, view: viewFor(room, user.id) }
+    const accounts = new TxAccounts(accRows, weekOf(t).day)
+    const room = restore(row, accounts, () => now())
+    return { error: null, changed: false, balance: accounts.get(user.id)?.balance, view: viewFor(room, user.id) }
   }
 
   function viewFor(room, userId) {
@@ -369,7 +387,18 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Elige mesa pública (o la crea) y entra.
   async function joinPublic(user, msg, current) {
     if (!GAMES.includes(msg.game)) throw new JuegosError('BAD_MESSAGE')
-    if (current) await withTable(current, user, (room, session) => room.leave(session)).catch(() => {})
+    const left = current ? await withTable(current, user, (room, session) => room.leave(session)).catch(() => null) : null
+    try {
+      const outcome = await joinTarget(user, msg)
+      if (left?.sent) outcome.sent = Promise.all([left.sent, outcome.sent])
+      return outcome
+    } catch (error) {
+      await left?.sent
+      throw error
+    }
+  }
+
+  async function joinTarget(user, msg) {
     const play = msg.as !== 'spectator'
     const all = (await db.query(`select codigo, juego, numero, estado from public.juegos_mesas`)).rows
     const t = now()
@@ -507,8 +536,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Punto de entrada: una petición del navegador. Devuelve lo que el cliente debe actualizar.
   async function handle(user, msg) {
     if (!msg || typeof msg.t !== 'string') throw new JuegosError('BAD_MESSAGE')
-    await ensureSchema()
-    await rollover(weekOf(now()))
+    await warm()
     const account = await touchAccount(user)
     const me = { id: user.id, name: user.name, avatar: user.avatar, balance: account.saldo, auth: true, privateRooms: false }
     const reply = { me }
@@ -516,9 +544,12 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     const tableReply = async (outcome, code) => {
       reply.state = outcome.view
       if (outcome.error) reply.error = { code: outcome.error, message: ERRORS[outcome.error] ?? 'Error.' }
-      if (outcome.view) reply.chat = await chatSince(code, msg.chatAfter)
-      const acc = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0]
-      me.balance = acc.saldo
+      // Chat y aviso de Realtime a la vez. «noChat» (solo en «view») lo manda el cliente al reaccionar a un «cambio»:
+      // el chat tiene su propio aviso y su latido. Sin la bandera, el comportamiento de siempre.
+      const wantChat = Boolean(outcome.view) && !(msg.t === 'view' && msg.noChat === true)
+      const [chat] = await Promise.all([wantChat ? chatSince(code, msg.chatAfter) : null, outcome.sent])
+      if (wantChat) reply.chat = chat
+      if (outcome.balance !== undefined) me.balance = outcome.balance
       return reply
     }
 
@@ -543,8 +574,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         return reply
       case 'join_public': {
         const outcome = await joinPublic(user, msg, account.mesa)
-        const code = (await db.query(`select mesa from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].mesa
-        return tableReply(outcome, code)
+        return tableReply(outcome, outcome.code)
       }
       case 'chat': {
         if (!account.mesa) throw new JuegosError('BAD_PHASE')
@@ -614,7 +644,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         const outcome = (quiet && (await peekTable(account.mesa, user))) || (await withTable(account.mesa, user, (room, session) => action(room, session, msg)))
         if (msg.t === 'leave_room') {
           reply.state = null
-          reply.lobby = await lobby(user)
+          ;[reply.lobby] = await Promise.all([lobby(user), outcome.sent])
           return reply
         }
         return tableReply(outcome, account.mesa)
@@ -633,11 +663,12 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     tablesReady = true
   }
 
-  return {
-    async handle(user, msg) {
-      await ensureSchema()
-      await ensurePublicTables()
-      return handle(user, msg)
-    },
+  // Arranque (esquema, semana, «Mesa 1»): cacheado por instancia. La función de Vercel lo lanza a la vez que la
+  // comprobación del usuario; en caliente no hace ninguna consulta.
+  async function warm() {
+    await ensureSchema()
+    await Promise.all([rollover(weekOf(now())), ensurePublicTables()])
   }
+
+  return { warm, handle }
 }

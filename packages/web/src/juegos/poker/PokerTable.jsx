@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useEffectEvent } from '../useEffectEvent.js'
 import { bestHand } from '../shared/poker-core.js'
 import Avatar from '../Avatar.jsx'
@@ -6,6 +6,7 @@ import Help from '../Help.jsx'
 import { eur } from '../money.js'
 import Chat from '../table/Chat.jsx'
 import Invite from '../table/Invite.jsx'
+import SeatBubble from '../table/SeatBubble.jsx'
 import PlayingCard from '../PlayingCard.jsx'
 import WinBurst from '../WinBurst.jsx'
 import WinToast from '../WinToast.jsx'
@@ -13,11 +14,14 @@ import { playCard, playChip, playLose, playTurn, playWin } from '../sound.js'
 import { useCountdown } from '../table/useCountdown.js'
 import './poker.css'
 import './bet-slider.css'
+// Último: ajusta el aspecto de poker.css (generado) sin tocarlo.
+import './poker-ui.css'
 
 const STREETS = { preflop: 'Preflop', flop: 'Flop', turn: 'Turn', river: 'River' }
 const LIVE = new Set(Object.keys(STREETS))
 const GLYPHS = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
 const RED = new Set(['hearts', 'diamonds'])
+const SUIT_WORDS = { spades: 'picas', hearts: 'corazones', diamonds: 'diamantes', clubs: 'tréboles' }
 
 const initials = (name) =>
   name
@@ -52,7 +56,7 @@ function chipsFor(amount) {
   return chips
 }
 
-function Chips({ amount }) {
+function Chips({ amount, bare = false }) {
   return (
     <span className="pchips">
       <span className="pchips__stack" aria-hidden="true">
@@ -60,7 +64,7 @@ function Chips({ amount }) {
           <i key={i} className={`pchip pchip--${tone}`} style={{ '--n': i }} />
         ))}
       </span>
-      <b>{money(amount)}</b>
+      {!bare && <b>{money(amount)}</b>}
     </span>
   )
 }
@@ -166,7 +170,7 @@ function EventText({ event }) {
     <>
       {event.text}
       {event.cards && (
-        <span className="pfeed__cards">
+        <span className="pk-band__cards">
           {event.cards.map((card) => (
             <Mini key={card.id} {...card} />
           ))}
@@ -176,42 +180,34 @@ function EventText({ event }) {
   )
 }
 
-function PlayFeed({ log, status, myTurn, clock, owed }) {
+// Texto plano de una jugada, para el aviso hablado.
+function plain(event) {
+  return event.cards ? `${event.text}: ${event.cards.map((card) => `${card.rank} de ${SUIT_WORDS[card.suit]}`).join(', ')}` : event.text
+}
+
+// Banda fija bajo la cabecera: estado corto, últimas jugadas y tus fichas. Su alto no cambia.
+function PlayBand({ log, status, myTurn, mine }) {
   const [latest, ...older] = log
-  if (myTurn) {
-    return (
-      <section className="pfeed pfeed--turn" aria-live="assertive" style={{ '--p': clock?.fraction ?? 0 }}>
-        <p className="pfeed__head">
-          <b>¡Es tu turno!</b>
-          {clock && <span className="pfeed__clock">{clock.seconds} s</span>}
-        </p>
-        <p className="pfeed__line">
-          {latest && (
-            <span className="pfeed__last">
-              <EventText event={latest} />
-              {' · '}
-            </span>
-          )}
-          {owed > 0 ? `Debes ${money(owed)}` : 'Puedes pasar o apostar'}
-        </p>
-        <span className="pfeed__timer" aria-hidden="true" />
-      </section>
-    )
-  }
   return (
-    <section className="pfeed" aria-live="polite">
-      <p className="pfeed__head">{status}</p>
-      <ol className="pfeed__log" aria-label="Últimas jugadas">
+    <section className="pk-band" aria-label="Estado de la mesa">
+      <p className={`pk-band__status ${myTurn ? 'is-turn' : ''}`}>{status}</p>
+      <ol className="pk-band__log" aria-label="Últimas jugadas">
         {latest ? (
-          [latest, ...older.slice(0, 3)].map((event, i) => (
-            <li key={event.id} className={`pfeed__item pfeed__item--${event.tone} ${i === 0 ? 'pfeed__item--new' : ''}`}>
+          [latest, ...older.slice(0, 2)].map((event, i) => (
+            <li key={event.id} className={`pk-band__item pk-band__item--${event.tone} ${i === 0 ? 'pk-band__item--new' : ''}`}>
               <EventText event={event} />
             </li>
           ))
         ) : (
-          <li className="pfeed__item">Aquí verás cada jugada de la mesa.</li>
+          <li className="pk-band__item">Aquí verás cada jugada.</li>
         )}
       </ol>
+      {mine && (
+        <p className="pk-band__money">
+          <span>Fichas</span>
+          <b>{money(mine.balance)}</b>
+        </p>
+      )}
     </section>
   )
 }
@@ -303,15 +299,19 @@ function PokerGuide({ current, state }) {
 
 // --- Asientos ---
 
-function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveHand, canSit, canKick, onSit, onKick }) {
+function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveHand, canSit, canKick, bubble, dealer, axis, onSit, onKick }) {
   const style = { '--a': `${angle}deg` }
   if (!seat) {
     return (
       <div className="pod pod--empty" style={style}>
         {canSit ? (
-          <button type="button" className="pod__sit" onClick={onSit}>
-            <span aria-hidden="true">+</span>
-            Sentarse
+          <button type="button" className="pod__sit" onClick={onSit} aria-label={`Sentarse en el asiento ${index + 1}`}>
+            <span className="pod__plus" aria-hidden="true">
+              +
+            </span>
+            <span className="pod__sit-text" aria-hidden="true">
+              Sentarse
+            </span>
           </button>
         ) : (
           <span className="pod__free">{index + 1}</span>
@@ -324,25 +324,25 @@ function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveH
   const showCards = seat.inHand && seat.cards.length > 0 && (!seat.folded || mine)
   const hurry = active && clock && clock.fraction < 0.25
   const handName = seat.handName ?? liveHand
+  // El globo va al lado exterior del avatar, lejos de las cartas y de la etiqueta de estado.
+  const side = Math.cos((angle * Math.PI) / 180) < -0.25 ? 'left' : 'right'
 
-  let badge = null
-  let tone = 'plain'
-  if (won) {
-    badge = `+${money(seat.won)}`
-    tone = 'win'
-  } else if (!seat.connected) badge = 'Sin conexión'
-  else if (state.phase === 'showdown' && !seat.folded) badge = null
-  else if (seat.allIn) {
-    badge = 'All-in'
-    tone = 'allin'
-  } else if (seat.folded) {
-    badge = 'Fuera'
-    tone = 'fold'
-  } else if (seat.action) {
-    badge = seat.action.replace('Ciega pequeña', 'C. pequeña').replace('Ciega grande', 'C. grande')
-    tone = /Sube|Apuesta/.test(seat.action) ? 'raise' : 'plain'
-  } else if (live && !seat.inHand) badge = 'Espera'
-  else if (seat.balance < state.blinds.big && !seat.inHand) badge = 'Sin fichas'
+  // Estado de la jugada: siempre con texto y símbolo, no solo con color.
+  let tag = null
+  if (won) tag = { icon: '★', text: `+${money(seat.won)}`, tone: 'win' }
+  else if (!seat.connected) tag = { icon: '☾', text: 'Ausente', tone: 'away' }
+  else if (state.phase === 'showdown' && !seat.folded) tag = null
+  else if (seat.allIn) tag = { icon: '◆', text: 'All-in', tone: 'allin' }
+  else if (seat.folded) tag = { icon: '✕', text: 'Fuera', tone: 'fold' }
+  else if (seat.action) {
+    tag = {
+      icon: null,
+      text: seat.action.replace('Ciega pequeña', 'C. pequeña').replace('Ciega grande', 'C. grande'),
+      bet: seat.bet > 0 ? money(seat.bet) : null,
+      tone: /Sube|Apuesta/.test(seat.action) ? 'raise' : 'plain',
+    }
+  } else if (live && !seat.inHand) tag = { icon: '…', text: 'Espera', tone: 'plain' }
+  else if (seat.balance < state.blinds.big && !seat.inHand) tag = { icon: '∅', text: 'Sin fichas', tone: 'fold' }
 
   const classes = [
     'pod',
@@ -352,40 +352,71 @@ function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveH
     seat.folded && 'pod--folded',
     !seat.connected && 'pod--away',
     won && 'pod--winner',
+    bubble && 'pod--talk',
+    axis && 'pod--axis',
+    side === 'left' ? 'pod--l' : 'pod--r',
   ]
     .filter(Boolean)
     .join(' ')
 
+  const cards = showCards && (
+    <div className="pod__cards">
+      {seat.cards.map((card, i) => (
+        <Card key={`${state.hand}-${i}`} card={card} index={i} best={highlight && card ? highlight.has(card.id) : undefined} />
+      ))}
+    </div>
+  )
+
   return (
     <div className={classes} style={{ ...style, '--hue': hueOf(seat.name), '--p': active && clock ? clock.fraction : 0 }}>
-      {showCards && (
-        <div className="pod__cards">
-          {seat.cards.map((card, i) => (
-            <Card
-              key={`${state.hand}-${i}`}
-              card={card}
-              index={i}
-              best={highlight && card ? highlight.has(card.id) : undefined}
-            />
-          ))}
-        </div>
+      {/* Tus cartas, en una bandeja propia: grandes, rectas y con el nombre de la mano al lado. */}
+      {mine ? (
+        showCards && (
+          <div className="pod__tray">
+            {cards}
+            {handName && (
+              <span className={`pod__hand ${won ? 'pod__hand--win' : ''}`}>
+                <small>Tu mano</small>
+                {handName}
+              </span>
+            )}
+          </div>
+        )
+      ) : (
+        cards
       )}
       <div className="pod__avatar" aria-hidden="true">
         {seat.avatar ? <Avatar name={seat.name} src={seat.avatar} size={64} className="pod__photo" /> : initials(seat.name)}
-        {badge && (
-          <span key={badge} className={`pod__badge pod__badge--${tone}`}>
-            {badge}
-          </span>
-        )}
       </div>
+      {dealer && (
+        <span className="pod__dealer" role="img" aria-label="Botón del repartidor">
+          D
+        </span>
+      )}
+      <div className={`pod__anchor pod__anchor--out pod__anchor--${side} ${axis ? 'pod__anchor--axis' : ''}`}>
+        <SeatBubble bubble={bubble} side={side} />
+      </div>
+      {/* En la mesa vertical el globo va sobre el avatar: en los lados no hay sitio fuera. */}
+      {!axis && (
+        <div className="pod__anchor pod__anchor--in pod__anchor--top">
+          <SeatBubble bubble={bubble} side="top" />
+        </div>
+      )}
       <div className="pod__plate">
         <span className="pod__name">
           {seat.name}
           {mine && <small> · tú</small>}
         </span>
         <span className="pod__stack">{money(seat.balance)}</span>
+        {!mine && handName && <span className={`pod__hand ${won ? 'pod__hand--win' : ''}`}>{handName}</span>}
+        {tag && (
+          <span key={tag.text} className={`pod__tag pod__tag--${tag.tone}`}>
+            {tag.icon && <i aria-hidden="true">{tag.icon}</i>}
+            {tag.text}
+            {tag.bet && <span className="pod__tag-bet"> {tag.bet}</span>}
+          </span>
+        )}
       </div>
-      {handName && <span className={`pod__hand ${won ? 'pod__hand--win' : ''}`}>{handName}</span>}
       {/* En la mesa vertical la apuesta va bajo la placa (en la horizontal, sobre el paño). */}
       {seat.bet > 0 && (
         <span className="pod__bet">
@@ -403,7 +434,7 @@ function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveH
 
 // --- Barra de decisiones. Se monta de nuevo en cada decisión, así la subida empieza en el mínimo. ---
 
-function ActionBar({ state, mine, send }) {
+function ActionBar({ state, mine, send, pending }) {
   const owed = Math.min(state.currentBet - mine.bet, mine.balance)
   const maxTo = mine.bet + mine.balance
   const canRaise = maxTo > state.currentBet && owed < mine.balance
@@ -427,9 +458,28 @@ function ActionBar({ state, mine, send }) {
   const potRaise = (part) => clamp(state.currentBet + (onTable + owed) * part)
   const opening = state.currentBet === 0
 
-  const fold = () => send({ t: 'action', kind: 'fold' })
-  const call = () => send({ t: 'action', kind: owed > 0 ? 'call' : 'check' })
-  const raise = () => send({ t: 'action', kind: 'raise', amount: raiseTo })
+  // Mientras la jugada viaja al servidor, los botones se bloquean: un doble clic no manda dos acciones.
+  const [sent, setSent] = useState(null)
+  const wasPending = useRef(false)
+  const locked = Boolean(pending) || sent !== null
+  useEffect(() => {
+    if (wasPending.current && !pending) setSent(null)
+    wasPending.current = Boolean(pending)
+  }, [pending])
+  // Por si la respuesta no llega o no se marca como pendiente: nunca queda bloqueado para siempre.
+  useEffect(() => {
+    if (sent === null) return
+    const timer = setTimeout(() => setSent(null), 4000)
+    return () => clearTimeout(timer)
+  }, [sent])
+  const act = (kind, message) => {
+    if (locked) return
+    setSent(kind)
+    if (send(message) === false) setSent(null)
+  }
+  const fold = () => act('fold', { t: 'action', kind: 'fold' })
+  const call = () => act('call', { t: 'action', kind: owed > 0 ? 'call' : 'check' })
+  const raise = () => act('raise', { t: 'action', kind: 'raise', amount: raiseTo })
 
   const onKey = useEffectEvent((event) => {
     if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
@@ -453,7 +503,32 @@ function ActionBar({ state, mine, send }) {
   ]
 
   return (
-    <div className="pbar pbar--act" role="group" aria-label="Tu decisión">
+    <div className={`pbar pbar--act ${locked ? 'pbar--sending' : ''}`} role="group" aria-label="Tu decisión" aria-busy={locked}>
+      <div className="pbar__buttons">
+        <button type="button" className="pbtn pbtn--fold" onClick={fold} disabled={locked}>
+          {sent === 'fold' ? 'Enviando…' : <>Retirarse <kbd>F</kbd></>}
+        </button>
+        <button type="button" className="pbtn pbtn--call" onClick={call} disabled={locked}>
+          {sent === 'call' ? (
+            'Enviando…'
+          ) : (
+            <>
+              {owed === 0 ? 'Pasar' : owed === mine.balance ? `All-in ${money(owed)}` : `Igualar ${money(owed)}`} <kbd>C</kbd>
+            </>
+          )}
+        </button>
+        {canRaise && (
+          <button type="button" className="pbtn pbtn--raise" onClick={raise} disabled={locked}>
+            {sent === 'raise' ? (
+              'Enviando…'
+            ) : (
+              <>
+                {raiseTo === maxTo ? 'All-in' : opening ? 'Apostar' : 'Subir a'} {money(raiseTo)} <kbd>R</kbd>
+              </>
+            )}
+          </button>
+        )}
+      </div>
       {canRaise ? (
         <div className="pbar__raise">
           <div className="pbar__presets">
@@ -526,24 +601,11 @@ function ActionBar({ state, mine, send }) {
       ) : (
         <p className="pbar__note">{owed >= mine.balance ? 'Para seguir tienes que ir all-in.' : 'No puedes subir más.'}</p>
       )}
-      <div className="pbar__buttons">
-        <button type="button" className="pbtn pbtn--fold" onClick={fold}>
-          Retirarse <kbd>F</kbd>
-        </button>
-        <button type="button" className="pbtn pbtn--call" onClick={call}>
-          {owed === 0 ? 'Pasar' : owed === mine.balance ? `All-in ${money(owed)}` : `Igualar ${money(owed)}`} <kbd>C</kbd>
-        </button>
-        {canRaise && (
-          <button type="button" className="pbtn pbtn--raise" onClick={raise}>
-            {raiseTo === maxTo ? 'All-in' : opening ? 'Apostar' : 'Subir a'} {money(raiseTo)} <kbd>R</kbd>
-          </button>
-        )}
-      </div>
     </div>
   )
 }
 
-function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
+function PokerTable({ room, me, conn, error, send, onLeave, chat, bubbles, pending }) {
   const { state, at } = room
   const n = state.seats.length
   const mySeat = state.seats.findIndex((seat) => seat?.id === me?.id)
@@ -558,6 +620,22 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
   const myHand = mine?.inHand && !mine.folded ? strength(mine.cards, state.board) : null
   const owed = mine ? Math.min(state.currentBet - mine.bet, mine.balance) : 0
   const log = usePlayLog(state, me?.id)
+  const [look, setLook] = useState(false) // «Mirar»: oculta el aviso grande de la mesa en espera
+
+  // El pie mide lo que mide: se publica su alto para que el chat se coloque sin números fijos.
+  const mainRef = useRef(null)
+  const footRef = useRef(null)
+  useLayoutEffect(() => {
+    const main = mainRef.current
+    const foot = footRef.current
+    if (!main || !foot) return
+    const publish = () => main.style.setProperty('--pk-foot-h', `${Math.ceil(foot.getBoundingClientRect().height)}px`)
+    publish()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(publish)
+    observer.observe(foot)
+    return () => observer.disconnect()
+  }, [])
 
   // Cartas ganadoras resaltadas en el enfrentamiento.
   const highlight = showdown && result && !result.byFold ? new Set(result.winners.flatMap((w) => w.best)) : null
@@ -606,58 +684,80 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
   // Los asientos giran para que el tuyo quede abajo, en el centro.
   const anchor = mySeat >= 0 ? mySeat : 0
   const angleOf = (i) => 90 + (((i - anchor + n) % n) * 360) / n
+  // Arriba y abajo del óvalo la apuesta no cabe entre el asiento y el centro: va junto al avatar.
+  const onAxis = (i) => Math.abs(Math.cos((angleOf(i) * Math.PI) / 180)) < 0.3
 
-  let status = 'Esperando jugadores…'
+  // Estado corto para la banda; el aviso grande de la espera va en el centro de la mesa.
+  let status = 'Esperando jugadores'
+  let wait = null
+  const waiting = state.phase === 'waiting'
   if (conn !== 'open') status = 'Conexión perdida. Reconectando…'
   else if (error) status = error
-  else if (state.phase === 'waiting') {
+  else if (waiting) {
     const ready = state.seats.filter((s) => s && s.connected && s.balance >= state.blinds.big).length
-    if (clock) status = `La mano empieza en ${clock.seconds} s`
-    else if (!mine) status = 'Estás mirando. Elige un asiento libre para jugar.'
-    else if (broke) status = 'Te quedaste sin fichas hasta el domingo a las 23:59.'
-    else if (ready >= 2) status = 'Preparando la mano…'
-    else status = 'Esperando a otro jugador: la mano empieza con dos. Invita a alguien con «Invitar».'
+    if (clock) {
+      status = `La mano empieza en ${clock.seconds} s`
+      wait = { title: 'La mano empieza', big: `${clock.seconds}`, text: 'Prepara tu decisión.' }
+    } else if (!mine) {
+      status = 'Mirando la mesa'
+      wait = { title: 'Mesa en espera', text: 'Siéntate en un asiento libre para jugar, o mira cómo empieza.', look: true }
+    } else if (broke) {
+      status = 'Sin fichas'
+      wait = { title: 'Sin fichas por ahora', text: 'Vuelves a tener 10.000 € el domingo a las 23:59.' }
+    } else if (ready >= 2) {
+      status = 'Preparando la mano…'
+      wait = { title: 'Preparando la mano…', text: 'Ya sois suficientes.' }
+    } else {
+      status = 'Esperando a otro jugador'
+      wait = { title: 'Esperando a otro jugador', text: 'La mano empieza cuando haya dos. Invita a alguien de TopCode.', invite: true }
+    }
   } else if (live) {
     const who = state.seats[state.turn]
     if (state.turn === null || state.deadlineIn === null) status = 'Se reparten las cartas…'
+    else if (myTurn) status = `Es tu turno${clock ? ` · ${clock.seconds} s` : ''}`
     else status = `Habla ${who?.name ?? '…'}${clock ? ` · ${clock.seconds} s` : ''}`
   } else if (showdown && result) {
     status = result.byFold ? 'Todos se retiraron' : 'Enfrentamiento'
   }
+  if (conn !== 'open') wait = { title: 'Conexión perdida', text: 'Reconectando…' }
 
   const streetIndex = Object.keys(STREETS).indexOf(state.phase)
 
+  // Un solo aviso hablado (cortés) para lo que pasa en la mesa; el turno se anuncia una vez.
+  const latest = log[0]
+  const announce = myTurn
+    ? `Es tu turno. ${owed > 0 ? `Debes ${money(owed)}.` : 'Puedes pasar o apostar.'}`
+    : latest
+      ? plain(latest)
+      : ''
+
   return (
-    <main className={`app poker ${myTurn ? 'poker--turn' : ''}`}>
+    <main ref={mainRef} className="app poker pk">
       <header className="top pk-top">
         <h1>Póker</h1>
-        <PlayFeed log={log} status={status} myTurn={myTurn} clock={clock} owed={owed} />
-        <div className="hud">
-          <dl className="money">
-            {mine && (
-              <div>
-                <dt>Fichas</dt>
-                <dd>{money(mine.balance)}</dd>
-              </div>
-            )}
-            <div>
-              <dt>Ciegas</dt>
-              <dd>
-                {state.blinds.small}/{state.blinds.big}
-              </dd>
-            </div>
-          </dl>
-          <div className="toggles">
-            <Help label="Jugadas" title="Jugadas del póker" wide>
-              <PokerGuide current={myHand ?? mine?.handName} state={state} />
-            </Help>
-            <Invite game="poker" code={state.code} name="Póker" />
-            <button type="button" onClick={onLeave}>
-              Salir
-            </button>
-          </div>
+        <p className="pk-room" data-room-code={state.code}>
+          <span>{state.label ? 'Mesa pública' : 'Sala'}</span>
+          <b>{state.label ?? state.code}</b>
+          <small>
+            Ciegas {state.blinds.small}/{state.blinds.big}
+            {state.spectators > 0 ? ` · ${state.spectators} mirando` : ''}
+          </small>
+        </p>
+        <div className="toggles">
+          <Help label="Jugadas" title="Jugadas del póker" wide>
+            <PokerGuide current={myHand ?? mine?.handName} state={state} />
+          </Help>
+          <Invite game="poker" code={state.code} name="Póker" />
+          <button type="button" onClick={onLeave}>
+            Salir
+          </button>
         </div>
       </header>
+
+      <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announce}
+      </p>
 
       <div className="pk-floor fill">
         <section className="pstage" aria-label="Mesa de póker">
@@ -665,67 +765,107 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
             <div className="pktable__felt" />
           </div>
 
-          <div className="pplaque" data-room-code={state.code}>
-            <span>{state.label ? 'Pública' : 'Sala'}</span>
-            <b>{state.label ?? state.code}</b>
-            {state.spectators > 0 && <small>{state.spectators} mirando</small>}
-          </div>
-
           <div className="pcenter">
-            <div className="ppot" aria-live="polite">
-              <ol className="pstreets" aria-label="Calle">
-                {Object.values(STREETS).map((name, i) => (
-                  <li
-                    key={name}
-                    className={i < streetIndex ? 'is-done' : i === streetIndex ? 'is-now' : ''}
-                    aria-current={i === streetIndex ? 'step' : undefined}
-                  >
-                    {name}
-                  </li>
-                ))}
-              </ol>
-              {state.pot > 0 && <Chips amount={state.pot} />}
-            </div>
-            <div className="pboard">
-              {Array.from({ length: 5 }, (_, i) => {
-                const card = state.board[i]
-                return card ? (
-                  <Card
-                    key={`${state.hand}-${card.id}`}
-                    card={card}
-                    index={i < 3 ? i : 0}
-                    best={highlight ? highlight.has(card.id) : undefined}
-                  />
-                ) : (
-                  <span key={`slot-${i}`} className="pboard__slot" />
-                )
-              })}
-            </div>
-            {showdown && result && (
-              <p className="presult">
-                {result.winners.map((w) => (
-                  <span key={w.seat}>
-                    <b>{w.name}</b> {result.byFold ? 'se lleva' : 'gana'} {money(w.amount)}
-                    {w.hand && <em> · {w.hand}</em>}
-                  </span>
-                ))}
-              </p>
+            {wait && !(look && wait.look) ? (
+              <div className={`pk-wait ${wait.big ? 'pk-wait--count' : ''}`}>
+                <h2>{wait.title}</h2>
+                {wait.big && <b className="pk-wait__big">{wait.big}</b>}
+                <p>{wait.text}</p>
+                {(wait.invite || wait.look) && (
+                  <div className="pk-wait__actions">
+                    {wait.invite && <Invite game="poker" code={state.code} name="Póker" />}
+                    {wait.look && (
+                      <>
+                        {conn === 'open' && (
+                          <button
+                            type="button"
+                            className="pk-cta"
+                            onClick={() => send({ t: 'sit', seat: state.seats.findIndex((seat) => !seat) })}
+                            disabled={!state.seats.some((seat) => !seat)}
+                          >
+                            Sentarme
+                          </button>
+                        )}
+                        <button type="button" onClick={() => setLook(true)}>
+                          Mirar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : waiting ? (
+              look && (
+                <button type="button" className="pk-wait__pill" onClick={() => setLook(false)}>
+                  Mirando · ver aviso
+                </button>
+              )
+            ) : (
+              <>
+                <div className="ppot">
+                  <ol className="pstreets" aria-label="Calle">
+                    {Object.values(STREETS).map((name, i) => (
+                      <li
+                        key={name}
+                        className={i < streetIndex ? 'is-done' : i === streetIndex ? 'is-now' : ''}
+                        aria-current={i === streetIndex ? 'step' : undefined}
+                      >
+                        {name}
+                      </li>
+                    ))}
+                  </ol>
+                  {showdown && result ? (
+                    <p className="presult">
+                      {result.winners.map((w) => (
+                        <span key={w.seat}>
+                          <b>{w.name}</b> {result.byFold ? 'se lleva' : 'gana'} {money(w.amount)}
+                          {w.hand && <em> · {w.hand}</em>}
+                        </span>
+                      ))}
+                    </p>
+                  ) : (
+                    <p className="ppot__sum">
+                      <span>Bote</span>
+                      {state.pot > 0 ? <Chips amount={state.pot} /> : <b className="ppot__zero">0 €</b>}
+                    </p>
+                  )}
+                </div>
+                <div className="pboard">
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const card = state.board[i]
+                    return card ? (
+                      <Card
+                        key={`${state.hand}-${card.id}`}
+                        card={card}
+                        index={i < 3 ? i : 0}
+                        best={highlight ? highlight.has(card.id) : undefined}
+                      />
+                    ) : (
+                      <span key={`slot-${i}`} className="pboard__slot" />
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
 
           {state.seats.map((seat, i) =>
-            seat && seat.bet > 0 ? (
-              <div key={`bet-${i}`} className={`pbet ${i === mySeat ? 'pbet--me' : ''}`} style={{ '--a': `${angleOf(i)}deg` }}>
+            seat && seat.bet > 0 && !onAxis(i) ? (
+              <div key={`bet-${i}`} className="pbet" style={{ '--a': `${angleOf(i)}deg` }}>
                 <Chips amount={seat.bet} />
               </div>
             ) : null,
           )}
 
-          {state.button >= 0 && state.phase !== 'waiting' && (
-            <span className="pdealer" style={{ '--a': `${angleOf(state.button)}deg` }} aria-label="Botón del repartidor">
-              D
-            </span>
-          )}
+          {/* El bote viaja hasta quien lo gana. */}
+          {showdown &&
+            state.seats.map((seat, i) =>
+              seat && seat.won > 0 ? (
+                <div key={`pay-${state.hand}-${i}`} className="pk-payout" style={{ '--a': `${angleOf(i)}deg` }} aria-hidden="true">
+                  <Chips amount={seat.won} bare />
+                </div>
+              ) : null,
+            )}
 
           {state.seats.map((seat, i) => (
             <Seat
@@ -740,7 +880,10 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
               highlight={highlight}
               liveHand={i === mySeat && live ? myHand : null}
               canSit={mySeat < 0 && conn === 'open'}
-              canKick={isHost && seat && i !== mySeat && state.phase === 'waiting'}
+              canKick={isHost && seat && i !== mySeat && waiting}
+              bubble={seat ? bubbles?.[seat.id] : undefined}
+              dealer={!waiting && state.button === i}
+              axis={onAxis(i)}
               onSit={() => send({ t: 'sit', seat: i })}
               onKick={() => send({ t: 'kick', seat: i })}
             />
@@ -748,9 +891,9 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
         </section>
       </div>
 
-      <footer className="pk-foot">
+      <footer ref={footRef} className={`pk-foot ${mine && !waiting ? 'pk-foot--seated' : ''}`}>
         {myTurn ? (
-          <ActionBar key={`${state.hand}-${state.phase}-${state.currentBet}`} state={state} mine={mine} send={send} />
+          <ActionBar key={`${state.hand}-${state.phase}-${state.currentBet}`} state={state} mine={mine} send={send} pending={pending} />
         ) : mine ? (
           <div className="pbar pbar--idle">
             <p className="pbar__note">
@@ -765,7 +908,7 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat }) {
                       : 'Sentado a la mesa.'}
             </p>
             <div className="pbar__buttons">
-              <button type="button" className="pbtn pbtn--fold" onClick={() => send({ t: 'stand_up' })}>
+              <button type="button" className="pbtn pbtn--fold" disabled={Boolean(pending)} onClick={() => send({ t: 'stand_up' })}>
                 {mine.inHand && live && !mine.folded ? 'Retirarse y levantarse' : 'Dejar el asiento'}
               </button>
             </div>

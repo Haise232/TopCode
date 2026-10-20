@@ -10,6 +10,11 @@ const LOBBY_POLL_MS = 30000
 const RETRY_MS = 3000
 const RETRY_MAX_MS = 30000
 const ERROR_MS = 3500
+const BUBBLE_MS = 5000
+const BUBBLE_CHAR_MS = 40
+const BUBBLE_MAX_MS = 9000
+// Peticiones que no son acciones de mesa: ni se reintentan con BUSY ni marcan «pendiente».
+const NOT_ACTION = new Set(['view', 'tick', 'chat', 'chat_poll', 'lobby', 'hello'])
 
 // Quién se ha sentado o se ha ido entre dos vistas de la mesa (sin contarte a ti).
 function seatNotes(before, after, myId) {
@@ -41,6 +46,39 @@ export function useJuegos() {
   const alive = useRef(true)
   const lastSeats = useRef(null)
   const sysCount = useRef(0)
+  const [bubbles, setBubbles] = useState({})
+  const [pending, setPending] = useState(false)
+  const inflight = useRef(0)
+  const chatReady = useRef(false)
+  const bubbleTimers = useRef(new Map())
+
+  // Quita todos los globos y sus temporizadores (cambio de mesa, salir, desmontar).
+  const clearBubbles = useCallback(() => {
+    for (const timer of bubbleTimers.current.values()) clearTimeout(timer)
+    bubbleTimers.current.clear()
+    setBubbles((current) => (Object.keys(current).length ? {} : current))
+  }, [])
+
+  // Un globo por autor: el mensaje nuevo sustituye al anterior y reinicia su cuenta atrás.
+  const showBubble = useCallback((message) => {
+    const user = message.from
+    clearTimeout(bubbleTimers.current.get(user))
+    setBubbles((current) => ({ ...current, [user]: { id: message.id, text: message.text } }))
+    const ms = Math.min(BUBBLE_MAX_MS, BUBBLE_MS + BUBBLE_CHAR_MS * String(message.text ?? '').length)
+    bubbleTimers.current.set(
+      user,
+      setTimeout(() => {
+        bubbleTimers.current.delete(user)
+        setBubbles((current) => {
+          if (current[user]?.id !== message.id) return current
+          const { [user]: _gone, ...rest } = current
+          return rest
+        })
+      }, ms),
+    )
+  }, [])
+
+  useEffect(() => clearBubbles, [clearBubbles])
 
   const showError = useCallback((message) => {
     setError(message)
@@ -63,6 +101,8 @@ export function useJuegos() {
           chatAfter.current = 0
           lastSeats.current = null
           setChat([])
+          chatReady.current = false
+          clearBubbles()
         }
         if (body.state) {
           const notes = seatNotes(lastSeats.current, body.state.seats, body.me?.id)
@@ -77,15 +117,23 @@ export function useJuegos() {
         }
         setRoom(body.state ? { state: body.state, at: Date.now() } : null)
       }
-      if (body.chat?.length && roomCode.current) {
+      if (Array.isArray(body.chat) && roomCode.current) {
         const fresh = body.chat.filter((m) => m.id > chatAfter.current)
+        // La primera respuesta con chat de una mesa (aunque venga vacía) es historial: no genera globos.
+        const history = !chatReady.current
+        chatReady.current = true
         if (fresh.length) {
           chatAfter.current = fresh.at(-1).id
           setChat((list) => [...list, ...fresh].slice(-50))
+          if (!history && document.visibilityState !== 'hidden') {
+            const last = new Map()
+            for (const m of fresh) if (m.from !== null && m.from !== undefined) last.set(m.from, m)
+            for (const m of last.values()) showBubble(m)
+          }
         }
       }
     },
-    [showError],
+    [showError, clearBubbles, showBubble],
   )
 
   const call = useCallback(
@@ -93,13 +141,27 @@ export function useJuegos() {
       const n = ++seq.current
       const { data } = await supabase.auth.getSession()
       const token = data.session?.access_token
-      let res
-      try {
-        res = await fetch('/api/juegos', {
+      const post = () =>
+        fetch('/api/juegos', {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({ ...msg, chatAfter: chatAfter.current }),
         })
+      let res
+      try {
+        res = await post()
+        // Mesa ocupada (la transacción hizo rollback): una acción se repite una vez tras una pausa con azar.
+        if (res.status === 409 && !NOT_ACTION.has(msg.t)) {
+          const busy = await res
+            .clone()
+            .json()
+            .catch(() => null)
+          if (busy?.error?.code === 'BUSY') {
+            await new Promise((resolve) => setTimeout(resolve, 150 + Math.random() * 150))
+            if (!alive.current) return
+            res = await post()
+          }
+        }
       } catch {
         if (alive.current) setConn('closed')
         return
@@ -156,7 +218,7 @@ export function useJuegos() {
     let chatDebounce = null
     let channel = supabase
       .channel(code ? `juegos-mesa-${code}` : 'juegos-lobby')
-      .on('broadcast', { event: 'cambio' }, refresh(code ? { t: 'view' } : { t: 'lobby' }, code ? 60 : 400))
+      .on('broadcast', { event: 'cambio' }, refresh(code ? { t: 'view', noChat: true } : { t: 'lobby' }, code ? 60 : 400))
     // Un mensaje nuevo solo trae el chat, no la mesa entera.
     if (code) {
       channel = channel.on('broadcast', { event: 'chat' }, () => {
@@ -198,7 +260,17 @@ export function useJuegos() {
   // Devuelve true como el WebSocket de juegos original: el envío ya está en marcha.
   const send = useCallback(
     (message) => {
-      call(message)
+      const tracked = !NOT_ACTION.has(message.t)
+      if (tracked) {
+        inflight.current++
+        setPending(true)
+      }
+      const done = () => {
+        if (!tracked) return
+        inflight.current = Math.max(0, inflight.current - 1)
+        setPending(inflight.current > 0)
+      }
+      call(message).then(done, done)
       return true
     },
     [call],
@@ -210,8 +282,10 @@ export function useJuegos() {
     chatAfter.current = 0
     setRoom(null)
     setChat([])
+    chatReady.current = false
+    clearBubbles()
     call({ t: 'leave_room' })
-  }, [call])
+  }, [call, clearBubbles])
 
   const reconnect = useCallback(() => {
     setDenied('')
@@ -222,5 +296,5 @@ export function useJuegos() {
   // Para los juegos en solitario: devuelve la respuesta del servidor (o undefined si no hubo conexión).
   const request = useCallback((message) => call(message), [call])
 
-  return { conn, me, room, lobby, chat, scores, error, denied, send, request, leave, reconnect }
+  return { conn, me, room, lobby, chat, scores, error, denied, send, request, leave, reconnect, bubbles, pending }
 }
