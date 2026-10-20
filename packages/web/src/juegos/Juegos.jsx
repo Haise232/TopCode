@@ -9,6 +9,7 @@ import './reset.css'
 import './index.css'
 import './App.css'
 import Roulette from './Roulette.jsx'
+import Crash from './Crash.jsx'
 import Slots from './Slots.jsx'
 import Blackjack from './Blackjack.jsx'
 import PlayingCard from './PlayingCard.jsx'
@@ -59,6 +60,12 @@ const SOLO = [
     name: 'Ruleta',
     blurb: 'En vivo: una tirada cada 25 s para todos, con relámpagos y pista.',
     art: <span className="game__wheel" />,
+  },
+  {
+    id: 'crash',
+    name: 'Cohete',
+    blurb: 'En vivo: sube para todos cada 30 s. Retira antes de que explote.',
+    art: <span className="game__rocket" />,
   },
   {
     id: 'slots',
@@ -341,7 +348,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | slots | blackjack | join | score
+  // screen: lobby | roulette | crash | slots | blackjack | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -397,6 +404,7 @@ function JuegosScreens() {
 
   const { screen } = view
   if (screen === 'roulette') return <Roulette onExit={exit} juegos={juegos} />
+  if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
   if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
   if (screen === 'blackjack') return <Blackjack onExit={exit} juegos={juegos} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />

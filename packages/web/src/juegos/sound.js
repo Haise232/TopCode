@@ -92,3 +92,17 @@ export function playTurn() {
   tone(ac, { freq: 880, dur: 0.16, type: 'sine', peak: 0.14 })
   tone(ac, { freq: 1320, at: 0.13, dur: 0.24, type: 'sine', peak: 0.14 })
 }
+
+// Despegue del cohete: un silbido que sube.
+export function playLaunch() {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 220, to: 880, dur: 0.6, type: 'sawtooth', peak: 0.05 })
+}
+
+// Explosión del cohete: un golpe grave que se apaga.
+export function playBoom() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 140, to: 40, dur: 0.5, type: 'sawtooth', peak: 0.14 })
+  tone(ac, { freq: 90, to: 30, dur: 0.7, type: 'square', peak: 0.06, at: 0.04 })
+}

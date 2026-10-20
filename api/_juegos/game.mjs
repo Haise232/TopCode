@@ -10,7 +10,7 @@ import { storedTimers } from './engine/timers.mjs'
 import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
-import { SOLO_GAMES, SOLO_PLAY, rouletteDue, rouletteView } from './solo.mjs'
+import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, rouletteDue, rouletteView } from './solo.mjs'
 
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -22,6 +22,9 @@ const ONLINE_MS = 60000
 const TOUCH_S = 20
 const CHAT_KEEP = 50
 const CHAT_GAP_MS = 700
+const CRASH_WAIT_MAX_MS = 20000 // el vuelo más largo del cohete dura 18 s
+const CRASH_WAIT_PAD_MS = 25
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const MAX_SCORES = 200
 const NO_DAYS = [null, null, null, null, null, null, null]
 // Array de Postgres como texto ({NULL,9000,…}): igual con cualquier driver.
@@ -39,6 +42,8 @@ export const ERRORS = {
   NOT_YOUR_TURN: 'No es tu turno.',
   INSUFFICIENT_FUNDS: 'Saldo insuficiente.',
   BETS_CLOSED: 'No va más: la bola ya está en marcha. Apuesta en la siguiente ronda.',
+  LAUNCHED: 'El cohete ya despegó: apuesta en la siguiente ronda.',
+  CRASHED: '¡Tarde! El cohete ya explotó.',
   SEAT_TAKEN: 'Ese asiento está ocupado.',
   NOT_HOST: 'Las mesas públicas no tienen anfitrión.',
   ROOM_NOT_FOUND: 'Esa mesa ya no existe.',
@@ -449,26 +454,34 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     })
   }
 
-  // Jugadores con fichas en una ronda de la ruleta en vivo (la ronda se queda anotada aunque ya se haya pagado).
-  async function roulettePlayers(round) {
+  // Jugadores con apuesta en una ronda de la ruleta o el cohete en vivo (la ronda se queda anotada aunque ya se haya pagado).
+  async function soloPlayers(game, round) {
     const { rows } = await db.query(
-      `select count(*)::int as n from public.juegos_solo where juego = 'roulette' and estado->>'round' = $1
-         and (jsonb_array_length(coalesce(estado->'bets', '[]'::jsonb)) > 0 or estado->'last'->>'round' = $1)`,
-      [String(round)],
+      `select count(*)::int as n from public.juegos_solo where juego = $2 and estado->>'round' = $1
+         and (jsonb_array_length(coalesce(estado->'bets', '[]'::jsonb)) > 0 or coalesce((estado->>'bet')::bigint, 0) > 0
+              or estado->'last'->>'round' = $1)`,
+      [String(round), game],
     )
     return rows[0].n
   }
 
-  // Quién ganó en una ronda ya jugada de la ruleta en vivo (para anunciarlo a toda la mesa), de más a menos.
-  async function rouletteWinners(round, userId) {
+  // Quién ganó en una ronda ya jugada de la ruleta o el cohete (para anunciarlo a todos), de más a menos.
+  async function soloWinners(game, round, userId) {
     const { rows } = await db.query(
-      `select c.nombre as name, (s.estado->'last'->>'net')::bigint as amount, s.usuario_id = $2 as me
+      `select c.nombre as name, (s.estado->'last'->>'net')::bigint as amount, (s.estado->'last'->>'mult')::int as mult,
+              s.usuario_id = $2 as me
        from public.juegos_solo s join public.juegos_cuentas c on c.usuario_id = s.usuario_id
-       where s.juego = 'roulette' and s.estado->'last'->>'round' = $1 and (s.estado->'last'->>'net')::bigint > 0
+       where s.juego = $3 and s.estado->'last'->>'round' = $1 and (s.estado->'last'->>'net')::bigint > 0
        order by amount desc limit 5`,
-      [String(round), userId],
+      [String(round), userId, game],
     )
-    return rows.map((r) => ({ name: r.name, amount: Number(r.amount), me: r.me }))
+    return rows.map((r) => ({ name: r.name, amount: Number(r.amount), mult: r.mult, me: r.me }))
+  }
+
+  // Ruleta y cohete en vivo: ponerse al día («sync») no bloquea nada si no hay apuesta que pagar; lo demás pasa por playSolo.
+  const LIVE_SOLO = {
+    solo_roulette: { game: 'roulette', due: rouletteDue, view: rouletteView },
+    solo_crash: { game: 'crash', due: (saved, t) => crashDue(saved, t, secret), view: crashView },
   }
 
   // Acciones que se aplican a la mesa en la que estás.
@@ -483,6 +496,12 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     rebuy: () => 'BROKE',
     kick: () => 'NOT_HOST',
     leave_room: (room, s) => room.leave(s),
+  }
+
+  // Jugadores de la ronda y, si se piden, ganadores de una ronda ya jugada.
+  async function liveExtras(game, msg, reply) {
+    reply.solo.players = await soloPlayers(game, reply.solo.round)
+    if (Number.isSafeInteger(msg.winners)) reply.solo.winners = await soloWinners(game, msg.winners, reply.me.id)
   }
 
   // Punto de entrada: una petición del navegador. Devuelve lo que el cliente debe actualizar.
@@ -535,28 +554,38 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         return reply
       }
       case 'solo_roulette':
-        // Ponerse al día con la ruleta en vivo (una vez por ronda) no bloquea nada si no hay apuesta que pagar.
-        if (msg.a === 'sync') {
-          const saved = (await db.query(`select estado from public.juegos_solo where usuario_id = $1 and juego = 'roulette'`, [user.id])).rows[0]?.estado
+      case 'solo_crash': {
+        const live = LIVE_SOLO[msg.t]
+        let play = msg
+        // Espera larga del cohete: se responde justo cuando explota (sin tocar la BD mientras tanto), así cada
+        // navegador hace una petición por vuelo en vez de preguntar cada poco si ya explotó.
+        if (msg.t === 'solo_crash' && msg.a === 'wait') {
+          const wait = Math.min(crashWaitMs(secret, now()), CRASH_WAIT_MAX_MS)
+          if (wait > 0) await sleep(wait + CRASH_WAIT_PAD_MS)
+          play = { ...msg, a: 'sync' }
+        }
+        if (play.a === 'sync') {
+          const saved = (await db.query(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2`, [user.id, live.game])).rows[0]?.estado
           const t = now()
-          if (!rouletteDue(saved, t)) {
-            reply.solo = rouletteView(saved, account.saldo, { now: t, secret })
-            reply.solo.players = await roulettePlayers(reply.solo.round)
-            if (Number.isSafeInteger(msg.winners)) reply.solo.winners = await rouletteWinners(msg.winners, user.id)
+          if (!live.due(saved, t)) {
+            reply.solo = live.view(saved, account.saldo, { now: t, secret })
+            await liveExtras(live.game, msg, reply)
             return reply
           }
         }
-      // falls through
+        const out = await playSolo(user, play)
+        if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
+        else reply.solo = out.result
+        me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
+        if (reply.solo) await liveExtras(live.game, msg, reply)
+        return reply
+      }
       case 'solo_slots':
       case 'solo_blackjack': {
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
-        if (msg.t === 'solo_roulette' && reply.solo) {
-          reply.solo.players = await roulettePlayers(reply.solo.round)
-          if (Number.isSafeInteger(msg.winners)) reply.solo.winners = await rouletteWinners(msg.winners, user.id)
-        }
         return reply
       }
       case 'solo_state': {
