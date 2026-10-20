@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 // Lo que comparten la pantalla del gacha y su escaparate en el selector de juegos.
-export const RARITY = { comun: 'Común', rara: 'Rara', epica: 'Épica', mitica: 'Mítica' }
+export const RARITY = { comun: 'Común', rara: 'Rara', epica: 'Épica', mitica: 'Legendaria' }
 export const RARITIES = ['mitica', 'epica', 'rara', 'comun']
 // Igual que WEIGHTS en api/_juegos/gacha.mjs, para la ayuda.
 export const ODDS = {

@@ -130,7 +130,7 @@ function Collection({ data, onSell, busy }) {
       <header className="gacha-col-head">
         <Avatar name={user.name} src={user.avatar} size={44} />
         <div>
-          <h2 id="col-title">{user.me ? 'Tu colección' : `Colección de ${user.name}`}</h2>
+          <h2 id="col-title">{user.me ? 'Mi biblioteca' : `Biblioteca de ${user.name}`}</h2>
           <p>
             {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · se {cards.length === 1 ? 'vende' : 'venden'} por {eur(worth)}
           </p>
@@ -203,7 +203,8 @@ function Collectors({ list, onOpen }) {
               {p.name}
               <small>
                 {p.count} {p.count === 1 ? 'carta' : 'cartas'}
-                {p.best ? ` · la mejor: ${p.best.name}` : ''}
+                {p.rarities?.mitica ? ` · ${p.rarities.mitica} ${p.rarities.mitica === 1 ? 'legendaria' : 'legendarias'}` : ''}
+                {p.rarities?.epica ? ` · ${p.rarities.epica} ${p.rarities.epica === 1 ? 'épica' : 'épicas'}` : ''}
               </small>
             </span>
             {p.best && (
@@ -304,11 +305,11 @@ function Rules({ prices }) {
   return (
     <Help label="Cómo funciona" title="Cómo funciona el gacha" wide>
       <p>
-        Cada hora tienes <b>8 tiradas gratis</b>. Lo que sale aparece en el <b>canal</b> y lo ve todo el mundo: durante 45 s
+        Tienes <b>una tirada gratis cada 2 horas</b>. Lo que sale aparece en el <b>canal</b> y lo ve todo el mundo: durante 45 s
         cualquiera puede <b>reclamarlo</b>, y se lo queda el primero que pulse. Cada carta tiene un solo dueño.
       </p>
       <p>
-        Solo puedes reclamar <b>una carta cada 3 horas</b>, así que elige bien.
+        Solo puedes reclamar <b>una carta cada 2 horas</b>, así que elige bien.
       </p>
       <p>
         Todo va con tu <b>saldo de la semana</b>. La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)}: siempre es
@@ -317,7 +318,7 @@ function Rules({ prices }) {
       </p>
       <p>
         Las cartas <b>épicas y míticas tienen un poder para el póker</b>, que puedes usar una vez al día con «✦ Poderes»
-        en la mesa: con una mítica, <b>Rayos X</b> (ves las cartas de todos durante una mano); con una épica,{' '}
+        en la mesa: con una legendaria, <b>Rayos X</b> (ves las cartas de todos durante una mano); con una épica,{' '}
         <b>Chivatazo</b> (ves las de un rival al azar). La mesa verá un aviso en el chat.
       </p>
       <p>
@@ -355,8 +356,8 @@ function Rules({ prices }) {
 
 const TABS = [
   ['tirar', 'Tirar'],
-  ['coleccion', 'Mi colección'],
-  ['colecciones', 'Colecciones'],
+  ['coleccion', 'Mi biblioteca'],
+  ['colecciones', 'Bibliotecas'],
   ['cartas', 'Cartas'],
 ]
 
@@ -425,14 +426,14 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
           <dt>Tiradas</dt>
           <dd>
             {rolls ? `${rolls.left}/${rolls.max}` : '–'}
-            {rolls && <small>{rolls.left < rolls.max ? `se recargan en ${wait(rolls.resetAt - t)}` : 'se recargan cada hora'}</small>}
+            {rolls && <small>{rolls.left < rolls.max ? `se recargan en ${wait(rolls.resetAt - t)}` : 'una gratis cada 2 h'}</small>}
           </dd>
         </div>
         <div className={claimReady ? 'is-ready' : ''}>
           <dt>Reclamo</dt>
           <dd>
             {state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}
-            <small>{claimReady ? 'puedes quedarte una carta' : 'uno cada 3 h'}</small>
+            <small>{claimReady ? 'puedes quedarte una carta' : 'uno cada 2 h'}</small>
           </dd>
         </div>
         <div>
@@ -473,7 +474,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
             </h2>
             <button type="button" className="gacha-roll-btn" disabled={busy || !rolls || rolls.left <= 0} onClick={() => roll(false)}>
               <b>{rolls && rolls.left <= 0 ? 'Sin tiradas' : 'Tirar'}</b>
-              <small>{rolls && rolls.left <= 0 ? `Vuelven en ${wait(rolls.resetAt - t)}` : `${rolls?.left ?? 0} gratis esta hora`}</small>
+              <small>{rolls && rolls.left <= 0 ? `Vuelven en ${wait(rolls.resetAt - t)}` : `${rolls?.left ?? 0} gratis · una cada 2 h`}</small>
             </button>
             <div className="gacha-actions">
               <button

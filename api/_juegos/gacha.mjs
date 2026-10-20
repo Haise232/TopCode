@@ -1,5 +1,5 @@
-// Gacha de Juegos al estilo de Mudae, con políticos españoles. Cada hora tienes ROLLS_PER_HOUR tiradas gratis; lo que
-// sale lo ve todo el mundo en el canal del gacha y cualquiera puede reclamarlo en los CLAIM_MS siguientes (el primero que
+// Gacha de Juegos al estilo de Mudae, con políticos españoles. Cada ROLL_PERIOD_MS tienes ROLLS_PER_PERIOD tirada
+// gratis; lo que sale lo ve todo el mundo en el canal del gacha y cualquiera puede reclamarlo en los CLAIM_MS siguientes (el primero que
 // llega se lo queda), pero cada persona solo puede reclamar una vez cada CLAIM_COOLDOWN_MS. Cada carta tiene como mucho
 // un dueño. Todo se paga y se cobra con el saldo de la semana (cuenta en el Score):
 //   - tirada premium (PREMIUM_COST): siempre épica o mítica, nunca una carta con dueño y directa a tu colección;
@@ -14,10 +14,12 @@ import { readFileSync } from 'node:fs'
 // vercel.json incluye el archivo en la función (includeFiles), por si el trazado de dependencias no lo ve.
 const catalogo = JSON.parse(readFileSync(new URL('./gacha-catalogo.json', import.meta.url), 'utf8'))
 
-export const ROLLS_PER_HOUR = 8
 const HOUR = 3600000
+export const ROLLS_PER_PERIOD = 1
+export const ROLL_PERIOD_MS = 2 * HOUR
 export const CLAIM_MS = 45000
-export const CLAIM_COOLDOWN_MS = 3 * HOUR
+// Igual que las tiradas: siempre puedes quedarte la carta de tu tirada gratis.
+export const CLAIM_COOLDOWN_MS = 2 * HOUR
 export const PREMIUM_COST = 20000
 export const EXTRA_ROLL_COST = 1000
 export const CLAIM_RESET_COST = 5000
@@ -27,9 +29,10 @@ export const SELL_RATE = 20
 export const POWER_COOLDOWN_MS = 24 * HOUR
 // Poderes por rareza. La mesa de póker (game.mjs) los aplica durante la mano en curso.
 export const POWERS = {
-  mitica: { id: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
+  mitica: { id: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker (legendaria).' },
   epica: { id: 'chivatazo', name: 'Chivatazo', text: 'Ves las cartas de un rival al azar durante una mano de póker.' },
 }
+const RARITY_ORDER = { mitica: 0, epica: 1, rara: 2, comun: 3 }
 const FEED_SIZE = 30
 const KEEP_DAYS = 7
 // Probabilidad de cada rareza (en milésimas).
@@ -47,7 +50,7 @@ const WEIGHTS = {
 }
 
 export const GACHA_ERRORS = {
-  GACHA_NO_ROLLS: 'No te quedan tiradas esta hora.',
+  GACHA_NO_ROLLS: 'Ya has usado tu tirada: tienes una gratis cada 2 horas.',
   GACHA_TAKEN: '¡Tarde! Otra persona la reclamó antes.',
   GACHA_LATE: 'Se acabó el tiempo para reclamarla.',
   GACHA_COOLDOWN: 'Todavía no puedes reclamar: espera a que se recargue tu reclamo.',
@@ -113,7 +116,8 @@ function draw(premium, taken) {
   return pick(pool)
 }
 
-const hourOf = (t) => Math.floor(t / HOUR)
+// Periodo de las tiradas gratis (la columna «hora» de juegos_gacha_jugadores guarda este número).
+const periodOf = (t) => Math.floor(t / ROLL_PERIOD_MS)
 const ms = (value) => (value instanceof Date ? value.getTime() : Number(value))
 
 // db: { query, tx } · ping(topic, event) avisa por Realtime · charge(q, userId, amount): cobra del saldo de la semana
@@ -123,14 +127,14 @@ export function createGacha({ db, ping, now, charge }) {
   async function player(q, userId, t) {
     await q(`insert into public.juegos_gacha_jugadores (usuario_id) values ($1) on conflict (usuario_id) do nothing`, [userId])
     const row = (await q(`select hora, tiradas, reclamo_listo from public.juegos_gacha_jugadores where usuario_id = $1 for update`, [userId])).rows[0]
-    const hour = hourOf(t)
-    return { hour, used: Number(row.hora) === hour ? row.tiradas : 0, claimAt: ms(row.reclamo_listo) }
+    const period = periodOf(t)
+    return { period, used: Number(row.hora) === period ? row.tiradas : 0, claimAt: ms(row.reclamo_listo) }
   }
 
   async function save(q, userId, st) {
     await q(`update public.juegos_gacha_jugadores set hora = $2, tiradas = $3, reclamo_listo = to_timestamp($4 / 1000.0) where usuario_id = $1`, [
       userId,
-      st.hour,
+      st.period,
       st.used,
       st.claimAt,
     ])
@@ -142,12 +146,12 @@ export function createGacha({ db, ping, now, charge }) {
       db.query(`select hora, tiradas, reclamo_listo from public.juegos_gacha_jugadores where usuario_id = $1`, [userId]).then((r) => r.rows[0]),
       db.query(`select count(*)::int as n from public.juegos_gacha_cartas where usuario_id = $1`, [userId]).then((r) => r.rows[0].n),
     ])
-    const hour = hourOf(t)
-    const used = row && Number(row.hora) === hour ? row.tiradas : 0
+    const period = periodOf(t)
+    const used = row && Number(row.hora) === period ? row.tiradas : 0
     const claimAt = row ? ms(row.reclamo_listo) : 0
     return {
       now: t,
-      rolls: { left: ROLLS_PER_HOUR - used, max: ROLLS_PER_HOUR, resetAt: (hour + 1) * HOUR },
+      rolls: { left: ROLLS_PER_PERIOD - used, max: ROLLS_PER_PERIOD, resetAt: (period + 1) * ROLL_PERIOD_MS, everyMs: ROLL_PERIOD_MS },
       claimAt: claimAt > t ? claimAt : 0,
       claimMs: CLAIM_MS,
       owned,
@@ -194,7 +198,7 @@ export function createGacha({ db, ping, now, charge }) {
     const premium = msg.premium === true
     const out = await db.tx(async (q) => {
       const st = await player(q, user.id, t)
-      if (!premium && st.used >= ROLLS_PER_HOUR) return { error: 'GACHA_NO_ROLLS' }
+      if (!premium && st.used >= ROLLS_PER_PERIOD) return { error: 'GACHA_NO_ROLLS' }
       if (premium && (await charge(q, user.id, PREMIUM_COST)) === null) return { error: 'GACHA_FUNDS' }
       let card
       let owner = null
@@ -269,7 +273,7 @@ export function createGacha({ db, ping, now, charge }) {
       const st = await player(q, user.id, t)
       if (msg.item === 'reclamo' && st.claimAt <= t) return { error: 'GACHA_READY' }
       if ((await charge(q, user.id, msg.item === 'tirada' ? EXTRA_ROLL_COST : CLAIM_RESET_COST)) === null) return { error: 'GACHA_FUNDS' }
-      // Una tirada extra es una tirada menos gastada (puede quedar por debajo de cero: tendrás más de ROLLS_PER_HOUR).
+      // Una tirada extra es una tirada menos gastada (puede quedar por debajo de cero: tendrás más de ROLLS_PER_PERIOD).
       if (msg.item === 'tirada') st.used -= 1
       else st.claimAt = 0
       await save(q, user.id, st)
@@ -313,6 +317,7 @@ export function createGacha({ db, ping, now, charge }) {
           me: r.usuario_id === user.id,
           count: owned.length,
           worth: owned.reduce((sum, c) => sum + c.price, 0),
+          rarities: Object.fromEntries(Object.keys(RARITY_ORDER).map((r) => [r, owned.filter((c) => c.rarity === r).length])),
           best,
         }
       })
