@@ -3,6 +3,7 @@ import { useEffectEvent } from '../useEffectEvent.js'
 import { bestHand } from '../shared/poker-core.js'
 import Avatar from '../Avatar.jsx'
 import Help from '../Help.jsx'
+import PowerButton from '../PowerButton.jsx'
 import { eur } from '../money.js'
 import Chat from '../table/Chat.jsx'
 import Invite from '../table/Invite.jsx'
@@ -605,7 +606,7 @@ function ActionBar({ state, mine, send, pending }) {
   )
 }
 
-function PokerTable({ room, me, conn, error, send, onLeave, chat, bubbles, pending }) {
+function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbles, pending }) {
   const { state, at } = room
   const n = state.seats.length
   const mySeat = state.seats.findIndex((seat) => seat?.id === me?.id)
@@ -748,6 +749,7 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat, bubbles, pendi
             <PokerGuide current={myHand ?? mine?.handName} state={state} />
           </Help>
           <Invite game="poker" code={state.code} name="Póker" />
+          {request && <PowerButton request={request} send={send} state={state} mine={mine} />}
           <button type="button" onClick={onLeave}>
             Salir
           </button>
@@ -755,6 +757,12 @@ function PokerTable({ room, me, conn, error, send, onLeave, chat, bubbles, pendi
       </header>
 
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
+      {state.peek && (
+        <p className="pk-peek" role="status">
+          ✦ {state.peek.power} ({state.peek.card}): {state.peek.target ? `ves las cartas de ${state.peek.target}` : 'ves las cartas de todos'}{' '}
+          en esta mano.
+        </p>
+      )}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announce}
       </p>

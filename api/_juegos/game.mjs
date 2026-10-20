@@ -26,6 +26,7 @@ const CHAT_GAP_MS = 700
 const CRASH_WAIT_MAX_MS = 20000 // el vuelo más largo del cohete dura 18 s
 const CRASH_WAIT_PAD_MS = 25
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const POKER_LIVE = new Set(['preflop', 'flop', 'turn', 'river'])
 const MAX_SCORES = 200
 const NO_DAYS = [null, null, null, null, null, null, null]
 // Array de Postgres como texto ({NULL,9000,…}): igual con cualquier driver.
@@ -343,8 +344,22 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return { error: null, changed: false, balance: accounts.get(user.id)?.balance, view: viewFor(room, user.id) }
   }
 
+  // Poder del gacha activo en la mano en curso: room.peeks[usuario] = { hand, seats: 'all' | [asientos], power, card }.
+  // Se guarda con la mesa (serialize copia todo lo que no es del motor) y solo cambia la vista de quien lo usó.
+  function applyPeek(room, userId, state) {
+    const peek = room.game === 'poker' ? room.peeks?.[userId] : null
+    if (!peek || peek.hand !== room.hand || !POKER_LIVE.has(room.phase)) return
+    state.seats.forEach((seat, i) => {
+      const real = room.seats[i]
+      if (!seat || !real || real.sid === userId || (peek.seats !== 'all' && !peek.seats.includes(i))) return
+      seat.cards = real.cards
+    })
+    state.peek = { power: peek.power, card: peek.card, target: peek.target ?? null }
+  }
+
   function viewFor(room, userId) {
     const state = room.view(userId)
+    applyPeek(room, userId, state)
     // Cuándo hay que volver a llamar para que avance un temporizador (crupier, turnos, cuenta atrás…).
     state.wakeIn = room.pending ? Math.max(0, room.pending.at - now()) : null
     return state
@@ -660,6 +675,49 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         reply.gacha = out
         if (out.result || reply.error) me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         return reply
+      }
+      case 'power': {
+        // Poder de una carta del gacha en la mesa de póker: primero se gasta (una vez al día) y después se aplica a la
+        // mano en curso; si la mesa no lo admite, se devuelve.
+        if (!account.mesa) throw new JuegosError('POWER_POKER')
+        const spent = await gacha.spendPower(user.id, msg.card, now())
+        if (spent.error) {
+          reply.error = { code: spent.error, message: ERRORS[spent.error] ?? 'Error.' }
+          return reply
+        }
+        let target = null
+        const outcome = await withTable(account.mesa, user, (room) => {
+          if (room.game !== 'poker') return 'POWER_POKER'
+          const seat = room.seats.find((s) => s?.sid === user.id)
+          if (!POKER_LIVE.has(room.phase) || !seat?.inHand || seat.folded) return 'POWER_NO_HAND'
+          const peeks = Object.fromEntries(Object.entries(room.peeks ?? {}).filter(([, p]) => p.hand === room.hand))
+          if (peeks[user.id]) return 'POWER_ACTIVE'
+          let seats = 'all'
+          if (spent.card.power.id === 'chivatazo') {
+            const rivals = room.seats.flatMap((s, i) => (s && s.inHand && !s.folded && s.sid !== user.id ? [i] : []))
+            if (rivals.length === 0) return 'POWER_NO_RIVALS'
+            seats = [rivals[randomInt(rivals.length)]]
+            target = room.seats[seats[0]].name
+          }
+          room.peeks = { ...peeks, [user.id]: { hand: room.hand, seats, power: spent.card.power.name, card: spent.card.name, target } }
+          room.rev++
+          return null
+        })
+        if (outcome.error) {
+          await gacha.refundPower(user.id, spent.card.id, spent.before)
+          return tableReply(outcome, account.mesa)
+        }
+        // Aviso en el chat de la mesa, para que nadie juegue engañado.
+        const what = target ? `ve las cartas de ${target}` : 've las cartas de todos'
+        await db.query(`insert into public.juegos_chat (mesa, usuario_id, nombre, avatar, texto) values ($1, $2, $3, $4, $5)`, [
+          account.mesa,
+          user.id,
+          user.name,
+          user.avatar,
+          `✦ Usa «${spent.card.power.name}» con ${spent.card.name}: ${what} en esta mano.`.slice(0, 200),
+        ])
+        await ping(`juegos-mesa-${account.mesa}`, 'chat')
+        return tableReply(outcome, account.mesa)
       }
       case 'chat_poll':
         reply.chat = await chatSince(account.mesa, msg.chatAfter)

@@ -5,6 +5,8 @@
 //   - tirada premium (PREMIUM_COST): siempre épica o mítica, nunca una carta con dueño y directa a tu colección;
 //   - tirada extra (EXTRA_ROLL_COST) y recargar el reclamo (CLAIM_RESET_COST);
 //   - vender una carta tuya te paga su precio (SELL_RATE € por punto de valor) y la deja libre otra vez.
+// Las épicas y míticas tienen además un poder para el póker (POWERS), que su dueño puede usar una vez cada
+// POWER_COOLDOWN_MS; lo aplica game.mjs en la mesa y la mesa ve un aviso en el chat.
 // Las cartas vienen de gacha-catalogo.json (lo genera scripts/gacha/importar.mjs).
 import { randomInt } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -22,6 +24,12 @@ export const CLAIM_RESET_COST = 5000
 // € por punto de valor al vender: común ≈ 700 €, mítica ≈ 19.000 €. Una premium se vende de media por menos de lo que
 // cuesta, y una carta normal, por menos de una recarga de reclamo más una tirada: comprar y vender no da dinero infinito.
 export const SELL_RATE = 20
+export const POWER_COOLDOWN_MS = 24 * HOUR
+// Poderes por rareza. La mesa de póker (game.mjs) los aplica durante la mano en curso.
+export const POWERS = {
+  mitica: { id: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
+  epica: { id: 'chivatazo', name: 'Chivatazo', text: 'Ves las cartas de un rival al azar durante una mano de póker.' },
+}
 const FEED_SIZE = 30
 const KEEP_DAYS = 7
 // Probabilidad de cada rareza (en milésimas).
@@ -48,6 +56,12 @@ export const GACHA_ERRORS = {
   GACHA_NOT_YOURS: 'Esa carta no es tuya.',
   GACHA_GONE: 'Esa tirada ya no existe.',
   GACHA_READY: 'Tu reclamo ya está listo.',
+  POWER_WAIT: 'Ese poder se está recargando: se puede usar una vez al día.',
+  POWER_NONE: 'Esa carta no tiene poder.',
+  POWER_POKER: 'Los poderes se usan en una mesa de póker.',
+  POWER_NO_HAND: 'Úsalo cuando estés jugando una mano.',
+  POWER_ACTIVE: 'Ya tienes un poder activo en esta mano.',
+  POWER_NO_RIVALS: 'No queda ningún rival en la mano.',
 }
 
 const cards = new Map(catalogo.cartas.map((c) => [c.id, c]))
@@ -68,7 +82,17 @@ function chance(kind, rarity) {
 export function cardView(id) {
   const c = cards.get(id)
   if (!c) return null
-  return { id: c.id, name: c.name, series: c.series, img: c.img, rarity: c.rarity, value: c.value, price: c.value * SELL_RATE, rank: c.rank }
+  return {
+    id: c.id,
+    name: c.name,
+    series: c.series,
+    img: c.img,
+    rarity: c.rarity,
+    value: c.value,
+    price: c.value * SELL_RATE,
+    rank: c.rank,
+    power: POWERS[c.rarity] ?? null,
+  }
 }
 
 function pick(list) {
@@ -306,16 +330,46 @@ export function createGacha({ db, ping, now, charge }) {
       .sort((a, b) => b.value - a.value || a.rank - b.rank)
   }
 
+  // Tus cartas con poder y cuándo se puede volver a usar cada una (0: ya).
+  async function powers(user, t) {
+    const { rows } = await db.query(`select carta, poder_usado from public.juegos_gacha_cartas where usuario_id = $1`, [user.id])
+    return rows
+      .map((r) => ({ card: cardView(r.carta), readyAt: r.poder_usado ? Math.max(0, ms(r.poder_usado) + POWER_COOLDOWN_MS) : 0 }))
+      .filter((p) => p.card?.power)
+      .map((p) => ({ ...p, readyAt: p.readyAt > t ? p.readyAt : 0 }))
+      .sort((a, b) => b.card.value - a.card.value)
+  }
+
+  // Gasta el poder de una carta tuya (game.mjs lo aplica después en la mesa). Devuelve { card, before } para poder
+  // devolverlo con refundPower si al final no se puede aplicar.
+  async function spendPower(userId, cardId, t) {
+    const card = cardView(cardId)
+    if (!card) return { error: 'BAD_MESSAGE' }
+    if (!card.power) return { error: 'POWER_NONE' }
+    return db.tx(async (q) => {
+      const row = (await q(`select poder_usado from public.juegos_gacha_cartas where carta = $1 and usuario_id = $2 for update`, [cardId, userId])).rows[0]
+      if (!row) return { error: 'GACHA_NOT_YOURS' }
+      if (row.poder_usado && ms(row.poder_usado) + POWER_COOLDOWN_MS > t) return { error: 'POWER_WAIT' }
+      await q(`update public.juegos_gacha_cartas set poder_usado = to_timestamp($3 / 1000.0) where carta = $1 and usuario_id = $2`, [cardId, userId, t])
+      return { card, before: row.poder_usado }
+    })
+  }
+
+  async function refundPower(userId, cardId, before) {
+    await db.query(`update public.juegos_gacha_cartas set poder_usado = $3 where carta = $1 and usuario_id = $2`, [cardId, userId, before])
+  }
+
   const ACTIONS = { tirar: roll, reclamar: claim, vender: sell, tienda: shop }
 
   // msg.a: estado | tirar { premium } | reclamar { id } | vender { card } | tienda { item } | coleccion { user } | ranking
-  //        | cartas
+  //        | cartas | poderes
   async function handle(user, msg) {
     const t = now()
     const reply = {}
     if (msg.a === 'coleccion') reply.collection = await collection(user, msg)
     else if (msg.a === 'ranking') reply.ranking = await ranking(user)
     else if (msg.a === 'cartas') reply.cards = await cardList()
+    else if (msg.a === 'poderes') reply.powers = await powers(user, t)
     else if (Object.hasOwn(ACTIONS, msg.a)) {
       const out = await ACTIONS[msg.a](user, msg, t)
       if (out.error) reply.error = out.error
@@ -327,5 +381,5 @@ export function createGacha({ db, ping, now, charge }) {
     return reply
   }
 
-  return { handle }
+  return { handle, spendPower, refundPower }
 }

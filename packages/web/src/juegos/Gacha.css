@@ -237,6 +237,15 @@
   font-weight: 700;
   color: var(--edge);
 }
+.juegos-root .gacha-card__power {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--edge);
+}
+.juegos-root .gacha-none {
+  color: var(--muted);
+}
 .juegos-root .gacha-card--mini {
   grid-template-rows: auto;
   border-radius: 9px;
@@ -835,5 +844,65 @@
   }
   .juegos-root .gacha-timer i {
     transition: none;
+  }
+}
+
+/* --- Poderes en la mesa de póker --- */
+.juegos-root .pk-peek {
+  justify-self: center;
+  margin: 0;
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--r-mitica) 60%, transparent);
+  border-radius: 999px;
+  background: rgba(242, 193, 78, 0.14);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--r-mitica);
+}
+.juegos-root .pw-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.juegos-root .pw-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .pw-list li {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(241, 233, 214, 0.12);
+  border-radius: 12px;
+  background: rgba(12, 39, 55, 0.5);
+}
+.juegos-root .pw-list b {
+  display: block;
+  color: var(--ivory);
+}
+.juegos-root .pw-list small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.juegos-root .pw-list p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.juegos-root .pw-list .hub-btn {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+@media (max-width: 520px) {
+  .juegos-root .pw-open__text {
+    display: none;
   }
 }

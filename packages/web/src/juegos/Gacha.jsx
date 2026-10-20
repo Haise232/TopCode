@@ -266,6 +266,7 @@ function CardTable({ list, onOpen }) {
               <th scope="col" className="is-num">
                 Venta
               </th>
+              <th scope="col">Poder</th>
               <th scope="col">Dueño</th>
             </tr>
           </thead>
@@ -287,6 +288,7 @@ function CardTable({ list, onOpen }) {
                 <td className="is-num">{pct(c.normal)}</td>
                 <td className="is-num">{c.premium ? pct(c.premium) : '—'}</td>
                 <td className="is-num">{eur(c.price)}</td>
+                <td>{c.power ? <span title={c.power.text}>✦ {c.power.name}</span> : <span className="gacha-none">—</span>}</td>
                 <td>{c.owner ? <Who person={c.owner} onOpen={onOpen} /> : <span className="gacha-free">Libre</span>}</td>
               </tr>
             ))}
@@ -312,6 +314,11 @@ function Rules({ prices }) {
         Todo va con tu <b>saldo de la semana</b>. La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)}: siempre es
         épica o mítica, nunca sale una carta con dueño y va directa a tu colección, sin gastar tu reclamo. Una tirada extra
         cuesta {eur(prices?.extraRoll ?? 1000)} y recargar el reclamo, {eur(prices?.claimReset ?? 5000)}.
+      </p>
+      <p>
+        Las cartas <b>épicas y míticas tienen un poder para el póker</b>, que puedes usar una vez al día con «✦ Poderes»
+        en la mesa: con una mítica, <b>Rayos X</b> (ves las cartas de todos durante una mano); con una épica,{' '}
+        <b>Chivatazo</b> (ves las de un rival al azar). La mesa verá un aviso en el chat.
       </p>
       <p>
         Puedes <b>vender</b> cualquier carta tuya desde tu colección: el dinero va a tu saldo de la semana (una común, unos

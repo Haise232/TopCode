@@ -30,6 +30,11 @@ function GachaCard({ card, big = false, mini = false }) {
             <em>{RARITY[card.rarity]}</em>
             <span title="Precio de venta">{eur(card.price)}</span>
           </span>
+          {card.power && (
+            <span className="gacha-card__power" title={card.power.text}>
+              ✦ {card.power.name}
+            </span>
+          )}
         </figcaption>
       )}
     </figure>

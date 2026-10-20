@@ -5,8 +5,9 @@
 -- Cada carta tiene como mucho un dueño.
 create table if not exists public.juegos_gacha_cartas (
   carta      text primary key,
-  usuario_id uuid not null references public.usuarios(id) on delete cascade,
-  reclamada  timestamptz not null default now()
+  usuario_id   uuid not null references public.usuarios(id) on delete cascade,
+  reclamada    timestamptz not null default now(),
+  poder_usado  timestamptz -- última vez que su dueño usó su poder (épicas y míticas)
 );
 create index if not exists juegos_gacha_cartas_usuario_idx on public.juegos_gacha_cartas (usuario_id);
 

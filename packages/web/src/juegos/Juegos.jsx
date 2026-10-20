@@ -509,6 +509,7 @@ function JuegosScreens() {
         conn={juegos.conn}
         error={juegos.error}
         send={juegos.send}
+        request={juegos.request}
         onLeave={() => {
           juegos.leave()
           exit()
