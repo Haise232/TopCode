@@ -68,6 +68,8 @@ export default function Admin() {
   // Contraseña temporal recién generada: se enseña una sola vez para pasársela a quien la pidió.
   const [temporal, setTemporal] = useState<{ nombre: string; email: string; password: string } | null>(null)
   const [copiada, setCopiada] = useState(false)
+  // Los rechazados no salen en la lista salvo que se pida verlos (para aceptarlos o eliminarlos después).
+  const [verRechazados, setVerRechazados] = useState(false)
 
   // ── Anuncios ──
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
@@ -215,6 +217,26 @@ export default function Admin() {
     })
   }
 
+  function pedirEliminar(u: Usuario) {
+    if (!puedeEliminar(u)) return
+    setAlert({
+      title: 'Eliminar usuario',
+      message: `¿Eliminar a ${u.nombre} (${u.email}) de TopCode? Se borrarán su cuenta y todo lo suyo: mensajes, apuntes, publicaciones del foro, partidas… No se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      confirmDestructive: true,
+      onConfirm: async () => {
+        setUpdating(u.id)
+        const { error } = await supabase.rpc('tc_eliminar_usuario', { p_usuario: u.id })
+        setUpdating(null)
+        if (error) {
+          setAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar el usuario: ' + error.message })
+          return
+        }
+        setUsers(prev => prev.filter(x => x.id !== u.id))
+      },
+    })
+  }
+
   async function copiarTemporal() {
     if (!temporal) return
     try {
@@ -232,12 +254,17 @@ export default function Admin() {
   // Igual que en el servidor (tc_password_temporal): el superadmin a cualquiera; un admin de clase, solo a alumnos.
   const puedeDarTemporal = (u: Usuario) =>
     u.id !== usuario?.id && (isSuperAdmin || (puedeGestionarUsuario(u) && u.rol === 'alumno' && !u.es_superadmin))
+  // Igual que en el servidor (tc_eliminar_usuario).
+  const puedeEliminar = (u: Usuario) =>
+    u.id !== usuario?.id && !u.es_superadmin && (isSuperAdmin || (puedeGestionarUsuario(u) && u.rol === 'alumno'))
   const usuariosVisibles = isSuperAdmin
     ? users
     : users.filter(u => u.clase === usuario?.clase)
-  const admins  = usuariosVisibles.filter(u => u.rol === 'admin')
-  const alumnos = usuariosVisibles.filter(u => u.rol === 'alumno')
-  const usersFiltrados = usuariosVisibles
+  const activos    = usuariosVisibles.filter(u => u.estado_acceso !== 'rechazado')
+  const rechazados = usuariosVisibles.filter(u => u.estado_acceso === 'rechazado')
+  const admins  = activos.filter(u => u.rol === 'admin')
+  const alumnos = activos.filter(u => u.rol === 'alumno')
+  const usersFiltrados = verRechazados ? [...activos, ...rechazados] : activos
 
   if (loading) return <AdminSkeleton />
 
@@ -281,7 +308,7 @@ export default function Admin() {
           {[
             { label: 'Admins',   value: admins.length,  Icon: Shield,    color: '#75b9aa', border: 'rgba(61,159,137,0.18)',  bg: 'rgba(61,159,137,0.12)'  },
             { label: 'Alumnos',  value: alumnos.length, Icon: Users,     color: '#2f8f75', border: 'rgba(16,185,129,0.15)',  bg: 'rgba(16,185,129,0.1)'   },
-            { label: 'Total',    value: users.length,   Icon: TrendingUp, color: '#2c8178', border: 'var(--overlay-07)', bg: 'rgba(44,129,120,0.12)'  },
+            { label: 'Total',    value: activos.length,   Icon: TrendingUp, color: '#2c8178', border: 'var(--overlay-07)', bg: 'rgba(44,129,120,0.12)'  },
           ].map(({ label, value, Icon, color, border, bg }) => (
             <div
               key={label}
@@ -335,6 +362,15 @@ export default function Admin() {
                 {usersFiltrados.length}
               </span>
             </div>
+            {rechazados.length > 0 && (
+              <button
+                onClick={() => setVerRechazados(v => !v)}
+                className="text-xs font-medium px-2.5 py-1 rounded-lg transition-colors text-text-muted hover:text-text-primary"
+                style={{ border: '1px solid var(--overlay-08)' }}
+              >
+                {verRechazados ? 'Ocultar rechazados' : `Ver rechazados (${rechazados.length})`}
+              </button>
+            )}
           </div>
 
           {/* User rows */}
@@ -403,6 +439,19 @@ export default function Admin() {
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-amber-300 bg-amber-400/10 border border-amber-400/20 hover:bg-amber-400/15 transition-colors disabled:opacity-40"
                 >
                   <KeyRound size={14} />
+                </button>
+              )}
+
+              {/* Eliminar cuenta */}
+              {puedeEliminar(u) && (
+                <button
+                  onClick={() => pedirEliminar(u)}
+                  disabled={updating === u.id}
+                  title="Eliminar usuario"
+                  aria-label={`Eliminar a ${u.nombre}`}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-rose-300 bg-rose-400/10 border border-rose-400/20 hover:bg-rose-400/15 transition-colors disabled:opacity-40"
+                >
+                  <Trash2 size={14} />
                 </button>
               )}
 
