@@ -15,15 +15,20 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     storage: window.localStorage,
     storageKey: 'topcode-session',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    lock: (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => fn(),
+    // Sin `lock` propio: supabase-js usa el LockManager del navegador y renueva la sesión de una en una, también entre
+    // pestañas. Con un lock vacío varias renovaciones salían a la vez con el mismo token; Supabase lo toma como un
+    // token reutilizado y cierra la sesión (pasó el 20/10/2026 con Supabase lento: echó a la gente de TopCode).
   },
   global: {
     fetch: (url: RequestInfo | URL, options?: RequestInit) => {
       // Las subidas a Storage (apuntes de hasta 20 MB) necesitan mucho más de 8s
       // en conexiones lentas; el resto de peticiones mantiene el timeout corto.
-      const esStorage = String(url instanceof Request ? url.url : url).includes('/storage/v1/')
-      const timeout = AbortSignal.timeout(esStorage ? 120_000 : 8000)
+      // Auth tampoco se corta a los 8 s: si se aborta una renovación de sesión que el servidor ya hizo, el reintento
+      // llega con el token viejo y Supabase cierra la sesión. Mejor esperar a que conteste.
+      const ruta = String(url instanceof Request ? url.url : url)
+      const esStorage = ruta.includes('/storage/v1/')
+      const esAuth = ruta.includes('/auth/v1/')
+      const timeout = AbortSignal.timeout(esStorage ? 120_000 : esAuth ? 30_000 : 8000)
       // Respetar también el signal del llamador (.abortSignal()) en lugar de pisarlo
       const signal = options?.signal && 'any' in AbortSignal
         ? AbortSignal.any([options.signal, timeout])
