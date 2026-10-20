@@ -581,9 +581,10 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                       type="button"
                       className="hub-btn hub-btn--primary"
                       disabled={busy || !claimReady}
+                      title={claimReady ? undefined : 'Puedes coger una carta de la mesa cada 2 horas'}
                       onClick={() => act('coger', { id: entry.id })}
                     >
-                      Coger
+                      {claimReady ? 'Coger' : `Coger en ${wait(state.claimAt - t)}`}
                     </button>
                   </li>
                 ))}
