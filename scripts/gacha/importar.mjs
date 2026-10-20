@@ -9,8 +9,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 const MIN_LINKS = 9
 // Partidos cuyos miembros entran aunque no hayan tenido uno de los CARGOS (eurodiputados, parlamentos autonómicos…),
 // con su propio mínimo de Wikipedias: Vox y Se Acabó La Fiesta (Alvise Pérez).
-// Legendarias aunque su popularidad no llegue (Santiago Abascal).
-const LEGENDARIAS = new Set(['Q11703587'])
+// Legendarias y épicas aunque su popularidad no llegue (Santiago Abascal y Alvise Pérez; Vito Quiles).
+const LEGENDARIAS = new Set(['Q11703587', 'Q121434583'])
+const EPICAS = new Set(['Q134389895'])
 const PARTIDOS = [
   ['Q15630787', 5],
   ['Q125882694', 1],
@@ -157,6 +158,7 @@ function rank(cat, list) {
     const pct = (i + 1) / sorted.length
     const [rarity, , base] = limits.find(([, upTo]) => i < upTo)
     if (LEGENDARIAS.has(c.id.split(':')[1])) return { ...c, cat, rank: i + 1, rarity: 'mitica', value: Math.round(RAREZAS[0][3] * 1.58) }
+    if (EPICAS.has(c.id.split(':')[1])) return { ...c, cat, rank: i + 1, rarity: 'epica', value: Math.round(RAREZAS[1][3] * 1.3) }
     return { ...c, cat, rank: i + 1, rarity, value: Math.round(base * (1.6 - pct * 0.6)) }
   })
 }

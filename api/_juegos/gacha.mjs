@@ -6,7 +6,8 @@
 // Todo se paga y se cobra con el saldo de la semana (cuenta en el Score): las tiradas, recargar el reclamo
 // (CLAIM_RESET_COST, para coger otra carta de la mesa ya) y vender una carta tuya (SELL_RATE € por punto de valor; la
 // carta queda libre otra vez).
-// Cada carta tiene además un poder para cada juego (powersOf), más fuerte cuanto más rara es: ver cartas en el póker o
+// Cada carta tiene además un poder para cada juego (powersOf), distinto en cada político y más fuerte cuanto más rara
+// es, con un juego como punto fuerte: ver cartas en el póker o
 // el blackjack (lo aplica game.mjs en la mesa, que ve un aviso en el chat) o un seguro o un premio para las próximas
 // jugadas de un juego en solitario (juegos_gacha_efectos, que aplica applyEffect al liquidar cada jugada). Usar un poder
 // gasta la carta: deja de ser tuya y vuelve a poder salir para cualquiera (consumePower).
@@ -30,35 +31,92 @@ export const CLAIM_RESET_COST = 5000
 export const POWER_COOLDOWN_MS = 24 * HOUR
 // Lo más que puede añadir un premio en una jugada.
 export const BONUS_CAP = 10000
-// Poderes de mesa según la rareza: game.mjs los aplica a la mano en curso.
-const TABLE_POWERS = {
-  poker: {
-    comun: { kind: 'vistazo', name: 'Vistazo', text: 'Ves una carta de un rival al azar durante una mano de póker.' },
-    rara: { kind: 'doble', name: 'Doble vistazo', text: 'Ves una carta de dos rivales al azar durante una mano de póker.' },
-    epica: { kind: 'chivatazo', name: 'Chivatazo', text: 'Ves las cartas de un rival al azar durante una mano de póker.' },
-    mitica: { kind: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
-  },
-  blackjack: {
-    comun: { kind: 'ojeada', name: 'Ojeada', text: 'Ves cuál es la próxima carta del mazo al usarlo, en una mano de blackjack.' },
-    rara: { kind: 'mazo', name: 'Mazo marcado', text: 'Ves siempre la próxima carta del mazo durante una mano de blackjack.' },
-    epica: { kind: 'crupier', name: 'Ojo del crupier', text: 'Ves la carta tapada del crupier durante una mano de blackjack.' },
-    mitica: {
-      kind: 'todo',
-      name: 'Ojo del crupier y mazo marcado',
-      text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.',
-    },
-  },
-}
-// Seguros y premios de los juegos en solitario: cuánto y durante cuántas jugadas, según la rareza.
-const STRENGTH = { comun: { pct: 25, uses: 1 }, rara: { pct: 50, uses: 1 }, epica: { pct: 100, uses: 1 }, mitica: { pct: 100, uses: 3 } }
+// Poderes. Cada carta tiene uno por juego, sacado al azar (pero fijo: depende de su id) de las variantes de su nivel,
+// así que dos cartas de la misma rareza casi nunca coinciden. Además cada político tiene su punto fuerte: un juego en
+// el que su poder sube un nivel (★). Niveles: 0 común, 1 rara, 2 épica, 3 legendaria, 4 legendaria en su punto fuerte.
+const TIER = { comun: 0, rara: 1, epica: 2, mitica: 3 }
+// Póker: a quién mira (target: azar, rico = más fichas, apuesta = más apostado en la mano), cuántos rivales (rivals,
+// o 'all'), si ve sus dos cartas (full) o una, y qué ve de la mesa que falta por salir (board: hint = si la próxima es
+// alta o baja, next = la próxima, all = todas). game.mjs lo aplica a la mano en curso.
+const POKER_POWERS = [
+  [
+    { name: 'Vistazo', target: 'azar', rivals: 1, text: 'Ves una carta de un rival al azar durante una mano de póker.' },
+    { name: 'Ojo al rico', target: 'rico', rivals: 1, text: 'Ves una carta del rival con más fichas durante una mano de póker.' },
+    { name: 'Sigue el dinero', target: 'apuesta', rivals: 1, text: 'Ves una carta del rival que más ha apostado en la mano de póker.' },
+    { name: 'Corazonada', board: 'hint', text: 'Sabes si la próxima carta de la mesa será alta (10 a as) o baja, durante una mano de póker.' },
+  ],
+  [
+    { name: 'Doble vistazo', target: 'azar', rivals: 2, text: 'Ves una carta de dos rivales al azar durante una mano de póker.' },
+    { name: 'Ojo a los grandes', target: 'rico', rivals: 2, text: 'Ves una carta de los dos rivales con más fichas durante una mano de póker.' },
+    { name: 'Adivino', board: 'next', text: 'Ves siempre la próxima carta que saldrá en la mesa durante una mano de póker.' },
+    { name: 'Topo', target: 'apuesta', rivals: 1, board: 'hint', text: 'Ves una carta del rival que más apuesta y sabes si la próxima de la mesa será alta o baja.' },
+  ],
+  [
+    { name: 'Chivatazo', target: 'azar', rivals: 1, full: true, text: 'Ves las dos cartas de un rival al azar durante una mano de póker.' },
+    { name: 'Auditoría', target: 'rico', rivals: 1, full: true, text: 'Ves las dos cartas del rival con más fichas durante una mano de póker.' },
+    { name: 'Soplo', target: 'apuesta', rivals: 1, full: true, text: 'Ves las dos cartas del rival que más ha apostado en la mano de póker.' },
+    { name: 'Vistazo general', target: 'azar', rivals: 'all', text: 'Ves una carta de cada rival durante una mano de póker.' },
+    { name: 'Bola de cristal', board: 'all', text: 'Ves todas las cartas que faltan por salir en la mesa durante una mano de póker.' },
+  ],
+  [
+    { name: 'Rayos X', target: 'azar', rivals: 'all', full: true, text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
+    { name: 'Profeta', target: 'rico', rivals: 2, full: true, board: 'all', text: 'Ves las cartas de los dos rivales con más fichas y todas las que faltan por salir en la mesa.' },
+  ],
+  [{ name: 'Omnisciencia', target: 'azar', rivals: 'all', full: true, board: 'all', text: 'Ves las cartas de todos y las que faltan por salir en la mesa durante una mano de póker.' }],
+]
+// Blackjack: ver la carta tapada del crupier (dealer) o solo si es alta o baja (hole), la próxima carta del mazo siempre
+// (live), una vez al usarlo (next) o solo si será alta o baja (nextHint).
+const BLACKJACK_POWERS = [
+  [
+    { name: 'Ojeada', next: true, text: 'Ves cuál es la próxima carta del mazo al usarlo, en una mano de blackjack.' },
+    { name: 'Corazonada', hole: true, text: 'Sabes si la carta tapada del crupier es alta (10, figura o as) o baja, en una mano de blackjack.' },
+    { name: 'Cuenta rápida', nextHint: true, text: 'Sabes siempre si la próxima carta del mazo será alta o baja, en una mano de blackjack.' },
+  ],
+  [
+    { name: 'Mazo marcado', live: true, text: 'Ves siempre la próxima carta del mazo durante una mano de blackjack.' },
+    { name: 'Instinto', hole: true, next: true, text: 'Sabes si la tapada del crupier es alta o baja y ves la próxima carta del mazo al usarlo.' },
+  ],
+  [
+    { name: 'Ojo del crupier', dealer: true, text: 'Ves la carta tapada del crupier durante una mano de blackjack.' },
+    { name: 'Tahúr', live: true, hole: true, text: 'Ves siempre la próxima carta del mazo y sabes si la tapada del crupier es alta o baja.' },
+  ],
+  [{ name: 'Ojo del crupier y mazo marcado', dealer: true, live: true, text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.' }],
+  [{ name: 'Crupier comprado', dealer: true, live: true, text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.' }],
+]
+// Seguros y premios de los juegos en solitario: [% , jugadas] posibles en cada nivel (más jugadas, menos %).
+const SOLO_SHAPES = [
+  [
+    [25, 1],
+    [15, 2],
+    [10, 3],
+  ],
+  [
+    [50, 1],
+    [30, 2],
+    [20, 3],
+  ],
+  [
+    [100, 1],
+    [60, 2],
+    [40, 3],
+  ],
+  [
+    [100, 3],
+    [75, 4],
+    [60, 5],
+  ],
+  [
+    [100, 5],
+    [80, 6],
+  ],
+]
 const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', slots: 'las tragamonedas', plinko: 'el Plinko' }
 const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', slots: 'tragamonedas', plinko: 'Plinko' }
 const SOLO_GAMES = Object.keys(SOLO_IN)
 export const POWER_GAMES = ['poker', 'blackjack', ...SOLO_GAMES]
 const euros = (n) => `${n.toLocaleString('es-ES')} €`
 
-function soloPower(kind, game, rarity) {
-  const { pct, uses } = STRENGTH[rarity]
+function soloPower(kind, game, pct, uses) {
   const where = uses > 1 ? `tus próximas ${uses} jugadas en ${SOLO_IN[game]}` : `tu próxima jugada en ${SOLO_IN[game]}`
   const times = uses > 1 ? ` ×${uses}` : ''
   const base = { id: `${kind}:${game}`, kind, game, pct, uses }
@@ -72,14 +130,33 @@ function soloPower(kind, game, rarity) {
   }
 }
 
-// Los seis poderes de una carta: los de mesa, según su rareza; en cada juego en solitario, seguro o premio según los
-// bits de su posición dentro de su rareza, así que dos cartas de la misma rareza no tienen la misma combinación.
-function powersFor(rarity, index) {
+// Números al azar pero siempre los mismos para una carta (su id es la semilla).
+function seeded(id) {
+  let h = 2166136261
+  for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
+  return () => {
+    h = (h + 0x6d2b79f5) | 0
+    let t = Math.imul(h ^ (h >>> 15), 1 | h)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Los seis poderes de una carta y su punto fuerte.
+function powersFor(card) {
+  const rnd = seeded(card.id)
+  const choose = (list) => list[Math.floor(rnd() * list.length)]
+  const strong = choose(POWER_GAMES)
+  const tierOf = (game) => TIER[card.rarity] + (game === strong ? 1 : 0)
+  const mark = (game, power) => (game === strong ? { ...power, strong: true } : power)
   const powers = {}
-  for (const game of ['poker', 'blackjack']) powers[game] = { id: TABLE_POWERS[game][rarity].kind, game, ...TABLE_POWERS[game][rarity] }
-  SOLO_GAMES.forEach((game, bit) => {
-    powers[game] = soloPower((index >> bit) & 1 ? 'premio' : 'seguro', game, rarity)
-  })
+  powers.poker = mark('poker', { id: 'poker', kind: 'poker', game: 'poker', ...choose(POKER_POWERS[tierOf('poker')]) })
+  powers.blackjack = mark('blackjack', { id: 'blackjack', kind: 'blackjack', game: 'blackjack', ...choose(BLACKJACK_POWERS[tierOf('blackjack')]) })
+  for (const game of SOLO_GAMES) {
+    const kind = rnd() < 0.5 ? 'seguro' : 'premio'
+    const [pct, uses] = choose(SOLO_SHAPES[tierOf(game)])
+    powers[game] = mark(game, soloPower(kind, game, pct, uses))
+  }
   return powers
 }
 const RARITY_ORDER = { mitica: 0, epica: 1, rara: 2, comun: 3 }
@@ -124,10 +201,7 @@ for (const c of catalogo.cartas) {
   if (!byRarity.has(c.rarity)) byRarity.set(c.rarity, [])
   byRarity.get(c.rarity).push(c)
 }
-const powersOf = new Map()
-for (const [rarity, list] of byRarity) {
-  ;[...list].sort((a, b) => a.rank - b.rank).forEach((c, i) => powersOf.set(c.id, powersFor(rarity, i)))
-}
+const powersOf = new Map(catalogo.cartas.map((c) => [c.id, powersFor(c)]))
 
 // Probabilidad (en %) de que una tirada saque una carta concreta de esa rareza.
 function chance(kind, rarity) {

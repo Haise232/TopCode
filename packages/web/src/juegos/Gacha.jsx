@@ -450,23 +450,26 @@ function Rules({ prices }) {
         <b>guardas</b> o la <b>descartas</b>; hasta decidirlo no puedes volver a tirar.
       </p>
       <p>
-        <b>Cada carta tiene un poder para cada juego</b> (míralos en «✦ Poderes en 6 juegos» de la carta), y cuanto más rara,
-        más fuerte. Se usan con el botón «✦ Poderes» de cada juego y <b>son de un solo uso</b>: al usar el poder de una carta,
-        la gastas, sale de tu biblioteca y vuelve a quedar libre para que le toque a otro.
+        <b>Cada político tiene sus propios poderes</b>, uno para cada juego (míralos en «✦ Poderes en 6 juegos» de la
+        carta): dos cartas de la misma rareza casi nunca tienen los mismos. Cuanto más rara, más fuerte, y cada uno tiene{' '}
+        <b>★ su punto fuerte</b>: un juego en el que su poder es de la rareza siguiente. Se usan con el botón «✦ Poderes» de
+        cada juego y <b>son de un solo uso</b>: al usar el poder de una carta, la gastas, sale de tu biblioteca y vuelve a
+        quedar libre para que le toque a otro.
       </p>
       <ul className="gacha-powers">
         <li>
-          <b>Póker:</b> Vistazo (común: una carta de un rival), Doble vistazo (rara: una carta de dos rivales), Chivatazo
-          (épica: las cartas de un rival) y Rayos X (legendaria: las de todos), durante una mano.
+          <b>Póker:</b> ver cartas de rivales (uno al azar, el que tiene más fichas o el que más apuesta; una carta o las dos)
+          o adivinar la mesa (si la próxima carta es alta o baja, cuál es o todas las que faltan). Las legendarias, Rayos X:
+          las de todos. Dura una mano.
         </li>
         <li>
-          <b>Blackjack:</b> Ojeada (común: la próxima carta del mazo), Mazo marcado (rara: siempre la próxima carta), Ojo del
-          crupier (épica: su carta tapada) y los dos últimos a la vez (legendaria), durante una mano.
+          <b>Blackjack:</b> la próxima carta del mazo (una vez, siempre o solo si es alta o baja) y la carta tapada del
+          crupier (o solo si es alta o baja). Dura una mano.
         </li>
         <li>
           <b>Ruleta, cohete, tragamonedas y Plinko:</b> un <b>seguro</b> (si pierdes, te devuelven una parte) o un{' '}
-          <b>premio</b> (si ganas, cobras más) según la carta: 25 % con una común, 50 % con una rara, 100 % con una épica y
-          100 % durante tres jugadas con una legendaria.
+          <b>premio</b> (si ganas, cobras más), fuerte para una jugada o más flojo para varias: una común da entre un 25 % una
+          vez y un 10 % tres veces; una épica, hasta un 100 %; una legendaria, el 100 % durante tres jugadas o más.
         </li>
       </ul>
       <p>En las mesas, los demás ven un aviso en el chat cuando usas un poder.</p>

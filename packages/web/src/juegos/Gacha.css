@@ -1890,3 +1890,18 @@
   display: block;
   margin: 10px auto 0;
 }
+
+.juegos-root .gacha-pw li.is-strong span,
+.juegos-root .gacha-pw li.is-strong b {
+  color: var(--gold);
+}
+.juegos-root .gacha-pw li.is-strong small {
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
+.juegos-root .pk-peek__extra {
+  display: block;
+  margin-top: 2px;
+  color: var(--ivory);
+}

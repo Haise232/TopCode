@@ -3,7 +3,7 @@ import { useEffectEvent } from '../useEffectEvent.js'
 import { bestHand } from '../shared/poker-core.js'
 import Avatar from '../Avatar.jsx'
 import Help from '../Help.jsx'
-import PowerButton from '../PowerButton.jsx'
+import PowerButton, { youForm } from '../PowerButton.jsx'
 import { PowerCast, SeatPower, powerOfSeat } from '../TablePower.jsx'
 import { eur } from '../money.js'
 import Chat from '../table/Chat.jsx'
@@ -762,7 +762,8 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
       <PowerCast powers={state.powers} seats={state.seats} />
       {state.peek && (
         <p className="pk-peek" role="status">
-          ✦ {state.peek.power} ({state.peek.card}): {state.peek.text.replace(/^ve /, 'ves ')} en esta mano.
+          ✦ {state.peek.power} ({state.peek.card}): {youForm(state.peek.text)} en esta mano.
+          {state.peek.extra && <b className="pk-peek__extra">{state.peek.extra}</b>}
         </p>
       )}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">

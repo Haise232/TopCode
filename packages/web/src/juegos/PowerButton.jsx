@@ -7,6 +7,9 @@ const POKER_LIVE = new Set(['preflop', 'flop', 'turn', 'river'])
 const TABLES = new Set(['poker', 'blackjack'])
 const TOAST_MS = 5000
 
+// «ve las cartas… y sabe si…» (lo que cuenta el chat) dicho a quien lo usa: «ves… y sabes…».
+export const youForm = (text) => text.replace(/\bve\b/g, 'ves').replace(/\bsabe\b/g, 'sabes')
+
 // Qué hizo el seguro o el premio en la última jugada.
 function hitText(hit) {
   let text
@@ -119,7 +122,10 @@ function PowerButton({ request, game, send, state, mine, hit }) {
                 <li key={p.card.id}>
                   <GachaCard card={p.card} mini />
                   <div>
-                    <b>{p.power.name}</b>
+                    <b>
+                      {p.power.strong && '★ '}
+                      {p.power.name}
+                    </b>
                     <small>{p.card.name}</small>
                     <p>{p.power.text}</p>
                   </div>

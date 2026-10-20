@@ -13,6 +13,11 @@ import { SCHEMA_SQL } from './schema.mjs'
 import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, rouletteDue, rouletteView } from './solo.mjs'
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 
+// Alta: 10, figura o as. Para las pistas de los poderes del gacha.
+const SUIT_MARK = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
+const highLow = (card) => (['10', 'J', 'Q', 'K', 'A'].includes(card.rank) ? 'alta' : 'baja')
+const cardName = (card) => `${card.rank}${SUIT_MARK[card.suit] ?? ''}`
+
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_PUBLIC_PER_GAME = 6
@@ -348,27 +353,51 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Se guarda con la mesa (serialize copia todo lo que no es del motor) y solo cambia la vista de quien lo usó.
   // Póker: picks = 'all' o [{ seat, card }] (card: índice de la carta, o null para ver las dos).
   // Blackjack: dealer (ves la carta tapada), live (siempre la próxima del mazo) o next (la que era al usarlo).
+  // Las cartas de la mesa del póker que faltan por salir, en orden: el motor quema una antes de cada calle y las saca
+  // del final del mazo (pop).
+  function futureBoard(room) {
+    const streets = { preflop: [3, 1, 1], flop: [1, 1], turn: [1] }[room.phase] ?? []
+    const out = []
+    let i = room.deck.length - 1
+    for (const n of streets) {
+      i-- // quemada
+      for (let k = 0; k < n && i >= 0; k++, i--) out.push(room.deck[i])
+    }
+    return out
+  }
+
   function applyPeek(room, userId, state) {
     const peek = room.peeks?.[userId]
     if (!peek) return
+    let extra = null
     if (room.game === 'blackjack') {
       if (peek.hand !== room.round || room.phase !== 'playing') return
       if (peek.dealer) state.dealer = [...room.dealer]
       if (peek.live) state.nextCard = room.shoe.at(-1) ?? null
       else if (peek.next) state.nextCard = peek.next
+      const hints = []
+      if (peek.hole && room.dealer[1]) hints.push(`La tapada del crupier es ${highLow(room.dealer[1])}`)
+      if (peek.nextHint && room.shoe.length) hints.push(`La próxima carta del mazo es ${highLow(room.shoe.at(-1))}`)
+      if (hints.length) extra = hints.join(' · ')
     } else {
       if (peek.hand !== room.hand || !POKER_LIVE.has(room.phase)) return
       state.seats.forEach((seat, i) => {
         const real = room.seats[i]
         if (!seat || !real || real.sid === userId) return
         if (peek.picks === 'all') return void (seat.cards = real.cards)
-        for (const pick of peek.picks) {
+        for (const pick of peek.picks ?? []) {
           if (pick.seat !== i) continue
           seat.cards = pick.card === null ? real.cards : seat.cards.map((c, k) => (k === pick.card ? real.cards[k] : c))
         }
       })
+      const coming = peek.board ? futureBoard(room) : []
+      if (coming.length) {
+        if (peek.board === 'hint') extra = `La próxima carta de la mesa es ${highLow(coming[0])}`
+        else if (peek.board === 'next') extra = `Próxima carta de la mesa: ${cardName(coming[0])}`
+        else extra = `Faltan por salir: ${coming.map(cardName).join(' ')}`
+      }
     }
-    state.peek = { power: peek.power, card: peek.cardName, text: peek.text }
+    state.peek = { power: peek.power, card: peek.cardName, text: peek.text, extra }
   }
 
   // Lo que ve toda la mesa: quién está usando un poder en esta mano, cuál y con qué carta (la animación y la carta junto
@@ -736,7 +765,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           reply.error = { code: spent.error, message: ERRORS[spent.error] ?? 'Error.' }
           return reply
         }
-        const { kind, name } = spent.power
+        const power = spent.power
+        const { name } = power
         let text = ''
         const outcome = await withTable(account.mesa, user, (room) => {
           if (room.game !== msg.game) return 'POWER_GAME'
@@ -747,27 +777,53 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           const peek = { hand: current, power: name, cardName: spent.card.name, cardId: spent.card.id }
           if (room.game === 'blackjack') {
             if (room.phase !== 'playing' || !seat?.cards?.length) return 'POWER_NO_HAND'
-            peek.dealer = kind === 'crupier' || kind === 'todo'
-            peek.live = kind === 'mazo' || kind === 'todo'
-            if (kind === 'ojeada') peek.next = room.shoe.at(-1) ?? null
-            text = [peek.dealer && 've la carta tapada del crupier', peek.live && 've siempre la próxima carta del mazo', peek.next && 've la próxima carta del mazo']
+            peek.dealer = Boolean(power.dealer)
+            peek.live = Boolean(power.live)
+            peek.hole = Boolean(power.hole) && !peek.dealer
+            peek.nextHint = Boolean(power.nextHint) && !peek.live
+            if (power.next && !peek.live) peek.next = room.shoe.at(-1) ?? null
+            text = [
+              peek.dealer && 've la carta tapada del crupier',
+              peek.hole && 'sabe si la tapada del crupier es alta o baja',
+              peek.live && 've siempre la próxima carta del mazo',
+              peek.next && 've la próxima carta del mazo',
+              peek.nextHint && 'sabe si la próxima carta del mazo es alta o baja',
+            ]
               .filter(Boolean)
               .join(' y ')
           } else {
             if (!POKER_LIVE.has(room.phase) || !seat?.inHand || seat.folded) return 'POWER_NO_HAND'
-            if (kind === 'rayos') {
-              peek.picks = 'all'
-              text = 've las cartas de todos'
-            } else {
+            const parts = []
+            if (power.rivals) {
               const rivals = room.seats.flatMap((s, i) => (s && s.inHand && !s.folded && s.sid !== user.id ? [i] : []))
-              if (rivals.length === 0) return 'POWER_NO_RIVALS'
-              const chosen = []
-              for (let n = kind === 'doble' ? 2 : 1; n > 0 && rivals.length; n--) chosen.push(rivals.splice(randomInt(rivals.length), 1)[0])
-              const one = kind === 'vistazo' || kind === 'doble'
-              peek.picks = chosen.map((i) => ({ seat: i, card: one ? randomInt(room.seats[i].cards.length) : null }))
-              const names = chosen.map((i) => room.seats[i].name).join(' y ')
-              text = one ? `ve una carta de ${names}` : `ve las cartas de ${names}`
+              if (rivals.length === 0 && !power.board) return 'POWER_NO_RIVALS'
+              let chosen
+              if (power.rivals === 'all') chosen = rivals
+              else {
+                // rico: más fichas; apuesta: más apostado en la mano; azar: cualquiera (desempate al azar también).
+                const score = (i) => (power.target === 'rico' ? room.balance(room.seats[i]) : power.target === 'apuesta' ? room.seats[i].total : 0)
+                chosen = rivals
+                  .map((i) => [i, score(i), randomInt(1000)])
+                  .sort((a, b) => b[1] - a[1] || a[2] - b[2])
+                  .slice(0, power.rivals)
+                  .map(([i]) => i)
+              }
+              if (power.rivals === 'all' && power.full) peek.picks = 'all'
+              else peek.picks = chosen.map((i) => ({ seat: i, card: power.full ? null : randomInt(room.seats[i].cards.length) }))
+              if (chosen.length) {
+                const names = power.rivals === 'all' ? 'todos' : chosen.map((i) => room.seats[i].name).join(' y ')
+                parts.push(power.full ? `ve las cartas de ${names}` : `ve una carta de ${names}`)
+              }
+            } else peek.picks = []
+            if (power.board) {
+              peek.board = power.board
+              parts.push(
+                { hint: 'sabe si la próxima carta de la mesa es alta o baja', next: 've la próxima carta de la mesa', all: 've las cartas que faltan por salir en la mesa' }[
+                  power.board
+                ],
+              )
             }
+            text = parts.join(' y ')
           }
           peek.text = text
           room.peeks = { ...peeks, [user.id]: peek }

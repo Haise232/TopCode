@@ -12,7 +12,7 @@ import Invite from './Invite.jsx'
 import SeatBubble from './SeatBubble.jsx'
 import WinBurst from '../WinBurst.jsx'
 import WinToast from '../WinToast.jsx'
-import PowerButton from '../PowerButton.jsx'
+import PowerButton, { youForm } from '../PowerButton.jsx'
 import { PowerCast, SeatPower, powerOfSeat } from '../TablePower.jsx'
 // Blackjack.css (generado) trae las fichas que comparte con el Cohete; blackjack-ui.css, el aspecto de esta mesa.
 import '../Blackjack.css'
@@ -494,7 +494,8 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
       <PowerCast powers={state.powers} seats={state.seats} />
       {state.peek && (
         <p className="pk-peek" role="status">
-          ✦ {state.peek.power} ({state.peek.card}): {state.peek.text.replace(/^ve /, 'ves ').replace(' y ve ', ' y ves ')} en esta mano.
+          ✦ {state.peek.power} ({state.peek.card}): {youForm(state.peek.text)} en esta mano.
+          {state.peek.extra && <b className="pk-peek__extra">{state.peek.extra}</b>}
           {state.nextCard && (
             <>
               {' '}
