@@ -53,30 +53,51 @@ create table if not exists public.juegos_solo (
   primary key (usuario_id, juego)
 );
 
--- Gacha (igual que supabase/migracion_juegos_gacha.sql): cartas con dueño, tiradas de todos y estado de cada jugador.
+-- Gacha (igual que supabase/migracion_juegos_gacha.sql): cartas con dueño, la mesa (cartas gratis que salen solas), el registro de movimientos y el estado de cada jugador.
+-- Cada carta tiene como mucho un dueño.
 create table if not exists public.juegos_gacha_cartas (
-  carta      text primary key,
-  usuario_id   uuid not null references public.usuarios(id) on delete cascade,
-  reclamada    timestamptz not null default now(),
-  poderes_usados jsonb not null default '{}'::jsonb -- { juego: ms } última vez que se usó su poder en cada juego
+  carta          text primary key,
+  usuario_id     uuid not null references public.usuarios(id) on delete cascade,
+  reclamada      timestamptz not null default now(),
+  poderes_usados jsonb not null default '{}'::jsonb -- { juego: ms }: última vez que se usó su poder en cada juego
 );
 create index if not exists juegos_gacha_cartas_usuario_idx on public.juegos_gacha_cartas (usuario_id);
 
+-- La mesa: hasta 5 cartas a la vista de todos; sale una cada 2 h y cualquiera puede cogerla.
+create table if not exists public.juegos_gacha_mesa (
+  id      bigserial primary key,
+  carta   text not null unique,
+  periodo bigint not null,
+  creada  timestamptz not null default now()
+);
+
+-- Último periodo de 2 h en el que se repuso la mesa.
+create table if not exists public.juegos_gacha_estado (
+  id      int primary key default 1 check (id = 1),
+  periodo bigint not null
+);
+
+-- Registro de movimientos (el canal): «mesa» (salió en la mesa), «cogida» o «guardada» (la sacó pagando y se la quedó).
+-- Se borra lo de hace más de 7 días.
 create table if not exists public.juegos_gacha_tiradas (
   id            bigserial primary key,
-  usuario_id    uuid not null references public.usuarios(id) on delete cascade,
+  usuario_id    uuid references public.usuarios(id) on delete cascade,
   carta         text not null,
   premium       boolean not null default false,
   creada        timestamptz not null default now(),
-  reclamada_por uuid references public.usuarios(id) on delete set null
+  reclamada_por uuid references public.usuarios(id) on delete set null,
+  tipo          text not null default 'tirada'
 );
 create index if not exists juegos_gacha_tiradas_creada_idx on public.juegos_gacha_tiradas (creada desc);
 
+-- Cuándo puede volver a coger una carta de la mesa y la carta que sacó pagando y aún no ha decidido si guardar.
 create table if not exists public.juegos_gacha_jugadores (
-  usuario_id    uuid primary key references public.usuarios(id) on delete cascade,
-  hora          bigint not null default 0,
-  tiradas       int not null default 0,
-  reclamo_listo timestamptz not null default 'epoch'
+  usuario_id        uuid primary key references public.usuarios(id) on delete cascade,
+  hora              bigint not null default 0,
+  tiradas           int not null default 0,
+  reclamo_listo     timestamptz not null default 'epoch',
+  pendiente         text,
+  pendiente_premium boolean not null default false
 );
 
 -- Poder del gacha activo en un juego en solitario: un seguro o un premio para las próximas «usos» jugadas.
@@ -98,6 +119,8 @@ alter table public.juegos_mesas   enable row level security;
 alter table public.juegos_chat    enable row level security;
 alter table public.juegos_solo    enable row level security;
 alter table public.juegos_gacha_cartas    enable row level security;
+alter table public.juegos_gacha_mesa      enable row level security;
+alter table public.juegos_gacha_estado    enable row level security;
 alter table public.juegos_gacha_tiradas   enable row level security;
 alter table public.juegos_gacha_jugadores enable row level security;
 alter table public.juegos_gacha_efectos   enable row level security;

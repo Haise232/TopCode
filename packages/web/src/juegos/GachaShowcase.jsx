@@ -1,61 +1,52 @@
-import Avatar from './Avatar.jsx'
 import GachaCard from './GachaCard.jsx'
 import { RARITY, useGacha, useServerNow, wait } from './gacha.js'
 
-const SHOWN = 6
+const SHOWN = 5
 
-// El gacha en el selector de juegos: las últimas cartas del canal en directo y tu estado, con acceso directo.
+// El gacha en el selector de juegos: las cartas de la mesa (gratis, para coger) en directo y tu estado.
 function GachaShowcase({ juegos, online, onOpen }) {
-  const { state, feed, offset } = useGacha(juegos.request)
+  const { state, offset } = useGacha(juegos.request)
   const t = useServerNow(offset)
   const claimReady = state ? state.claimAt === 0 || state.claimAt <= t : false
-  const open = feed.filter((r) => r.until > t)
-  const recent = feed.slice(0, SHOWN)
-  const best = feed.find((r) => r.card.rarity === 'mitica') ?? feed.find((r) => r.card.rarity === 'epica')
+  const table = state?.table ?? []
+  const best = table.find((e) => e.card.rarity === 'mitica') ?? table.find((e) => e.card.rarity === 'epica')
 
-  let headline = 'Políticos españoles: tira, quédate la carta antes que nadie y véndela por saldo.'
-  if (open.length > 0) headline = `¡${open.length === 1 ? 'Hay una carta' : `Hay ${open.length} cartas`} por reclamar ahora mismo!`
-  else if (best) headline = `Última gran tirada: ${best.card.name} (${RARITY[best.card.rarity].toLowerCase()}).`
+  let headline = 'Políticos españoles: cada 2 h sale una carta gratis en la mesa. Cógela antes que nadie.'
+  if (best) headline = `¡En la mesa hay una ${RARITY[best.card.rarity].toLowerCase()}: ${best.card.name}!`
+  else if (table.length > 0) headline = `${table.length === 1 ? 'Hay una carta' : `Hay ${table.length} cartas`} en la mesa para coger gratis.`
 
   return (
-    <article className={`hub-gacha ${open.length ? 'is-hot' : ''}`} aria-labelledby="gacha-title">
+    <article className={`hub-gacha ${table.length && claimReady ? 'is-hot' : ''}`} aria-labelledby="gacha-title">
       <div className="hub-gacha__head">
         <h3 id="gacha-title">Gacha</h3>
-        <span className={`hub-chip hub-chip--${open.length ? 'on' : 'free'}`}>
+        <span className={`hub-chip hub-chip--${table.length ? 'on' : 'free'}`}>
           <i aria-hidden="true" />
-          {open.length ? `${open.length} por reclamar` : 'En directo'}
+          {table.length ? `${table.length} en la mesa` : 'Mesa vacía'}
         </span>
       </div>
       <p className="hub-gacha__line">{headline}</p>
 
-      {recent.length > 0 ? (
-        <ul className="hub-gacha__strip" aria-label="Últimas tiradas">
-          {recent.map((r) => (
-            <li key={r.id} className={r.until > t ? 'is-open' : ''} title={`${r.card.name} · ${RARITY[r.card.rarity]} · tirada de ${r.by.name}`}>
-              <GachaCard card={r.card} mini />
-              <span className="hub-gacha__who">
-                <Avatar name={r.by.name} src={r.by.avatar} size={18} />
-                {r.until > t ? wait(r.until - t) : r.claimed ? `de ${r.claimed.name}` : r.owner ? `de ${r.owner.name}` : 'libre'}
-              </span>
+      <ul className="hub-gacha__strip" aria-label="Cartas en la mesa">
+        {Array.from({ length: SHOWN }, (_, i) => {
+          const entry = table[i]
+          if (!entry) return <li key={`vacia-${i}`} className="hub-gacha__slot" aria-hidden="true" />
+          return (
+            <li key={entry.id} className="is-open" title={`${entry.card.name} · ${RARITY[entry.card.rarity]}`}>
+              <GachaCard card={entry.card} mini />
+              <span className="hub-gacha__who">{RARITY[entry.card.rarity]}</span>
             </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="hub-gacha__strip hub-gacha__strip--empty" aria-hidden="true">
-          {Array.from({ length: SHOWN }, (_, i) => (
-            <span key={i} />
-          ))}
-        </div>
-      )}
+          )
+        })}
+      </ul>
 
       <div className="hub-gacha__foot">
         <dl className="hub-gacha__facts">
           <div>
-            <dt>Tiradas</dt>
-            <dd>{state ? `${state.rolls.left}/${state.rolls.max}` : '–'}</dd>
+            <dt>Próxima</dt>
+            <dd>{state ? (state.nextDropAt ? wait(state.nextDropAt - t) : 'llena') : '–'}</dd>
           </div>
           <div>
-            <dt>Reclamo</dt>
+            <dt>Coger</dt>
             <dd className={claimReady ? 'is-ready' : ''}>{state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}</dd>
           </div>
           <div>
@@ -65,7 +56,7 @@ function GachaShowcase({ juegos, online, onOpen }) {
         </dl>
         <div className="hub-gacha__actions">
           <button type="button" className="hub-btn hub-btn--primary" disabled={!online} onClick={() => onOpen('tirar')}>
-            {open.length ? 'Ir a reclamar' : 'Tirar'}
+            {table.length && claimReady ? 'Ir a la mesa' : 'Abrir el gacha'}
           </button>
           <button type="button" className="hub-btn" disabled={!online} onClick={() => onOpen('colecciones')}>
             Bibliotecas

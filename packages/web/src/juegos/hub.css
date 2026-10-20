@@ -776,7 +776,7 @@
 }
 .juegos-root .hub-gacha__strip {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
   padding: 0;
@@ -806,6 +806,7 @@
   font-weight: 700;
   color: #7be0a6;
 }
+.juegos-root .hub-gacha__slot,
 .juegos-root .hub-gacha__strip--empty span {
   aspect-ratio: 3 / 4;
   border: 2px dashed rgba(241, 233, 214, 0.18);

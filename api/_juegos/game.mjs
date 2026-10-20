@@ -170,7 +170,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   function ensureSchema() {
     schemaReady ??= (async () => {
       // La tabla más nueva: si falta, se ejecuta el esquema entero (es idempotente).
-      const { rows } = await db.query(`select to_regclass('public.juegos_gacha_efectos') is not null as ok`)
+      const { rows } = await db.query(`select to_regclass('public.juegos_gacha_mesa') is not null as ok`)
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
       await refundSoloBlackjack()

@@ -13,17 +13,7 @@ import './Gacha.css'
 
 // Probabilidad de una carta concreta: «0,48 %», «0,0029 %».
 
-// Barra que se vacía mientras quedan segundos para reclamar.
-function Countdown({ until, t, total }) {
-  const left = Math.max(0, until - t)
-  return (
-    <span className="gacha-timer" aria-hidden="true">
-      <i style={{ transform: `scaleX(${Math.min(1, left / total)})` }} />
-    </span>
-  )
-}
-
-// Nombre de alguien que lleva a su colección.
+// Nombre de alguien que lleva a su biblioteca.
 function Who({ person, onOpen }) {
   return (
     <button type="button" className="gacha-who" onClick={() => onOpen(person.id)} title={`Ver la biblioteca de ${person.name}`}>
@@ -32,68 +22,49 @@ function Who({ person, onOpen }) {
   )
 }
 
-// Una tirada del canal: la carta y qué ha pasado con ella.
-function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim, onOpen }) {
-  const open = roll.until > t
-  const canClaim = open && !busy && claimReady
-  const mine = roll.claimed?.id === meId
-  let status = null
-  if (roll.claimed) {
-    status = mine ? (
-      '¡Es tuya!'
-    ) : (
+// «hace 5 min», «hace 2 h», «hace 3 d».
+function ago(ms) {
+  const min = Math.floor(ms / 60000)
+  if (min < 1) return 'ahora'
+  if (min < 60) return `hace ${min} min`
+  const h = Math.floor(min / 60)
+  return h < 24 ? `hace ${h} h` : `hace ${Math.floor(h / 24)} d`
+}
+
+// Un movimiento del canal: salió en la mesa, alguien la cogió o alguien la sacó pagando y se la quedó.
+function Move({ move, t, onOpen }) {
+  const who = move.by && (move.by.me ? 'Tú' : <Who person={move.by} onOpen={onOpen} />)
+  let text = 'Salió en la mesa'
+  if (move.type === 'cogida') text = <>{who} la {move.by?.me ? 'cogiste' : 'cogió'} de la mesa</>
+  if (move.type === 'guardada') {
+    text = (
       <>
-        Se la quedó <Who person={roll.claimed} onOpen={onOpen} />
+        {who} la {move.by?.me ? 'sacaste' : 'sacó'} {move.premium ? 'con una premium' : 'pagando'} y {move.by?.me ? 'te la quedaste' : 'se la quedó'}
       </>
     )
-  } else if (roll.owner) {
-    status = roll.owner.me ? (
-      'Ya era tuya'
-    ) : (
-      <>
-        Ya es de <Who person={roll.owner} onOpen={onOpen} />
-      </>
-    )
-  } else if (!open) status = 'Nadie la reclamó'
+  }
+  if (move.type === 'tirada') text = <>{who} la sacó</>
   return (
-    <li className={`gacha-roll ${open ? 'is-open' : ''} ${mine ? 'is-mine' : ''}`}>
-      <GachaCard card={roll.card} mini />
+    <li className={`gacha-roll gacha-move--${move.type} ${move.by?.me ? 'is-mine' : ''}`}>
+      <GachaCard card={move.card} mini />
       <div className="gacha-roll__info">
-        <span className={`gacha-roll__name gacha-roll__name--${roll.card.rarity}`}>
-          <b>{roll.card.name}</b>
+        <span className={`gacha-roll__name gacha-roll__name--${move.card.rarity}`}>
+          <b>{move.card.name}</b>
           <small>
-            <em>{RARITY[roll.card.rarity]}</em>
-            {roll.card.series ? ` · ${roll.card.series}` : ''}
+            <em>{RARITY[move.card.rarity]}</em>
+            {move.card.series ? ` · ${move.card.series}` : ''}
           </small>
         </span>
-        <span className="gacha-roll__by">
-          <Avatar name={roll.by.name} src={roll.by.avatar} size={20} />
-          {roll.by.me ? 'Tu tirada' : <Who person={roll.by} onOpen={onOpen} />}
-          {roll.premium && <em className="gacha-pill">Premium</em>}
+        <span className="gacha-roll__status">
+          {move.by && <Avatar name={move.by.name} src={move.by.avatar} size={18} />}
+          {text}
         </span>
-        {open ? (
-          <>
-            <button
-              type="button"
-              className="hub-btn hub-btn--primary gacha-claim"
-              disabled={!canClaim}
-              title={!claimReady ? 'Tu reclamo aún se está recargando' : undefined}
-              onClick={() => onClaim(roll.id)}
-            >
-              Reclamar · {wait(roll.until - t)}
-            </button>
-            <Countdown until={roll.until} t={t} total={claimMs} />
-          </>
-        ) : (
-          <span className={`gacha-roll__status ${mine ? 'is-mine' : ''}`}>{status}</span>
-        )}
       </div>
-      <span className="gacha-roll__value">{eur(roll.card.price)}</span>
+      <span className="gacha-roll__value">{ago(t - move.at)}</span>
     </li>
   )
 }
 
-// La carta que acabas de sacar, en grande, con la entrada según su rareza.
 const CHARGE_MS = 1300
 const BURST_MS = 650
 const SPARKS = 28
@@ -101,7 +72,7 @@ const SPARKS = 28
 // La invocación: la carta llega boca abajo y se carga de energía, estalla con el color de su rareza y se da la vuelta.
 // Las épicas y legendarias traen rayos y chispas; las legendarias, además, un destello dorado y un temblor.
 // stage: charge (esperando al servidor) | burst | show.
-function Summon({ summon, onClose }) {
+function Summon({ summon, busy, onDecide }) {
   const { stage, result } = summon
   const rarity = result?.card.rarity ?? 'comun'
   const big = rarity === 'mitica' || rarity === 'epica'
@@ -111,7 +82,6 @@ function Summon({ summon, onClose }) {
       role="dialog"
       aria-modal="true"
       aria-label="Tirada del gacha"
-      onClick={() => stage === 'show' && onClose()}
     >
       <span className="gacha-summon__rays" aria-hidden="true" />
       <span className="gacha-summon__flash" aria-hidden="true" />
@@ -130,9 +100,15 @@ function Summon({ summon, onClose }) {
               <GachaCard card={result.card} big />
             </div>
             <p className="gacha-summon__name">{result.card.name}</p>
-            <button type="button" className="hub-btn hub-btn--primary" onClick={onClose} autoFocus>
-              {result.claimed ? '¡A mi biblioteca!' : result.owned ? 'Vaya, ya tiene dueño' : '¡A reclamarla!'}
-            </button>
+            <div className="gacha-decide">
+              <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => onDecide(true)} autoFocus>
+                Guardar en mi biblioteca
+              </button>
+              <button type="button" className="hub-btn" disabled={busy} onClick={() => onDecide(false)}>
+                Descartar
+              </button>
+            </div>
+            <small className="gacha-decide__note">Si la descartas, queda libre para que le toque a otro. Se vende por {eur(result.card.price)}.</small>
           </>
         ) : (
           <div className="gacha-summon__card">
@@ -144,27 +120,25 @@ function Summon({ summon, onClose }) {
   )
 }
 
-function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
-  let text = 'Se te escapó.'
-  if (roll?.claimed) text = roll.claimed.id === meId ? (last.claimed ? '¡Directa a tu biblioteca!' : '¡Es tuya!') : `Te la ha quitado ${roll.claimed.name}.`
-  else if (last.owned) text = roll?.owner ? `Ya es de ${roll.owner.me ? 'ti' : roll.owner.name}.` : 'Ya tiene dueño.'
-  else if (roll && roll.until > t) text = '¡Reclámala antes que nadie!'
-  const open = roll && !roll.claimed && roll.until > t
+// La carta que sacaste pagando y aún no has decidido si guardar (por ejemplo, si recargaste la página).
+function Pending({ pending, busy, onDecide }) {
   return (
-    <div className={`gacha-reveal gacha-reveal--${last.card.rarity}`} key={last.id}>
+    <div className={`gacha-reveal gacha-reveal--${pending.card.rarity}`}>
       <span className="gacha-reveal__burst" aria-hidden="true" />
-      <GachaCard card={last.card} big />
+      <GachaCard card={pending.card} big />
       <div className="gacha-reveal__text">
-        <span className="gacha-reveal__rarity">{RARITY[last.card.rarity]}</span>
-        <p aria-live="polite">{text}</p>
-        {open && (
-          <button type="button" className="hub-btn hub-btn--primary" disabled={busy || !claimReady} onClick={() => onClaim(last.id)}>
-            Reclamar · {wait(roll.until - t)}
+        <span className="gacha-reveal__rarity">{RARITY[pending.card.rarity]}</span>
+        <p>¿Te la quedas?</p>
+        <div className="gacha-decide">
+          <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => onDecide(true)}>
+            Guardar
           </button>
-        )}
-        {open && !claimReady && <small>Tu reclamo aún se está recargando; puedes recargarlo ya desde la tienda.</small>}
-        <small>Se vende por {eur(last.card.price)}.</small>
-        <GachaPowers powers={last.card.powers} />
+          <button type="button" className="hub-btn" disabled={busy} onClick={() => onDecide(false)}>
+            Descartar
+          </button>
+        </div>
+        <small>Si la descartas, queda libre. Se vende por {eur(pending.card.price)}.</small>
+        <GachaPowers powers={pending.card.powers} />
       </div>
     </div>
   )
@@ -393,16 +367,14 @@ function Rules({ prices }) {
   return (
     <Help label="Cómo funciona" title="Cómo funciona el gacha" wide>
       <p>
-        Tienes <b>una tirada gratis cada 2 horas</b>. Lo que sale aparece en el <b>canal</b> y lo ve todo el mundo: durante 45 s
-        cualquiera puede <b>reclamarlo</b>, y se lo queda el primero que pulse. Cada carta tiene un solo dueño.
+        <b>La mesa:</b> cada 2 horas sale sola una carta, hasta 5 a la vista de todos. Cualquiera puede <b>cogerla</b> gratis y
+        se la queda el primero que pulse. Cada persona puede coger <b>una cada 2 horas</b> (o pagar{' '}
+        {eur(prices?.claimReset ?? 5000)} para coger otra ya). Cada carta tiene un solo dueño.
       </p>
       <p>
-        Solo puedes reclamar <b>una carta cada 2 horas</b>, así que elige bien.
-      </p>
-      <p>
-        Todo va con tu <b>saldo de la semana</b>. La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)}: siempre es
-        épica o legendaria, nunca sale una carta con dueño y va directa a tu biblioteca, sin gastar tu reclamo. Una tirada extra
-        cuesta {eur(prices?.extraRoll ?? 1000)} y recargar el reclamo, {eur(prices?.claimReset ?? 5000)}.
+        <b>Tirar pagando</b> con tu saldo de la semana: una tirada cuesta {eur(prices?.roll ?? 2000)} y una{' '}
+        <b>premium</b>, {eur(prices?.premium ?? 20000)} (siempre épica o legendaria). Sale una carta sin dueño y decides si la{' '}
+        <b>guardas</b> o la <b>descartas</b>; hasta decidirlo no puedes volver a tirar.
       </p>
       <p>
         <b>Cada carta tiene un poder para cada juego</b> (míralos en «✦ Poderes en 6 juegos» de la carta), y cuanto más rara,
@@ -433,7 +405,7 @@ function Rules({ prices }) {
         <thead>
           <tr>
             <th>Rareza</th>
-            <th>Tirada normal</th>
+            <th>Mesa y tirada</th>
             <th>Premium</th>
           </tr>
         </thead>
@@ -468,11 +440,9 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   const { state, feed, offset, collection, setCollection, ranking, cards, load } = useGacha(juegos.request)
   const [tab, setTab] = useState(initialTab)
   const [busy, setBusy] = useState(false)
-  const [last, setLast] = useState(null)
   const [summon, setSummon] = useState(null)
   const t = useServerNow(offset)
   const balance = juegos.me?.balance ?? 0
-  const meId = juegos.me?.id
 
   async function act(a, extra) {
     setBusy(true)
@@ -488,10 +458,9 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       setSummon({ stage: 'charge' })
       playSpin(CHARGE_MS)
     }
-    const body = await act('tirar', { premium })
+    const body = await act('tirar', { pago: true, premium })
     const result = body?.gacha?.result
     if (!result) return setSummon(null)
-    setLast(result)
     if (reduced) return setSummon({ stage: 'show', result })
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, CHARGE_MS - (Date.now() - started))))
     setSummon({ stage: 'burst', result })
@@ -501,6 +470,11 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     const rarity = result.card.rarity
     if (rarity === 'mitica' || rarity === 'epica') playWin(rarity === 'mitica')
     else playCard()
+  }
+
+  async function decide(keep) {
+    await act('decidir', { keep })
+    setSummon(null)
   }
 
   function openCollection(user) {
@@ -523,12 +497,11 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     if (initialTab === 'cartas') load('cartas')
   }, [initialTab, load])
 
-  const rolls = state?.rolls
   const claimReady = state ? state.claimAt === 0 || state.claimAt <= t : false
-  const lastRoll = last && feed.find((r) => r.id === last.id)
   const prices = state?.prices
   const premiumPrice = prices?.premium ?? 20000
-  const openCount = feed.filter((r) => r.until > t).length
+  const rollPrice = prices?.roll ?? 2000
+  const table = state?.table ?? []
 
   return (
     <main className="app gacha-app">
@@ -544,17 +517,17 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
 
       <dl className="gacha-hud">
         <div>
-          <dt>Tiradas</dt>
+          <dt>La mesa</dt>
           <dd>
-            {rolls ? `${rolls.left}/${rolls.max}` : '–'}
-            {rolls && <small>{rolls.left < rolls.max ? `se recargan en ${wait(rolls.resetAt - t)}` : 'una gratis cada 2 h'}</small>}
+            {state ? `${table.length}/${state.tableMax}` : '–'}
+            {state && <small>{state.nextDropAt ? `otra carta en ${wait(state.nextDropAt - t)}` : 'llena: cógelas'}</small>}
           </dd>
         </div>
         <div className={claimReady ? 'is-ready' : ''}>
-          <dt>Reclamo</dt>
+          <dt>Coger</dt>
           <dd>
             {state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}
-            <small>{claimReady ? 'puedes quedarte una carta' : 'uno cada 2 h'}</small>
+            <small>{claimReady ? 'puedes coger una de la mesa' : 'una cada 2 h'}</small>
           </dd>
         </div>
         <div>
@@ -588,80 +561,98 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       )}
 
       {tab === 'tirar' && (
-        <div className="gacha-play">
-          <section className="gacha-panel" aria-labelledby="roll-title">
-            <h2 id="roll-title" className="hub-title">
-              Tirar <small>todos lo verán durante 45 s</small>
+        <>
+          <section className="gacha-mesa" aria-labelledby="mesa-title">
+            <h2 id="mesa-title" className="hub-title">
+              La mesa{' '}
+              <small>
+                {state?.nextDropAt ? `sale otra carta en ${wait(state.nextDropAt - t)}` : 'llena: hasta 5 cartas'} · gratis, una cada 2 h por
+                persona
+              </small>
             </h2>
-            <button type="button" className="gacha-roll-btn" disabled={busy || !rolls || rolls.left <= 0} onClick={() => roll(false)}>
-              <b>{rolls && rolls.left <= 0 ? 'Sin tiradas' : 'Tirar'}</b>
-              <small>{rolls && rolls.left <= 0 ? `Vuelven en ${wait(rolls.resetAt - t)}` : `${rolls?.left ?? 0} gratis · una cada 2 h`}</small>
-            </button>
-            <div className="gacha-actions">
-              <button
-                type="button"
-                className="hub-btn gacha-premium"
-                disabled={busy || !state || balance < premiumPrice}
-                title="Épica o legendaria, sin dueño, directa a tu biblioteca"
-                onClick={() => roll(true)}
-              >
-                ✦ Premium · {eur(premiumPrice)}
-              </button>
-              <button
-                type="button"
-                className="hub-btn hub-btn--ghost"
-                disabled={busy || !prices || balance < prices.extraRoll}
-                onClick={() => act('tienda', { item: 'tirada' })}
-              >
-                +1 tirada · {eur(prices?.extraRoll ?? 1000)}
-              </button>
-              <button
-                type="button"
-                className="hub-btn hub-btn--ghost"
-                disabled={busy || !prices || claimReady || balance < prices.claimReset}
-                title="Recarga tu reclamo para poder quedarte otra carta ahora"
-                onClick={() => act('tienda', { item: 'reclamo' })}
-              >
-                Reclamo ya · {eur(prices?.claimReset ?? 5000)}
-              </button>
-            </div>
-            {last ? (
-              <Reveal last={last} roll={lastRoll} t={t} meId={meId} claimReady={claimReady} busy={busy} onClaim={(id) => act('reclamar', { id })} />
+            {table.length === 0 ? (
+              <p className="gacha-empty">{state ? 'La mesa está vacía: en un rato saldrá una carta.' : 'Cargando…'}</p>
             ) : (
-              <div className="gacha-placeholder" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-            )}
-          </section>
-
-          <section className="gacha-feed" aria-labelledby="feed-title">
-            <h2 id="feed-title" className="hub-title">
-              Canal
-              <small>{openCount > 0 ? `${openCount} por reclamar ahora mismo` : 'las últimas tiradas de todos'}</small>
-            </h2>
-            {feed.length === 0 ? (
-              <p className="gacha-empty">{state ? 'Todavía no ha tirado nadie. ¡Estrénalo!' : 'Cargando…'}</p>
-            ) : (
-              <ul className="gacha-rolls">
-                {feed.map((r) => (
-                  <Roll
-                    key={r.id}
-                    roll={r}
-                    t={t}
-                    meId={meId}
-                    claimReady={claimReady}
-                    claimMs={state?.claimMs ?? 45000}
-                    busy={busy}
-                    onClaim={(id) => act('reclamar', { id })}
-                    onOpen={openCollection}
-                  />
+              <ul className="gacha-mesa__cards">
+                {table.map((entry) => (
+                  <li key={entry.id}>
+                    <GachaCard card={entry.card} />
+                    <button
+                      type="button"
+                      className="hub-btn hub-btn--primary"
+                      disabled={busy || !claimReady}
+                      onClick={() => act('coger', { id: entry.id })}
+                    >
+                      Coger
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}
+            {state && !claimReady && (
+              <p className="gacha-mesa__wait">
+                Podrás coger otra en {wait(state.claimAt - t)}.{' '}
+                <button
+                  type="button"
+                  className="hub-btn hub-btn--ghost"
+                  disabled={busy || !prices || balance < prices.claimReset}
+                  onClick={() => act('tienda', { item: 'reclamo' })}
+                >
+                  Coger otra ya · {eur(prices?.claimReset ?? 5000)}
+                </button>
+              </p>
+            )}
           </section>
-        </div>
+
+          <div className="gacha-play">
+            <section className="gacha-panel" aria-labelledby="roll-title">
+              <h2 id="roll-title" className="hub-title">
+                Tirar pagando <small>tú decides si te la quedas</small>
+              </h2>
+              {state?.pending && !summon ? (
+                <Pending pending={state.pending} busy={busy} onDecide={decide} />
+              ) : (
+                <>
+                  <button type="button" className="gacha-roll-btn" disabled={busy || !state || balance < rollPrice} onClick={() => roll(false)}>
+                    <b>Tirar</b>
+                    <small>{eur(rollPrice)} · cualquier rareza</small>
+                  </button>
+                  <div className="gacha-actions">
+                    <button
+                      type="button"
+                      className="hub-btn gacha-premium"
+                      disabled={busy || !state || balance < premiumPrice}
+                      title="Siempre épica o legendaria"
+                      onClick={() => roll(true)}
+                    >
+                      ✦ Premium · {eur(premiumPrice)}
+                    </button>
+                  </div>
+                  <div className="gacha-placeholder" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </>
+              )}
+            </section>
+
+            <section className="gacha-feed" aria-labelledby="feed-title">
+              <h2 id="feed-title" className="hub-title">
+                Canal <small>lo último que ha pasado</small>
+              </h2>
+              {feed.length === 0 ? (
+                <p className="gacha-empty">{state ? 'Todavía no ha pasado nada.' : 'Cargando…'}</p>
+              ) : (
+                <ul className="gacha-rolls">
+                  {feed.map((move) => (
+                    <Move key={move.id} move={move} t={t} onOpen={openCollection} />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        </>
       )}
 
       {tab === 'coleccion' && (
@@ -670,7 +661,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       {tab === 'colecciones' && <Collectors list={ranking} onOpen={openCollection} />}
       {tab === 'cartas' && <CardTable list={cards} onOpen={openCollection} />}
 
-      {summon && <Summon summon={summon} onClose={() => setSummon(null)} />}
+      {summon && <Summon summon={summon} busy={busy} onDecide={decide} />}
 
       <footer className="gacha-foot">Fotos de Wikimedia Commons y datos de Wikipedia. Solo para TopCode, sin fines comerciales.</footer>
     </main>

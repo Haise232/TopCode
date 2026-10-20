@@ -1303,3 +1303,82 @@
 .juegos-root .gacha-owner.gacha-free {
   color: #7be0a6;
 }
+
+/* --- La mesa: cartas gratis para coger --- */
+.juegos-root .gacha-mesa {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(123, 224, 166, 0.35);
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(30, 138, 90, 0.18), transparent 65%),
+    rgba(12, 39, 55, 0.45);
+}
+.juegos-root .gacha-mesa .hub-title {
+  margin: 0;
+}
+.juegos-root .gacha-mesa__cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .gacha-mesa__cards li {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.juegos-root .gacha-mesa__cards .hub-btn {
+  min-height: 38px;
+  font-size: 15px;
+}
+.juegos-root .gacha-mesa__wait {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.juegos-root .gacha-mesa__wait .hub-btn {
+  min-height: 36px;
+  font-size: 14px;
+}
+.juegos-root .gacha-roll__status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Guardar o descartar --- */
+.juegos-root .gacha-decide {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.juegos-root .gacha-reveal .gacha-decide {
+  justify-content: flex-start;
+}
+.juegos-root .gacha-decide__note {
+  max-width: 360px;
+  font-size: 13px;
+  color: var(--muted);
+  animation: gacha-pop 0.4s 0.9s both;
+}
+
+@media (max-width: 860px) {
+  .juegos-root .gacha-mesa__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .juegos-root .gacha-mesa__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
