@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Users, RefreshCw, Settings, GraduationCap, TrendingUp, Megaphone, Plus, Trash2, Eye, EyeOff, Check, X } from 'lucide-react'
+import { Shield, Users, RefreshCw, Settings, GraduationCap, TrendingUp, Megaphone, Plus, Trash2, Eye, EyeOff, Check, X, KeyRound, Copy } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { Usuario, Anuncio } from '@topcode/shared'
 import AlertModal from '../components/AlertModal'
 import AdminHorario from '../components/AdminHorario'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
-import { Badge, Spinner } from '../components/ui'
+import { Badge, Modal, Spinner } from '../components/ui'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -65,6 +65,9 @@ export default function Admin() {
   const [refreshing, setRefreshing] = useState(false)
   const [updating, setUpdating] = useState<string | null>(null)
   const [alert, setAlert] = useState<AlertState>(null)
+  // Contraseña temporal recién generada: se enseña una sola vez para pasársela a quien la pidió.
+  const [temporal, setTemporal] = useState<{ nombre: string; email: string; password: string } | null>(null)
+  const [copiada, setCopiada] = useState(false)
 
   // ── Anuncios ──
   const [anuncios, setAnuncios] = useState<Anuncio[]>([])
@@ -192,10 +195,43 @@ export default function Admin() {
     }
   }
 
+  function pedirPasswordTemporal(u: Usuario) {
+    if (!puedeDarTemporal(u)) return
+    setAlert({
+      title: 'Contraseña temporal',
+      message: `¿Generar una contraseña temporal para ${u.nombre}? Se le cerrará la sesión si la tiene abierta y, al entrar con ella, tendrá que elegir una nueva.`,
+      confirmLabel: 'Generar',
+      onConfirm: async () => {
+        setUpdating(u.id)
+        const { data, error } = await supabase.rpc('tc_password_temporal', { p_usuario: u.id })
+        setUpdating(null)
+        if (error || typeof data !== 'string') {
+          setAlert({ type: 'error', title: 'Error', message: 'No se pudo generar la contraseña: ' + (error?.message ?? 'respuesta vacía') })
+          return
+        }
+        setCopiada(false)
+        setTemporal({ nombre: u.nombre, email: u.email, password: data })
+      },
+    })
+  }
+
+  async function copiarTemporal() {
+    if (!temporal) return
+    try {
+      await navigator.clipboard.writeText(temporal.password)
+      setCopiada(true)
+    } catch {
+      setCopiada(false)
+    }
+  }
+
   const isSuperAdmin = usuario?.es_superadmin === true
   const puedeGestionarUsuario = (u: Usuario) => isSuperAdmin || (
     usuario?.rol === 'admin' && usuario.clase !== null && u.clase === usuario.clase
   )
+  // Igual que en el servidor (tc_password_temporal): el superadmin a cualquiera; un admin de clase, solo a alumnos.
+  const puedeDarTemporal = (u: Usuario) =>
+    u.id !== usuario?.id && (isSuperAdmin || (puedeGestionarUsuario(u) && u.rol === 'alumno' && !u.es_superadmin))
   const usuariosVisibles = isSuperAdmin
     ? users
     : users.filter(u => u.clase === usuario?.clase)
@@ -356,6 +392,19 @@ export default function Admin() {
                   )}
                 </div>
               </div>
+
+              {/* Contraseña temporal */}
+              {puedeDarTemporal(u) && (
+                <button
+                  onClick={() => pedirPasswordTemporal(u)}
+                  disabled={updating === u.id}
+                  title="Generar contraseña temporal"
+                  aria-label={`Generar contraseña temporal para ${u.nombre}`}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-amber-300 bg-amber-400/10 border border-amber-400/20 hover:bg-amber-400/15 transition-colors disabled:opacity-40"
+                >
+                  <KeyRound size={14} />
+                </button>
+              )}
 
               {/* Role toggle */}
               <div className="flex items-center shrink-0">
@@ -592,6 +641,43 @@ export default function Admin() {
         <AdminHorario />
 
       </div>
+
+      <Modal open={temporal !== null} onClose={() => setTemporal(null)}>
+        {temporal && (
+          <div className="p-6 flex flex-col items-center gap-4 text-center">
+            <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-amber-400/10 border border-amber-400/20">
+              <KeyRound size={24} className="text-amber-300" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <h3 className="font-bold text-base text-text-primary">Contraseña temporal de {temporal.nombre}</h3>
+              <p className="text-xs text-text-muted break-all">{temporal.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={copiarTemporal}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-input border border-border hover:border-primary/50 transition-colors"
+              title="Copiar"
+            >
+              <code className="font-mono text-lg font-bold tracking-wider text-text-primary select-all">{temporal.password}</code>
+              <Copy size={15} className="text-text-muted shrink-0" />
+            </button>
+            <p className="text-xs font-semibold text-primary-light min-h-4" aria-live="polite">
+              {copiada ? 'Copiada' : ''}
+            </p>
+            <p className="text-sm leading-relaxed text-text-muted">
+              Pásasela por privado. Con ella entra con su email y TopCode le pedirá elegir una nueva antes de nada.
+              Cuando cierres esta ventana ya no podrás volver a verla (puedes generar otra).
+            </p>
+            <button
+              type="button"
+              onClick={() => setTemporal(null)}
+              className="w-full font-semibold py-2.5 text-sm text-white rounded-xl bg-gradient-to-br from-primary to-primary-dark hover:opacity-90 transition-opacity"
+            >
+              Hecho
+            </button>
+          </div>
+        )}
+      </Modal>
 
       <AlertModal
         visible={alert !== null}

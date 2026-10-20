@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
 import Loading from './components/Loading'
+import CambiarPasswordObligatorio from './components/CambiarPasswordObligatorio'
 import { supabase } from './lib/supabase'
 
 const Login       = lazy(() => import('./pages/Login'))
@@ -32,6 +33,8 @@ function ProtectedRoute({ children, bare = false }: { children: React.ReactNode;
   // lugar de asumir que la solicitud está pendiente.
   if (!usuario) return perfilError ? <ProfileError /> : <Loading />
   if (usuario.estado_acceso !== 'aprobado') return <AccessPending />
+  // Entró con una contraseña temporal de un administrador: primero elige la suya.
+  if (usuario.debe_cambiar_password) return <CambiarPasswordObligatorio />
   return bare ? <>{children}</> : <Layout>{children}</Layout>
 }
 

@@ -196,6 +196,9 @@ export default function Login() {
                 Crear una cuenta
               </Link>
             </p>
+            <p className="text-xs mt-3 text-text-muted">
+              ¿Olvidaste tu contraseña? Pide una temporal al administrador de tu clase.
+            </p>
           </div>
         </div>
       </div>

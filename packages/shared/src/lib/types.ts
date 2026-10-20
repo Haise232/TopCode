@@ -13,6 +13,8 @@ export interface Usuario {
   es_superadmin: boolean
   estado_acceso: 'pendiente' | 'aprobado' | 'rechazado'
   created_at: string
+  /** Solo en get_mi_perfil(): entró con una contraseña temporal y aún no ha elegido la suya. */
+  debe_cambiar_password?: boolean
   bio: string | null
   github_url: string | null
   linkedin_url: string | null
