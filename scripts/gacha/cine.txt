@@ -1,0 +1,297 @@
+# Personajes de cine del gacha: «Artículo de la Wikipedia en inglés | Película o saga».
+# La foto y la popularidad (en cuántas Wikipedias aparece) las saca scripts/gacha/importar.mjs.
+Darth Vader | Star Wars
+Luke Skywalker | Star Wars
+Princess Leia | Star Wars
+Han Solo | Star Wars
+Yoda | Star Wars
+Obi-Wan Kenobi | Star Wars
+Chewbacca | Star Wars
+R2-D2 | Star Wars
+C-3PO | Star Wars
+Palpatine | Star Wars
+Boba Fett | Star Wars
+Kylo Ren | Star Wars
+Rey (Star Wars) | Star Wars
+Grogu | Star Wars
+Anakin Skywalker | Star Wars
+Padmé Amidala | Star Wars
+Darth Maul | Star Wars
+Jar Jar Binks | Star Wars
+James Bond | James Bond
+Indiana Jones | Indiana Jones
+Rocky Balboa | Rocky
+John Rambo | Rambo
+The Terminator | Terminator
+Sarah Connor (Terminator) | Terminator
+Ellen Ripley | Alien
+Xenomorph | Alien
+Predator (fictional species) | Predator
+RoboCop (character) | RoboCop
+John McClane | Die Hard
+Hans Gruber | Die Hard
+Marty McFly | Regreso al futuro
+Emmett Brown | Regreso al futuro
+Biff Tannen | Regreso al futuro
+Vito Corleone | El padrino
+Michael Corleone | El padrino
+Tony Montana | El precio del poder
+Travis Bickle | Taxi Driver
+Hannibal Lecter | El silencio de los corderos
+Clarice Starling | El silencio de los corderos
+Norman Bates | Psicosis
+Jack Torrance | El resplandor
+Alex DeLarge | La naranja mecánica
+HAL 9000 | 2001: Una odisea del espacio
+Forrest Gump (character) | Forrest Gump
+Jack Sparrow | Piratas del Caribe
+Hector Barbossa | Piratas del Caribe
+Davy Jones (Pirates of the Caribbean) | Piratas del Caribe
+Neo (The Matrix) | Matrix
+Trinity (The Matrix) | Matrix
+Morpheus (The Matrix) | Matrix
+Agent Smith | Matrix
+Harry Potter (character) | Harry Potter
+Hermione Granger | Harry Potter
+Ron Weasley | Harry Potter
+Albus Dumbledore | Harry Potter
+Severus Snape | Harry Potter
+Lord Voldemort | Harry Potter
+Rubeus Hagrid | Harry Potter
+Draco Malfoy | Harry Potter
+Sirius Black | Harry Potter
+Dobby (Harry Potter) | Harry Potter
+Bellatrix Lestrange | Harry Potter
+Minerva McGonagall | Harry Potter
+Gandalf | El señor de los anillos
+Frodo Baggins | El señor de los anillos
+Samwise Gamgee | El señor de los anillos
+Aragorn | El señor de los anillos
+Legolas | El señor de los anillos
+Gimli (Middle-earth) | El señor de los anillos
+Gollum | El señor de los anillos
+Sauron | El señor de los anillos
+Saruman | El señor de los anillos
+Bilbo Baggins | El hobbit
+Smaug | El hobbit
+Galadriel | El señor de los anillos
+Boromir | El señor de los anillos
+Arwen | El señor de los anillos
+Iron Man | Marvel
+Captain America | Marvel
+Thor (Marvel Comics) | Marvel
+Hulk | Marvel
+Black Widow (Natasha Romanova) | Marvel
+Hawkeye (Clint Barton) | Marvel
+Spider-Man | Marvel
+Doctor Strange | Marvel
+Black Panther (character) | Marvel
+Thanos | Marvel
+Loki (Marvel Comics) | Marvel
+Wolverine (character) | X-Men
+Deadpool | Deadpool
+Groot | Guardianes de la Galaxia
+Rocket Raccoon | Guardianes de la Galaxia
+Star-Lord | Guardianes de la Galaxia
+Scarlet Witch | Marvel
+Captain Marvel (Carol Danvers) | Marvel
+Magneto (Marvel Comics) | X-Men
+Professor X | X-Men
+Batman | Batman
+Joker (character) | Batman
+Harley Quinn | Batman
+Catwoman | Batman
+Bane (DC Comics) | Batman
+Superman | Superman
+Lex Luthor | Superman
+Wonder Woman | Wonder Woman
+Aquaman | Aquaman
+The Flash | The Flash
+Shrek (character) | Shrek
+Donkey (Shrek) | Shrek
+Princess Fiona | Shrek
+Puss in Boots (Shrek) | Shrek
+Woody (Toy Story) | Toy Story
+Buzz Lightyear | Toy Story
+Mickey Mouse | Disney
+Donald Duck | Disney
+Goofy | Disney
+Simba | El rey león
+Mufasa | El rey león
+Scar (The Lion King) | El rey león
+Timon and Pumbaa | El rey león
+Elsa (Frozen) | Frozen
+Anna (Frozen) | Frozen
+Olaf (Frozen) | Frozen
+Moana (character) | Vaiana
+Ariel (The Little Mermaid) | La sirenita
+Belle (Beauty and the Beast) | La bella y la bestia
+Beast (Beauty and the Beast) | La bella y la bestia
+Aladdin (Disney character) | Aladdín
+Genie (Aladdin) | Aladdín
+Jafar (Aladdin) | Aladdín
+Mulan (Disney character) | Mulán
+Cinderella (Disney character) | La Cenicienta
+Snow White (Disney character) | Blancanieves
+Maleficent | La bella durmiente
+Ursula (The Little Mermaid) | La sirenita
+Cruella de Vil | 101 dálmatas
+Captain Hook | Peter Pan
+Peter Pan | Peter Pan
+Tinker Bell | Peter Pan
+Pinocchio | Pinocho
+Bambi (character) | Bambi
+Dumbo (character) | Dumbo
+Stitch (Lilo & Stitch) | Lilo y Stitch
+Nemo (Finding Nemo) | Buscando a Nemo
+Dory (Finding Nemo) | Buscando a Nemo
+Lightning McQueen | Cars
+WALL-E (character) | WALL·E
+Sulley | Monstruos, S.A.
+Mike Wazowski | Monstruos, S.A.
+Remy (Ratatouille) | Ratatouille
+Carl Fredricksen | Up
+Mr. Incredible | Los increíbles
+Edna Mode | Los increíbles
+Po (Kung Fu Panda) | Kung Fu Panda
+Gru (Despicable Me) | Gru, mi villano favorito
+Minions (Despicable Me) | Gru, mi villano favorito
+Sid (Ice Age) | Ice Age
+Scrat | Ice Age
+Totoro | Mi vecino Totoro
+No-Face | El viaje de Chihiro
+Godzilla | Godzilla
+King Kong | King Kong
+E.T. the Extra-Terrestrial (character) | E.T.
+Gizmo (Gremlins) | Gremlins
+Freddy Krueger | Pesadilla en Elm Street
+Jason Voorhees | Viernes 13
+Michael Myers (Halloween) | Halloween
+Chucky | Muñeco diabólico
+Ghostface (Scream) | Scream
+Pennywise | It
+Pinhead (Hellraiser) | Hellraiser
+Leatherface | La matanza de Texas
+Jigsaw (Saw) | Saw
+Samara Morgan | The Ring
+Annabelle (doll) | Annabelle
+Count Dracula | Drácula
+Frankenstein's monster | Frankenstein
+Edward Scissorhands (character) | Eduardo Manostijeras
+Willy Wonka | Charlie y la fábrica de chocolate
+Mary Poppins (character) | Mary Poppins
+Dorothy Gale | El mago de Oz
+Wicked Witch of the West | El mago de Oz
+Alice (Alice's Adventures in Wonderland) | Alicia en el país de las maravillas
+Mad Hatter | Alicia en el país de las maravillas
+Cheshire Cat | Alicia en el país de las maravillas
+The Bride (Kill Bill) | Kill Bill
+Jules Winnfield | Pulp Fiction
+Mia Wallace | Pulp Fiction
+Hans Landa | Malditos bastardos
+Django (character) | Django
+Tyler Durden | El club de la lucha
+Patrick Bateman | American Psycho
+Jordan Belfort | El lobo de Wall Street
+Gordon Gekko | Wall Street
+Dominic Toretto | Fast & Furious
+Ethan Hunt | Misión: Imposible
+Jason Bourne | Bourne
+John Wick (character) | John Wick
+Maverick (Top Gun) | Top Gun
+Mad Max | Mad Max
+Imperator Furiosa | Mad Max: Furia en la carretera
+Katniss Everdeen | Los juegos del hambre
+Bella Swan | Crepúsculo
+Edward Cullen | Crepúsculo
+Jack Dawson | Titanic
+Rose DeWitt Bukater | Titanic
+Paul Atreides | Dune
+Optimus Prime | Transformers
+Bumblebee (Transformers) | Transformers
+Ace Ventura | Ace Ventura
+The Dude | El gran Lebowski
+Ferris Bueller | Todo en un día
+Napoleon Dynamite (character) | Napoleon Dynamite
+Barbie | Barbie
+Ken (doll) | Barbie
+Paddington Bear | Paddington
+Mr. Bean | Mr. Bean
+Austin Powers (character) | Austin Powers
+Inspector Clouseau | La pantera rosa
+Pink Panther (character) | La pantera rosa
+Rick Blaine | Casablanca
+Scarlett O'Hara | Lo que el viento se llevó
+Charles Foster Kane | Ciudadano Kane
+The Tramp | Charlot
+Holly Golightly | Desayuno con diamantes
+Atticus Finch | Matar a un ruiseñor
+Dirty Harry | Harry el sucio
+Man with No Name | Trilogía del dólar
+Maximus (Gladiator) | Gladiator
+Commodus (Gladiator) | Gladiator
+William Wallace (Braveheart) | Braveheart
+Leonidas (300) | 300
+Optimus Prime | Transformers
+Sherlock Holmes | Sherlock Holmes
+Hermione Granger | Harry Potter
+Na'vi | Avatar
+Neytiri | Avatar
+Ghost (Patrick Swayze character) | Ghost
+Rocky Balboa | Rocky
+Ivan Drago | Rocky IV
+Apollo Creed | Rocky
+Daniel LaRusso | Karate Kid
+Mr. Miyagi | Karate Kid
+Peter Venkman | Cazafantasmas
+Stay Puft Marshmallow Man | Cazafantasmas
+Beetlejuice (character) | Bitelchús
+Jack Skellington | Pesadilla antes de Navidad
+Coraline Jones | Los mundos de Coraline
+Wednesday Addams | La familia Addams
+Gomez Addams | La familia Addams
+Cousin Itt | La familia Addams
+Hiccup Horrendous Haddock III | Cómo entrenar a tu dragón
+Toothless (How to Train Your Dragon) | Cómo entrenar a tu dragón
+Shere Khan | El libro de la selva
+Baloo | El libro de la selva
+Mowgli | El libro de la selva
+Pumbaa | El rey león
+Rafiki | El rey león
+Hercules (Disney character) | Hércules
+Hades (Disney) | Hércules
+Tarzan | Tarzán
+Quasimodo | El jorobado de Notre Dame
+Pocahontas (character) | Pocahontas
+Rapunzel (Disney character) | Enredados
+Merida (Brave) | Brave
+Tiana (The Princess and the Frog) | Tiana y el sapo
+Wreck-It Ralph (character) | ¡Rompe Ralph!
+Baymax | Big Hero 6
+Judy Hopps | Zootrópolis
+Nick Wilde | Zootrópolis
+Joy (Inside Out) | Del revés
+Sadness (Inside Out) | Del revés
+Miguel Rivera (Coco) | Coco
+Mirabel Madrigal | Encanto
+Puss in Boots | El gato con botas
+Jessica Rabbit | ¿Quién engañó a Roger Rabbit?
+Roger Rabbit | ¿Quién engañó a Roger Rabbit?
+Bugs Bunny | Looney Tunes
+Daffy Duck | Looney Tunes
+Tweety | Looney Tunes
+Wile E. Coyote and the Road Runner | Looney Tunes
+Scooby-Doo (character) | Scooby-Doo
+Shaggy Rogers | Scooby-Doo
+Garfield (character) | Garfield
+Sonic the Hedgehog (character) | Sonic
+Mario | Super Mario Bros.
+Pikachu | Pokémon
+Detective Pikachu | Detective Pikachu
+Gru | Gru, mi villano favorito
+Leon (Léon: The Professional) | León, el profesional
+Mathilda (Léon: The Professional) | León, el profesional
+Amélie Poulain | Amélie
+Ofelia (Pan's Labyrinth) | El laberinto del fauno
+Pale Man | El laberinto del fauno
+Torrente | Torrente

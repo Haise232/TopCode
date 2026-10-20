@@ -42,3 +42,6 @@ android/
 ios/
 *.keystore
 *.jks
+
+# Descargas intermedias del catálogo del gacha
+scripts/gacha/.cache/

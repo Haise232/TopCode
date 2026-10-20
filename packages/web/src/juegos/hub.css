@@ -801,3 +801,33 @@
     animation: none;
   }
 }
+
+/* Icono del gacha: tres cartas en abanico (común, épica y mítica). */
+.juegos-root .hub-row__art .game__gacha {
+  position: relative;
+  display: block;
+  width: 46px;
+  height: 46px;
+}
+.juegos-root .game__gacha i {
+  position: absolute;
+  left: 13px;
+  top: 6px;
+  width: 20px;
+  height: 30px;
+  border: 2px solid var(--ivory);
+  border-radius: 4px;
+  background: var(--baize);
+  transform-origin: 50% 110%;
+}
+.juegos-root .game__gacha i:nth-child(1) {
+  transform: rotate(-22deg);
+}
+.juegos-root .game__gacha i:nth-child(2) {
+  border-color: #b06cff;
+}
+.juegos-root .game__gacha i:nth-child(3) {
+  border-color: #f2c14e;
+  background: linear-gradient(160deg, #f2c14e55, var(--baize) 60%);
+  transform: rotate(22deg);
+}

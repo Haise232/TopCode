@@ -53,9 +53,38 @@ create table if not exists public.juegos_solo (
   primary key (usuario_id, juego)
 );
 
+-- Gacha (igual que supabase/migracion_juegos_gacha.sql): cartas con dueño, tiradas de todos y estado de cada jugador.
+create table if not exists public.juegos_gacha_cartas (
+  carta      text primary key,
+  usuario_id uuid not null references public.usuarios(id) on delete cascade,
+  reclamada  timestamptz not null default now()
+);
+create index if not exists juegos_gacha_cartas_usuario_idx on public.juegos_gacha_cartas (usuario_id);
+
+create table if not exists public.juegos_gacha_tiradas (
+  id            bigserial primary key,
+  usuario_id    uuid not null references public.usuarios(id) on delete cascade,
+  carta         text not null,
+  premium       boolean not null default false,
+  creada        timestamptz not null default now(),
+  reclamada_por uuid references public.usuarios(id) on delete set null
+);
+create index if not exists juegos_gacha_tiradas_creada_idx on public.juegos_gacha_tiradas (creada desc);
+
+create table if not exists public.juegos_gacha_jugadores (
+  usuario_id    uuid primary key references public.usuarios(id) on delete cascade,
+  hora          bigint not null default 0,
+  tiradas       int not null default 0,
+  reclamo_listo timestamptz not null default 'epoch',
+  kakera        bigint not null default 0
+);
+
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;
 alter table public.juegos_mesas   enable row level security;
 alter table public.juegos_chat    enable row level security;
 alter table public.juegos_solo    enable row level security;
+alter table public.juegos_gacha_cartas    enable row level security;
+alter table public.juegos_gacha_tiradas   enable row level security;
+alter table public.juegos_gacha_jugadores enable row level security;
 `

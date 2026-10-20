@@ -11,6 +11,7 @@ import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
 import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, rouletteDue, rouletteView } from './solo.mjs'
+import { GACHA_ERRORS, createGacha } from './gacha.mjs'
 
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -55,6 +56,7 @@ export const ERRORS = {
   AUTH_INVALID: 'Tu sesión de TopCode caducó. Recarga la página.',
   AUTH_PENDING: 'Tu cuenta de TopCode aún no está aprobada.',
   AUTH_DOWN: 'No se pudo comprobar tu sesión. Reintentando…',
+  ...GACHA_ERRORS,
 }
 
 export class JuegosError extends Error {
@@ -166,7 +168,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
 
   function ensureSchema() {
     schemaReady ??= (async () => {
-      const { rows } = await db.query(`select to_regclass('public.juegos_solo') is not null as ok`)
+      // La tabla más nueva: si falta, se ejecuta el esquema entero (es idempotente).
+      const { rows } = await db.query(`select to_regclass('public.juegos_gacha_jugadores') is not null as ok`)
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
       await refundSoloBlackjack()
@@ -499,6 +502,20 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     })
   }
 
+  // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
+  // Devuelve el saldo nuevo, o null si no llega.
+  async function charge(q, userId, amount) {
+    const week = weekOf(now())
+    const rows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [userId])).rows
+    const accounts = new TxAccounts(rows, week.day)
+    if (!accounts.get(userId) || accounts.get(userId).balance < amount) return null
+    accounts.adjust(userId, -amount)
+    const acc = accounts.get(userId)
+    await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [userId, acc.balance, pgArray(acc.days), acc.played])
+    return acc.balance
+  }
+  const gacha = createGacha({ db, ping, now, charge })
+
   // Jugadores con apuesta en una ronda de la ruleta o el cohete en vivo (la ronda se queda anotada aunque ya se haya pagado).
   async function soloPlayers(game, round) {
     const { rows } = await db.query(
@@ -632,6 +649,16 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
+        return reply
+      }
+      case 'gacha': {
+        const out = await gacha.handle(user, msg)
+        if (out.error) {
+          reply.error = { code: out.error, message: ERRORS[out.error] ?? 'Error.' }
+          delete out.error
+        }
+        reply.gacha = out
+        if (out.result || reply.error) me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         return reply
       }
       case 'chat_poll':

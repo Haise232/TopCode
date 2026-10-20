@@ -12,6 +12,7 @@ import Roulette from './Roulette.jsx'
 import Crash from './Crash.jsx'
 import Slots from './Slots.jsx'
 import Plinko from './Plinko.jsx'
+import Gacha from './Gacha.jsx'
 import SlotSymbol from './SlotSymbol.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
@@ -30,6 +31,19 @@ const LIVE = {
 }
 
 const SOLO = [
+  {
+    id: 'gacha',
+    name: 'Gacha',
+    blurb: 'Anime, cine y políticos. Reclama antes que nadie.',
+    badge: 'Nuevo',
+    art: (
+      <span className="game__gacha">
+        <i />
+        <i />
+        <i />
+      </span>
+    ),
+  },
   {
     id: 'roulette',
     name: 'Ruleta',
@@ -372,7 +386,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
               Para jugar solo <small>con tu saldo de la semana</small>
             </h2>
             <ul className="hub-solo">
-              {SOLO.map(({ id, name, blurb, art, live }) => (
+              {SOLO.map(({ id, name, blurb, art, live, badge }) => (
                 <li key={id}>
                   <button type="button" className="hub-row" disabled={!connected} onClick={() => onPick(id)}>
                     <span className="hub-row__art" aria-hidden="true">
@@ -382,6 +396,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
                       <span className="hub-row__name">
                         {name}
                         {live && <em className="hub-pill">En vivo</em>}
+                        {badge && <em className="hub-pill">{badge}</em>}
                       </span>
                       <span className="hub-row__blurb">{blurb}</span>
                     </span>
@@ -461,7 +476,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | slots | plinko | join | score
+  // screen: lobby | roulette | crash | slots | plinko | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -522,6 +537,7 @@ function JuegosScreens() {
   if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
   if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
+  if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />
   return (

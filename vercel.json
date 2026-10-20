@@ -3,6 +3,9 @@
   "outputDirectory": "packages/web/dist",
   "installCommand": "npm install --legacy-peer-deps",
   "regions": ["dub1"],
+  "functions": {
+    "api/juegos.mjs": { "includeFiles": "api/_juegos/gacha-catalogo.json" }
+  },
   "rewrites": [
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ],
