@@ -96,10 +96,10 @@ export function rouletteLive(msg, balance, saved, _rand, ctx) {
     const placed = state.bets
     if (state.week === ctx.week) {
       const { number, lucky } = drawRound(ctx.secret, state.round)
-      const result = roulette.settle(placed, number, lucky, state.streak)
+      const result = roulette.settle(placed, number, lucky, state.streak, state.floor)
       const stake = roulette.totalOf(placed)
       delta += result.payout + result.bonus
-      state = { ...state, streak: result.streak, last: { round: state.round, number, stake, ...result } }
+      state = { ...state, streak: result.streak, floor: result.floor, last: { round: state.round, number, stake, ...result } }
     }
     state = { ...state, bets: [] }
     changed = true

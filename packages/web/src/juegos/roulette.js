@@ -79,8 +79,9 @@ export const validBets = (placed) =>
   placed.length <= MAX_CHIPS &&
   placed.every((bet) => typeof bet?.id === 'string' && BET_ID.test(bet.id) && CHIPS.includes(bet.amount))
 
-// Resultado de una tirada con el número n, los relámpago y la racha que traía el jugador.
-export function settle(placed, n, lucky, streak) {
+// Resultado de una tirada con el número n, los relámpago, la racha que traía el jugador y `floor`, la ganancia más
+// pequeña de esa racha.
+export function settle(placed, n, lucky, streak, floor) {
   const boost = lucky[n]
   let payout = 0
   let boosted = null
@@ -96,8 +97,12 @@ export function settle(placed, n, lucky, streak) {
   // poco y casi siempre no da extra.
   const doubled = profit >= stake
   const nextStreak = doubled ? streak + 1 : 0
-  const bonus = doubled ? Math.round(profit * streakBonus(nextStreak)) : 0
-  return { payout, bonus, boosted, streak: nextStreak, net: profit + bonus }
+  // El extra se calcula sobre la ganancia más pequeña de la racha: si no, se podría hacer la racha con fichas de 5 y
+  // apostarlo todo al llegar al +15 % (con rojo/negro eso devuelve más de lo apostado). Sin `floor` (rachas guardadas
+  // antes de este cambio) cuenta la ganancia de esta tirada.
+  const nextFloor = doubled ? (streak > 0 && floor !== undefined ? Math.min(floor, profit) : profit) : 0
+  const bonus = doubled ? Math.round(nextFloor * streakBonus(nextStreak)) : 0
+  return { payout, bonus, boosted, streak: nextStreak, floor: nextFloor, net: profit + bonus }
 }
 
 export const totalOf = (placed) => placed.reduce((sum, bet) => sum + bet.amount, 0)

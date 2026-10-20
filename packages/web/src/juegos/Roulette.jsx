@@ -454,9 +454,15 @@ function Roulette({ onExit, juegos }) {
   }, [live])
 
   // Las fichas se confirman con el servidor poco después de ponerlas (y al momento si se acaba el tiempo).
+  // De una en una: dos peticiones a la vez pueden llegar al servidor en otro orden y dejar guardada la lista vieja.
   const dirty = placed !== confirmed
   useEffect(() => {
-    if (!dirty || phase !== 'betting' || state.round !== round) return
+    if (!dirty || sending || state.round !== round) return
+    // Lo que no llegó a enviarse antes del «no va más» no juega: la mesa vuelve a lo confirmado.
+    if (phase !== 'betting') {
+      dispatch({ type: 'REJECTED', round })
+      return
+    }
     const bets = placed
     const wait = Math.max(0, Math.min(SEND_MS, BETS_MS - offset - 150))
     const timer = setTimeout(async () => {
@@ -469,7 +475,7 @@ function Roulette({ onExit, juegos }) {
     return () => clearTimeout(timer)
     // offset cambia cuatro veces por segundo: solo se vuelve a programar si cambian las fichas o la ronda.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, placed, phase, round, state.round, ask])
+  }, [dirty, sending, placed, phase, round, state.round, ask])
 
   // Lo que se puede apostar todavía: el saldo del servidor (ya sin lo confirmado) menos lo pendiente de confirmar.
   const available = Math.max(0, balance - unconfirmed(state))
@@ -607,7 +613,9 @@ function Roulette({ onExit, juegos }) {
                 ficha a pleno en cada número: Vecinos del cero (17), Tercio (12), Huérfanos (8) y Juego cero (7).
               </p>
               <p>En cada tirada caen de 1 a 3 números relámpago: si aciertas uno a pleno, paga entre 50 y 150 a 1.</p>
-              <p>Cada victoria seguida en la que al menos duplicas lo apostado suma un 5% extra a la siguiente, hasta un 15%.</p>
+              <p>Cada victoria seguida en la que al menos duplicas lo apostado suma un 5% extra a la siguiente, hasta un 15%. El
+                extra se calcula sobre la ganancia más pequeña de la racha.
+              </p>
               <p>Juegas con tu saldo de la semana: lo que ganes o pierdas cuenta en el Score.</p>
               <h3>Pagos</h3>
               <p>
