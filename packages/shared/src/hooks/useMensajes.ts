@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import type { RealtimeChannel } from '@supabase/supabase-js'
 import { getSupabase } from '../lib/supabase'
+import { onBroadcast, sendBroadcast } from '../lib/realtime'
 import { Mensaje, MensajePrivado } from '../lib/types'
 
 // ── Public chat messages ──────────────────────────────────────────────────────
@@ -25,7 +25,6 @@ export function usePublicMensajes(canal: string = 'general'): UsePublicMensajesR
   const [typingUsers, setTypingUsers] = useState<string[]>([])
 
   const mountedRef = useRef(true)
-  const channelRef = useRef<RealtimeChannel | null>(null)
   const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   useEffect(() => {
@@ -75,29 +74,17 @@ export function usePublicMensajes(canal: string = 'general'): UsePublicMensajesR
 
     cargar()
 
-    // Limpiar canal anterior antes de suscribirse al nuevo
-    if (channelRef.current) supabase.removeChannel(channelRef.current)
-
-    const realtimeChannel = supabase
-      .channel(`public-chat-${canal}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `canal=eq.${canal}` },
-        payload => {
-          if (!mountedRef.current) return
-          setMensajes(prev => [...prev, payload.new as Mensaje])
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'mensajes', filter: `canal=eq.${canal}` },
-        payload => {
-          if (!mountedRef.current) return
-          const updated = payload.new as Mensaje
-          setMensajes(prev => prev.map(m => m.id === updated.id ? updated : m))
-        },
-      )
-      .on('broadcast', { event: `typing-${canal}` }, ({ payload }) => {
+    const topic = `chat:${canal}`
+    const dejar = [
+      onBroadcast(topic, 'INSERT', (nuevo: Mensaje) => {
+        if (!mountedRef.current) return
+        setMensajes(prev => prev.some(m => m.id === nuevo.id) ? prev : [...prev, nuevo])
+      }),
+      onBroadcast(topic, 'UPDATE', (updated: Mensaje) => {
+        if (!mountedRef.current) return
+        setMensajes(prev => prev.map(m => m.id === updated.id ? updated : m))
+      }),
+      onBroadcast(topic, 'typing', payload => {
         if (!mountedRef.current) return
         const nombre = payload?.nombre as string
         if (!nombre) return
@@ -107,16 +94,14 @@ export function usePublicMensajes(canal: string = 'general'): UsePublicMensajesR
           setTypingUsers(prev => prev.filter(n => n !== nombre))
           delete typingTimers.current[nombre]
         }, 3000)
-      })
-      .subscribe()
-
-    channelRef.current = realtimeChannel
+      }),
+    ]
 
     return () => {
       mountedRef.current = false
       controller.abort()
       Object.values(typingTimers.current).forEach(clearTimeout)
-      supabase.removeChannel(realtimeChannel)
+      dejar.forEach(fn => fn())
     }
   }, [canal])
 
@@ -164,7 +149,7 @@ export function usePublicMensajes(canal: string = 'general'): UsePublicMensajesR
   }, [])
 
   const emitirTyping = useCallback((nombre: string) => {
-    channelRef.current?.send({ type: 'broadcast', event: `typing-${canal}`, payload: { nombre } })
+    sendBroadcast(`chat:${canal}`, 'typing', { nombre })
   }, [canal])
 
   return { mensajes, avatares, loading, error, typingUsers, enviar, editarMensaje, eliminarMensaje, emitirTyping }
@@ -227,31 +212,17 @@ export function usePrivateMensajes({ meId, peerId }: UsePrivateMensajesOptions):
 
     cargar()
 
-    const channelName = `private-${[meId, peerId].sort().join('-')}`
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'mensajes_privados',
-          filter: `para_id=eq.${meId}`,
-        },
-        payload => {
-          if (!mountedRef.current) return
-          const msg = payload.new as MensajePrivado
-          if (msg.de_id === peerId) {
-            setMensajes(prev => [...prev, msg])
-          }
-        },
-      )
-      .subscribe()
+    const dejar = onBroadcast(`dm:${meId}`, 'INSERT', (msg: MensajePrivado) => {
+      if (!mountedRef.current) return
+      if (msg.de_id === peerId) {
+        setMensajes(prev => [...prev, msg])
+      }
+    })
 
     return () => {
       mountedRef.current = false
       controller.abort()
-      supabase.removeChannel(channel)
+      dejar()
     }
   }, [meId, peerId])
 

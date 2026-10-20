@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Megaphone, CheckCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Anuncio } from '@topcode/shared'
+import { Anuncio, onBroadcast } from '@topcode/shared'
 
 // Clave localStorage: topcode-anuncio-leido-{userId}-{anuncioId}
 // Así cada usuario tiene su propio estado de lectura por anuncio.
@@ -42,14 +42,7 @@ export default function AnuncioModal() {
     cargar()
 
     // Escuchar nuevos anuncios en tiempo real
-    const channel = supabase
-      .channel('anuncios-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'anuncios' }, () => {
-        cargar()
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return onBroadcast('anuncios', 'cambio', () => { cargar() })
   }, [usuario])
 
   function handleLeer() {

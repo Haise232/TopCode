@@ -1,5 +1,6 @@
 // Supabase singleton
 export { initSupabase, getSupabase, actualizarPromedio } from './lib/supabase'
+export { onBroadcast, sendBroadcast } from './lib/realtime'
 
 // Types
 export type {

@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ClipboardCheck, X } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
 import { useBellSound } from '../hooks/useBellSound'
-import { type EventoCalendario } from '@topcode/shared'
+import { onBroadcast, type EventoCalendario } from '@topcode/shared'
 
 const RUTA_ACTIVIDADES = '/calendar?vista=actividades'
 
@@ -46,32 +45,20 @@ export default function ActivityToast() {
   useEffect(() => {
     if (!miId) return
 
-    const channel = supabase
-      .channel('activity-toast')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'eventos' },
-        payload => {
-          const item = payload.new as EventoCalendario
-          if (item.tipo !== 'actividad' && item.tipo !== 'trabajo') return
-          if (item.clase && miClase && item.clase !== miClase) return
+    return onBroadcast('eventos', 'INSERT', (item: EventoCalendario) => {
+      if (item.tipo !== 'actividad' && item.tipo !== 'trabajo') return
+      if (item.clase && miClase && item.clase !== miClase) return
 
-          notify('Nueva actividad en TopCode', {
-            body: `${item.titulo}`,
-            icon: '/favicon.png',
-            tag: `act-${item.id}`,
-            onClick: () => navigate(RUTA_ACTIVIDADES),
-          })
+      notify('Nueva actividad en TopCode', {
+        body: `${item.titulo}`,
+        icon: '/favicon.png',
+        tag: `act-${item.id}`,
+        onClick: () => navigate(RUTA_ACTIVIDADES),
+      })
 
-          if (pathnameRef.current.startsWith('/calendar') && window.location.search.includes('vista=actividades')) return
-          show(item)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+      if (pathnameRef.current.startsWith('/calendar') && window.location.search.includes('vista=actividades')) return
+      show(item)
+    })
   }, [miId, miClase, show, notify, navigate])
 
   useEffect(() => {

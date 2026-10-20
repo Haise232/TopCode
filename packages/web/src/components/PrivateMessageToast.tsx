@@ -1,10 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { MessageCircle, X } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
-import { MensajePrivado } from '@topcode/shared'
+import { MensajePrivado, onBroadcast } from '@topcode/shared'
 
 function getHue(nombre: string) {
   return nombre.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
@@ -52,38 +51,26 @@ export default function PrivateMessageToast() {
 
     const uid = usuario.id
 
-    const channel = supabase
-      .channel(`private-msg-toast-${uid}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'mensajes_privados', filter: `para_id=eq.${uid}` },
-        payload => {
-          const msg = payload.new as MensajePrivado
-          // No notificar mensajes propios (por si acaso)
-          if (msg.de_id === uid) return
+    return onBroadcast(`dm:${uid}`, 'INSERT', (msg: MensajePrivado) => {
+      // No notificar mensajes propios (por si acaso)
+      if (msg.de_id === uid) return
 
-          const preview = msg.texto.length > 60 ? msg.texto.slice(0, 60) + '…' : msg.texto
+      const preview = msg.texto.length > 60 ? msg.texto.slice(0, 60) + '…' : msg.texto
 
-          // Notificación del navegador cuando la pestaña no está visible
-          notify(`💬 ${msg.de_nombre}`, {
-            body: preview,
-            icon: '/favicon.png',
-            tag: `pm-${msg.de_id}`,
-            onClick: () => navigate('/chat'),
-          })
+      // Notificación del navegador cuando la pestaña no está visible
+      notify(`💬 ${msg.de_nombre}`, {
+        body: preview,
+        icon: '/favicon.png',
+        tag: `pm-${msg.de_id}`,
+        onClick: () => navigate('/chat'),
+      })
 
-          // Toast en app solo si no está en /chat
-          if (pathnameRef.current.startsWith('/chat')) return
-          show(msg)
-          // Guardar último remitente para deep-link desde el nav
-          try { sessionStorage.setItem('lastDmSender', JSON.stringify({ id: msg.de_id, nombre: msg.de_nombre })) } catch { /* ignore */ }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+      // Toast en app solo si no está en /chat
+      if (pathnameRef.current.startsWith('/chat')) return
+      show(msg)
+      // Guardar último remitente para deep-link desde el nav
+      try { sessionStorage.setItem('lastDmSender', JSON.stringify({ id: msg.de_id, nombre: msg.de_nombre })) } catch { /* ignore */ }
+    })
   }, [usuario?.id, show, notify, navigate])
 
   // Limpiar timer al desmontar
