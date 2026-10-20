@@ -23,6 +23,7 @@ import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
 import WinToast from './WinToast.jsx'
 import Help from './Help.jsx'
+import { createScene } from './crashScene.js'
 import './Roulette.css'
 import './Crash.css'
 
@@ -34,84 +35,55 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 // Color de cada explosión en el historial: el color nunca va solo, también va el número.
 const toneOf = (mult) => (mult < 200 ? 'low' : mult < 1000 ? 'mid' : 'high')
 
-// Curva del vuelo dibujada con el reloj del servidor: todos ven el mismo cohete a la vez.
-// boom: multiplicador donde explotó esta ronda (null si sigue volando o aún no se sabe).
-function Sky({ clock, round, boom }) {
-  const path = useRef(null)
-  const area = useRef(null)
-  const rocket = useRef(null)
-  const label = useRef(null)
+// El vuelo dibujado con el reloj del servidor (crashScene.js): todos ven el mismo cohete a la vez.
+// boom: dónde explotó esta ronda (null si sigue volando) · auto: tu retiro automático · cashed: donde retiraste
+// flags: quién más retiró (tras la explosión) · sub: línea bajo el multiplicador (lo que cobrarías, por ejemplo).
+function Sky({ clock, round, boom, auto, cashed, flags, sub, won }) {
+  const canvas = useRef(null)
   const box = useRef(null)
-  const props = useRef({ round, boom })
-  props.current = { round, boom }
+  const label = useRef(null)
+  const bar = useRef(null)
+  const props = useRef(null)
+  props.current = { round, boom, auto, cashed, flags }
 
   useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const scene = createScene(canvas.current, { reduced })
+    const observer = new ResizeObserver(() => scene.resize())
+    observer.observe(canvas.current)
     let frame
-    const W = 300
-    const H = 180
+    let text = ''
     const draw = () => {
       const t = clock()
-      const { round, boom } = props.current
-      const flown = t - (round * ROUND_MS + BETS_MS)
-      // Con la explosión conocida, la curva se queda donde explotó.
-      const end = boom !== null ? Math.min(flown, msFor(boom)) : Math.min(flown, FLIGHT_MS)
-      const mult = boom !== null && flown >= msFor(boom) ? boom : multiplierAt(end)
-      const state = flown < 0 ? 'waiting' : boom !== null && flown >= msFor(boom) ? 'boom' : 'flying'
-      box.current.dataset.state = state
-      if (state === 'waiting') {
-        const left = Math.ceil(-flown / 1000)
-        label.current.textContent = `Despega en ${left} s`
-        path.current.setAttribute('d', '')
-        area.current.setAttribute('d', '')
-        rocket.current.setAttribute('transform', `translate(14 ${H - 14}) rotate(-45)`)
-      } else {
-        // Escalas que crecen con el vuelo: al principio se ve cerca y luego se aleja.
-        const xMax = Math.max(8000, end * 1.15)
-        const yMax = Math.max(2, (mult / 100) * 1.25)
-        const x = (ms) => 14 + (ms / xMax) * (W - 28)
-        const y = (m) => H - 14 - ((m - 1) / (yMax - 1)) * (H - 28)
-        const steps = 40
-        let d = ''
-        for (let i = 0; i <= steps; i++) {
-          const ms = (end * i) / steps
-          d += `${i ? 'L' : 'M'}${x(ms).toFixed(1)} ${y(multiplierAt(ms) / 100).toFixed(1)}`
-        }
-        path.current.setAttribute('d', d)
-        area.current.setAttribute('d', `${d}L${x(end).toFixed(1)} ${H - 14}L14 ${H - 14}Z`)
-        const tipX = x(end)
-        const tipY = y(mult / 100)
-        const before = Math.max(0, end - 300)
-        const angle = (Math.atan2(y(multiplierAt(before) / 100) - tipY, tipX - x(before)) * 180) / Math.PI
-        rocket.current.setAttribute('transform', `translate(${tipX.toFixed(1)} ${tipY.toFixed(1)}) rotate(${(-angle).toFixed(1)})`)
-        label.current.textContent = state === 'boom' ? `¡Boom! ${fmtMult(mult)}` : fmtMult(mult)
+      const { state, mult, flown } = scene.draw({ t, ...props.current })
+      const next = state === 'waiting' ? `${Math.ceil(-flown / 1000)}` : fmtMult(mult)
+      if (next !== text) {
+        text = next
+        label.current.textContent = next
       }
+      if (box.current.dataset.state !== state) box.current.dataset.state = state
+      bar.current.style.setProperty('--left', state === 'waiting' ? Math.max(0, -flown / BETS_MS) : 0)
       frame = requestAnimationFrame(draw)
     }
     draw()
-    return () => cancelAnimationFrame(frame)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [clock])
 
   return (
     <div className="sky" ref={box} data-state="waiting">
-      <svg viewBox="0 0 300 180" aria-hidden="true" preserveAspectRatio="none">
-        <path ref={area} className="sky__area" />
-        <path ref={path} className="sky__line" />
-        <g ref={rocket} className="sky__rocket">
-          <g className="sky__ship">
-            <path d="M-12 -4 L6 -4 Q14 0 6 4 L-12 4 Z" className="sky__body" />
-            <path d="M-12 -4 L-17 -9 L-9 -4 Z M-12 4 L-17 9 L-9 4 Z" className="sky__fin" />
-            <circle cx="1" cy="0" r="2" className="sky__window" />
-            <path d="M-12 -2.5 L-22 0 L-12 2.5 Z" className="sky__flame" />
-          </g>
-          <g className="sky__blast">
-            {Array.from({ length: 8 }, (_, i) => (
-              <line key={i} x1="0" y1="0" x2="16" y2="0" transform={`rotate(${i * 45})`} />
-            ))}
-            <circle r="9" />
-          </g>
-        </g>
-      </svg>
-      <p className="sky__mult" ref={label} />
+      <canvas ref={canvas} aria-hidden="true" />
+      <div className="sky__readout">
+        <span className="sky__kicker" aria-hidden="true">
+          <span className="sky__when-waiting">Despega en</span>
+          <span className="sky__when-boom">Explotó en</span>
+        </span>
+        <span className="sky__mult" ref={label} />
+        {sub && <span className={`sky__sub ${won ? 'sky__sub--win' : ''}`}>{sub}</span>}
+      </div>
+      <span className="sky__fuse" ref={bar} aria-hidden="true" />
     </div>
   )
 }
@@ -301,6 +273,20 @@ function Crash({ onExit, juegos }) {
     [winners],
   )
 
+  // Banderas de quién retiró en esta ronda (llegan poco después de la explosión).
+  const flags = useMemo(
+    () => (winners.round === round ? winners.list.filter((w) => !w.me && w.mult).map((w) => ({ name: w.name, mult: w.mult })) : []),
+    [winners, round],
+  )
+  let sub = ''
+  if (ready && phase !== 'betting') {
+    if (mine && mine.net > 0) sub = `Retiraste: +${eur(mine.net)}`
+    else if (mine && exploded) sub = `Perdiste ${eur(-mine.net)}`
+    else if (autoHit) sub = `Retiro automático: ${eur(payout(inPlay, live.auto))}`
+    else if (inPlay > 0 && !exploded) sub = `Cobrarías ${eur(payout(inPlay, now))}`
+    else if (exploded && inPlay > 0) sub = `Perdiste ${eur(inPlay)}`
+  } else if (ready && stake > 0) sub = `Tu apuesta: ${eur(stake)}`
+
   let call = 'Conectando…'
   let detail = ''
   if (ready) {
@@ -380,7 +366,16 @@ function Crash({ onExit, juegos }) {
 
       <div className="floor fill">
         <section className="side crash__side">
-          <Sky clock={clock} round={round} boom={boom} />
+          <Sky
+            clock={clock}
+            round={round}
+            boom={boom}
+            auto={inPlay > 0 ? live.auto : mine?.auto ? mine.mult : null}
+            cashed={mine && mine.net > 0 ? mine.mult : null}
+            flags={flags}
+            sub={sub}
+            won={Boolean(won || autoHit)}
+          />
           <div className="recent crash__recent">
             <h2>Últimas explosiones</h2>
             {shownCrashes.length === 0 ? (
@@ -408,14 +403,24 @@ function Crash({ onExit, juegos }) {
           </div>
 
           <div className="crash__panel">
-            <button type="button" className="cashout" disabled={!canCashout} onClick={cashout}>
-              {inPlay > 0 && !exploded && phase !== 'betting' ? (
+            <button
+              type="button"
+              className={`cashout ${canCashout ? 'cashout--live' : autoHit || won ? 'cashout--done' : mine ? 'cashout--lost' : ''}`}
+              disabled={!canCashout}
+              onClick={cashout}
+            >
+              {autoHit ? (
+                <>
+                  <span>Retirado a {fmtMult(live.auto)}</span>
+                  <small>{eur(payout(inPlay, live.auto))}</small>
+                </>
+              ) : inPlay > 0 && !exploded && phase !== 'betting' ? (
                 <>
                   <span>Retirar</span>
                   <small>{eur(payout(inPlay, autoHit ? live.auto : now))}</small>
                 </>
               ) : (
-                <span>{mine && mine.net > 0 ? `Retirado a ${fmtMult(mine.mult)}` : 'Retirar'}</span>
+                <span>{mine ? (mine.net > 0 ? `Retirado a ${fmtMult(mine.mult)}` : 'Explotó') : phase === 'betting' ? 'Retirar en vuelo' : 'Retirar'}</span>
               )}
             </button>
 
@@ -486,7 +491,8 @@ function Crash({ onExit, juegos }) {
         </section>
       </div>
 
-      {won && (
+      {/* La celebración espera a la explosión: si retiras pronto, sigues viendo el vuelo de los demás. */}
+      {won && exploded && (
         <WinBurst
           key={round}
           amount={mine.net}
