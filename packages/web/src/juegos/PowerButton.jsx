@@ -25,6 +25,7 @@ function PowerButton({ request, game, send, state, mine, hit }) {
   const dialog = useRef(null)
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [confirm, setConfirm] = useState(null)
   const [toast, setToast] = useState(null)
   const table = TABLES.has(game)
 
@@ -103,8 +104,8 @@ function PowerButton({ request, game, send, state, mine, hit }) {
           </header>
           <p className="pw-note">
             {table
-              ? 'Cada carta de tu biblioteca tiene un poder para esta mesa. Se usan durante una mano, una vez al día por carta, y la mesa verá un aviso en el chat.'
-              : 'Cada carta de tu biblioteca tiene un poder para este juego: un seguro si pierdes o un premio si ganas. Una vez al día por carta; uno activo a la vez.'}
+              ? 'Cada carta de tu biblioteca tiene un poder para esta mesa, que dura una mano. Usarlo gasta la carta: sale de tu biblioteca y vuelve a quedar libre. La mesa verá un aviso en el chat.'
+              : 'Cada carta de tu biblioteca tiene un poder para este juego: un seguro si pierdes o un premio si ganas. Usarlo gasta la carta: sale de tu biblioteca y vuelve a quedar libre. Uno activo a la vez.'}
           </p>
           {!table && active && (
             <p className="pw-active">
@@ -126,9 +127,14 @@ function PowerButton({ request, game, send, state, mine, hit }) {
                     type="button"
                     className="hub-btn hub-btn--primary"
                     disabled={busy || !canPlay || Boolean(active) || waiting}
-                    onClick={() => use(p.card.id)}
+                    onBlur={() => setConfirm(null)}
+                    onClick={() => {
+                      if (confirm !== p.card.id) return setConfirm(p.card.id)
+                      setConfirm(null)
+                      use(p.card.id)
+                    }}
                   >
-                    {waiting ? `En ${wait(p.readyAt - now)}` : table ? 'Usar' : 'Activar'}
+                    {waiting ? `En ${wait(p.readyAt - now)}` : confirm === p.card.id ? '¿Gastar la carta?' : table ? 'Usar' : 'Activar'}
                   </button>
                 </li>
               )

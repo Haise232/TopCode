@@ -765,13 +765,15 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           await gacha.refundPower(user.id, spent.card.id, msg.game, spent.before)
           return tableReply(outcome, account.mesa)
         }
+        // La carta se gasta: vuelve a quedar libre.
+        await gacha.consumePower(user.id, spent.card.id, now())
         // Aviso en el chat de la mesa, para que nadie juegue engañado.
         await db.query(`insert into public.juegos_chat (mesa, usuario_id, nombre, avatar, texto) values ($1, $2, $3, $4, $5)`, [
           account.mesa,
           user.id,
           user.name,
           user.avatar,
-          `✦ Usa «${name}» con ${spent.card.name}: ${text} en esta mano.`.slice(0, 200),
+          `✦ Gasta a ${spent.card.name} en «${name}»: ${text} en esta mano.`.slice(0, 200),
         ])
         await ping(`juegos-mesa-${account.mesa}`, 'chat')
         return tableReply(outcome, account.mesa)

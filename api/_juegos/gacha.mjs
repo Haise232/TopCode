@@ -6,10 +6,10 @@
 // Todo se paga y se cobra con el saldo de la semana (cuenta en el Score): las tiradas, recargar el reclamo
 // (CLAIM_RESET_COST, para coger otra carta de la mesa ya) y vender una carta tuya (SELL_RATE € por punto de valor; la
 // carta queda libre otra vez).
-// Cada carta tiene además un poder para cada juego (powersOf), más fuerte cuanto más rara es, y cada uno se puede usar
-// una vez cada POWER_COOLDOWN_MS: ver cartas en el póker o el blackjack (lo aplica game.mjs en la mesa, que ve un aviso
-// en el chat) o un seguro o un premio para las próximas jugadas de un juego en solitario (juegos_gacha_efectos, que
-// aplica applyEffect al liquidar cada jugada).
+// Cada carta tiene además un poder para cada juego (powersOf), más fuerte cuanto más rara es: ver cartas en el póker o
+// el blackjack (lo aplica game.mjs en la mesa, que ve un aviso en el chat) o un seguro o un premio para las próximas
+// jugadas de un juego en solitario (juegos_gacha_efectos, que aplica applyEffect al liquidar cada jugada). Usar un poder
+// gasta la carta: deja de ser tuya y vuelve a poder salir para cualquiera (consumePower).
 // Las cartas vienen de gacha-catalogo.json (lo genera scripts/gacha/importar.mjs).
 import { randomInt } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -437,6 +437,7 @@ export function createGacha({ db, ping, now, charge }) {
       await refundPower(user.id, spent.card.id, msg.game, spent.before)
       return { error: 'POWER_ACTIVE' }
     }
+    await consumePower(user.id, spent.card.id, t)
     return { result: { activated: power.name, game: msg.game } }
   }
 
@@ -460,6 +461,16 @@ export function createGacha({ db, ping, now, charge }) {
       ])
       return { card, power, before }
     })
+  }
+
+  // Usar el poder gasta la carta: sale de tu biblioteca y queda libre para que le toque a otro.
+  async function consumePower(userId, cardId, t) {
+    const gone = await db.tx(async (q) => {
+      const { rows } = await q(`delete from public.juegos_gacha_cartas where carta = $1 and usuario_id = $2 returning carta`, [cardId, userId])
+      if (rows.length) await log(q, 'usada', userId, cardId, false, t)
+      return rows.length > 0
+    })
+    if (gone) await ping('juegos-gacha', 'tirada')
   }
 
   async function refundPower(userId, cardId, game, before) {
@@ -499,7 +510,7 @@ export function createGacha({ db, ping, now, charge }) {
     return reply
   }
 
-  return { handle, spendPower, refundPower }
+  return { handle, spendPower, refundPower, consumePower }
 }
 
 // Al liquidarse una jugada de un juego en solitario (dentro de su transacción): si hay un seguro o un premio activo

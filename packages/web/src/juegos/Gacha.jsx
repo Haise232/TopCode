@@ -44,6 +44,7 @@ function Move({ move, t, onOpen }) {
     )
   }
   if (move.type === 'tirada') text = <>{who} la sacó</>
+  if (move.type === 'usada') text = <>{who} {move.by?.me ? 'gastaste' : 'gastó'} su poder: vuelve a estar libre</>
   return (
     <li className={`gacha-roll gacha-move--${move.type} ${move.by?.me ? 'is-mine' : ''}`}>
       <GachaCard card={move.card} mini />
@@ -378,7 +379,8 @@ function Rules({ prices }) {
       </p>
       <p>
         <b>Cada carta tiene un poder para cada juego</b> (míralos en «✦ Poderes en 6 juegos» de la carta), y cuanto más rara,
-        más fuerte. Cada uno se usa una vez al día con el botón «✦ Poderes» de su juego:
+        más fuerte. Se usan con el botón «✦ Poderes» de cada juego y <b>son de un solo uso</b>: al usar el poder de una carta,
+        la gastas, sale de tu biblioteca y vuelve a quedar libre para que le toque a otro.
       </p>
       <ul className="gacha-powers">
         <li>
