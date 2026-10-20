@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import GachaCard from './GachaCard.jsx'
+import GachaPowers from './GachaPowers.jsx'
 import Help from './Help.jsx'
 import { eur } from './money.js'
-import { ODDS, RARITIES, RARITY, useGacha, useServerNow, wait } from './gacha.js'
+import { playCard, playSpin, playWin, playZap } from './sound.js'
+import { ODDS, RARITIES, RARITY, pct, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
 // Gacha de políticos españoles al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el
 // mundo, el primero que reclama se queda la carta, vender cartas por saldo de la semana y ver la colección de cualquiera.
 
 // Probabilidad de una carta concreta: «0,48 %», «0,0029 %».
-const pct = (n) => `${n.toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`
 
 // Barra que se vacía mientras quedan segundos para reclamar.
 function Countdown({ until, t, total }) {
@@ -93,6 +94,56 @@ function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim, onOpen }) {
 }
 
 // La carta que acabas de sacar, en grande, con la entrada según su rareza.
+const CHARGE_MS = 1300
+const BURST_MS = 650
+const SPARKS = 28
+
+// La invocación: la carta llega boca abajo y se carga de energía, estalla con el color de su rareza y se da la vuelta.
+// Las épicas y legendarias traen rayos y chispas; las legendarias, además, un destello dorado y un temblor.
+// stage: charge (esperando al servidor) | burst | show.
+function Summon({ summon, onClose }) {
+  const { stage, result } = summon
+  const rarity = result?.card.rarity ?? 'comun'
+  const big = rarity === 'mitica' || rarity === 'epica'
+  return (
+    <div
+      className={`gacha-summon is-${stage} gacha-summon--${stage === 'charge' ? 'unknown' : rarity}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tirada del gacha"
+      onClick={() => stage === 'show' && onClose()}
+    >
+      <span className="gacha-summon__rays" aria-hidden="true" />
+      <span className="gacha-summon__flash" aria-hidden="true" />
+      {big && stage !== 'charge' && (
+        <span className="gacha-summon__sparks" aria-hidden="true">
+          {Array.from({ length: SPARKS }, (_, i) => (
+            <i key={i} style={{ '--a': `${(360 / SPARKS) * i}deg`, '--d': `${120 + ((i * 37) % 160)}px`, '--t': `${(i % 5) * 0.05}s` }} />
+          ))}
+        </span>
+      )}
+      <div className="gacha-summon__stage">
+        {stage === 'show' ? (
+          <>
+            <span className="gacha-summon__title">{rarity === 'mitica' ? '¡LEGENDARIA!' : RARITY[rarity]}</span>
+            <div className="gacha-summon__card">
+              <GachaCard card={result.card} big />
+            </div>
+            <p className="gacha-summon__name">{result.card.name}</p>
+            <button type="button" className="hub-btn hub-btn--primary" onClick={onClose} autoFocus>
+              {result.claimed ? '¡A mi biblioteca!' : result.owned ? 'Vaya, ya tiene dueño' : '¡A reclamarla!'}
+            </button>
+          </>
+        ) : (
+          <div className="gacha-summon__card">
+            <span className="gacha-summon__back" />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
   let text = 'Se te escapó.'
   if (roll?.claimed) text = roll.claimed.id === meId ? (last.claimed ? '¡Directa a tu biblioteca!' : '¡Es tuya!') : `Te la ha quitado ${roll.claimed.name}.`
@@ -113,6 +164,7 @@ function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
         )}
         {open && !claimReady && <small>Tu reclamo aún se está recargando; puedes recargarlo ya desde la tienda.</small>}
         <small>Se vende por {eur(last.card.price)}.</small>
+        <GachaPowers powers={last.card.powers} />
       </div>
     </div>
   )
@@ -178,6 +230,7 @@ function Library({ data, onSell, busy }) {
                 .map((card) => (
                   <li key={card.id}>
                     <GachaCard card={card} />
+                    <GachaPowers powers={card.powers} />
                     {user.me && (
                       <button
                         type="button"
@@ -234,21 +287,28 @@ function Collectors({ list, onOpen }) {
 // Todas las cartas que pueden salir: rareza, probabilidad de que te toque cada una, precio de venta y dueño.
 function CardTable({ list, onOpen }) {
   const [rarity, setRarity] = useState('todas')
+  const [owner, setOwner] = useState('todas')
   const [query, setQuery] = useState('')
   if (!list) return <p className="gacha-empty">Cargando…</p>
   const q = query.trim().toLowerCase()
-  const shown = list.filter((c) => (rarity === 'todas' || c.rarity === rarity) && (!q || `${c.name} ${c.series}`.toLowerCase().includes(q)))
-  const free = list.filter((c) => !c.owner).length
+  const byOwner = { todas: () => true, con: (c) => c.owner, libres: (c) => !c.owner, mias: (c) => c.owner?.me }
+  const shown = list.filter(
+    (c) =>
+      (rarity === 'todas' || c.rarity === rarity) &&
+      byOwner[owner](c) &&
+      (!q || `${c.name} ${c.series} ${c.owner?.name ?? ''}`.toLowerCase().includes(q)),
+  )
+  const taken = list.filter((c) => c.owner).length
   return (
     <section className="gacha-cards" aria-labelledby="cards-title">
       <header className="gacha-cards__head">
         <h2 id="cards-title" className="hub-title">
-          Cartas <small>{`${list.length} políticos · ${free} sin dueño`}</small>
+          Cartas <small>{`${list.length} políticos · ${taken} con dueño · ${list.length - taken} libres`}</small>
         </h2>
         <div className="gacha-filters">
           <label className="gacha-select">
             <span>Buscar</span>
-            <input type="search" value={query} placeholder="Nombre o partido" onChange={(e) => setQuery(e.target.value)} />
+            <input type="search" value={query} placeholder="Nombre, partido o dueño" onChange={(e) => setQuery(e.target.value)} />
           </label>
           <label className="gacha-select">
             <span>Rareza</span>
@@ -261,36 +321,52 @@ function CardTable({ list, onOpen }) {
               ))}
             </select>
           </label>
+          <label className="gacha-select">
+            <span>Dueño</span>
+            <select value={owner} onChange={(e) => setOwner(e.target.value)}>
+              <option value="todas">Todas</option>
+              <option value="con">Con dueño</option>
+              <option value="libres">Libres</option>
+              <option value="mias">Mías</option>
+            </select>
+          </label>
         </div>
       </header>
       <div className="gacha-table-wrap">
         <table className="gacha-table">
           <thead>
             <tr>
-              <th scope="col">Carta</th>
+              <th scope="col">Carta y dueño</th>
               <th scope="col">Rareza</th>
               <th scope="col" className="is-num" title="Probabilidad de que te toque esta carta en una tirada normal">
-                Tirada
+                Prob. tirada
               </th>
               <th scope="col" className="is-num" title="Probabilidad de que te toque esta carta en una tirada premium">
-                Premium
+                Prob. premium
               </th>
               <th scope="col" className="is-num">
                 Venta
               </th>
-              <th scope="col">Poder</th>
-              <th scope="col">Dueño</th>
+              <th scope="col">Poderes</th>
             </tr>
           </thead>
           <tbody>
             {shown.map((c) => (
-              <tr key={c.id}>
+              <tr key={c.id} className={c.owner?.me ? 'is-mine' : ''}>
                 <td>
                   <span className="gacha-table__card">
                     <GachaCard card={c} mini />
                     <span>
                       <b>{c.name}</b>
                       {c.series && <small>{c.series}</small>}
+                      {c.owner ? (
+                        <span className="gacha-owner">
+                          <Avatar name={c.owner.name} src={c.owner.avatar} size={18} />
+                          {c.owner.me ? <b>Es tuya</b> : <>Es de <Who person={c.owner} onOpen={onOpen} /></>}
+                        </span>
+                      ) : (
+                        <span className="gacha-owner gacha-free">Libre: puede tocarle a cualquiera</span>
+                      )}
                     </span>
                   </span>
                 </td>
@@ -300,8 +376,9 @@ function CardTable({ list, onOpen }) {
                 <td className="is-num">{pct(c.normal)}</td>
                 <td className="is-num">{c.premium ? pct(c.premium) : '—'}</td>
                 <td className="is-num">{eur(c.price)}</td>
-                <td>{c.power ? <span title={c.power.text}>✦ {c.power.name}</span> : <span className="gacha-none">—</span>}</td>
-                <td>{c.owner ? <Who person={c.owner} onOpen={onOpen} /> : <span className="gacha-free">Libre</span>}</td>
+                <td>
+                  <GachaPowers powers={c.powers} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -328,21 +405,22 @@ function Rules({ prices }) {
         cuesta {eur(prices?.extraRoll ?? 1000)} y recargar el reclamo, {eur(prices?.claimReset ?? 5000)}.
       </p>
       <p>
-        <b>Cada carta tiene un poder</b> para uno de los juegos (míralo en la carta o en «Cartas»), y cuanto más rara, más
-        fuerte. Se usa una vez al día con el botón «✦ Poderes» de ese juego:
+        <b>Cada carta tiene un poder para cada juego</b> (míralos en «✦ Poderes en 6 juegos» de la carta), y cuanto más rara,
+        más fuerte. Cada uno se usa una vez al día con el botón «✦ Poderes» de su juego:
       </p>
       <ul className="gacha-powers">
         <li>
-          <b>Póker:</b> Rayos X (legendaria: ves las cartas de todos durante una mano), Chivatazo (épica: las de un rival) y
-          Vistazo (rara: una carta de un rival).
+          <b>Póker:</b> Vistazo (común: una carta de un rival), Doble vistazo (rara: una carta de dos rivales), Chivatazo
+          (épica: las cartas de un rival) y Rayos X (legendaria: las de todos), durante una mano.
         </li>
         <li>
-          <b>Blackjack:</b> Ojo del crupier (legendaria o épica: ves su carta tapada durante una mano).
+          <b>Blackjack:</b> Ojeada (común: la próxima carta del mazo), Mazo marcado (rara: siempre la próxima carta), Ojo del
+          crupier (épica: su carta tapada) y los dos últimos a la vez (legendaria), durante una mano.
         </li>
         <li>
           <b>Ruleta, cohete, tragamonedas y Plinko:</b> un <b>seguro</b> (si pierdes, te devuelven una parte) o un{' '}
-          <b>premio</b> (si ganas, cobras más): 25 % con una común, 50 % con una rara, 100 % con una épica y 100 % durante tres
-          jugadas con una legendaria.
+          <b>premio</b> (si ganas, cobras más) según la carta: 25 % con una común, 50 % con una rara, 100 % con una épica y
+          100 % durante tres jugadas con una legendaria.
         </li>
       </ul>
       <p>En las mesas, los demás ven un aviso en el chat cuando usas un poder.</p>
@@ -391,6 +469,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   const [tab, setTab] = useState(initialTab)
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
+  const [summon, setSummon] = useState(null)
   const t = useServerNow(offset)
   const balance = juegos.me?.balance ?? 0
   const meId = juegos.me?.id
@@ -403,8 +482,25 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   }
 
   async function roll(premium) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const started = Date.now()
+    if (!reduced) {
+      setSummon({ stage: 'charge' })
+      playSpin(CHARGE_MS)
+    }
     const body = await act('tirar', { premium })
-    if (body?.gacha?.result) setLast(body.gacha.result)
+    const result = body?.gacha?.result
+    if (!result) return setSummon(null)
+    setLast(result)
+    if (reduced) return setSummon({ stage: 'show', result })
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, CHARGE_MS - (Date.now() - started))))
+    setSummon({ stage: 'burst', result })
+    playZap()
+    await new Promise((resolve) => setTimeout(resolve, BURST_MS))
+    setSummon({ stage: 'show', result })
+    const rarity = result.card.rarity
+    if (rarity === 'mitica' || rarity === 'epica') playWin(rarity === 'mitica')
+    else playCard()
   }
 
   function openCollection(user) {
@@ -573,6 +669,8 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       )}
       {tab === 'colecciones' && <Collectors list={ranking} onOpen={openCollection} />}
       {tab === 'cartas' && <CardTable list={cards} onOpen={openCollection} />}
+
+      {summon && <Summon summon={summon} onClose={() => setSummon(null)} />}
 
       <footer className="gacha-foot">Fotos de Wikimedia Commons y datos de Wikipedia. Solo para TopCode, sin fines comerciales.</footer>
     </main>

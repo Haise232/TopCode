@@ -279,6 +279,10 @@ function Seat({ bubble, seat, index, count, mine, active, clock, phase, round, c
   )
 }
 
+const SUIT_SIGN = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
+// «7♥», «K♠»: la próxima carta del mazo que enseñan los poderes del gacha.
+const nextCardText = (card) => `${card.rank}${SUIT_SIGN[card.suit] ?? ''}`
+
 function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, pending }) {
   const { state, at } = room
   const mySeat = state.seats.findIndex((seat) => seat?.id === me?.id)
@@ -487,7 +491,13 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
       {state.peek && (
         <p className="pk-peek" role="status">
-          ✦ {state.peek.power} ({state.peek.card}): ves la carta tapada del crupier en esta mano.
+          ✦ {state.peek.power} ({state.peek.card}): {state.peek.text.replace(/^ve /, 'ves ').replace(' y ve ', ' y ves ')} en esta mano.
+          {state.nextCard && (
+            <>
+              {' '}
+              Próxima carta del mazo: <b>{nextCardText(state.nextCard)}</b>.
+            </>
+          )}
         </p>
       )}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">

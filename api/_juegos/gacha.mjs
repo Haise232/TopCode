@@ -5,10 +5,10 @@
 //   - tirada premium (PREMIUM_COST): siempre épica o mítica, nunca una carta con dueño y directa a tu colección;
 //   - tirada extra (EXTRA_ROLL_COST) y recargar el reclamo (CLAIM_RESET_COST);
 //   - vender una carta tuya te paga su precio (SELL_RATE € por punto de valor) y la deja libre otra vez.
-// Cada carta tiene además un poder (powerOf) para uno de los juegos, más fuerte cuanto más rara es, que su dueño puede
-// usar una vez cada POWER_COOLDOWN_MS: ver cartas en el póker o el blackjack (lo aplica game.mjs en la mesa, que ve un
-// aviso en el chat) o un seguro o un premio para las próximas jugadas de un juego en solitario (juegos_gacha_efectos,
-// que aplica applyEffect al liquidar cada jugada).
+// Cada carta tiene además un poder para cada juego (powersOf), más fuerte cuanto más rara es, y cada uno se puede usar
+// una vez cada POWER_COOLDOWN_MS: ver cartas en el póker o el blackjack (lo aplica game.mjs en la mesa, que ve un aviso
+// en el chat) o un seguro o un premio para las próximas jugadas de un juego en solitario (juegos_gacha_efectos, que
+// aplica applyEffect al liquidar cada jugada).
 // Las cartas vienen de gacha-catalogo.json (lo genera scripts/gacha/importar.mjs).
 import { randomInt } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -31,46 +31,57 @@ export const SELL_RATE = 20
 export const POWER_COOLDOWN_MS = 24 * HOUR
 // Lo más que puede añadir un premio en una jugada.
 export const BONUS_CAP = 10000
-// Poderes de mesa: game.mjs los aplica a la mano en curso.
+// Poderes de mesa según la rareza: game.mjs los aplica a la mano en curso.
 const TABLE_POWERS = {
-  rayos: { game: 'poker', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
-  chivatazo: { game: 'poker', name: 'Chivatazo', text: 'Ves las cartas de un rival al azar durante una mano de póker.' },
-  vistazo: { game: 'poker', name: 'Vistazo', text: 'Ves una carta de un rival al azar durante una mano de póker.' },
-  crupier: { game: 'blackjack', name: 'Ojo del crupier', text: 'Ves la carta tapada del crupier durante una mano de blackjack.' },
+  poker: {
+    comun: { kind: 'vistazo', name: 'Vistazo', text: 'Ves una carta de un rival al azar durante una mano de póker.' },
+    rara: { kind: 'doble', name: 'Doble vistazo', text: 'Ves una carta de dos rivales al azar durante una mano de póker.' },
+    epica: { kind: 'chivatazo', name: 'Chivatazo', text: 'Ves las cartas de un rival al azar durante una mano de póker.' },
+    mitica: { kind: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
+  },
+  blackjack: {
+    comun: { kind: 'ojeada', name: 'Ojeada', text: 'Ves cuál es la próxima carta del mazo al usarlo, en una mano de blackjack.' },
+    rara: { kind: 'mazo', name: 'Mazo marcado', text: 'Ves siempre la próxima carta del mazo durante una mano de blackjack.' },
+    epica: { kind: 'crupier', name: 'Ojo del crupier', text: 'Ves la carta tapada del crupier durante una mano de blackjack.' },
+    mitica: {
+      kind: 'todo',
+      name: 'Ojo del crupier y mazo marcado',
+      text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.',
+    },
+  },
 }
 // Seguros y premios de los juegos en solitario: cuánto y durante cuántas jugadas, según la rareza.
 const STRENGTH = { comun: { pct: 25, uses: 1 }, rara: { pct: 50, uses: 1 }, epica: { pct: 100, uses: 1 }, mitica: { pct: 100, uses: 3 } }
 const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', slots: 'las tragamonedas', plinko: 'el Plinko' }
 const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', slots: 'tragamonedas', plinko: 'Plinko' }
-// Qué poder toca a cada carta: las de cada rareza, por orden de popularidad, van recorriendo su lista.
-const POOLS = {
-  mitica: ['rayos', 'crupier', 'premio:roulette', 'seguro:crash', 'premio:slots', 'seguro:plinko', 'premio:crash', 'seguro:roulette'],
-  epica: ['chivatazo', 'crupier', 'seguro:roulette', 'premio:crash', 'seguro:slots', 'premio:plinko', 'premio:roulette', 'seguro:crash', 'premio:slots', 'seguro:plinko'],
-  rara: ['vistazo', 'seguro:roulette', 'premio:roulette', 'seguro:crash', 'premio:crash', 'seguro:slots', 'premio:slots', 'seguro:plinko', 'premio:plinko'],
-  comun: ['seguro:roulette', 'premio:roulette', 'seguro:crash', 'premio:crash', 'seguro:slots', 'premio:slots', 'seguro:plinko', 'premio:plinko'],
-}
-// Cartas con un poder elegido a mano (Santiago Abascal, legendaria con Rayos X).
-const POWER_OVERRIDES = { 'politica:Q11703587': 'rayos' }
+const SOLO_GAMES = Object.keys(SOLO_IN)
+export const POWER_GAMES = ['poker', 'blackjack', ...SOLO_GAMES]
 const euros = (n) => `${n.toLocaleString('es-ES')} €`
 
-function buildPower(key, rarity) {
-  if (TABLE_POWERS[key]) return { id: key, kind: key, ...TABLE_POWERS[key] }
-  const [kind, game] = key.split(':')
+function soloPower(kind, game, rarity) {
   const { pct, uses } = STRENGTH[rarity]
   const where = uses > 1 ? `tus próximas ${uses} jugadas en ${SOLO_IN[game]}` : `tu próxima jugada en ${SOLO_IN[game]}`
   const times = uses > 1 ? ` ×${uses}` : ''
+  const base = { id: `${kind}:${game}`, kind, game, pct, uses }
   if (kind === 'seguro') {
-    return { id: key, kind, game, pct, uses, name: `${pct === 100 ? 'Seguro total' : `Seguro del ${pct} %`}${times} · ${SOLO_TITLE[game]}`, text: `Si pierdes en ${where}, te devuelven el ${pct} % de lo perdido.` }
+    return { ...base, name: `${pct === 100 ? 'Seguro total' : `Seguro del ${pct} %`}${times}`, text: `Si pierdes en ${where}, te devuelven el ${pct} % de lo perdido.` }
   }
   return {
-    id: key,
-    kind,
-    game,
-    pct,
-    uses,
-    name: `${pct === 100 ? 'Premio doble' : `Premio +${pct} %`}${times} · ${SOLO_TITLE[game]}`,
+    ...base,
+    name: `${pct === 100 ? 'Premio doble' : `Premio +${pct} %`}${times}`,
     text: `Si ganas en ${where}, cobras un ${pct} % más de lo ganado (hasta ${euros(BONUS_CAP)} por jugada).`,
   }
+}
+
+// Los seis poderes de una carta: los de mesa, según su rareza; en cada juego en solitario, seguro o premio según los
+// bits de su posición dentro de su rareza, así que dos cartas de la misma rareza no tienen la misma combinación.
+function powersFor(rarity, index) {
+  const powers = {}
+  for (const game of ['poker', 'blackjack']) powers[game] = { id: TABLE_POWERS[game][rarity].kind, game, ...TABLE_POWERS[game][rarity] }
+  SOLO_GAMES.forEach((game, bit) => {
+    powers[game] = soloPower((index >> bit) & 1 ? 'premio' : 'seguro', game, rarity)
+  })
+  return powers
 }
 const RARITY_ORDER = { mitica: 0, epica: 1, rara: 2, comun: 3 }
 const FEED_SIZE = 30
@@ -114,14 +125,9 @@ for (const c of catalogo.cartas) {
   if (!byRarity.has(c.rarity)) byRarity.set(c.rarity, [])
   byRarity.get(c.rarity).push(c)
 }
-const powerOf = new Map()
+const powersOf = new Map()
 for (const [rarity, list] of byRarity) {
-  const pool = POOLS[rarity] ?? []
-  for (const c of list) if (POWER_OVERRIDES[c.id]) powerOf.set(c.id, buildPower(POWER_OVERRIDES[c.id], rarity))
-  ;[...list]
-    .filter((c) => !POWER_OVERRIDES[c.id])
-    .sort((a, b) => a.rank - b.rank)
-    .forEach((c, i) => pool.length && powerOf.set(c.id, buildPower(pool[i % pool.length], rarity)))
+  ;[...list].sort((a, b) => a.rank - b.rank).forEach((c, i) => powersOf.set(c.id, powersFor(rarity, i)))
 }
 
 // Probabilidad (en %) de que una tirada saque una carta concreta de esa rareza.
@@ -144,7 +150,9 @@ export function cardView(id) {
     value: c.value,
     price: c.value * SELL_RATE,
     rank: c.rank,
-    power: powerOf.get(c.id) ?? null,
+    powers: powersOf.get(c.id),
+    // Probabilidad (en %) de que te toque esta carta en una tirada normal y en una premium.
+    odds: { normal: chance('normal', c.rarity), premium: chance('premium', c.rarity) },
   }
 }
 
@@ -375,79 +383,99 @@ export function createGacha({ db, ping, now, charge }) {
   }
 
   // Todas las cartas que pueden salir, con su probabilidad en cada tipo de tirada y quién la tiene.
-  async function cardList() {
+  async function cardList(user) {
     const { rows } = await db.query(
-      `select c.carta, c.usuario_id, a.nombre from public.juegos_gacha_cartas c left join public.juegos_cuentas a on a.usuario_id = c.usuario_id`,
+      `select c.carta, c.usuario_id, a.nombre, a.avatar from public.juegos_gacha_cartas c left join public.juegos_cuentas a on a.usuario_id = c.usuario_id`,
     )
-    const owners = new Map(rows.map((r) => [r.carta, { id: r.usuario_id, name: r.nombre ?? '¿?' }]))
+    const owners = new Map(rows.map((r) => [r.carta, { id: r.usuario_id, name: r.nombre ?? '¿?', avatar: r.avatar ?? null, me: r.usuario_id === user.id }]))
     return catalogo.cartas
       .map((c) => ({ ...cardView(c.id), normal: chance('normal', c.rarity), premium: chance('premium', c.rarity), owner: owners.get(c.id) ?? null }))
       .sort((a, b) => b.value - a.value || a.rank - b.rank)
   }
 
-  // Tus cartas con poder, cuándo se puede volver a usar cada una (0: ya) y los efectos que tienes activos.
+  // Cada poder de tus cartas (uno por carta y juego), cuándo se puede volver a usar (0: ya) y tus efectos activos.
   async function powers(user, t) {
     const [owned, active] = await Promise.all([
-      db.query(`select carta, poder_usado from public.juegos_gacha_cartas where usuario_id = $1`, [user.id]),
+      db.query(`select carta, poderes_usados from public.juegos_gacha_cartas where usuario_id = $1`, [user.id]),
       db.query(`select juego, tipo, pct, usos, nombre from public.juegos_gacha_efectos where usuario_id = $1`, [user.id]),
     ])
-    const list = owned.rows
-      .map((r) => ({ card: cardView(r.carta), readyAt: r.poder_usado ? Math.max(0, ms(r.poder_usado) + POWER_COOLDOWN_MS) : 0 }))
-      .filter((p) => p.card?.power)
-      .map((p) => ({ ...p, readyAt: p.readyAt > t ? p.readyAt : 0 }))
-      .sort((a, b) => b.card.value - a.card.value)
+    const list = []
+    for (const row of owned.rows) {
+      const card = cardView(row.carta)
+      if (!card) continue
+      for (const game of POWER_GAMES) {
+        const used = Number(row.poderes_usados?.[game] ?? 0)
+        const readyAt = used ? used + POWER_COOLDOWN_MS : 0
+        list.push({ card, game, power: card.powers[game], readyAt: readyAt > t ? readyAt : 0 })
+      }
+    }
+    list.sort((a, b) => b.card.value - a.card.value)
     return { list, active: active.rows.map((r) => ({ game: r.juego, kind: r.tipo, pct: r.pct, uses: r.usos, name: r.nombre })) }
   }
 
-  // Activa el seguro o el premio de una carta para su juego en solitario (uno a la vez por juego).
+  // Activa el seguro o el premio de una carta en un juego en solitario (uno a la vez por juego).
   async function activate(user, msg, t) {
-    const card = cardView(msg.card)
-    if (!card?.power) return { error: card ? 'POWER_NONE' : 'BAD_MESSAGE' }
-    if (!SOLO_IN[card.power.game]) return { error: 'POWER_GAME' }
-    const spent = await spendPower(user.id, card.id, t)
+    if (!SOLO_IN[msg.game]) return { error: 'POWER_GAME' }
+    const spent = await spendPower(user.id, msg.card, msg.game, t)
     if (spent.error) return spent
-    const { power } = card
+    const { power } = spent
     const got = await db.query(
       `insert into public.juegos_gacha_efectos (usuario_id, juego, tipo, pct, usos, nombre, carta) values ($1, $2, $3, $4, $5, $6, $7)
        on conflict (usuario_id, juego) do nothing returning juego`,
-      [user.id, power.game, power.kind, power.pct, power.uses, power.name, card.id],
+      [user.id, msg.game, power.kind, power.pct, power.uses, `${power.name} · ${SOLO_TITLE[msg.game]}`, spent.card.id],
     )
     if (got.rows.length === 0) {
-      await refundPower(user.id, card.id, spent.before)
+      await refundPower(user.id, spent.card.id, msg.game, spent.before)
       return { error: 'POWER_ACTIVE' }
     }
-    return { result: { activated: power.name, game: power.game } }
+    return { result: { activated: power.name, game: msg.game } }
   }
 
-  // Gasta el poder de una carta tuya (game.mjs lo aplica después en la mesa). Devuelve { card, before } para poder
-  // devolverlo con refundPower si al final no se puede aplicar.
-  async function spendPower(userId, cardId, t) {
+  // Gasta el poder de una carta tuya en un juego (game.mjs lo aplica después en la mesa). Devuelve { card, power, before }
+  // para poder devolverlo con refundPower si al final no se puede aplicar.
+  async function spendPower(userId, cardId, game, t) {
     const card = cardView(cardId)
     if (!card) return { error: 'BAD_MESSAGE' }
-    if (!card.power) return { error: 'POWER_NONE' }
+    const power = card.powers[game]
+    if (!power) return { error: 'POWER_GAME' }
     return db.tx(async (q) => {
-      const row = (await q(`select poder_usado from public.juegos_gacha_cartas where carta = $1 and usuario_id = $2 for update`, [cardId, userId])).rows[0]
+      const row = (await q(`select poderes_usados from public.juegos_gacha_cartas where carta = $1 and usuario_id = $2 for update`, [cardId, userId])).rows[0]
       if (!row) return { error: 'GACHA_NOT_YOURS' }
-      if (row.poder_usado && ms(row.poder_usado) + POWER_COOLDOWN_MS > t) return { error: 'POWER_WAIT' }
-      await q(`update public.juegos_gacha_cartas set poder_usado = to_timestamp($3 / 1000.0) where carta = $1 and usuario_id = $2`, [cardId, userId, t])
-      return { card, before: row.poder_usado }
+      const before = row.poderes_usados?.[game] ?? null
+      if (before && Number(before) + POWER_COOLDOWN_MS > t) return { error: 'POWER_WAIT' }
+      await q(`update public.juegos_gacha_cartas set poderes_usados = poderes_usados || jsonb_build_object($3::text, $4::bigint) where carta = $1 and usuario_id = $2`, [
+        cardId,
+        userId,
+        game,
+        t,
+      ])
+      return { card, power, before }
     })
   }
 
-  async function refundPower(userId, cardId, before) {
-    await db.query(`update public.juegos_gacha_cartas set poder_usado = $3 where carta = $1 and usuario_id = $2`, [cardId, userId, before])
+  async function refundPower(userId, cardId, game, before) {
+    if (before === null) {
+      await db.query(`update public.juegos_gacha_cartas set poderes_usados = poderes_usados - $3::text where carta = $1 and usuario_id = $2`, [cardId, userId, game])
+    } else {
+      await db.query(`update public.juegos_gacha_cartas set poderes_usados = poderes_usados || jsonb_build_object($3::text, $4::bigint) where carta = $1 and usuario_id = $2`, [
+        cardId,
+        userId,
+        game,
+        before,
+      ])
+    }
   }
 
   const ACTIONS = { tirar: roll, reclamar: claim, vender: sell, tienda: shop, activar: activate }
 
   // msg.a: estado | tirar { premium } | reclamar { id } | vender { card } | tienda { item } | coleccion { user } | ranking
-  //        | cartas | poderes | activar { card }
+  //        | cartas | poderes | activar { card, game }
   async function handle(user, msg) {
     const t = now()
     const reply = {}
     if (msg.a === 'coleccion') reply.collection = await collection(user, msg)
     else if (msg.a === 'ranking') reply.ranking = await ranking(user)
-    else if (msg.a === 'cartas') reply.cards = await cardList()
+    else if (msg.a === 'cartas') reply.cards = await cardList(user)
     else if (msg.a === 'poderes') reply.powers = await powers(user, t)
     else if (Object.hasOwn(ACTIONS, msg.a)) {
       const out = await ACTIONS[msg.a](user, msg, t)

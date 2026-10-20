@@ -759,13 +759,7 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
       {state.peek && (
         <p className="pk-peek" role="status">
-          ✦ {state.peek.power} ({state.peek.card}):{' '}
-          {state.peek.power === 'Vistazo'
-            ? `ves una carta de ${state.peek.target}`
-            : state.peek.target
-              ? `ves las cartas de ${state.peek.target}`
-              : 'ves las cartas de todos'}{' '}
-          en esta mano.
+          ✦ {state.peek.power} ({state.peek.card}): {state.peek.text.replace(/^ve /, 'ves ')} en esta mano.
         </p>
       )}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">

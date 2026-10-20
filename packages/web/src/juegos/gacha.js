@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase'
 // Lo que comparten la pantalla del gacha y su escaparate en el selector de juegos.
 export const RARITY = { comun: 'Común', rara: 'Rara', epica: 'Épica', mitica: 'Legendaria' }
 export const RARITIES = ['mitica', 'epica', 'rara', 'comun']
+// Juegos con poder, en el orden en que se enseñan.
+export const GAME_NAME = { poker: 'Póker', blackjack: 'Blackjack', roulette: 'Ruleta', crash: 'Cohete', slots: 'Tragamonedas', plinko: 'Plinko' }
+// Probabilidad de una carta concreta: «0,11 %», «2,8 %».
+export const pct = (n) => `${n.toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`
 // Igual que WEIGHTS en api/_juegos/gacha.mjs, para la ayuda.
 export const ODDS = {
   normal: { comun: 70, rara: 23, epica: 6, mitica: 1 },

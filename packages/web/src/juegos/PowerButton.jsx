@@ -43,7 +43,7 @@ function PowerButton({ request, game, send, state, mine, hit }) {
     load()
   }, [load, state?.hand, state?.round, hit])
 
-  const list = data?.list.filter((p) => p.card.power.game === game) ?? []
+  const list = data?.list.filter((p) => p.game === game) ?? []
   if (list.length === 0) return null
   const now = Date.now()
   const active = table ? (state?.peek ?? null) : (data.active.find((e) => e.game === game) ?? null)
@@ -54,13 +54,13 @@ function PowerButton({ request, game, send, state, mine, hit }) {
 
   async function use(card) {
     if (table) {
-      send({ t: 'power', card })
+      send({ t: 'power', card, game })
       dialog.current?.close()
       setTimeout(load, 800)
       return
     }
     setBusy(true)
-    await request({ t: 'gacha', a: 'activar', card })
+    await request({ t: 'gacha', a: 'activar', card, game })
     await load()
     setBusy(false)
     dialog.current?.close()
@@ -96,15 +96,15 @@ function PowerButton({ request, game, send, state, mine, hit }) {
       >
         <div className="modal__body">
           <header className="modal__head">
-            <h2>Poderes para este juego</h2>
+            <h2>Tus poderes para este juego</h2>
             <button type="button" className="modal__close" aria-label="Cerrar" onClick={() => dialog.current?.close()}>
               ×
             </button>
           </header>
           <p className="pw-note">
             {table
-              ? 'Se usan durante una mano. Cada carta, una vez al día, y la mesa verá un aviso en el chat.'
-              : 'Se activan para tus próximas jugadas: un seguro si pierdes o un premio si ganas. Cada carta, una vez al día; uno activo a la vez.'}
+              ? 'Cada carta de tu biblioteca tiene un poder para esta mesa. Se usan durante una mano, una vez al día por carta, y la mesa verá un aviso en el chat.'
+              : 'Cada carta de tu biblioteca tiene un poder para este juego: un seguro si pierdes o un premio si ganas. Una vez al día por carta; uno activo a la vez.'}
           </p>
           {!table && active && (
             <p className="pw-active">
@@ -118,9 +118,9 @@ function PowerButton({ request, game, send, state, mine, hit }) {
                 <li key={p.card.id}>
                   <GachaCard card={p.card} mini />
                   <div>
-                    <b>{p.card.power.name}</b>
+                    <b>{p.power.name}</b>
                     <small>{p.card.name}</small>
-                    <p>{p.card.power.text}</p>
+                    <p>{p.power.text}</p>
                   </div>
                   <button
                     type="button"
