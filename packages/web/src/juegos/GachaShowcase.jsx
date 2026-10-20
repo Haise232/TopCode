@@ -7,7 +7,6 @@ const SHOWN = 5
 function GachaShowcase({ juegos, online, onOpen }) {
   const { state, offset } = useGacha(juegos.request)
   const t = useServerNow(offset)
-  const claimReady = state ? state.claimAt === 0 || state.claimAt <= t : false
   const table = state?.table ?? []
   const best = table.find((e) => e.card.rarity === 'mitica') ?? table.find((e) => e.card.rarity === 'epica')
 
@@ -16,7 +15,7 @@ function GachaShowcase({ juegos, online, onOpen }) {
   else if (table.length > 0) headline = `${table.length === 1 ? 'Hay una carta' : `Hay ${table.length} cartas`} en la mesa para coger gratis.`
 
   return (
-    <article className={`hub-gacha ${table.length && claimReady ? 'is-hot' : ''}`} aria-labelledby="gacha-title">
+    <article className={`hub-gacha ${table.length ? 'is-hot' : ''}`} aria-labelledby="gacha-title">
       <div className="hub-gacha__head">
         <h3 id="gacha-title">Gacha</h3>
         <span className={`hub-chip hub-chip--${table.length ? 'on' : 'free'}`}>
@@ -46,17 +45,13 @@ function GachaShowcase({ juegos, online, onOpen }) {
             <dd>{state ? (state.nextDropAt ? wait(state.nextDropAt - t) : 'llena') : '–'}</dd>
           </div>
           <div>
-            <dt>Coger</dt>
-            <dd className={claimReady ? 'is-ready' : ''}>{state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}</dd>
-          </div>
-          <div>
             <dt>Biblioteca</dt>
             <dd>{state ? state.owned : '–'}</dd>
           </div>
         </dl>
         <div className="hub-gacha__actions">
           <button type="button" className="hub-btn hub-btn--primary" disabled={!online} onClick={() => onOpen('tirar')}>
-            {table.length && claimReady ? 'Ir a la mesa' : 'Abrir el gacha'}
+            {table.length ? 'Ir a la mesa' : 'Abrir el gacha'}
           </button>
           <button type="button" className="hub-btn" disabled={!online} onClick={() => onOpen('colecciones')}>
             Bibliotecas

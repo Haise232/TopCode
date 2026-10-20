@@ -1,11 +1,10 @@
 // Gacha de Juegos al estilo de Mudae, con políticos españoles. Cada carta tiene como mucho un dueño.
 //   - La mesa: cada TABLE_PERIOD_MS sale sola una carta libre, hasta TABLE_MAX a la vista de todos, y cualquiera puede
-//     cogerla (una cada TAKE_COOLDOWN_MS por persona).
+//     cogerla: se la queda el primero, sin límite por persona.
 //   - Tirar pagando: una tirada (ROLL_COST) o una premium (PREMIUM_COST: épica o legendaria) saca una carta libre y su
 //     jugador decide si guardarla o descartarla; hasta decidirlo no puede volver a tirar.
-// Todo se paga y se cobra con el saldo de la semana (cuenta en el Score): las tiradas, recargar el reclamo
-// (CLAIM_RESET_COST, para coger otra carta de la mesa ya) y vender una carta tuya (SELL_RATE € por punto de valor; la
-// carta queda libre otra vez).
+// Todo se paga y se cobra con el saldo de la semana (cuenta en el Score): las tiradas y vender una carta tuya (SELL_RATE €
+// por punto de valor; la carta queda libre otra vez).
 // Cada carta tiene además un poder para cada juego (powersOf), distinto en cada político y más fuerte cuanto más rara
 // es, con un juego como punto fuerte: ver cartas en el póker o
 // el blackjack (lo aplica game.mjs en la mesa, que ve un aviso en el chat) o un seguro o un premio para las próximas
@@ -21,13 +20,11 @@ const catalogo = JSON.parse(readFileSync(new URL('./gacha-catalogo.json', import
 const HOUR = 3600000
 export const TABLE_PERIOD_MS = HOUR
 export const TABLE_MAX = 5
-export const TAKE_COOLDOWN_MS = HOUR
 // € por punto de valor al vender: común ≈ 700 €, legendaria ≈ 19.000 €. Una tirada (≈ 1.600 € de media al venderla) y
 // una premium (≈ 9.500 €) cuestan más de lo que valen, así que tirar y vender no da dinero infinito.
 export const SELL_RATE = 20
 export const ROLL_COST = 2000
 export const PREMIUM_COST = 20000
-export const CLAIM_RESET_COST = 5000
 export const POWER_COOLDOWN_MS = 24 * HOUR
 // Lo más que puede añadir un premio en una jugada.
 export const BONUS_CAP = 10000
@@ -178,11 +175,9 @@ const WEIGHTS = {
 
 export const GACHA_ERRORS = {
   GACHA_TAKEN: '¡Tarde! Otra persona la cogió antes.',
-  GACHA_COOLDOWN: 'Todavía no puedes coger otra carta: espera a que se recargue tu reclamo.',
   GACHA_OWNED: 'Esa carta ya tiene dueño.',
   GACHA_FUNDS: 'No te llega el saldo de la semana.',
   GACHA_NOT_YOURS: 'Esa carta no es tuya.',
-  GACHA_READY: 'Tu reclamo ya está listo.',
   GACHA_PENDING: 'Primero decide si guardas o descartas la carta que sacaste.',
   GACHA_NO_PENDING: 'No tienes ninguna carta por decidir.',
   GACHA_UPDATE: 'El gacha ha cambiado: recarga la página.',
@@ -258,9 +253,8 @@ export function createGacha({ db, ping, now, charge }) {
   // Estado del jugador, bloqueado para la transacción.
   async function player(q, userId) {
     await q(`insert into public.juegos_gacha_jugadores (usuario_id) values ($1) on conflict (usuario_id) do nothing`, [userId])
-    const row = (await q(`select reclamo_listo, pendiente, pendiente_premium from public.juegos_gacha_jugadores where usuario_id = $1 for update`, [userId]))
-      .rows[0]
-    return { claimAt: ms(row.reclamo_listo), pending: row.pendiente, pendingPremium: row.pendiente_premium }
+    const row = (await q(`select pendiente, pendiente_premium from public.juegos_gacha_jugadores where usuario_id = $1 for update`, [userId])).rows[0]
+    return { pending: row.pendiente, pendingPremium: row.pendiente_premium }
   }
 
   // Cartas que no pueden salir: con dueño, en la mesa o pendientes de decisión.
@@ -309,21 +303,19 @@ export function createGacha({ db, ping, now, charge }) {
   // Sin bloqueo: para pintar la pantalla.
   async function readState(userId, t) {
     const [row, owned, table] = await Promise.all([
-      db.query(`select reclamo_listo, pendiente, pendiente_premium from public.juegos_gacha_jugadores where usuario_id = $1`, [userId]).then((r) => r.rows[0]),
+      db.query(`select pendiente, pendiente_premium from public.juegos_gacha_jugadores where usuario_id = $1`, [userId]).then((r) => r.rows[0]),
       db.query(`select count(*)::int as n from public.juegos_gacha_cartas where usuario_id = $1`, [userId]).then((r) => r.rows[0].n),
       db.query(`select id, carta, creada from public.juegos_gacha_mesa order by id`).then((r) => r.rows),
     ])
-    const claimAt = row ? ms(row.reclamo_listo) : 0
     const full = table.length >= TABLE_MAX
     return {
       now: t,
       table: table.map((r) => ({ id: Number(r.id), card: cardView(r.carta), at: ms(r.creada) })).filter((x) => x.card),
       tableMax: TABLE_MAX,
       nextDropAt: full ? 0 : (periodOf(t) + 1) * TABLE_PERIOD_MS,
-      claimAt: claimAt > t ? claimAt : 0,
       pending: row?.pendiente ? { card: cardView(row.pendiente), premium: row.pendiente_premium } : null,
       owned,
-      prices: { roll: ROLL_COST, premium: PREMIUM_COST, claimReset: CLAIM_RESET_COST, sellRate: SELL_RATE },
+      prices: { roll: ROLL_COST, premium: PREMIUM_COST, sellRate: SELL_RATE },
     }
   }
 
@@ -375,18 +367,15 @@ export function createGacha({ db, ping, now, charge }) {
     return out
   }
 
-  // Coger una carta de la mesa: el primero que llega se la queda; después hay que esperar TAKE_COOLDOWN_MS.
+  // Coger una carta de la mesa: el primero que llega se la queda (sin límite por persona).
   async function take(user, msg, t) {
     if (!Number.isSafeInteger(msg.id)) return { error: 'BAD_MESSAGE' }
     const out = await db.tx(async (q) => {
       const row = (await q(`select carta from public.juegos_gacha_mesa where id = $1 for update`, [msg.id])).rows[0]
       if (!row) return { error: 'GACHA_TAKEN' }
-      const st = await player(q, user.id)
-      if (st.claimAt > t) return { error: 'GACHA_COOLDOWN' }
       const got = await q(`insert into public.juegos_gacha_cartas (carta, usuario_id) values ($1, $2) on conflict (carta) do nothing returning carta`, [row.carta, user.id])
       if (got.rows.length === 0) return { error: 'GACHA_OWNED' }
       await q(`delete from public.juegos_gacha_mesa where id = $1`, [msg.id])
-      await q(`update public.juegos_gacha_jugadores set reclamo_listo = to_timestamp($2 / 1000.0) where usuario_id = $1`, [user.id, t + TAKE_COOLDOWN_MS])
       await log(q, 'cogida', user.id, row.carta, false, t)
       return { result: { card: cardView(row.carta) } }
     })
@@ -408,18 +397,6 @@ export function createGacha({ db, ping, now, charge }) {
     })
     if (!out.error) await ping('juegos-gacha', 'tirada')
     return out
-  }
-
-  // Tienda: tener el reclamo listo ya (para coger otra carta de la mesa). Se paga con el saldo de la semana.
-  async function shop(user, msg, t) {
-    if (msg.item !== 'reclamo') return { error: 'BAD_MESSAGE' }
-    return db.tx(async (q) => {
-      const st = await player(q, user.id)
-      if (st.claimAt <= t) return { error: 'GACHA_READY' }
-      if ((await charge(q, user.id, CLAIM_RESET_COST)) === null) return { error: 'GACHA_FUNDS' }
-      await q(`update public.juegos_gacha_jugadores set reclamo_listo = 'epoch' where usuario_id = $1`, [user.id])
-      return { result: { item: msg.item } }
-    })
   }
 
   // Colección de alguien (la tuya si no se dice de quién), de la carta más valiosa a la que menos.
@@ -560,9 +537,9 @@ export function createGacha({ db, ping, now, charge }) {
     }
   }
 
-  const ACTIONS = { tirar: roll, decidir: decide, coger: take, vender: sell, tienda: shop, activar: activate }
+  const ACTIONS = { tirar: roll, decidir: decide, coger: take, vender: sell, activar: activate }
 
-  // msg.a: estado | tirar { pago, premium } | decidir { keep } | coger { id } | vender { card } | tienda { item }
+  // msg.a: estado | tirar { pago, premium } | decidir { keep } | coger { id } | vender { card }
   //        | coleccion { user } | ranking
   //        | cartas | poderes | activar { card, game }
   async function handle(user, msg) {

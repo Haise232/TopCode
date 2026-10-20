@@ -441,8 +441,8 @@ function Rules({ prices }) {
     <Help label="Cómo funciona" title="Cómo funciona el gacha" wide>
       <p>
         <b>La mesa:</b> cada hora sale sola una carta, hasta 5 a la vista de todos. Cualquiera puede <b>cogerla</b> gratis y
-        se la queda el primero que pulse. Cada persona puede coger <b>una cada hora</b> (o pagar{' '}
-        {eur(prices?.claimReset ?? 5000)} para coger otra ya). Cada carta tiene un solo dueño.
+        se la queda el primero que pulse, <b>sin límite</b>: puedes coger todas las que quieras. Cada carta tiene un solo
+        dueño.
       </p>
       <p>
         <b>Tirar pagando</b> con tu saldo de la semana: una tirada cuesta {eur(prices?.roll ?? 2000)} y una{' '}
@@ -581,7 +581,6 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     if (initialTab === 'cartas') load('cartas')
   }, [initialTab, load])
 
-  const claimReady = state ? state.claimAt === 0 || state.claimAt <= t : false
   const prices = state?.prices
   const premiumPrice = prices?.premium ?? 20000
   const rollPrice = prices?.roll ?? 2000
@@ -605,13 +604,6 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
           <dd>
             {state ? `${table.length}/${state.tableMax}` : '–'}
             {state && <small>{state.nextDropAt ? `otra carta en ${wait(state.nextDropAt - t)}` : 'llena: cógelas'}</small>}
-          </dd>
-        </div>
-        <div className={claimReady ? 'is-ready' : ''}>
-          <dt>Coger</dt>
-          <dd>
-            {state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}
-            <small>{claimReady ? 'puedes coger una de la mesa' : 'una cada hora'}</small>
           </dd>
         </div>
         <div>
@@ -650,8 +642,8 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
             <h2 id="mesa-title" className="hub-title">
               La mesa{' '}
               <small>
-                {state?.nextDropAt ? `sale otra carta en ${wait(state.nextDropAt - t)}` : 'llena: hasta 5 cartas'} · gratis, una cada hora por
-                persona
+                {state?.nextDropAt ? `sale otra carta en ${wait(state.nextDropAt - t)}` : 'llena: hasta 5 cartas'} · gratis y sin
+                límite
               </small>
             </h2>
             {table.length === 0 ? (
@@ -664,28 +656,14 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                     <button
                       type="button"
                       className="hub-btn hub-btn--primary"
-                      disabled={busy || !claimReady}
-                      title={claimReady ? undefined : 'Puedes coger una carta de la mesa cada hora'}
+                      disabled={busy}
                       onClick={() => act('coger', { id: entry.id })}
                     >
-                      {claimReady ? 'Coger' : `Coger en ${wait(state.claimAt - t)}`}
+                      Coger
                     </button>
                   </li>
                 ))}
               </ul>
-            )}
-            {state && !claimReady && (
-              <p className="gacha-mesa__wait">
-                Podrás coger otra en {wait(state.claimAt - t)}.{' '}
-                <button
-                  type="button"
-                  className="hub-btn hub-btn--ghost"
-                  disabled={busy || !prices || balance < prices.claimReset}
-                  onClick={() => act('tienda', { item: 'reclamo' })}
-                >
-                  Coger otra ya · {eur(prices?.claimReset ?? 5000)}
-                </button>
-              </p>
             )}
           </section>
 
