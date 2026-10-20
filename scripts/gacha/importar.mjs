@@ -7,6 +7,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 // Mínimo de Wikipedias con artículo propio: por debajo, casi nadie los conocería.
 const MIN_LINKS = 9
+// Partidos cuyos miembros entran aunque no hayan tenido uno de los CARGOS (eurodiputados, parlamentos autonómicos…),
+// con su propio mínimo de Wikipedias: Vox y Se Acabó La Fiesta (Alvise Pérez).
+// Legendarias aunque su popularidad no llegue (Santiago Abascal).
+const LEGENDARIAS = new Set(['Q11703587'])
+const PARTIDOS = [
+  ['Q15630787', 5],
+  ['Q125882694', 1],
+]
 const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de clase sin fines comerciales)'
 // Franquistas puros que el filtro de Wikidata deja pasar por un escaño o cargo después de 1977, y escritores que
 // fueron senadores o diputados pero a los que se conoce por sus libros.
@@ -101,6 +109,15 @@ async function politica() {
     if (born < 1900 || (died !== null && died <= 1977)) continue
     if (!people.has(qid)) people.set(qid, { img: r.img.value, party: r.partyLabel?.value ?? '' })
   }
+  const extra = `SELECT ?p ?img ?partyLabel WHERE {
+    VALUES (?party ?min) { ${PARTIDOS.map(([q, min]) => `(wd:${q} ${min})`).join(' ')} }
+    ?p wdt:P102 ?party; wdt:P18 ?img; wikibase:sitelinks ?links. FILTER(?links >= ?min)
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "es,en". } }`
+  const extraBody = await json(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(extra)}`, {}, 6)
+  for (const r of extraBody.results.bindings) {
+    const qid = r.p.value.split('/').pop()
+    if (!people.has(qid)) people.set(qid, { img: r.img.value, party: r.partyLabel?.value ?? '' })
+  }
   const wd = await wikidata([...people.keys()])
   const thumbs = await commonsThumbs([...people.values()].map((p) => decodeURIComponent(p.img.split('/').pop())))
   const out = []
@@ -139,6 +156,7 @@ function rank(cat, list) {
   return sorted.map((c, i) => {
     const pct = (i + 1) / sorted.length
     const [rarity, , base] = limits.find(([, upTo]) => i < upTo)
+    if (LEGENDARIAS.has(c.id.split(':')[1])) return { ...c, cat, rank: i + 1, rarity: 'mitica', value: Math.round(RAREZAS[0][3] * 1.58) }
     return { ...c, cat, rank: i + 1, rarity, value: Math.round(base * (1.6 - pct * 0.6)) }
   })
 }

@@ -24,6 +24,7 @@ import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
 import WinToast from './WinToast.jsx'
 import Help from './Help.jsx'
+import PowerButton from './PowerButton.jsx'
 import './Roulette.css'
 
 const COLOR_NAMES = { red: 'Rojo', black: 'Negro', green: 'Verde' }
@@ -590,6 +591,7 @@ function Roulette({ onExit, juegos }) {
             <button type="button" onClick={onExit}>
               Juegos
             </button>
+            <PowerButton request={juegos.request} game="roulette" hit={juegos.powerHit} />
             <button
               type="button"
               aria-pressed={sound}

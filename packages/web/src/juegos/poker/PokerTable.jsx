@@ -749,7 +749,7 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
             <PokerGuide current={myHand ?? mine?.handName} state={state} />
           </Help>
           <Invite game="poker" code={state.code} name="Póker" />
-          {request && <PowerButton request={request} send={send} state={state} mine={mine} />}
+          {request && <PowerButton request={request} game="poker" send={send} state={state} mine={mine} />}
           <button type="button" onClick={onLeave}>
             Salir
           </button>
@@ -759,7 +759,12 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
       {state.peek && (
         <p className="pk-peek" role="status">
-          ✦ {state.peek.power} ({state.peek.card}): {state.peek.target ? `ves las cartas de ${state.peek.target}` : 'ves las cartas de todos'}{' '}
+          ✦ {state.peek.power} ({state.peek.card}):{' '}
+          {state.peek.power === 'Vistazo'
+            ? `ves una carta de ${state.peek.target}`
+            : state.peek.target
+              ? `ves las cartas de ${state.peek.target}`
+              : 'ves las cartas de todos'}{' '}
           en esta mano.
         </p>
       )}

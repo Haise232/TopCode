@@ -11,7 +11,7 @@ import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
 import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, rouletteDue, rouletteView } from './solo.mjs'
-import { GACHA_ERRORS, createGacha } from './gacha.mjs'
+import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -170,7 +170,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   function ensureSchema() {
     schemaReady ??= (async () => {
       // La tabla más nueva: si falta, se ejecuta el esquema entero (es idempotente).
-      const { rows } = await db.query(`select to_regclass('public.juegos_gacha_jugadores') is not null as ok`)
+      const { rows } = await db.query(`select to_regclass('public.juegos_gacha_efectos') is not null as ok`)
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
       await refundSoloBlackjack()
@@ -346,15 +346,22 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
 
   // Poder del gacha activo en la mano en curso: room.peeks[usuario] = { hand, seats: 'all' | [asientos], power, card }.
   // Se guarda con la mesa (serialize copia todo lo que no es del motor) y solo cambia la vista de quien lo usó.
+  // Blackjack: { hand: ronda, dealer: true }. Póker: seats 'all' o [asiento], y card (índice) si solo se ve una carta.
   function applyPeek(room, userId, state) {
-    const peek = room.game === 'poker' ? room.peeks?.[userId] : null
-    if (!peek || peek.hand !== room.hand || !POKER_LIVE.has(room.phase)) return
-    state.seats.forEach((seat, i) => {
-      const real = room.seats[i]
-      if (!seat || !real || real.sid === userId || (peek.seats !== 'all' && !peek.seats.includes(i))) return
-      seat.cards = real.cards
-    })
-    state.peek = { power: peek.power, card: peek.card, target: peek.target ?? null }
+    const peek = room.peeks?.[userId]
+    if (!peek) return
+    if (room.game === 'blackjack') {
+      if (peek.hand !== room.round || room.phase !== 'playing') return
+      state.dealer = [...room.dealer]
+    } else {
+      if (peek.hand !== room.hand || !POKER_LIVE.has(room.phase)) return
+      state.seats.forEach((seat, i) => {
+        const real = room.seats[i]
+        if (!seat || !real || real.sid === userId || (peek.seats !== 'all' && !peek.seats.includes(i))) return
+        seat.cards = peek.card === undefined ? real.cards : seat.cards.map((c, k) => (k === peek.card ? real.cards[k] : c))
+      })
+    }
+    state.peek = { power: peek.power, card: peek.cardName, target: peek.target ?? null }
   }
 
   function viewFor(room, userId) {
@@ -483,6 +490,15 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return null
   }
 
+  // Lo apostado y lo ganado (o perdido) en la jugada que acaba de liquidarse, o null si no se liquidó ninguna.
+  // Tragamonedas y Plinko se liquidan en cada jugada; ruleta y cohete, cuando aparece un «last» de otra ronda.
+  function settlementOf(game, msg, saved, out) {
+    if (game === 'slots' || game === 'plinko') return { stake: msg.bet, net: out.delta }
+    const last = out.saved?.last
+    if (!last || last.round === saved?.last?.round) return null
+    return { stake: last.stake, net: last.net }
+  }
+
   // Una jugada en solitario: se bloquea tu cuenta, se sortea en el servidor y se guarda el saldo (cuenta en el Score).
   async function playSolo(user, msg) {
     const game = SOLO_GAMES[msg.t]
@@ -500,6 +516,15 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
       const out = SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
       if (out.error) return out
+      // Seguro o premio del gacha activo para este juego: se aplica cuando se liquida una jugada.
+      const settled = settlementOf(game, msg, saved, out)
+      if (settled) {
+        const hit = await applyEffect(q, user.id, game, settled)
+        if (hit) {
+          out.delta += hit.extra
+          out.power = hit
+        }
+      }
       // Toda jugada cuenta para el Score, también la que te deja igual (entras en la clasificación y se anota el día).
       if (out.played || out.delta) accounts.adjust(user.id, out.delta)
       for (const token of accounts.dirty) {
@@ -654,6 +679,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         const out = await playSolo(user, play)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
+        if (out.power) reply.power = out.power
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         if (reply.solo) await liveExtras(live.game, msg, reply)
         return reply
@@ -663,6 +689,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
+        if (out.power) reply.power = out.power
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         return reply
       }
@@ -680,6 +707,11 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         // Poder de una carta del gacha en la mesa de póker: primero se gasta (una vez al día) y después se aplica a la
         // mano en curso; si la mesa no lo admite, se devuelve.
         if (!account.mesa) throw new JuegosError('POWER_POKER')
+        const kind = cardView(msg.card)?.power?.kind
+        if (kind !== 'rayos' && kind !== 'chivatazo' && kind !== 'vistazo' && kind !== 'crupier') {
+          reply.error = { code: 'POWER_GAME', message: ERRORS.POWER_GAME }
+          return reply
+        }
         const spent = await gacha.spendPower(user.id, msg.card, now())
         if (spent.error) {
           reply.error = { code: spent.error, message: ERRORS[spent.error] ?? 'Error.' }
@@ -687,19 +719,26 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         }
         let target = null
         const outcome = await withTable(account.mesa, user, (room) => {
-          if (room.game !== 'poker') return 'POWER_POKER'
+          if (room.game !== spent.card.power.game) return 'POWER_GAME'
           const seat = room.seats.find((s) => s?.sid === user.id)
-          if (!POKER_LIVE.has(room.phase) || !seat?.inHand || seat.folded) return 'POWER_NO_HAND'
-          const peeks = Object.fromEntries(Object.entries(room.peeks ?? {}).filter(([, p]) => p.hand === room.hand))
+          const current = room.game === 'blackjack' ? room.round : room.hand
+          const peeks = Object.fromEntries(Object.entries(room.peeks ?? {}).filter(([, p]) => p.hand === current))
           if (peeks[user.id]) return 'POWER_ACTIVE'
-          let seats = 'all'
-          if (spent.card.power.id === 'chivatazo') {
-            const rivals = room.seats.flatMap((s, i) => (s && s.inHand && !s.folded && s.sid !== user.id ? [i] : []))
-            if (rivals.length === 0) return 'POWER_NO_RIVALS'
-            seats = [rivals[randomInt(rivals.length)]]
-            target = room.seats[seats[0]].name
+          const peek = { hand: current, power: spent.card.power.name, cardName: spent.card.name, target: null }
+          if (room.game === 'blackjack') {
+            if (room.phase !== 'playing' || !seat?.cards?.length) return 'POWER_NO_HAND'
+          } else {
+            if (!POKER_LIVE.has(room.phase) || !seat?.inHand || seat.folded) return 'POWER_NO_HAND'
+            peek.seats = 'all'
+            if (kind === 'chivatazo' || kind === 'vistazo') {
+              const rivals = room.seats.flatMap((s, i) => (s && s.inHand && !s.folded && s.sid !== user.id ? [i] : []))
+              if (rivals.length === 0) return 'POWER_NO_RIVALS'
+              peek.seats = [rivals[randomInt(rivals.length)]]
+              peek.target = target = room.seats[peek.seats[0]].name
+              if (kind === 'vistazo') peek.card = randomInt(room.seats[peek.seats[0]].cards.length)
+            }
           }
-          room.peeks = { ...peeks, [user.id]: { hand: room.hand, seats, power: spent.card.power.name, card: spent.card.name, target } }
+          room.peeks = { ...peeks, [user.id]: peek }
           room.rev++
           return null
         })
@@ -708,7 +747,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           return tableReply(outcome, account.mesa)
         }
         // Aviso en el chat de la mesa, para que nadie juegue engañado.
-        const what = target ? `ve las cartas de ${target}` : 've las cartas de todos'
+        const what =
+          kind === 'crupier' ? 've la carta tapada del crupier' : kind === 'vistazo' ? `ve una carta de ${target}` : target ? `ve las cartas de ${target}` : 've las cartas de todos'
         await db.query(`insert into public.juegos_chat (mesa, usuario_id, nombre, avatar, texto) values ($1, $2, $3, $4, $5)`, [
           account.mesa,
           user.id,

@@ -1,34 +1,89 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import GachaCard from './GachaCard.jsx'
+import { eur } from './money.js'
 import { wait } from './gacha.js'
 
-const LIVE = new Set(['preflop', 'flop', 'turn', 'river'])
+const POKER_LIVE = new Set(['preflop', 'flop', 'turn', 'river'])
+const TABLES = new Set(['poker', 'blackjack'])
+const TOAST_MS = 5000
 
-// Poderes de tus cartas del gacha en la mesa de póker (las reglas, en api/_juegos/gacha.mjs y game.mjs). Solo aparece si
-// tienes alguna carta con poder; la lista se pide al entrar y en cada mano nueva.
-function PowerButton({ request, send, state, mine }) {
+// Qué hizo el seguro o el premio en la última jugada.
+function hitText(hit) {
+  let text
+  if (hit.kind === 'seguro') text = hit.extra > 0 ? `te devuelve ${eur(hit.extra)}` : 'no hizo falta: no perdiste'
+  else text = hit.extra > 0 ? `+${eur(hit.extra)} de premio` : 'esta vez no ganaste'
+  const left = hit.left > 0 ? ` Le ${hit.left === 1 ? 'queda 1 jugada' : `quedan ${hit.left} jugadas`}.` : ''
+  return `✦ ${hit.name}: ${text}.${left}`
+}
+
+// Poderes de tus cartas del gacha para el juego en el que estás (las reglas, en api/_juegos/gacha.mjs y game.mjs).
+// Solo aparece si tienes alguna carta con poder para este juego. En las mesas (póker, blackjack) se usan durante una
+// mano; en los juegos en solitario se activa un seguro o un premio para las próximas jugadas.
+// game: poker | blackjack | roulette | crash | slots | plinko. send, state y mine solo hacen falta en las mesas.
+// hit: el último efecto que se aplicó (para volver a pedir la lista y que se vean los usos que quedan).
+function PowerButton({ request, game, send, state, mine, hit }) {
   const dialog = useRef(null)
-  const [list, setList] = useState(null)
+  const [data, setData] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [toast, setToast] = useState(null)
+  const table = TABLES.has(game)
+
+  useEffect(() => {
+    if (!hit) return
+    setToast(hit)
+    const timer = setTimeout(() => setToast(null), TOAST_MS)
+    return () => clearTimeout(timer)
+  }, [hit])
   const load = useCallback(async () => {
     const body = await request({ t: 'gacha', a: 'poderes' })
-    if (body?.gacha?.powers) setList(body.gacha.powers)
+    if (body?.gacha?.powers) setData(body.gacha.powers)
   }, [request])
 
   useEffect(() => {
     load()
-  }, [load, state.hand])
+  }, [load, state?.hand, state?.round, hit])
 
-  if (!list || list.length === 0) return null
+  const list = data?.list.filter((p) => p.card.power.game === game) ?? []
+  if (list.length === 0) return null
   const now = Date.now()
-  const inHand = LIVE.has(state.phase) && mine?.inHand && !mine.folded
-  const active = Boolean(state.peek)
+  const active = table ? (state?.peek ?? null) : (data.active.find((e) => e.game === game) ?? null)
+  let canPlay = true
+  if (game === 'poker') canPlay = POKER_LIVE.has(state?.phase) && mine?.inHand && !mine.folded
+  if (game === 'blackjack') canPlay = state?.phase === 'playing' && mine?.cards?.length > 0
   const ready = list.filter((p) => !p.readyAt || p.readyAt <= now).length
+
+  async function use(card) {
+    if (table) {
+      send({ t: 'power', card })
+      dialog.current?.close()
+      setTimeout(load, 800)
+      return
+    }
+    setBusy(true)
+    await request({ t: 'gacha', a: 'activar', card })
+    await load()
+    setBusy(false)
+    dialog.current?.close()
+  }
+
+  let label = ready > 0 ? ` ${ready}` : ''
+  if (!table && active) label = ` activo · ${active.uses}`
 
   return (
     <>
-      <button type="button" className="pw-open" aria-label={`Poderes${ready > 0 ? `: ${ready} listos` : ''}`} onClick={() => dialog.current?.showModal()}>
+      {toast && (
+        <p className={`pw-toast ${toast.extra > 0 ? 'is-good' : ''}`} role="status">
+          {hitText(toast)}
+        </p>
+      )}
+      <button
+        type="button"
+        className={`pw-open ${!table && active ? 'is-active' : ''}`}
+        aria-label={!table && active ? `Poder activo: ${active.name}, ${active.uses} jugadas` : `Poderes${ready > 0 ? `: ${ready} listos` : ''}`}
+        onClick={() => dialog.current?.showModal()}
+      >
         ✦<span className="pw-open__text"> Poderes</span>
-        {ready > 0 ? ` ${ready}` : ''}
+        {label}
       </button>
       <dialog
         ref={dialog}
@@ -41,15 +96,21 @@ function PowerButton({ request, send, state, mine }) {
       >
         <div className="modal__body">
           <header className="modal__head">
-            <h2>Poderes de tus cartas</h2>
+            <h2>Poderes para este juego</h2>
             <button type="button" className="modal__close" aria-label="Cerrar" onClick={() => dialog.current?.close()}>
               ×
             </button>
           </header>
           <p className="pw-note">
-            Cada carta épica o legendaria de tu biblioteca del gacha tiene un poder para una mano de póker. Se puede usar una vez al
-            día y la mesa verá un aviso en el chat.
+            {table
+              ? 'Se usan durante una mano. Cada carta, una vez al día, y la mesa verá un aviso en el chat.'
+              : 'Se activan para tus próximas jugadas: un seguro si pierdes o un premio si ganas. Cada carta, una vez al día; uno activo a la vez.'}
           </p>
+          {!table && active && (
+            <p className="pw-active">
+              ✦ Activo: <b>{active.name}</b> · {active.uses === 1 ? 'queda 1 jugada' : `quedan ${active.uses} jugadas`}
+            </p>
+          )}
           <ul className="pw-list">
             {list.map((p) => {
               const waiting = p.readyAt > now
@@ -64,21 +125,17 @@ function PowerButton({ request, send, state, mine }) {
                   <button
                     type="button"
                     className="hub-btn hub-btn--primary"
-                    disabled={!inHand || active || waiting}
-                    onClick={() => {
-                      send({ t: 'power', card: p.card.id })
-                      dialog.current?.close()
-                      setTimeout(load, 800)
-                    }}
+                    disabled={busy || !canPlay || Boolean(active) || waiting}
+                    onClick={() => use(p.card.id)}
                   >
-                    {waiting ? `En ${wait(p.readyAt - now)}` : 'Usar'}
+                    {waiting ? `En ${wait(p.readyAt - now)}` : table ? 'Usar' : 'Activar'}
                   </button>
                 </li>
               )
             })}
           </ul>
-          {!inHand && <p className="pw-note">Podrás usarlos cuando estés jugando una mano.</p>}
-          {inHand && active && <p className="pw-note">Ya tienes un poder activo en esta mano.</p>}
+          {table && !canPlay && <p className="pw-note">Podrás usarlos cuando estés jugando una mano.</p>}
+          {table && canPlay && active && <p className="pw-note">Ya tienes un poder activo en esta mano.</p>}
         </div>
       </dialog>
     </>

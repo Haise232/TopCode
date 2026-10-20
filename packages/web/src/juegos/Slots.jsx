@@ -7,6 +7,7 @@ import { useCountUp } from './useCountUp.js'
 import SlotSymbol from './SlotSymbol.jsx'
 import WinBurst from './WinBurst.jsx'
 import Help from './Help.jsx'
+import PowerButton from './PowerButton.jsx'
 import './Slots.css'
 
 const SYMBOL_NAMES = {
@@ -182,6 +183,7 @@ function Slots({ onExit, juegos }) {
             <button type="button" onClick={onExit}>
               Juegos
             </button>
+            <PowerButton request={juegos.request} game="slots" hit={juegos.powerHit} />
             <button type="button" aria-pressed={turbo} onClick={() => setTurbo(!turbo)}>
               Turbo
             </button>

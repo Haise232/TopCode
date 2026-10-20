@@ -79,6 +79,19 @@ create table if not exists public.juegos_gacha_jugadores (
   reclamo_listo timestamptz not null default 'epoch'
 );
 
+-- Poder del gacha activo en un juego en solitario: un seguro o un premio para las próximas «usos» jugadas.
+create table if not exists public.juegos_gacha_efectos (
+  usuario_id uuid not null references public.usuarios(id) on delete cascade,
+  juego      text not null,
+  tipo       text not null check (tipo in ('seguro', 'premio')),
+  pct        int not null,
+  usos       int not null,
+  nombre     text not null,
+  carta      text not null,
+  creado     timestamptz not null default now(),
+  primary key (usuario_id, juego)
+);
+
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;
 alter table public.juegos_mesas   enable row level security;
@@ -87,4 +100,5 @@ alter table public.juegos_solo    enable row level security;
 alter table public.juegos_gacha_cartas    enable row level security;
 alter table public.juegos_gacha_tiradas   enable row level security;
 alter table public.juegos_gacha_jugadores enable row level security;
+alter table public.juegos_gacha_efectos   enable row level security;
 `

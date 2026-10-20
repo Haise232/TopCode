@@ -12,6 +12,7 @@ import Invite from './Invite.jsx'
 import SeatBubble from './SeatBubble.jsx'
 import WinBurst from '../WinBurst.jsx'
 import WinToast from '../WinToast.jsx'
+import PowerButton from '../PowerButton.jsx'
 // Blackjack.css (generado) trae las fichas que comparte con el Cohete; blackjack-ui.css, el aspecto de esta mesa.
 import '../Blackjack.css'
 import './blackjack-ui.css'
@@ -278,7 +279,7 @@ function Seat({ bubble, seat, index, count, mine, active, clock, phase, round, c
   )
 }
 
-function Table({ room, me, conn, error, send, onLeave, chat, bubbles, pending }) {
+function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, pending }) {
   const { state, at } = room
   const mySeat = state.seats.findIndex((seat) => seat?.id === me?.id)
   const mine = mySeat >= 0 ? state.seats[mySeat] : null
@@ -452,6 +453,7 @@ function Table({ room, me, conn, error, send, onLeave, chat, bubbles, pending })
           </small>
         </p>
         <div className="toggles">
+          {request && <PowerButton request={request} game="blackjack" send={send} state={state} mine={mine} />}
           <Help label="Reglas" title="Blackjack en vivo">
             <p>
               Todos juegan contra el crupier. Pon tus fichas y confirma la apuesta: la ronda empieza cuando todos están
@@ -483,6 +485,11 @@ function Table({ room, me, conn, error, send, onLeave, chat, bubbles, pending })
       </header>
 
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
+      {state.peek && (
+        <p className="pk-peek" role="status">
+          ✦ {state.peek.power} ({state.peek.card}): ves la carta tapada del crupier en esta mano.
+        </p>
+      )}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {announce}
       </p>

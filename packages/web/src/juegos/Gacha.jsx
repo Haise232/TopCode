@@ -136,7 +136,6 @@ function Library({ data, onSell, busy }) {
   const { user, cards, worth } = data
   const counts = Object.fromEntries(RARITIES.map((r) => [r, cards.filter((c) => c.rarity === r).length]))
   const line = cards.length ? `${user.me ? 'Tengo' : 'Tiene'} ${summary(counts)}.` : ''
-  const powers = counts.mitica + counts.epica
 
   async function copy() {
     try {
@@ -157,7 +156,6 @@ function Library({ data, onSell, busy }) {
           {line && <p className="gacha-lib-line">{line}</p>}
           <p className="gacha-lib-meta">
             {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · {cards.length === 1 ? 'vale' : 'valen'} {eur(worth)}
-            {powers > 0 ? ` · ${powers} con poder para el póker` : ''}
           </p>
         </div>
         {user.me && cards.length > 0 && (
@@ -330,10 +328,24 @@ function Rules({ prices }) {
         cuesta {eur(prices?.extraRoll ?? 1000)} y recargar el reclamo, {eur(prices?.claimReset ?? 5000)}.
       </p>
       <p>
-        Las cartas <b>épicas y legendarias tienen un poder para el póker</b>, que puedes usar una vez al día con «✦ Poderes»
-        en la mesa: con una legendaria, <b>Rayos X</b> (ves las cartas de todos durante una mano); con una épica,{' '}
-        <b>Chivatazo</b> (ves las de un rival al azar). La mesa verá un aviso en el chat.
+        <b>Cada carta tiene un poder</b> para uno de los juegos (míralo en la carta o en «Cartas»), y cuanto más rara, más
+        fuerte. Se usa una vez al día con el botón «✦ Poderes» de ese juego:
       </p>
+      <ul className="gacha-powers">
+        <li>
+          <b>Póker:</b> Rayos X (legendaria: ves las cartas de todos durante una mano), Chivatazo (épica: las de un rival) y
+          Vistazo (rara: una carta de un rival).
+        </li>
+        <li>
+          <b>Blackjack:</b> Ojo del crupier (legendaria o épica: ves su carta tapada durante una mano).
+        </li>
+        <li>
+          <b>Ruleta, cohete, tragamonedas y Plinko:</b> un <b>seguro</b> (si pierdes, te devuelven una parte) o un{' '}
+          <b>premio</b> (si ganas, cobras más): 25 % con una común, 50 % con una rara, 100 % con una épica y 100 % durante tres
+          jugadas con una legendaria.
+        </li>
+      </ul>
+      <p>En las mesas, los demás ven un aviso en el chat cuando usas un poder.</p>
       <p>
         Puedes <b>vender</b> cualquier carta tuya desde tu biblioteca: el dinero va a tu saldo de la semana (una común, unos
         700 €; una legendaria, unos 19.000 €) y la carta vuelve a poder salir. En «Bibliotecas» ves las cartas de todo el mundo y

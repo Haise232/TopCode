@@ -48,6 +48,8 @@ export function useJuegos() {
   const sysCount = useRef(0)
   const [bubbles, setBubbles] = useState({})
   const [pending, setPending] = useState(false)
+  // Último seguro o premio del gacha que se aplicó a una jugada: { name, kind, extra, left, at }.
+  const [powerHit, setPowerHit] = useState(null)
   const inflight = useRef(0)
   const chatReady = useRef(false)
   const bubbleTimers = useRef(new Map())
@@ -92,6 +94,7 @@ export function useJuegos() {
       if (body.lobby) setLobby(body.lobby)
       if (body.scores) setScores({ ...body.scores, at: Date.now() })
       if (body.error) showError(body.error.message)
+      if (body.power) setPowerHit({ ...body.power, at: Date.now() })
       // Una respuesta vieja que llega tarde no pisa una mesa más nueva.
       if ('state' in body && n > appliedSeq.current) {
         appliedSeq.current = n
@@ -296,5 +299,5 @@ export function useJuegos() {
   // Para los juegos en solitario: devuelve la respuesta del servidor (o undefined si no hubo conexión).
   const request = useCallback((message) => call(message), [call])
 
-  return { conn, me, room, lobby, chat, scores, error, denied, send, request, leave, reconnect, bubbles, pending }
+  return { conn, me, room, lobby, chat, scores, error, denied, send, request, leave, reconnect, bubbles, pending, powerHit }
 }

@@ -23,6 +23,7 @@ import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
 import WinToast from './WinToast.jsx'
 import Help from './Help.jsx'
+import PowerButton from './PowerButton.jsx'
 import { createScene } from './crashScene.js'
 import './Roulette.css'
 import './Crash.css'
@@ -331,6 +332,7 @@ function Crash({ onExit, juegos }) {
             <button type="button" onClick={onExit}>
               Juegos
             </button>
+            <PowerButton request={juegos.request} game="crash" hit={juegos.powerHit} />
             <button
               type="button"
               aria-pressed={sound}
