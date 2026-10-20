@@ -11,7 +11,7 @@ import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
 import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, rouletteDue, rouletteView } from './solo.mjs'
-import { GACHA_ERRORS, applyEffect, createGacha } from './gacha.mjs'
+import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 
 export const STARTING_BALANCE = 10000
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -371,9 +371,22 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     state.peek = { power: peek.power, card: peek.cardName, text: peek.text }
   }
 
+  // Lo que ve toda la mesa: quién está usando un poder en esta mano, cuál y con qué carta (la animación y la carta junto
+  // a su foto). Lo que descubre cada poder solo lo ve quien lo usó (applyPeek).
+  function publicPowers(room) {
+    const current = room.game === 'blackjack' ? room.round : room.hand
+    const live = room.game === 'blackjack' ? room.phase === 'playing' : POKER_LIVE.has(room.phase)
+    if (!live) return []
+    return Object.entries(room.peeks ?? {})
+      .filter(([, p]) => p.hand === current && p.cardId)
+      .map(([uid, p]) => ({ seat: room.seats.findIndex((s) => s?.sid === uid), hand: current, power: p.power, card: cardView(p.cardId) }))
+      .filter((x) => x.seat >= 0 && x.card)
+  }
+
   function viewFor(room, userId) {
     const state = room.view(userId)
     applyPeek(room, userId, state)
+    state.powers = publicPowers(room)
     // Cuándo hay que volver a llamar para que avance un temporizador (crupier, turnos, cuenta atrás…).
     state.wakeIn = room.pending ? Math.max(0, room.pending.at - now()) : null
     return state
@@ -731,7 +744,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           const current = room.game === 'blackjack' ? room.round : room.hand
           const peeks = Object.fromEntries(Object.entries(room.peeks ?? {}).filter(([, p]) => p.hand === current))
           if (peeks[user.id]) return 'POWER_ACTIVE'
-          const peek = { hand: current, power: name, cardName: spent.card.name }
+          const peek = { hand: current, power: name, cardName: spent.card.name, cardId: spent.card.id }
           if (room.game === 'blackjack') {
             if (room.phase !== 'playing' || !seat?.cards?.length) return 'POWER_NO_HAND'
             peek.dealer = kind === 'crupier' || kind === 'todo'

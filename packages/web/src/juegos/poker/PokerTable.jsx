@@ -4,6 +4,7 @@ import { bestHand } from '../shared/poker-core.js'
 import Avatar from '../Avatar.jsx'
 import Help from '../Help.jsx'
 import PowerButton from '../PowerButton.jsx'
+import { PowerCast, SeatPower, powerOfSeat } from '../TablePower.jsx'
 import { eur } from '../money.js'
 import Chat from '../table/Chat.jsx'
 import Invite from '../table/Invite.jsx'
@@ -300,7 +301,7 @@ function PokerGuide({ current, state }) {
 
 // --- Asientos ---
 
-function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveHand, canSit, canKick, bubble, dealer, axis, onSit, onKick }) {
+function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveHand, canSit, canKick, bubble, dealer, axis, power, onSit, onKick }) {
   const style = { '--a': `${angle}deg` }
   if (!seat) {
     return (
@@ -389,6 +390,7 @@ function Seat({ seat, index, angle, state, mine, active, clock, highlight, liveH
       <div className="pod__avatar" aria-hidden="true">
         {seat.avatar ? <Avatar name={seat.name} src={seat.avatar} size={64} className="pod__photo" /> : initials(seat.name)}
       </div>
+      <SeatPower power={power} />
       {dealer && (
         <span className="pod__dealer" role="img" aria-label="Botón del repartidor">
           D
@@ -757,6 +759,7 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
       </header>
 
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
+      <PowerCast powers={state.powers} seats={state.seats} />
       {state.peek && (
         <p className="pk-peek" role="status">
           ✦ {state.peek.power} ({state.peek.card}): {state.peek.text.replace(/^ve /, 'ves ')} en esta mano.
@@ -891,6 +894,7 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
               bubble={seat ? bubbles?.[seat.id] : undefined}
               dealer={!waiting && state.button === i}
               axis={onAxis(i)}
+              power={powerOfSeat(state.powers, i)}
               onSit={() => send({ t: 'sit', seat: i })}
               onKick={() => send({ t: 'kick', seat: i })}
             />

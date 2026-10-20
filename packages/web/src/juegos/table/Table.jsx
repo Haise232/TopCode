@@ -13,6 +13,7 @@ import SeatBubble from './SeatBubble.jsx'
 import WinBurst from '../WinBurst.jsx'
 import WinToast from '../WinToast.jsx'
 import PowerButton from '../PowerButton.jsx'
+import { PowerCast, SeatPower, powerOfSeat } from '../TablePower.jsx'
 // Blackjack.css (generado) trae las fichas que comparte con el Cohete; blackjack-ui.css, el aspecto de esta mesa.
 import '../Blackjack.css'
 import './blackjack-ui.css'
@@ -202,7 +203,7 @@ function placement(index, count) {
   return { '--cos': Math.cos(rad).toFixed(4), '--sin': Math.sin(rad).toFixed(4) }
 }
 
-function Seat({ bubble, seat, index, count, mine, active, clock, phase, round, canSit, canKick, onSit, onKick }) {
+function Seat({ bubble, seat, index, count, mine, active, clock, phase, round, canSit, canKick, power, onSit, onKick }) {
   const style = placement(index, count)
   if (!seat) {
     return (
@@ -254,6 +255,7 @@ function Seat({ bubble, seat, index, count, mine, active, clock, phase, round, c
         </div>
         <div className="bj-seat__avatar">
           <Avatar name={seat.name} src={seat.avatar} size={56} />
+          <SeatPower power={power} />
         </div>
         <div className="bj-seat__plate">
           <span className="bj-seat__name">
@@ -489,6 +491,7 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
       </header>
 
       <PlayBand log={log} status={status} myTurn={myTurn} mine={mine} />
+      <PowerCast powers={state.powers} seats={state.seats} />
       {state.peek && (
         <p className="pk-peek" role="status">
           ✦ {state.peek.power} ({state.peek.card}): {state.peek.text.replace(/^ve /, 'ves ').replace(' y ve ', ' y ves ')} en esta mano.
@@ -592,6 +595,7 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
                 clock={clock}
                 phase={state.phase}
                 round={state.round}
+                power={powerOfSeat(state.powers, i)}
                 canSit={mySeat < 0 && conn === 'open'}
                 canKick={isHost && seat && i !== mySeat && betting}
                 onSit={() => send({ t: 'sit', seat: i })}

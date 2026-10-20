@@ -1382,3 +1382,151 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* --- Poderes en las mesas: la animación central y la carta junto a la foto --- */
+.juegos-root .tp-cast {
+  --glow: var(--r-comun);
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(3, 10, 16, 0.75), rgba(3, 10, 16, 0.2) 60%, transparent 75%);
+  animation: tp-cast-out 2.8s ease-in forwards;
+}
+.juegos-root .tp-cast--rara {
+  --glow: var(--r-rara);
+}
+.juegos-root .tp-cast--epica {
+  --glow: var(--r-epica);
+}
+.juegos-root .tp-cast--mitica {
+  --glow: var(--r-mitica);
+}
+@keyframes tp-cast-out {
+  0% {
+    opacity: 0;
+  }
+  8%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.juegos-root .tp-cast__rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120vmax;
+  height: 120vmax;
+  margin: -60vmax 0 0 -60vmax;
+  border-radius: 50%;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--glow) 40%, transparent) 0 7deg, transparent 7deg 20deg);
+  mask: radial-gradient(circle, black 0%, transparent 45%);
+  animation: gacha-spin 10s linear infinite;
+}
+.juegos-root .tp-cast__card {
+  position: relative;
+  width: min(190px, 46vw);
+  animation: tp-card-in 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.juegos-root .tp-cast__card .gacha-card {
+  box-shadow:
+    0 0 50px color-mix(in srgb, var(--glow) 70%, transparent),
+    0 20px 40px rgba(0, 0, 0, 0.5);
+}
+@keyframes tp-card-in {
+  0% {
+    opacity: 0;
+    transform: perspective(700px) rotateY(90deg) scale(0.3) translateY(80px);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(700px) rotateY(-12deg) scale(1.08);
+  }
+  100% {
+    transform: perspective(700px) rotateY(0) scale(1);
+  }
+}
+.juegos-root .tp-cast__text {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 18px;
+  border: 1px solid color-mix(in srgb, var(--glow) 55%, transparent);
+  border-radius: 14px;
+  background: rgba(8, 24, 34, 0.9);
+  font-size: 18px;
+  text-align: center;
+  color: var(--ivory);
+  animation: gacha-pop 0.4s 0.5s both;
+}
+.juegos-root .tp-cast__text em {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--glow);
+}
+.juegos-root .tp-cast__text small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .tp-seat {
+  --edge: var(--r-comun);
+  position: absolute;
+  z-index: 3;
+  top: -6px;
+  left: calc(50% + var(--size, var(--av, 56px)) / 2 - 8px);
+  width: clamp(26px, calc(var(--size, var(--av, 56px)) * 0.62), 40px);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--edge) 80%, transparent));
+  animation: tp-seat-in 0.5s 2.4s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.juegos-root .tp-seat--rara {
+  --edge: var(--r-rara);
+}
+.juegos-root .tp-seat--epica {
+  --edge: var(--r-epica);
+}
+.juegos-root .tp-seat--mitica {
+  --edge: var(--r-mitica);
+}
+.juegos-root .tp-seat .gacha-card {
+  border-radius: 6px;
+  transform: rotate(10deg);
+}
+.juegos-root .tp-seat i {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--edge);
+  font-size: 11px;
+  font-style: normal;
+  color: #1b1405;
+}
+.juegos-root .bj-seat__avatar .tp-seat {
+  left: calc(50% + var(--av) / 2 - 8px);
+}
+@keyframes tp-seat-in {
+  from {
+    opacity: 0;
+    scale: 0.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .tp-cast__rays,
+  .juegos-root .tp-cast__card,
+  .juegos-root .tp-seat {
+    animation: none;
+  }
+}
