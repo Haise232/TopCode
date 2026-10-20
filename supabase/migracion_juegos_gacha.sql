@@ -33,3 +33,12 @@ create table if not exists public.juegos_gacha_jugadores (
 alter table public.juegos_gacha_cartas    enable row level security;
 alter table public.juegos_gacha_tiradas   enable row level security;
 alter table public.juegos_gacha_jugadores enable row level security;
+
+-- La función de Juegos se conecta como juegos_api (dueño de las demás tablas de juegos): si esta migración se ejecuta
+-- como postgres, las tablas tienen que pasar a ser suyas o cada petición del gacha falla con «permission denied».
+alter table public.juegos_gacha_cartas    owner to juegos_api;
+alter table public.juegos_gacha_tiradas   owner to juegos_api;
+alter table public.juegos_gacha_jugadores owner to juegos_api;
+alter sequence public.juegos_gacha_tiradas_id_seq owner to juegos_api;
+revoke all on public.juegos_gacha_cartas, public.juegos_gacha_tiradas, public.juegos_gacha_jugadores from anon, authenticated, service_role;
+revoke all on sequence public.juegos_gacha_tiradas_id_seq from anon, authenticated, service_role;

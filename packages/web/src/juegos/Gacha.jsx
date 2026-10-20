@@ -1,145 +1,162 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { useEffect, useState } from 'react'
 import Avatar from './Avatar.jsx'
+import GachaCard from './GachaCard.jsx'
+import Help from './Help.jsx'
 import { eur } from './money.js'
+import { CATS, CAT_NAME, ODDS, RARITIES, RARITY, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
 // Gacha al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el mundo, el primero que
-// reclama se queda la carta, colección y ranking. Supabase Realtime avisa de cada tirada o reclamo («juegos-gacha»)
-// y la pantalla pide el canal de nuevo; el aviso no lleva datos.
-const CATS = [
-  { id: 'mixto', name: 'Mixto' },
-  { id: 'anime', name: 'Anime' },
-  { id: 'cine', name: 'Cine' },
-  { id: 'politica', name: 'Política' },
-]
-const CAT_NAME = { anime: 'Anime', cine: 'Cine', politica: 'Política' }
-const RARITY = { comun: 'Común', rara: 'Rara', epica: 'Épica', mitica: 'Mítica' }
-const REFRESH_MS = 20000
+// reclama se queda la carta, colección y ranking.
 
-// «45 s», «12 min», «2 h 5 min».
-function wait(ms) {
-  const s = Math.max(0, Math.ceil(ms / 1000))
-  if (s < 60) return `${s} s`
-  const min = Math.ceil(s / 60)
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  return min % 60 ? `${h} h ${min % 60} min` : `${h} h`
-}
-
-// Reloj del servidor (las cuentas atrás de reclamar se miden con él), avanzando cada segundo.
-function useServerNow(offset) {
-  const [t, setT] = useState(() => Date.now() + offset)
-  useEffect(() => {
-    setT(Date.now() + offset)
-    const timer = setInterval(() => setT(Date.now() + offset), 1000)
-    return () => clearInterval(timer)
-  }, [offset])
-  return t
-}
-
-// Si la imagen no carga (la fuente la quitó o va lenta), las iniciales en su lugar.
-function Card({ card, big = false }) {
-  const [broken, setBroken] = useState(false)
-  const initials = card.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
+// Barra que se vacía mientras quedan segundos para reclamar.
+function Countdown({ until, t, total }) {
+  const left = Math.max(0, until - t)
   return (
-    <figure className={`gacha-card gacha-card--${card.rarity} ${big ? 'gacha-card--big' : ''}`}>
-      <span className="gacha-card__img">
-        {broken ? (
-          <span className="gacha-card__fallback" aria-hidden="true">
-            {initials}
-          </span>
-        ) : (
-          <img src={card.img} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
-        )}
-      </span>
-      <figcaption>
-        <b>{card.name}</b>
-        {card.series && <small>{card.series}</small>}
-        <span className="gacha-card__tags">
-          <em>{RARITY[card.rarity]}</em>
-          <span>{CAT_NAME[card.cat]}</span>
-          <span className="gacha-kakera" title="Valor en kakera">
-            {card.value}
-          </span>
-        </span>
-      </figcaption>
-    </figure>
+    <span className="gacha-timer" aria-hidden="true">
+      <i style={{ transform: `scaleX(${Math.min(1, left / total)})` }} />
+    </span>
   )
 }
 
 // Una tirada del canal: la carta y qué ha pasado con ella.
-function Roll({ roll, t, meId, claimReady, busy, onClaim }) {
+function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim }) {
   const open = roll.until > t
-  const reserved = roll.premium && !roll.by.me
-  const canClaim = open && !busy && !reserved && (claimReady || (roll.premium && roll.by.me))
+  const canClaim = open && !busy && claimReady
   let status
-  if (roll.claimed) status = roll.claimed.id === meId ? '¡Es tuya!' : `Reclamada por ${roll.claimed.name}`
+  if (roll.claimed) status = roll.claimed.id === meId ? '¡Es tuya!' : `Se la quedó ${roll.claimed.name}`
   else if (roll.owner) status = roll.owner.me ? 'Ya era tuya' : `Ya es de ${roll.owner.name}`
   else if (!open) status = 'Nadie la reclamó'
+  const mine = roll.claimed?.id === meId
   return (
-    <li className={`gacha-roll ${open ? 'is-open' : ''} ${roll.premium ? 'is-premium' : ''}`}>
-      <Card card={roll.card} />
+    <li className={`gacha-roll ${open ? 'is-open' : ''} ${mine ? 'is-mine' : ''}`}>
+      <GachaCard card={roll.card} mini />
       <div className="gacha-roll__info">
         <span className={`gacha-roll__name gacha-roll__name--${roll.card.rarity}`}>
           <b>{roll.card.name}</b>
           <small>
             <em>{RARITY[roll.card.rarity]}</em> · {CAT_NAME[roll.card.cat]}
-            {roll.card.series ? ` · ${roll.card.series}` : ''} · <span className="gacha-kakera">{roll.card.value}</span>
+            {roll.card.series ? ` · ${roll.card.series}` : ''}
           </small>
         </span>
         <span className="gacha-roll__by">
-          <Avatar name={roll.by.name} src={roll.by.avatar} size={22} />
-          {roll.by.me ? 'Tu tirada' : `Tirada de ${roll.by.name}`}
+          <Avatar name={roll.by.name} src={roll.by.avatar} size={20} />
+          {roll.by.me ? 'Tu tirada' : roll.by.name}
           {roll.premium && <em className="gacha-pill">Premium</em>}
         </span>
         {open ? (
-          <button
-            type="button"
-            className="hub-btn hub-btn--primary gacha-claim"
-            disabled={!canClaim}
-            title={reserved ? 'Solo puede reclamarla quien pagó la tirada premium' : !claimReady ? 'Tu reclamo aún se está recargando' : undefined}
-            onClick={() => onClaim(roll.id)}
-          >
-            Reclamar · {wait(roll.until - t)}
-          </button>
+          <>
+            <button
+              type="button"
+              className="hub-btn hub-btn--primary gacha-claim"
+              disabled={!canClaim}
+              title={!claimReady ? 'Tu reclamo aún se está recargando' : undefined}
+              onClick={() => onClaim(roll.id)}
+            >
+              Reclamar · {wait(roll.until - t)}
+            </button>
+            <Countdown until={roll.until} t={t} total={claimMs} />
+          </>
         ) : (
-          <span className="gacha-roll__status">{status}</span>
+          <span className={`gacha-roll__status ${mine ? 'is-mine' : ''}`}>{status}</span>
         )}
       </div>
+      <span className="gacha-kakera gacha-roll__value">{roll.card.value}</span>
     </li>
+  )
+}
+
+// La carta que acabas de sacar, en grande, con la entrada según su rareza.
+function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
+  let text = 'Se te escapó.'
+  if (roll?.claimed) text = roll.claimed.id === meId ? (last.claimed ? '¡Directa a tu colección!' : '¡Es tuya!') : `Te la ha quitado ${roll.claimed.name}.`
+  else if (last.owned) text = `Ya tiene dueño: te llevas ${last.kakera} de kakera.`
+  else if (roll && roll.until > t) text = '¡Reclámala antes que nadie!'
+  const open = roll && !roll.claimed && roll.until > t
+  return (
+    <div className={`gacha-reveal gacha-reveal--${last.card.rarity}`} key={last.id}>
+      <span className="gacha-reveal__burst" aria-hidden="true" />
+      <GachaCard card={last.card} big />
+      <div className="gacha-reveal__text">
+        <span className="gacha-reveal__rarity">{RARITY[last.card.rarity]}</span>
+        <p aria-live="polite">{text}</p>
+        {open && (
+          <button type="button" className="hub-btn hub-btn--primary" disabled={busy || !claimReady} onClick={() => onClaim(last.id)}>
+            Reclamar · {wait(roll.until - t)}
+          </button>
+        )}
+        {open && !claimReady && <small>Tu reclamo aún se está recargando; puedes recargarlo con kakera.</small>}
+        <a href={last.card.src} target="_blank" rel="noreferrer">
+          Ver en la fuente ↗
+        </a>
+      </div>
+    </div>
   )
 }
 
 function Collection({ data, onRelease, busy }) {
   const [confirm, setConfirm] = useState(null)
+  const [cat, setCat] = useState('todas')
+  const [rarity, setRarity] = useState('todas')
   if (!data) return <p className="gacha-empty">Cargando…</p>
   const { user, cards, value } = data
+  const count = (r) => cards.filter((c) => c.rarity === r).length
+  const shown = cards.filter((c) => (cat === 'todas' || c.cat === cat) && (rarity === 'todas' || c.rarity === rarity))
   return (
-    <section aria-labelledby="col-title">
-      <h2 id="col-title" className="hub-title gacha-col-title">
-        <Avatar name={user.name} src={user.avatar} size={32} />
-        {user.me ? 'Tu colección' : `Colección de ${user.name}`}
-        <small>
-          {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · <span className="gacha-kakera">{value}</span>
-        </small>
-      </h2>
+    <section className="gacha-collection" aria-labelledby="col-title">
+      <header className="gacha-col-head">
+        <Avatar name={user.name} src={user.avatar} size={44} />
+        <div>
+          <h2 id="col-title">{user.me ? 'Tu colección' : `Colección de ${user.name}`}</h2>
+          <p>
+            {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · valor <span className="gacha-kakera">{value}</span>
+          </p>
+        </div>
+        <ul className="gacha-col-counts" aria-label="Cartas por rareza">
+          {RARITIES.map((r) => (
+            <li key={r} className={`gacha-roll__name--${r}`}>
+              <em>{count(r)}</em> {RARITY[r]}
+            </li>
+          ))}
+        </ul>
+      </header>
+      {cards.length > 0 && (
+        <div className="gacha-filters">
+          <div className="hub-segs" role="group" aria-label="Categoría">
+            {[{ id: 'todas', name: 'Todas' }, ...CATS.filter((c) => c.id !== 'mixto')].map((c) => (
+              <button key={c.id} type="button" className="hub-seg" aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>
+                <span>{c.name}</span>
+              </button>
+            ))}
+          </div>
+          <label className="gacha-select">
+            <span>Rareza</span>
+            <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
+              <option value="todas">Todas</option>
+              {RARITIES.map((r) => (
+                <option key={r} value={r}>
+                  {RARITY[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       {cards.length === 0 ? (
         <p className="gacha-empty">{user.me ? 'Aún no tienes cartas: tira y reclama la que te guste.' : 'Aún no tiene cartas.'}</p>
+      ) : shown.length === 0 ? (
+        <p className="gacha-empty">Ninguna carta con esos filtros.</p>
       ) : (
         <ul className="gacha-grid">
-          {cards.map((card) => (
+          {shown.map((card) => (
             <li key={card.id}>
-              <Card card={card} />
+              <GachaCard card={card} />
               {user.me && (
                 <button
                   type="button"
-                  className="gacha-release"
+                  className={`gacha-release ${confirm === card.id ? 'is-confirm' : ''}`}
                   disabled={busy}
+                  onBlur={() => setConfirm(null)}
                   onClick={() => {
                     if (confirm !== card.id) return setConfirm(card.id)
                     setConfirm(null)
@@ -159,14 +176,14 @@ function Collection({ data, onRelease, busy }) {
 
 function Ranking({ list, onOpen }) {
   if (!list) return <p className="gacha-empty">Cargando…</p>
-  if (list.length === 0) return <p className="gacha-empty">Nadie tiene cartas todavía.</p>
+  if (list.length === 0) return <p className="gacha-empty">Nadie tiene cartas todavía. ¡Sé el primero!</p>
   return (
     <ol className="gacha-rank">
       {list.map((p, i) => (
         <li key={p.id}>
           <button type="button" className={p.me ? 'is-me' : ''} onClick={() => onOpen(p.id)}>
             <b className="gacha-rank__pos">{i + 1}</b>
-            <Avatar name={p.name} src={p.avatar} size={36} />
+            <Avatar name={p.name} src={p.avatar} size={40} />
             <span className="gacha-rank__name">
               {p.name}
               <small>
@@ -174,6 +191,11 @@ function Ranking({ list, onOpen }) {
                 {p.best ? ` · la mejor: ${p.best.name}` : ''}
               </small>
             </span>
+            {p.best && (
+              <span className="gacha-rank__best">
+                <GachaCard card={p.best} mini />
+              </span>
+            )}
             <span className="gacha-kakera">{p.value}</span>
           </button>
         </li>
@@ -182,53 +204,62 @@ function Ranking({ list, onOpen }) {
   )
 }
 
-export default function Gacha({ onExit, juegos }) {
-  const { request } = juegos
-  const [tab, setTab] = useState('tirar')
+function Rules({ prices }) {
+  return (
+    <Help label="Cómo funciona" title="Cómo funciona el gacha" wide>
+      <p>
+        Cada hora tienes <b>8 tiradas gratis</b>. Lo que sale aparece en el <b>canal</b> y lo ve todo el mundo: durante 45 s
+        cualquiera puede <b>reclamarlo</b>, y se lo queda el primero que pulse. Cada carta tiene un solo dueño.
+      </p>
+      <p>
+        Solo puedes reclamar <b>una carta cada 3 horas</b>, así que elige bien. Si sale una carta que ya tiene dueño, quien
+        tiró se lleva la mitad de su valor en <b>kakera</b>.
+      </p>
+      <p>
+        La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)} de tu saldo de la semana: siempre es épica o mítica,
+        nunca sale una carta con dueño y va directa a tu colección, sin gastar tu reclamo.
+      </p>
+      <p>
+        Con <b>kakera</b> compras una tirada extra ({prices?.extraRoll ?? 150}) o recargas tu reclamo ({prices?.claimReset ?? 600}).
+        La consigues sacando cartas con dueño y liberando las tuyas, que te devuelven su valor.
+      </p>
+      <table className="gacha-odds">
+        <thead>
+          <tr>
+            <th>Rareza</th>
+            <th>Tirada normal</th>
+            <th>Premium</th>
+          </tr>
+        </thead>
+        <tbody>
+          {RARITIES.map((r) => (
+            <tr key={r} className={`gacha-roll__name--${r}`}>
+              <td>
+                <em>{RARITY[r]}</em>
+              </td>
+              <td>{ODDS.normal[r] ?? 0} %</td>
+              <td>{ODDS.premium[r] ?? 0} %</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="gacha-note">
+        La rareza sale de lo popular que es cada personaje: los favoritos de AniList y, en cine y política, en cuántas
+        Wikipedias aparece. Tu colección no se reinicia el domingo.
+      </p>
+    </Help>
+  )
+}
+
+export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
+  const { state, feed, offset, collection, setCollection, ranking, load } = useGacha(juegos.request)
+  const [tab, setTab] = useState(initialTab)
   const [cat, setCat] = useState('mixto')
-  const [state, setState] = useState(null)
-  const [feed, setFeed] = useState([])
-  const [offset, setOffset] = useState(0)
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
-  const [collection, setCollection] = useState(null)
-  const [ranking, setRanking] = useState(null)
   const t = useServerNow(offset)
   const balance = juegos.me?.balance ?? 0
-
-  const load = useCallback(
-    async (a, extra = {}) => {
-      const body = await request({ t: 'gacha', a, ...extra })
-      const g = body?.gacha
-      if (!g) return null
-      setState(g.state)
-      setFeed(g.feed)
-      setOffset(g.state.now - Date.now())
-      if (g.collection) setCollection(g.collection)
-      if (g.ranking) setRanking(g.ranking)
-      return body
-    },
-    [request],
-  )
-
-  // Al entrar, cada vez que alguien tira o reclama (aviso de Realtime) y, por si se pierde un aviso, cada REFRESH_MS.
-  const debounce = useRef(null)
-  useEffect(() => {
-    load('estado')
-    const channel = supabase
-      .channel('juegos-gacha')
-      .on('broadcast', { event: 'tirada' }, () => {
-        clearTimeout(debounce.current)
-        debounce.current = setTimeout(() => load('estado'), 250)
-      })
-      .subscribe()
-    const timer = setInterval(() => load('estado'), REFRESH_MS)
-    return () => {
-      clearTimeout(debounce.current)
-      clearInterval(timer)
-      supabase.removeChannel(channel)
-    }
-  }, [load])
+  const meId = juegos.me?.id
 
   async function act(a, extra) {
     setBusy(true)
@@ -242,23 +273,29 @@ export default function Gacha({ onExit, juegos }) {
     if (body?.gacha?.result) setLast(body.gacha.result)
   }
 
-  async function openCollection(user) {
+  function openCollection(user) {
     setCollection(null)
     setTab('coleccion')
-    await load('coleccion', user ? { user } : {})
+    load('coleccion', user ? { user } : {})
   }
+
+  function openTab(id) {
+    if (id === 'coleccion') return openCollection()
+    setTab(id)
+    if (id === 'ranking') load('ranking')
+  }
+
+  // Si se entra desde el escaparate con «Mi colección» o «Ranking», se cargan sus datos.
+  useEffect(() => {
+    if (initialTab === 'coleccion') load('coleccion')
+    if (initialTab === 'ranking') load('ranking')
+  }, [initialTab, load])
 
   const rolls = state?.rolls
   const claimReady = state ? state.claimAt === 0 || state.claimAt <= t : false
   const lastRoll = last && feed.find((r) => r.id === last.id)
-
-  let lastText = null
-  if (last && lastRoll) {
-    if (lastRoll.claimed) lastText = lastRoll.claimed.id === juegos.me?.id ? '¡Es tuya!' : `Te la ha quitado ${lastRoll.claimed.name}.`
-    else if (last.owned) lastText = `Ya tiene dueño: te llevas ${last.kakera} de kakera.`
-    else if (lastRoll.until > t) lastText = `¡Reclámala antes de ${wait(lastRoll.until - t)}!`
-    else lastText = 'Se te escapó.'
-  }
+  const premiumPrice = state?.prices.premium ?? 20000
+  const openCount = feed.filter((r) => r.until > t).length
 
   return (
     <main className="app gacha-app">
@@ -266,8 +303,9 @@ export default function Gacha({ onExit, juegos }) {
         <h1>Gacha</h1>
         <div className="toggles">
           <button type="button" onClick={onExit}>
-            Volver
+            Juegos
           </button>
+          <Rules prices={state?.prices} />
         </div>
       </header>
 
@@ -276,25 +314,29 @@ export default function Gacha({ onExit, juegos }) {
           <dt>Tiradas</dt>
           <dd>
             {rolls ? `${rolls.left}/${rolls.max}` : '–'}
-            {rolls && <small>se recargan en {wait(rolls.resetAt - t)}</small>}
+            {rolls && <small>{rolls.left < rolls.max ? `se recargan en ${wait(rolls.resetAt - t)}` : 'se recargan cada hora'}</small>}
           </dd>
         </div>
-        <div>
+        <div className={claimReady ? 'is-ready' : ''}>
           <dt>Reclamo</dt>
-          <dd className={claimReady ? 'is-ready' : ''}>
+          <dd>
             {state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}
-            <small>uno cada 3 h</small>
+            <small>{claimReady ? 'puedes quedarte una carta' : 'uno cada 3 h'}</small>
           </dd>
         </div>
         <div>
           <dt>Kakera</dt>
           <dd>
             <span className="gacha-kakera">{state?.kakera ?? 0}</span>
+            <small>{state ? `${state.owned} ${state.owned === 1 ? 'carta' : 'cartas'} en tu colección` : ''}</small>
           </dd>
         </div>
         <div>
           <dt>Saldo de la semana</dt>
-          <dd>{eur(balance)}</dd>
+          <dd>
+            {eur(balance)}
+            <small>{balance >= premiumPrice ? 'te llega para una premium' : `la premium cuesta ${eur(premiumPrice)}`}</small>
+          </dd>
         </div>
       </dl>
 
@@ -304,50 +346,45 @@ export default function Gacha({ onExit, juegos }) {
           ['coleccion', 'Mi colección'],
           ['ranking', 'Ranking'],
         ].map(([id, name]) => (
-          <button
-            key={id}
-            type="button"
-            className="hub-seg"
-            aria-pressed={tab === id}
-            onClick={() => (id === 'coleccion' ? openCollection() : id === 'ranking' ? (setTab('ranking'), load('ranking')) : setTab(id))}
-          >
+          <button key={id} type="button" className="hub-seg" aria-pressed={tab === id} onClick={() => openTab(id)}>
             <span>{name}</span>
           </button>
         ))}
       </nav>
 
-      <p className="status gacha-status" aria-live="polite">
-        {juegos.error || (state ? '' : 'Conectando…')}
-      </p>
+      {(juegos.error || !state) && (
+        <p className="status gacha-status" role="status">
+          {juegos.error || 'Conectando…'}
+        </p>
+      )}
 
       {tab === 'tirar' && (
         <div className="gacha-play">
           <section className="gacha-panel" aria-labelledby="roll-title">
             <h2 id="roll-title" className="hub-title">
-              Tirar <small>lo que salga lo ve todo el mundo durante 45 s</small>
+              Tirar <small>todos lo verán durante 45 s</small>
             </h2>
-            <div className="hub-segs" role="group" aria-label="Categoría">
+            <div className="hub-segs gacha-cats" role="group" aria-label="Categoría">
               {CATS.map((c) => (
                 <button key={c.id} type="button" className="hub-seg" aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>
                   <span>{c.name}</span>
                 </button>
               ))}
             </div>
+            <button type="button" className="gacha-roll-btn" disabled={busy || !rolls || rolls.left <= 0} onClick={() => roll(false)}>
+              <b>{rolls && rolls.left <= 0 ? 'Sin tiradas' : 'Tirar'}</b>
+              <small>{rolls && rolls.left <= 0 ? `Vuelven en ${wait(rolls.resetAt - t)}` : `${rolls?.left ?? 0} gratis esta hora`}</small>
+            </button>
             <div className="gacha-actions">
-              <button type="button" className="hub-btn hub-btn--primary" disabled={busy || !rolls || rolls.left <= 0} onClick={() => roll(false)}>
-                {rolls && rolls.left <= 0 ? 'Sin tiradas esta hora' : 'Tirar'}
-              </button>
               <button
                 type="button"
                 className="hub-btn gacha-premium"
-                disabled={busy || !state || balance < state.prices.premium}
-                title="Siempre épica o mítica, sin dueño, y solo la puedes reclamar tú (sin gastar tu reclamo)"
+                disabled={busy || !state || balance < premiumPrice}
+                title="Épica o mítica, sin dueño, directa a tu colección"
                 onClick={() => roll(true)}
               >
-                Premium · {eur(state?.prices.premium ?? 20000)}
+                ✦ Premium · {eur(premiumPrice)}
               </button>
-            </div>
-            <div className="gacha-shop">
               <button
                 type="button"
                 className="hub-btn hub-btn--ghost"
@@ -360,44 +397,43 @@ export default function Gacha({ onExit, juegos }) {
                 type="button"
                 className="hub-btn hub-btn--ghost"
                 disabled={busy || !state || claimReady || state.kakera < state.prices.claimReset}
+                title="Recarga tu reclamo para poder quedarte otra carta ahora"
                 onClick={() => act('tienda', { item: 'reclamo' })}
               >
-                Recargar reclamo · <span className="gacha-kakera">{state?.prices.claimReset ?? 600}</span>
+                Reclamo ya · <span className="gacha-kakera">{state?.prices.claimReset ?? 600}</span>
               </button>
             </div>
-            {last && (
-              <div className="gacha-last" key={last.id}>
-                <Card card={last.card} big />
-                <div className="gacha-last__text">
-                  <p>{lastText}</p>
-                  {lastRoll && lastRoll.until > t && (
-                    <button
-                      type="button"
-                      className="hub-btn hub-btn--primary"
-                      disabled={busy || (!claimReady && !lastRoll.premium)}
-                      onClick={() => act('reclamar', { id: last.id })}
-                    >
-                      Reclamar
-                    </button>
-                  )}
-                  <a href={last.card.src} target="_blank" rel="noreferrer">
-                    Ver en la fuente
-                  </a>
-                </div>
+            {last ? (
+              <Reveal last={last} roll={lastRoll} t={t} meId={meId} claimReady={claimReady} busy={busy} onClaim={(id) => act('reclamar', { id })} />
+            ) : (
+              <div className="gacha-placeholder" aria-hidden="true">
+                <span />
+                <span />
+                <span />
               </div>
             )}
           </section>
 
           <section className="gacha-feed" aria-labelledby="feed-title">
             <h2 id="feed-title" className="hub-title">
-              Canal <small>las últimas tiradas de todos</small>
+              Canal
+              <small>{openCount > 0 ? `${openCount} por reclamar ahora mismo` : 'las últimas tiradas de todos'}</small>
             </h2>
             {feed.length === 0 ? (
               <p className="gacha-empty">{state ? 'Todavía no ha tirado nadie. ¡Estrénalo!' : 'Cargando…'}</p>
             ) : (
               <ul className="gacha-rolls">
                 {feed.map((r) => (
-                  <Roll key={r.id} roll={r} t={t} meId={juegos.me?.id} claimReady={claimReady} busy={busy} onClaim={(id) => act('reclamar', { id })} />
+                  <Roll
+                    key={r.id}
+                    roll={r}
+                    t={t}
+                    meId={meId}
+                    claimReady={claimReady}
+                    claimMs={state?.claimMs ?? 45000}
+                    busy={busy}
+                    onClaim={(id) => act('reclamar', { id })}
+                  />
                 ))}
               </ul>
             )}
@@ -405,7 +441,9 @@ export default function Gacha({ onExit, juegos }) {
         </div>
       )}
 
-      {tab === 'coleccion' && <Collection data={collection} busy={busy} onRelease={(card) => act('liberar', { card }).then(() => load('coleccion'))} />}
+      {tab === 'coleccion' && (
+        <Collection data={collection} busy={busy} onRelease={(card) => act('liberar', { card }).then(() => load('coleccion'))} />
+      )}
       {tab === 'ranking' && <Ranking list={ranking} onOpen={openCollection} />}
 
       <footer className="gacha-foot">

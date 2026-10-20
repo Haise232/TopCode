@@ -3,7 +3,7 @@
 // cada persona solo puede reclamar una vez cada CLAIM_COOLDOWN_MS. Cada carta tiene como mucho un dueño.
 // Kakera: la ganas al sacar una carta que ya tiene dueño y al liberar una tuya; se gasta en tiradas extra o en recargar
 // el reclamo. Tirada premium: cuesta PREMIUM_COST € del saldo de la semana, siempre es épica o mítica, nunca sale una
-// carta con dueño y solo puede reclamarla quien la pagó (sin gastar su reclamo).
+// carta con dueño y va directa a la colección de quien la paga (sin gastar su reclamo ni carreras de 45 s).
 // Las cartas vienen de gacha-catalogo.json (lo genera scripts/gacha/importar.mjs).
 import { randomInt } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -123,12 +123,16 @@ export function createGacha({ db, ping, now, charge }) {
 
   // Sin bloqueo: para pintar la pantalla.
   async function readState(userId, t) {
-    const row = (await db.query(`select hora, tiradas, reclamo_listo, kakera from public.juegos_gacha_jugadores where usuario_id = $1`, [userId])).rows[0]
+    const [player, owned] = await Promise.all([
+      db.query(`select hora, tiradas, reclamo_listo, kakera from public.juegos_gacha_jugadores where usuario_id = $1`, [userId]),
+      db.query(`select count(*)::int as n from public.juegos_gacha_cartas where usuario_id = $1`, [userId]),
+    ])
+    const row = player.rows[0]
     const hour = hourOf(t)
     const st = row
       ? { hour, used: Number(row.hora) === hour ? row.tiradas : 0, claimAt: ms(row.reclamo_listo), kakera: Number(row.kakera) }
       : { hour, used: 0, claimAt: 0, kakera: 0 }
-    return stateView(st, t)
+    return { ...stateView(st, t), owned: owned.rows[0].n }
   }
 
   async function feed(userId, t) {
@@ -172,9 +176,22 @@ export function createGacha({ db, ping, now, charge }) {
       const st = await player(q, user.id, t)
       if (!premium && st.used >= ROLLS_PER_HOUR) return { error: 'GACHA_NO_ROLLS' }
       if (premium && (await charge(q, user.id, PREMIUM_COST)) === null) return { error: 'GACHA_FUNDS' }
-      const taken = premium ? new Set((await q(`select carta from public.juegos_gacha_cartas`)).rows.map((r) => r.carta)) : null
-      const card = draw(msg.cat, premium, taken)
-      const owner = (await q(`select usuario_id from public.juegos_gacha_cartas where carta = $1`, [card.id])).rows[0]?.usuario_id
+      let card
+      let owner = null
+      if (premium) {
+        // Directa a tu colección. Si otra premium a la vez se llevó la misma carta (el insert no entra), se sortea otra.
+        const taken = new Set((await q(`select carta from public.juegos_gacha_cartas`)).rows.map((r) => r.carta))
+        for (let i = 0; i < 5 && !card; i++) {
+          const pick = draw(msg.cat, true, taken)
+          const got = await q(`insert into public.juegos_gacha_cartas (carta, usuario_id) values ($1, $2) on conflict (carta) do nothing returning carta`, [pick.id, user.id])
+          if (got.rows.length) card = pick
+          else taken.add(pick.id)
+        }
+        if (!card) throw new Error('gacha: no queda ninguna carta libre para la tirada premium')
+      } else {
+        card = draw(msg.cat, false, null)
+        owner = (await q(`select usuario_id from public.juegos_gacha_cartas where carta = $1`, [card.id])).rows[0]?.usuario_id ?? null
+      }
       // Si ya tiene dueño (aunque seas tú), te llevas kakera en lugar de la carta.
       const gain = owner ? Math.round(card.value / 2) : 0
       if (!premium) st.used += 1
@@ -182,11 +199,11 @@ export function createGacha({ db, ping, now, charge }) {
       await save(q, user.id, st)
       // La hora de la tirada, con el mismo reloj que cuenta los CLAIM_MS al reclamar.
       const { rows } = await q(
-        `insert into public.juegos_gacha_tiradas (usuario_id, carta, premium, creada) values ($1, $2, $3, to_timestamp($4 / 1000.0)) returning id`,
-        [user.id, card.id, premium, t],
+        `insert into public.juegos_gacha_tiradas (usuario_id, carta, premium, creada, reclamada_por) values ($1, $2, $3, to_timestamp($4 / 1000.0), $5) returning id`,
+        [user.id, card.id, premium, t, premium ? user.id : null],
       )
       if (Number(rows[0].id) % 50 === 0) await q(`delete from public.juegos_gacha_tiradas where creada < now() - make_interval(days => $1)`, [KEEP_DAYS])
-      return { result: { id: Number(rows[0].id), card: cardView(card.id), kakera: gain, owned: Boolean(owner) } }
+      return { result: { id: Number(rows[0].id), card: cardView(card.id), kakera: gain, owned: Boolean(owner), claimed: premium } }
     })
     if (!out.error) await ping('juegos-gacha', 'tirada')
     return out

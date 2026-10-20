@@ -13,6 +13,7 @@ import Crash from './Crash.jsx'
 import Slots from './Slots.jsx'
 import Plinko from './Plinko.jsx'
 import Gacha from './Gacha.jsx'
+import GachaShowcase from './GachaShowcase.jsx'
 import SlotSymbol from './SlotSymbol.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
@@ -31,19 +32,6 @@ const LIVE = {
 }
 
 const SOLO = [
-  {
-    id: 'gacha',
-    name: 'Gacha',
-    blurb: 'Anime, cine y políticos. Reclama antes que nadie.',
-    badge: 'Nuevo',
-    art: (
-      <span className="game__gacha">
-        <i />
-        <i />
-        <i />
-      </span>
-    ),
-  },
   {
     id: 'roulette',
     name: 'Ruleta',
@@ -318,7 +306,7 @@ function LiveGame({ game, tables, loaded, online, onJoin }) {
   )
 }
 
-function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
+function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
   const { me, lobby, conn, scores, send } = juegos
   const connected = conn === 'open' && Boolean(me)
   const online = connected && Boolean(lobby)
@@ -371,6 +359,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
               <LiveGame key={game} game={game} tables={tablesOf(game)} loaded={Boolean(lobby)} online={online} onJoin={onJoin} />
             ))}
           </div>
+          <GachaShowcase juegos={juegos} online={connected} onOpen={onGacha} />
         </section>
 
         <div className="hub-side">
@@ -386,7 +375,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
               Para jugar solo <small>con tu saldo de la semana</small>
             </h2>
             <ul className="hub-solo">
-              {SOLO.map(({ id, name, blurb, art, live, badge }) => (
+              {SOLO.map(({ id, name, blurb, art, live }) => (
                 <li key={id}>
                   <button type="button" className="hub-row" disabled={!connected} onClick={() => onPick(id)}>
                     <span className="hub-row__art" aria-hidden="true">
@@ -396,7 +385,6 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onHome }) {
                       <span className="hub-row__name">
                         {name}
                         {live && <em className="hub-pill">En vivo</em>}
-                        {badge && <em className="hub-pill">{badge}</em>}
                       </span>
                       <span className="hub-row__blurb">{blurb}</span>
                     </span>
@@ -537,7 +525,7 @@ function JuegosScreens() {
   if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
   if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
-  if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} />
+  if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />
   return (
@@ -546,6 +534,7 @@ function JuegosScreens() {
       onPick={(screen) => setView({ screen })}
       onJoin={(game, as, code) => setView({ screen: 'join', game, as, code })}
       onScore={() => setView({ screen: 'score' })}
+      onGacha={(tab) => setView({ screen: 'gacha', tab })}
       onHome={home}
     />
   )
