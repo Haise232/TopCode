@@ -641,8 +641,25 @@
   padding: 1px;
   border-radius: 3px;
 }
-.juegos-root .hub-row__art .game__cards .card {
-  --card-w: 30px;
+.juegos-root .hub-row__art .game__plinko {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--baize);
+  box-shadow: inset 0 0 0 2px var(--brass);
+}
+.juegos-root .game__plinko-peg {
+  fill: #e9e1cf;
+}
+.juegos-root .game__plinko-ball {
+  fill: #f0c75a;
+}
+.juegos-root .game__plinko-hot {
+  fill: #e2463c;
+}
+.juegos-root .game__plinko-cold {
+  fill: #5f87a0;
 }
 
 /* Hover solo con puntero: al tocar no se queda a medias. */

@@ -11,8 +11,7 @@ import './App.css'
 import Roulette from './Roulette.jsx'
 import Crash from './Crash.jsx'
 import Slots from './Slots.jsx'
-import Blackjack from './Blackjack.jsx'
-import PlayingCard from './PlayingCard.jsx'
+import Plinko from './Plinko.jsx'
 import SlotSymbol from './SlotSymbol.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
@@ -58,14 +57,26 @@ const SOLO = [
     ),
   },
   {
-    id: 'blackjack',
-    name: 'Blackjack solo',
-    blurb: 'Tú contra el crupier.',
+    id: 'plinko',
+    name: 'Plinko',
+    blurb: 'Suelta bolas y que caigan en las orillas.',
     art: (
-      <span className="game__cards">
-        <PlayingCard rank="Q" suit="diamonds" />
-        <PlayingCard rank="J" suit="clubs" />
-      </span>
+      <svg className="game__plinko" viewBox="0 0 40 40">
+        {[
+          [20, 9],
+          [14, 17],
+          [26, 17],
+          [8, 25],
+          [20, 25],
+          [32, 25],
+        ].map(([cx, cy]) => (
+          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.2" className="game__plinko-peg" />
+        ))}
+        <circle cx="17" cy="4" r="3.6" className="game__plinko-ball" />
+        <rect x="3" y="31" width="9" height="6" rx="1.5" className="game__plinko-hot" />
+        <rect x="15.5" y="31" width="9" height="6" rx="1.5" className="game__plinko-cold" />
+        <rect x="28" y="31" width="9" height="6" rx="1.5" className="game__plinko-hot" />
+      </svg>
     ),
   },
 ]
@@ -450,7 +461,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | slots | blackjack | join | score
+  // screen: lobby | roulette | crash | slots | plinko | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -510,7 +521,7 @@ function JuegosScreens() {
   if (screen === 'roulette') return <Roulette onExit={exit} juegos={juegos} />
   if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
   if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
-  if (screen === 'blackjack') return <Blackjack onExit={exit} juegos={juegos} />
+  if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />
   return (

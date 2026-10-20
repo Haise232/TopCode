@@ -79,6 +79,12 @@ export function playClunk() {
   if (ac) tone(ac, { freq: 240, to: 90, dur: 0.12, type: 'square', peak: 0.09 })
 }
 
+// Toque de la bola de Plinko contra un clavo: más agudo cuanto más abajo.
+export function playPeg(row = 0) {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 1100 + row * 60, dur: 0.035, type: 'sine', peak: 0.035 })
+}
+
 // Roce de una carta al caer sobre el tapete.
 export function playCard() {
   const ac = audio()

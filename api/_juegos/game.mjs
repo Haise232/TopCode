@@ -169,11 +169,26 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       const { rows } = await db.query(`select to_regclass('public.juegos_solo') is not null as ok`)
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
+      await refundSoloBlackjack()
     })().catch((error) => {
       schemaReady = null
       throw error
     })
     return schemaReady
+  }
+
+  // El blackjack en solitario ya no existe (lo sustituye Plinko): una mano que se quedó a medias ya no se puede terminar,
+  // así que se devuelve lo apostado en ella y se borra. Las partidas de semanas pasadas ya las borró el reinicio, y tras
+  // la primera vez no queda ninguna fila: en cada arranque es una consulta que no encuentra nada.
+  async function refundSoloBlackjack() {
+    await db.tx(async (q) => {
+      const { rows } = await q(`select usuario_id, estado from public.juegos_solo where juego = 'blackjack' for update`)
+      for (const { usuario_id: id, estado } of rows) {
+        const stake = estado?.phase && estado.phase !== 'idle' ? (estado.hands ?? []).reduce((sum, hand) => sum + (hand.bet ?? 0), 0) : 0
+        if (stake > 0) await q(`update public.juegos_cuentas set saldo = saldo + $2 where usuario_id = $1`, [id, stake])
+      }
+      if (rows.length) await q(`delete from public.juegos_solo where juego = 'blackjack'`)
+    })
   }
 
   // Domingo 23:59: se guarda el podio y todos vuelven a 10.000 €.
@@ -460,8 +475,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
       const accounts = new TxAccounts(accRows, week.day)
       const balance = accounts.get(user.id).balance
+      // Tragamonedas y Plinko no guardan nada entre jugadas.
       const saved =
-        game === 'slots'
+        game === 'slots' || game === 'plinko'
           ? null
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
       const out = SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
@@ -611,21 +627,11 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         return reply
       }
       case 'solo_slots':
-      case 'solo_blackjack': {
+      case 'solo_plinko': {
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
-        return reply
-      }
-      case 'solo_state': {
-        // Racha de la ruleta y mano de blackjack a medias, para retomarlas al entrar en la pantalla.
-        const { rows } = await db.query(`select juego, estado from public.juegos_solo where usuario_id = $1`, [user.id])
-        const saved = Object.fromEntries(rows.map((r) => [r.juego, r.estado]))
-        reply.soloState = {
-          streak: saved.roulette?.streak ?? 0,
-          blackjack: saved.blackjack ? SOLO_PLAY.blackjack({ a: 'view' }, account.saldo, saved.blackjack, randomInt).result : null,
-        }
         return reply
       }
       case 'chat_poll':

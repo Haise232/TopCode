@@ -1,14 +1,14 @@
-// Juegos en solitario (ruleta, tragamonedas y blackjack contra el crupier) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, tragamonedas y Plinko) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
-// el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta, mano del blackjack).
+// el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
 import { createHmac } from 'node:crypto'
 import * as roulette from '../../packages/web/src/juegos/roulette.js'
 import * as slots from '../../packages/web/src/juegos/slots.js'
-import * as blackjack from '../../packages/web/src/juegos/blackjack.js'
+import * as plinko from '../../packages/web/src/juegos/plinko.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_blackjack: 'blackjack', solo_crash: 'crash' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_plinko: 'plinko', solo_crash: 'crash' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -137,26 +137,15 @@ export function slotsSpin(msg, balance, _saved, rand) {
   return { delta, played: true, saved: null, result: { stops, payout, balance: balance + delta } }
 }
 
-const BJ_ACTIONS = { hit: 'HIT', stand: 'STAND', double: 'DOUBLE', split: 'SPLIT' }
-
-export function blackjackPlay(msg, balance, saved, rand) {
-  // El saldo de la partida es siempre el de la cuenta (puede haber cambiado jugando en otra mesa).
-  const state = { ...(saved ?? { ...blackjack.initialState, shoe: [] }), bank: balance }
-  let next = state
-  if (msg.a === 'deal') {
-    if (state.phase !== 'idle') return { error: 'BAD_PHASE' }
-    if (!blackjack.validBet(msg.bet, balance)) return { error: msg.bet > balance ? 'INSUFFICIENT_FUNDS' : 'BAD_MESSAGE' }
-    next = blackjack.reducer({ ...state, bet: msg.bet }, { type: 'DEAL', shoe: state.shoe.length < blackjack.CUT ? blackjack.newShoe(rand) : undefined })
-  } else if (Object.hasOwn(BJ_ACTIONS, msg.a)) {
-    next = blackjack.reducer(state, { type: BJ_ACTIONS[msg.a] })
-    if (next === state) return { error: 'BAD_PHASE' }
-  } else if (msg.a !== 'view') {
-    return { error: 'BAD_MESSAGE' }
-  }
-  // El crupier juega de una vez; la pantalla lo anima carta a carta.
-  for (let i = 0; next.phase === 'dealer' && i < 30; i++) next = blackjack.reducer(next, { type: 'DEALER_STEP' })
-  const delta = next.bank - balance
-  return { delta, played: msg.a !== 'view', saved: next, result: blackjack.viewOf(next) }
+// Plinko: una bola por petición; el servidor sortea el recorrido entero y la pantalla solo lo anima.
+export function plinkoDrop(msg, balance, _saved, rand) {
+  if (!plinko.validBet(msg.bet) || !plinko.validRisk(msg.risk)) return { error: 'BAD_MESSAGE' }
+  if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+  const path = plinko.dropPath(rand)
+  const slot = plinko.slotOf(path)
+  const payout = plinko.payoutOf(msg.bet, msg.risk, slot)
+  const delta = payout - msg.bet
+  return { delta, played: true, saved: null, result: { path, slot, payout, balance: balance + delta } }
 }
 
 // --- Cohete en vivo: un multiplicador que sube para todos a la vez; quien retira antes de que explote, cobra. ---
@@ -261,4 +250,4 @@ export function crashLive(msg, balance, saved, _rand, ctx) {
   }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, blackjack: blackjackPlay, crash: crashLive }
+export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, plinko: plinkoDrop, crash: crashLive }
