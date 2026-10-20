@@ -3,11 +3,14 @@ import Avatar from './Avatar.jsx'
 import GachaCard from './GachaCard.jsx'
 import Help from './Help.jsx'
 import { eur } from './money.js'
-import { CATS, CAT_NAME, ODDS, RARITIES, RARITY, useGacha, useServerNow, wait } from './gacha.js'
+import { ODDS, RARITIES, RARITY, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
-// Gacha al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el mundo, el primero que
-// reclama se queda la carta, colección y ranking.
+// Gacha de políticos españoles al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el
+// mundo, el primero que reclama se queda la carta, vender cartas por saldo de la semana y ver la colección de cualquiera.
+
+// Probabilidad de una carta concreta: «0,48 %», «0,0029 %».
+const pct = (n) => `${n.toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`
 
 // Barra que se vacía mientras quedan segundos para reclamar.
 function Countdown({ until, t, total }) {
@@ -19,15 +22,38 @@ function Countdown({ until, t, total }) {
   )
 }
 
+// Nombre de alguien que lleva a su colección.
+function Who({ person, onOpen }) {
+  return (
+    <button type="button" className="gacha-who" onClick={() => onOpen(person.id)} title={`Ver la colección de ${person.name}`}>
+      {person.name}
+    </button>
+  )
+}
+
 // Una tirada del canal: la carta y qué ha pasado con ella.
-function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim }) {
+function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim, onOpen }) {
   const open = roll.until > t
   const canClaim = open && !busy && claimReady
-  let status
-  if (roll.claimed) status = roll.claimed.id === meId ? '¡Es tuya!' : `Se la quedó ${roll.claimed.name}`
-  else if (roll.owner) status = roll.owner.me ? 'Ya era tuya' : `Ya es de ${roll.owner.name}`
-  else if (!open) status = 'Nadie la reclamó'
   const mine = roll.claimed?.id === meId
+  let status = null
+  if (roll.claimed) {
+    status = mine ? (
+      '¡Es tuya!'
+    ) : (
+      <>
+        Se la quedó <Who person={roll.claimed} onOpen={onOpen} />
+      </>
+    )
+  } else if (roll.owner) {
+    status = roll.owner.me ? (
+      'Ya era tuya'
+    ) : (
+      <>
+        Ya es de <Who person={roll.owner} onOpen={onOpen} />
+      </>
+    )
+  } else if (!open) status = 'Nadie la reclamó'
   return (
     <li className={`gacha-roll ${open ? 'is-open' : ''} ${mine ? 'is-mine' : ''}`}>
       <GachaCard card={roll.card} mini />
@@ -35,13 +61,13 @@ function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim }) {
         <span className={`gacha-roll__name gacha-roll__name--${roll.card.rarity}`}>
           <b>{roll.card.name}</b>
           <small>
-            <em>{RARITY[roll.card.rarity]}</em> · {CAT_NAME[roll.card.cat]}
+            <em>{RARITY[roll.card.rarity]}</em>
             {roll.card.series ? ` · ${roll.card.series}` : ''}
           </small>
         </span>
         <span className="gacha-roll__by">
           <Avatar name={roll.by.name} src={roll.by.avatar} size={20} />
-          {roll.by.me ? 'Tu tirada' : roll.by.name}
+          {roll.by.me ? 'Tu tirada' : <Who person={roll.by} onOpen={onOpen} />}
           {roll.premium && <em className="gacha-pill">Premium</em>}
         </span>
         {open ? (
@@ -61,7 +87,7 @@ function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim }) {
           <span className={`gacha-roll__status ${mine ? 'is-mine' : ''}`}>{status}</span>
         )}
       </div>
-      <span className="gacha-kakera gacha-roll__value">{roll.card.value}</span>
+      <span className="gacha-roll__value">{eur(roll.card.price)}</span>
     </li>
   )
 }
@@ -70,7 +96,7 @@ function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim }) {
 function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
   let text = 'Se te escapó.'
   if (roll?.claimed) text = roll.claimed.id === meId ? (last.claimed ? '¡Directa a tu colección!' : '¡Es tuya!') : `Te la ha quitado ${roll.claimed.name}.`
-  else if (last.owned) text = `Ya tiene dueño: te llevas ${last.kakera} de kakera.`
+  else if (last.owned) text = roll?.owner ? `Ya es de ${roll.owner.me ? 'ti' : roll.owner.name}.` : 'Ya tiene dueño.'
   else if (roll && roll.until > t) text = '¡Reclámala antes que nadie!'
   const open = roll && !roll.claimed && roll.until > t
   return (
@@ -85,23 +111,20 @@ function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
             Reclamar · {wait(roll.until - t)}
           </button>
         )}
-        {open && !claimReady && <small>Tu reclamo aún se está recargando; puedes recargarlo con kakera.</small>}
-        <a href={last.card.src} target="_blank" rel="noreferrer">
-          Ver en la fuente ↗
-        </a>
+        {open && !claimReady && <small>Tu reclamo aún se está recargando; puedes recargarlo ya desde la tienda.</small>}
+        <small>Se vende por {eur(last.card.price)}.</small>
       </div>
     </div>
   )
 }
 
-function Collection({ data, onRelease, busy }) {
+function Collection({ data, onSell, busy }) {
   const [confirm, setConfirm] = useState(null)
-  const [cat, setCat] = useState('todas')
   const [rarity, setRarity] = useState('todas')
   if (!data) return <p className="gacha-empty">Cargando…</p>
-  const { user, cards, value } = data
+  const { user, cards, worth } = data
   const count = (r) => cards.filter((c) => c.rarity === r).length
-  const shown = cards.filter((c) => (cat === 'todas' || c.cat === cat) && (rarity === 'todas' || c.rarity === rarity))
+  const shown = cards.filter((c) => rarity === 'todas' || c.rarity === rarity)
   return (
     <section className="gacha-collection" aria-labelledby="col-title">
       <header className="gacha-col-head">
@@ -109,7 +132,7 @@ function Collection({ data, onRelease, busy }) {
         <div>
           <h2 id="col-title">{user.me ? 'Tu colección' : `Colección de ${user.name}`}</h2>
           <p>
-            {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · valor <span className="gacha-kakera">{value}</span>
+            {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · se {cards.length === 1 ? 'vende' : 'venden'} por {eur(worth)}
           </p>
         </div>
         <ul className="gacha-col-counts" aria-label="Cartas por rareza">
@@ -121,31 +144,22 @@ function Collection({ data, onRelease, busy }) {
         </ul>
       </header>
       {cards.length > 0 && (
-        <div className="gacha-filters">
-          <div className="hub-segs" role="group" aria-label="Categoría">
-            {[{ id: 'todas', name: 'Todas' }, ...CATS.filter((c) => c.id !== 'mixto')].map((c) => (
-              <button key={c.id} type="button" className="hub-seg" aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>
-                <span>{c.name}</span>
-              </button>
+        <label className="gacha-select">
+          <span>Rareza</span>
+          <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
+            <option value="todas">Todas</option>
+            {RARITIES.map((r) => (
+              <option key={r} value={r}>
+                {RARITY[r]}
+              </option>
             ))}
-          </div>
-          <label className="gacha-select">
-            <span>Rareza</span>
-            <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
-              <option value="todas">Todas</option>
-              {RARITIES.map((r) => (
-                <option key={r} value={r}>
-                  {RARITY[r]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+          </select>
+        </label>
       )}
       {cards.length === 0 ? (
-        <p className="gacha-empty">{user.me ? 'Aún no tienes cartas: tira y reclama la que te guste.' : 'Aún no tiene cartas.'}</p>
+        <p className="gacha-empty">{user.me ? 'Aún no tienes cartas: tira y reclama la que te guste.' : `${user.name} aún no tiene cartas.`}</p>
       ) : shown.length === 0 ? (
-        <p className="gacha-empty">Ninguna carta con esos filtros.</p>
+        <p className="gacha-empty">Ninguna carta de esa rareza.</p>
       ) : (
         <ul className="gacha-grid">
           {shown.map((card) => (
@@ -154,16 +168,16 @@ function Collection({ data, onRelease, busy }) {
               {user.me && (
                 <button
                   type="button"
-                  className={`gacha-release ${confirm === card.id ? 'is-confirm' : ''}`}
+                  className={`gacha-sell ${confirm === card.id ? 'is-confirm' : ''}`}
                   disabled={busy}
                   onBlur={() => setConfirm(null)}
                   onClick={() => {
                     if (confirm !== card.id) return setConfirm(card.id)
                     setConfirm(null)
-                    onRelease(card.id)
+                    onSell(card.id)
                   }}
                 >
-                  {confirm === card.id ? `¿Seguro? +${card.value} kakera` : 'Liberar'}
+                  {confirm === card.id ? `¿Vender por ${eur(card.price)}?` : `Vender · ${eur(card.price)}`}
                 </button>
               )}
             </li>
@@ -174,11 +188,12 @@ function Collection({ data, onRelease, busy }) {
   )
 }
 
-function Ranking({ list, onOpen }) {
+// Todos los que tienen cartas, de la colección que más vale a la que menos; cada uno abre su colección.
+function Collectors({ list, onOpen }) {
   if (!list) return <p className="gacha-empty">Cargando…</p>
   if (list.length === 0) return <p className="gacha-empty">Nadie tiene cartas todavía. ¡Sé el primero!</p>
   return (
-    <ol className="gacha-rank">
+    <ol className="gacha-rank" aria-label="Colecciones de todos">
       {list.map((p, i) => (
         <li key={p.id}>
           <button type="button" className={p.me ? 'is-me' : ''} onClick={() => onOpen(p.id)}>
@@ -196,11 +211,90 @@ function Ranking({ list, onOpen }) {
                 <GachaCard card={p.best} mini />
               </span>
             )}
-            <span className="gacha-kakera">{p.value}</span>
+            <span className="gacha-rank__worth">{eur(p.worth)}</span>
           </button>
         </li>
       ))}
     </ol>
+  )
+}
+
+// Todas las cartas que pueden salir: rareza, probabilidad de que te toque cada una, precio de venta y dueño.
+function CardTable({ list, onOpen }) {
+  const [rarity, setRarity] = useState('todas')
+  const [query, setQuery] = useState('')
+  if (!list) return <p className="gacha-empty">Cargando…</p>
+  const q = query.trim().toLowerCase()
+  const shown = list.filter((c) => (rarity === 'todas' || c.rarity === rarity) && (!q || `${c.name} ${c.series}`.toLowerCase().includes(q)))
+  const free = list.filter((c) => !c.owner).length
+  return (
+    <section className="gacha-cards" aria-labelledby="cards-title">
+      <header className="gacha-cards__head">
+        <h2 id="cards-title" className="hub-title">
+          Cartas <small>{`${list.length} políticos · ${free} sin dueño`}</small>
+        </h2>
+        <div className="gacha-filters">
+          <label className="gacha-select">
+            <span>Buscar</span>
+            <input type="search" value={query} placeholder="Nombre o partido" onChange={(e) => setQuery(e.target.value)} />
+          </label>
+          <label className="gacha-select">
+            <span>Rareza</span>
+            <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
+              <option value="todas">Todas</option>
+              {RARITIES.map((r) => (
+                <option key={r} value={r}>
+                  {RARITY[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </header>
+      <div className="gacha-table-wrap">
+        <table className="gacha-table">
+          <thead>
+            <tr>
+              <th scope="col">Carta</th>
+              <th scope="col">Rareza</th>
+              <th scope="col" className="is-num" title="Probabilidad de que te toque esta carta en una tirada normal">
+                Tirada
+              </th>
+              <th scope="col" className="is-num" title="Probabilidad de que te toque esta carta en una tirada premium">
+                Premium
+              </th>
+              <th scope="col" className="is-num">
+                Venta
+              </th>
+              <th scope="col">Dueño</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  <span className="gacha-table__card">
+                    <GachaCard card={c} mini />
+                    <span>
+                      <b>{c.name}</b>
+                      {c.series && <small>{c.series}</small>}
+                    </span>
+                  </span>
+                </td>
+                <td className={`gacha-roll__name--${c.rarity}`}>
+                  <em>{RARITY[c.rarity]}</em>
+                </td>
+                <td className="is-num">{pct(c.normal)}</td>
+                <td className="is-num">{c.premium ? pct(c.premium) : '—'}</td>
+                <td className="is-num">{eur(c.price)}</td>
+                <td>{c.owner ? <Who person={c.owner} onOpen={onOpen} /> : <span className="gacha-free">Libre</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {shown.length === 0 && <p className="gacha-empty">Ninguna carta con esos filtros.</p>}
+      </div>
+    </section>
   )
 }
 
@@ -212,16 +306,17 @@ function Rules({ prices }) {
         cualquiera puede <b>reclamarlo</b>, y se lo queda el primero que pulse. Cada carta tiene un solo dueño.
       </p>
       <p>
-        Solo puedes reclamar <b>una carta cada 3 horas</b>, así que elige bien. Si sale una carta que ya tiene dueño, quien
-        tiró se lleva la mitad de su valor en <b>kakera</b>.
+        Solo puedes reclamar <b>una carta cada 3 horas</b>, así que elige bien.
       </p>
       <p>
-        La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)} de tu saldo de la semana: siempre es épica o mítica,
-        nunca sale una carta con dueño y va directa a tu colección, sin gastar tu reclamo.
+        Todo va con tu <b>saldo de la semana</b>. La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)}: siempre es
+        épica o mítica, nunca sale una carta con dueño y va directa a tu colección, sin gastar tu reclamo. Una tirada extra
+        cuesta {eur(prices?.extraRoll ?? 1000)} y recargar el reclamo, {eur(prices?.claimReset ?? 5000)}.
       </p>
       <p>
-        Con <b>kakera</b> compras una tirada extra ({prices?.extraRoll ?? 150}) o recargas tu reclamo ({prices?.claimReset ?? 600}).
-        La consigues sacando cartas con dueño y liberando las tuyas, que te devuelven su valor.
+        Puedes <b>vender</b> cualquier carta tuya desde tu colección: el dinero va a tu saldo de la semana (una común, unos
+        700 €; una mítica, unos 19.000 €) y la carta vuelve a poder salir. En «Colecciones» ves las cartas de todo el mundo y
+        en «Cartas», todas las que pueden tocar y con qué probabilidad.
       </p>
       <table className="gacha-odds">
         <thead>
@@ -244,17 +339,23 @@ function Rules({ prices }) {
         </tbody>
       </table>
       <p className="gacha-note">
-        La rareza sale de lo popular que es cada personaje: los favoritos de AniList y, en cine y política, en cuántas
-        Wikipedias aparece. Tu colección no se reinicia el domingo.
+        Las cartas son políticos españoles de la democracia. La rareza sale de lo conocido que es cada uno (en cuántas
+        Wikipedias tiene artículo). Tu colección no se reinicia el domingo; tu saldo, sí.
       </p>
     </Help>
   )
 }
 
+const TABS = [
+  ['tirar', 'Tirar'],
+  ['coleccion', 'Mi colección'],
+  ['colecciones', 'Colecciones'],
+  ['cartas', 'Cartas'],
+]
+
 export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
-  const { state, feed, offset, collection, setCollection, ranking, load } = useGacha(juegos.request)
+  const { state, feed, offset, collection, setCollection, ranking, cards, load } = useGacha(juegos.request)
   const [tab, setTab] = useState(initialTab)
-  const [cat, setCat] = useState('mixto')
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
   const t = useServerNow(offset)
@@ -269,7 +370,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   }
 
   async function roll(premium) {
-    const body = await act('tirar', { cat, premium })
+    const body = await act('tirar', { premium })
     if (body?.gacha?.result) setLast(body.gacha.result)
   }
 
@@ -282,19 +383,22 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   function openTab(id) {
     if (id === 'coleccion') return openCollection()
     setTab(id)
-    if (id === 'ranking') load('ranking')
+    if (id === 'colecciones') load('ranking')
+    if (id === 'cartas') load('cartas')
   }
 
-  // Si se entra desde el escaparate con «Mi colección» o «Ranking», se cargan sus datos.
+  // Si se entra desde el escaparate con una pestaña concreta, se cargan sus datos.
   useEffect(() => {
     if (initialTab === 'coleccion') load('coleccion')
-    if (initialTab === 'ranking') load('ranking')
+    if (initialTab === 'colecciones') load('ranking')
+    if (initialTab === 'cartas') load('cartas')
   }, [initialTab, load])
 
   const rolls = state?.rolls
   const claimReady = state ? state.claimAt === 0 || state.claimAt <= t : false
   const lastRoll = last && feed.find((r) => r.id === last.id)
-  const premiumPrice = state?.prices.premium ?? 20000
+  const prices = state?.prices
+  const premiumPrice = prices?.premium ?? 20000
   const openCount = feed.filter((r) => r.until > t).length
 
   return (
@@ -305,7 +409,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
           <button type="button" onClick={onExit}>
             Juegos
           </button>
-          <Rules prices={state?.prices} />
+          <Rules prices={prices} />
         </div>
       </header>
 
@@ -325,10 +429,10 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
           </dd>
         </div>
         <div>
-          <dt>Kakera</dt>
+          <dt>Colección</dt>
           <dd>
-            <span className="gacha-kakera">{state?.kakera ?? 0}</span>
-            <small>{state ? `${state.owned} ${state.owned === 1 ? 'carta' : 'cartas'} en tu colección` : ''}</small>
+            {state ? state.owned : '–'}
+            <small>{state?.owned === 1 ? 'carta tuya' : 'cartas tuyas'}</small>
           </dd>
         </div>
         <div>
@@ -341,11 +445,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       </dl>
 
       <nav className="hub-segs gacha-tabs" aria-label="Secciones del gacha">
-        {[
-          ['tirar', 'Tirar'],
-          ['coleccion', 'Mi colección'],
-          ['ranking', 'Ranking'],
-        ].map(([id, name]) => (
+        {TABS.map(([id, name]) => (
           <button key={id} type="button" className="hub-seg" aria-pressed={tab === id} onClick={() => openTab(id)}>
             <span>{name}</span>
           </button>
@@ -364,13 +464,6 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
             <h2 id="roll-title" className="hub-title">
               Tirar <small>todos lo verán durante 45 s</small>
             </h2>
-            <div className="hub-segs gacha-cats" role="group" aria-label="Categoría">
-              {CATS.map((c) => (
-                <button key={c.id} type="button" className="hub-seg" aria-pressed={cat === c.id} onClick={() => setCat(c.id)}>
-                  <span>{c.name}</span>
-                </button>
-              ))}
-            </div>
             <button type="button" className="gacha-roll-btn" disabled={busy || !rolls || rolls.left <= 0} onClick={() => roll(false)}>
               <b>{rolls && rolls.left <= 0 ? 'Sin tiradas' : 'Tirar'}</b>
               <small>{rolls && rolls.left <= 0 ? `Vuelven en ${wait(rolls.resetAt - t)}` : `${rolls?.left ?? 0} gratis esta hora`}</small>
@@ -388,19 +481,19 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
               <button
                 type="button"
                 className="hub-btn hub-btn--ghost"
-                disabled={busy || !state || state.kakera < state.prices.extraRoll}
+                disabled={busy || !prices || balance < prices.extraRoll}
                 onClick={() => act('tienda', { item: 'tirada' })}
               >
-                +1 tirada · <span className="gacha-kakera">{state?.prices.extraRoll ?? 150}</span>
+                +1 tirada · {eur(prices?.extraRoll ?? 1000)}
               </button>
               <button
                 type="button"
                 className="hub-btn hub-btn--ghost"
-                disabled={busy || !state || claimReady || state.kakera < state.prices.claimReset}
+                disabled={busy || !prices || claimReady || balance < prices.claimReset}
                 title="Recarga tu reclamo para poder quedarte otra carta ahora"
                 onClick={() => act('tienda', { item: 'reclamo' })}
               >
-                Reclamo ya · <span className="gacha-kakera">{state?.prices.claimReset ?? 600}</span>
+                Reclamo ya · {eur(prices?.claimReset ?? 5000)}
               </button>
             </div>
             {last ? (
@@ -433,6 +526,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                     claimMs={state?.claimMs ?? 45000}
                     busy={busy}
                     onClaim={(id) => act('reclamar', { id })}
+                    onOpen={openCollection}
                   />
                 ))}
               </ul>
@@ -442,13 +536,12 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       )}
 
       {tab === 'coleccion' && (
-        <Collection data={collection} busy={busy} onRelease={(card) => act('liberar', { card }).then(() => load('coleccion'))} />
+        <Collection data={collection} busy={busy} onSell={(card) => act('vender', { card }).then(() => load('coleccion'))} />
       )}
-      {tab === 'ranking' && <Ranking list={ranking} onOpen={openCollection} />}
+      {tab === 'colecciones' && <Collectors list={ranking} onOpen={openCollection} />}
+      {tab === 'cartas' && <CardTable list={cards} onOpen={openCollection} />}
 
-      <footer className="gacha-foot">
-        Datos e imágenes de AniList, Wikipedia y Wikimedia Commons. Solo para TopCode, sin fines comerciales.
-      </footer>
+      <footer className="gacha-foot">Fotos de Wikimedia Commons y datos de Wikipedia. Solo para TopCode, sin fines comerciales.</footer>
     </main>
   )
 }

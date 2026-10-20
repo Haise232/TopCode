@@ -75,8 +75,7 @@ create table if not exists public.juegos_gacha_jugadores (
   usuario_id    uuid primary key references public.usuarios(id) on delete cascade,
   hora          bigint not null default 0,
   tiradas       int not null default 0,
-  reclamo_listo timestamptz not null default 'epoch',
-  kakera        bigint not null default 0
+  reclamo_listo timestamptz not null default 'epoch'
 );
 
 alter table public.juegos_meta    enable row level security;

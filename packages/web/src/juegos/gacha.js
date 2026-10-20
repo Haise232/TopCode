@@ -2,13 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 // Lo que comparten la pantalla del gacha y su escaparate en el selector de juegos.
-export const CATS = [
-  { id: 'mixto', name: 'Mixto' },
-  { id: 'anime', name: 'Anime' },
-  { id: 'cine', name: 'Cine' },
-  { id: 'politica', name: 'Política' },
-]
-export const CAT_NAME = { anime: 'Anime', cine: 'Cine', politica: 'Política' }
 export const RARITY = { comun: 'Común', rara: 'Rara', epica: 'Épica', mitica: 'Mítica' }
 export const RARITIES = ['mitica', 'epica', 'rara', 'comun']
 // Igual que WEIGHTS en api/_juegos/gacha.mjs, para la ayuda.
@@ -49,6 +42,7 @@ export function useGacha(request) {
   const [offset, setOffset] = useState(0)
   const [collection, setCollection] = useState(null)
   const [ranking, setRanking] = useState(null)
+  const [cards, setCards] = useState(null)
 
   const load = useCallback(
     async (a, extra = {}) => {
@@ -60,6 +54,7 @@ export function useGacha(request) {
       setOffset(g.state.now - Date.now())
       if (g.collection) setCollection(g.collection)
       if (g.ranking) setRanking(g.ranking)
+      if (g.cards) setCards(g.cards)
       return body
     },
     [request],
@@ -83,5 +78,5 @@ export function useGacha(request) {
     }
   }, [load])
 
-  return { state, feed, offset, collection, setCollection, ranking, load }
+  return { state, feed, offset, collection, setCollection, ranking, cards, load }
 }

@@ -13,7 +13,7 @@ function GachaShowcase({ juegos, online, onOpen }) {
   const recent = feed.slice(0, SHOWN)
   const best = feed.find((r) => r.card.rarity === 'mitica') ?? feed.find((r) => r.card.rarity === 'epica')
 
-  let headline = 'Anime, cine y políticos: tira y quédate la carta antes que nadie.'
+  let headline = 'Políticos españoles: tira, quédate la carta antes que nadie y véndela por saldo.'
   if (open.length > 0) headline = `¡${open.length === 1 ? 'Hay una carta' : `Hay ${open.length} cartas`} por reclamar ahora mismo!`
   else if (best) headline = `Última gran tirada: ${best.card.name} (${RARITY[best.card.rarity].toLowerCase()}).`
 
@@ -67,8 +67,8 @@ function GachaShowcase({ juegos, online, onOpen }) {
           <button type="button" className="hub-btn hub-btn--primary" disabled={!online} onClick={() => onOpen('tirar')}>
             {open.length ? 'Ir a reclamar' : 'Tirar'}
           </button>
-          <button type="button" className="hub-btn" disabled={!online} onClick={() => onOpen('coleccion')}>
-            Colección
+          <button type="button" className="hub-btn" disabled={!online} onClick={() => onOpen('colecciones')}>
+            Colecciones
           </button>
         </div>
       </div>

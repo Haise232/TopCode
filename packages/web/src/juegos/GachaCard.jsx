@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { CAT_NAME, RARITY } from './gacha.js'
+import { eur } from './money.js'
+import { RARITY } from './gacha.js'
 import './Gacha.css'
 
 // Una carta del gacha. mini: solo la imagen con el marco de su rareza. Si la imagen no carga, las iniciales.
@@ -27,10 +28,7 @@ function GachaCard({ card, big = false, mini = false }) {
           {card.series && <small>{card.series}</small>}
           <span className="gacha-card__tags">
             <em>{RARITY[card.rarity]}</em>
-            <span>{CAT_NAME[card.cat]}</span>
-            <span className="gacha-kakera" title="Valor en kakera">
-              {card.value}
-            </span>
+            <span title="Precio de venta">{eur(card.price)}</span>
           </span>
         </figcaption>
       )}

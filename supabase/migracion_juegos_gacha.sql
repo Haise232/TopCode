@@ -21,13 +21,12 @@ create table if not exists public.juegos_gacha_tiradas (
 );
 create index if not exists juegos_gacha_tiradas_creada_idx on public.juegos_gacha_tiradas (creada desc);
 
--- Tiradas gastadas en la hora en curso, cuándo puede volver a reclamar y su kakera.
+-- Tiradas gastadas en la hora en curso y cuándo puede volver a reclamar.
 create table if not exists public.juegos_gacha_jugadores (
   usuario_id    uuid primary key references public.usuarios(id) on delete cascade,
   hora          bigint not null default 0,
   tiradas       int not null default 0,
-  reclamo_listo timestamptz not null default 'epoch',
-  kakera        bigint not null default 0
+  reclamo_listo timestamptz not null default 'epoch'
 );
 
 alter table public.juegos_gacha_cartas    enable row level security;
