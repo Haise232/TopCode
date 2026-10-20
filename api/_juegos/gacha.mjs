@@ -19,9 +19,9 @@ import { readFileSync } from 'node:fs'
 const catalogo = JSON.parse(readFileSync(new URL('./gacha-catalogo.json', import.meta.url), 'utf8'))
 
 const HOUR = 3600000
-export const TABLE_PERIOD_MS = 2 * HOUR
+export const TABLE_PERIOD_MS = HOUR
 export const TABLE_MAX = 5
-export const TAKE_COOLDOWN_MS = 2 * HOUR
+export const TAKE_COOLDOWN_MS = HOUR
 // € por punto de valor al vender: común ≈ 700 €, legendaria ≈ 19.000 €. Una tirada (≈ 1.600 € de media al venderla) y
 // una premium (≈ 9.500 €) cuestan más de lo que valen, así que tirar y vender no da dinero infinito.
 export const SELL_RATE = 20

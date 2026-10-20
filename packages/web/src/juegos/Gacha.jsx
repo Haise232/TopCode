@@ -440,8 +440,8 @@ function Rules({ prices }) {
   return (
     <Help label="Cómo funciona" title="Cómo funciona el gacha" wide>
       <p>
-        <b>La mesa:</b> cada 2 horas sale sola una carta, hasta 5 a la vista de todos. Cualquiera puede <b>cogerla</b> gratis y
-        se la queda el primero que pulse. Cada persona puede coger <b>una cada 2 horas</b> (o pagar{' '}
+        <b>La mesa:</b> cada hora sale sola una carta, hasta 5 a la vista de todos. Cualquiera puede <b>cogerla</b> gratis y
+        se la queda el primero que pulse. Cada persona puede coger <b>una cada hora</b> (o pagar{' '}
         {eur(prices?.claimReset ?? 5000)} para coger otra ya). Cada carta tiene un solo dueño.
       </p>
       <p>
@@ -611,7 +611,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
           <dt>Coger</dt>
           <dd>
             {state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}
-            <small>{claimReady ? 'puedes coger una de la mesa' : 'una cada 2 h'}</small>
+            <small>{claimReady ? 'puedes coger una de la mesa' : 'una cada hora'}</small>
           </dd>
         </div>
         <div>
@@ -650,7 +650,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
             <h2 id="mesa-title" className="hub-title">
               La mesa{' '}
               <small>
-                {state?.nextDropAt ? `sale otra carta en ${wait(state.nextDropAt - t)}` : 'llena: hasta 5 cartas'} · gratis, una cada 2 h por
+                {state?.nextDropAt ? `sale otra carta en ${wait(state.nextDropAt - t)}` : 'llena: hasta 5 cartas'} · gratis, una cada hora por
                 persona
               </small>
             </h2>
@@ -665,7 +665,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                       type="button"
                       className="hub-btn hub-btn--primary"
                       disabled={busy || !claimReady}
-                      title={claimReady ? undefined : 'Puedes coger una carta de la mesa cada 2 horas'}
+                      title={claimReady ? undefined : 'Puedes coger una carta de la mesa cada hora'}
                       onClick={() => act('coger', { id: entry.id })}
                     >
                       {claimReady ? 'Coger' : `Coger en ${wait(state.claimAt - t)}`}

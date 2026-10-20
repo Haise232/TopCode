@@ -12,7 +12,7 @@ create table if not exists public.juegos_gacha_cartas (
 );
 create index if not exists juegos_gacha_cartas_usuario_idx on public.juegos_gacha_cartas (usuario_id);
 
--- La mesa: hasta 5 cartas a la vista de todos; sale una cada 2 h y cualquiera puede cogerla.
+-- La mesa: hasta 5 cartas a la vista de todos; sale una cada hora y cualquiera puede cogerla.
 create table if not exists public.juegos_gacha_mesa (
   id      bigserial primary key,
   carta   text not null unique,
@@ -20,7 +20,7 @@ create table if not exists public.juegos_gacha_mesa (
   creada  timestamptz not null default now()
 );
 
--- Último periodo de 2 h en el que se repuso la mesa.
+-- Último periodo de 1 h en el que se repuso la mesa.
 create table if not exists public.juegos_gacha_estado (
   id      int primary key default 1 check (id = 1),
   periodo bigint not null
