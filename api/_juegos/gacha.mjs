@@ -29,7 +29,7 @@ export const SELL_RATE = 20
 export const POWER_COOLDOWN_MS = 24 * HOUR
 // Poderes por rareza. La mesa de póker (game.mjs) los aplica durante la mano en curso.
 export const POWERS = {
-  mitica: { id: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker (legendaria).' },
+  mitica: { id: 'rayos', name: 'Rayos X', text: 'Ves las cartas de todos los jugadores durante una mano de póker.' },
   epica: { id: 'chivatazo', name: 'Chivatazo', text: 'Ves las cartas de un rival al azar durante una mano de póker.' },
 }
 const RARITY_ORDER = { mitica: 0, epica: 1, rara: 2, comun: 3 }
@@ -266,7 +266,7 @@ export function createGacha({ db, ping, now, charge }) {
     return out
   }
 
-  // Tienda: una tirada más esta hora, o el reclamo listo ya. Se pagan con el saldo de la semana.
+  // Tienda: una tirada más en este periodo, o el reclamo listo ya. Se pagan con el saldo de la semana.
   async function shop(user, msg, t) {
     if (msg.item !== 'tirada' && msg.item !== 'reclamo') return { error: 'BAD_MESSAGE' }
     return db.tx(async (q) => {

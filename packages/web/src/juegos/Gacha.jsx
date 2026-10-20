@@ -25,7 +25,7 @@ function Countdown({ until, t, total }) {
 // Nombre de alguien que lleva a su colección.
 function Who({ person, onOpen }) {
   return (
-    <button type="button" className="gacha-who" onClick={() => onOpen(person.id)} title={`Ver la colección de ${person.name}`}>
+    <button type="button" className="gacha-who" onClick={() => onOpen(person.id)} title={`Ver la biblioteca de ${person.name}`}>
       {person.name}
     </button>
   )
@@ -95,7 +95,7 @@ function Roll({ roll, t, meId, claimReady, claimMs, busy, onClaim, onOpen }) {
 // La carta que acabas de sacar, en grande, con la entrada según su rareza.
 function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
   let text = 'Se te escapó.'
-  if (roll?.claimed) text = roll.claimed.id === meId ? (last.claimed ? '¡Directa a tu colección!' : '¡Es tuya!') : `Te la ha quitado ${roll.claimed.name}.`
+  if (roll?.claimed) text = roll.claimed.id === meId ? (last.claimed ? '¡Directa a tu biblioteca!' : '¡Es tuya!') : `Te la ha quitado ${roll.claimed.name}.`
   else if (last.owned) text = roll?.owner ? `Ya es de ${roll.owner.me ? 'ti' : roll.owner.name}.` : 'Ya tiene dueño.'
   else if (roll && roll.until > t) text = '¡Reclámala antes que nadie!'
   const open = roll && !roll.claimed && roll.until > t
@@ -118,82 +118,99 @@ function Reveal({ last, roll, t, meId, claimReady, busy, onClaim }) {
   )
 }
 
-function Collection({ data, onSell, busy }) {
+// Nombre de una rareza en plural o singular: «2 legendarias», «1 común».
+const WORDS = { mitica: ['legendaria', 'legendarias'], epica: ['épica', 'épicas'], rara: ['rara', 'raras'], comun: ['común', 'comunes'] }
+const SHELF = { mitica: 'Legendarias', epica: 'Épicas', rara: 'Raras', comun: 'Comunes' }
+
+// «2 legendarias, 3 épicas y 1 rara».
+function summary(counts) {
+  const parts = RARITIES.filter((r) => counts[r] > 0).map((r) => `${counts[r]} ${WORDS[r][counts[r] === 1 ? 0 : 1]}`)
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}` : (parts[0] ?? '')
+}
+
+// La biblioteca de alguien: un titular con lo que tiene y sus cartas en estantes por rareza.
+function Library({ data, onSell, busy }) {
   const [confirm, setConfirm] = useState(null)
-  const [rarity, setRarity] = useState('todas')
+  const [copied, setCopied] = useState(false)
   if (!data) return <p className="gacha-empty">Cargando…</p>
   const { user, cards, worth } = data
-  const count = (r) => cards.filter((c) => c.rarity === r).length
-  const shown = cards.filter((c) => rarity === 'todas' || c.rarity === rarity)
+  const counts = Object.fromEntries(RARITIES.map((r) => [r, cards.filter((c) => c.rarity === r).length]))
+  const line = cards.length ? `${user.me ? 'Tengo' : 'Tiene'} ${summary(counts)}.` : ''
+  const powers = counts.mitica + counts.epica
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(`Mi biblioteca del gacha de TopCode: ${summary(counts)} (${cards.length} ${cards.length === 1 ? 'carta' : 'cartas'}, valen ${eur(worth)}).`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
+
   return (
-    <section className="gacha-collection" aria-labelledby="col-title">
-      <header className="gacha-col-head">
-        <Avatar name={user.name} src={user.avatar} size={44} />
-        <div>
-          <h2 id="col-title">{user.me ? 'Mi biblioteca' : `Biblioteca de ${user.name}`}</h2>
-          <p>
-            {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · se {cards.length === 1 ? 'vende' : 'venden'} por {eur(worth)}
+    <section className="gacha-library" aria-labelledby="lib-title">
+      <header className="gacha-lib-head">
+        <Avatar name={user.name} src={user.avatar} size={56} />
+        <div className="gacha-lib-head__text">
+          <h2 id="lib-title">{user.me ? 'Mi biblioteca' : `Biblioteca de ${user.name}`}</h2>
+          {line && <p className="gacha-lib-line">{line}</p>}
+          <p className="gacha-lib-meta">
+            {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · {cards.length === 1 ? 'vale' : 'valen'} {eur(worth)}
+            {powers > 0 ? ` · ${powers} con poder para el póker` : ''}
           </p>
         </div>
-        <ul className="gacha-col-counts" aria-label="Cartas por rareza">
-          {RARITIES.map((r) => (
-            <li key={r} className={`gacha-roll__name--${r}`}>
-              <em>{count(r)}</em> {RARITY[r]}
-            </li>
-          ))}
-        </ul>
+        {user.me && cards.length > 0 && (
+          <button type="button" className="hub-btn hub-btn--ghost gacha-lib-copy" onClick={copy}>
+            {copied ? 'Copiado' : 'Copiar resumen'}
+          </button>
+        )}
       </header>
-      {cards.length > 0 && (
-        <label className="gacha-select">
-          <span>Rareza</span>
-          <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
-            <option value="todas">Todas</option>
-            {RARITIES.map((r) => (
-              <option key={r} value={r}>
-                {RARITY[r]}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       {cards.length === 0 ? (
         <p className="gacha-empty">{user.me ? 'Aún no tienes cartas: tira y reclama la que te guste.' : `${user.name} aún no tiene cartas.`}</p>
-      ) : shown.length === 0 ? (
-        <p className="gacha-empty">Ninguna carta de esa rareza.</p>
       ) : (
-        <ul className="gacha-grid">
-          {shown.map((card) => (
-            <li key={card.id}>
-              <GachaCard card={card} />
-              {user.me && (
-                <button
-                  type="button"
-                  className={`gacha-sell ${confirm === card.id ? 'is-confirm' : ''}`}
-                  disabled={busy}
-                  onBlur={() => setConfirm(null)}
-                  onClick={() => {
-                    if (confirm !== card.id) return setConfirm(card.id)
-                    setConfirm(null)
-                    onSell(card.id)
-                  }}
-                >
-                  {confirm === card.id ? `¿Vender por ${eur(card.price)}?` : `Vender · ${eur(card.price)}`}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+        RARITIES.filter((r) => counts[r] > 0).map((r) => (
+          <section key={r} className={`gacha-shelf gacha-shelf--${r}`} aria-label={SHELF[r]}>
+            <h3>
+              {SHELF[r]} <small>{counts[r]}</small>
+            </h3>
+            <ul className="gacha-grid">
+              {cards
+                .filter((c) => c.rarity === r)
+                .map((card) => (
+                  <li key={card.id}>
+                    <GachaCard card={card} />
+                    {user.me && (
+                      <button
+                        type="button"
+                        className={`gacha-sell ${confirm === card.id ? 'is-confirm' : ''}`}
+                        disabled={busy}
+                        onBlur={() => setConfirm(null)}
+                        onClick={() => {
+                          if (confirm !== card.id) return setConfirm(card.id)
+                          setConfirm(null)
+                          onSell(card.id)
+                        }}
+                      >
+                        {confirm === card.id ? `¿Vender por ${eur(card.price)}?` : `Vender · ${eur(card.price)}`}
+                      </button>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))
       )}
     </section>
   )
 }
 
-// Todos los que tienen cartas, de la colección que más vale a la que menos; cada uno abre su colección.
+// Todos los que tienen cartas, de la biblioteca que más vale a la que menos; cada uno abre su biblioteca.
 function Collectors({ list, onOpen }) {
   if (!list) return <p className="gacha-empty">Cargando…</p>
   if (list.length === 0) return <p className="gacha-empty">Nadie tiene cartas todavía. ¡Sé el primero!</p>
   return (
-    <ol className="gacha-rank" aria-label="Colecciones de todos">
+    <ol className="gacha-rank" aria-label="Bibliotecas de todos">
       {list.map((p, i) => (
         <li key={p.id}>
           <button type="button" className={p.me ? 'is-me' : ''} onClick={() => onOpen(p.id)}>
@@ -201,11 +218,7 @@ function Collectors({ list, onOpen }) {
             <Avatar name={p.name} src={p.avatar} size={40} />
             <span className="gacha-rank__name">
               {p.name}
-              <small>
-                {p.count} {p.count === 1 ? 'carta' : 'cartas'}
-                {p.rarities?.mitica ? ` · ${p.rarities.mitica} ${p.rarities.mitica === 1 ? 'legendaria' : 'legendarias'}` : ''}
-                {p.rarities?.epica ? ` · ${p.rarities.epica} ${p.rarities.epica === 1 ? 'épica' : 'épicas'}` : ''}
-              </small>
+              <small>{p.rarities ? summary(p.rarities) : `${p.count} ${p.count === 1 ? 'carta' : 'cartas'}`}</small>
             </span>
             {p.best && (
               <span className="gacha-rank__best">
@@ -313,17 +326,17 @@ function Rules({ prices }) {
       </p>
       <p>
         Todo va con tu <b>saldo de la semana</b>. La <b>tirada premium</b> cuesta {eur(prices?.premium ?? 20000)}: siempre es
-        épica o mítica, nunca sale una carta con dueño y va directa a tu colección, sin gastar tu reclamo. Una tirada extra
+        épica o legendaria, nunca sale una carta con dueño y va directa a tu biblioteca, sin gastar tu reclamo. Una tirada extra
         cuesta {eur(prices?.extraRoll ?? 1000)} y recargar el reclamo, {eur(prices?.claimReset ?? 5000)}.
       </p>
       <p>
-        Las cartas <b>épicas y míticas tienen un poder para el póker</b>, que puedes usar una vez al día con «✦ Poderes»
+        Las cartas <b>épicas y legendarias tienen un poder para el póker</b>, que puedes usar una vez al día con «✦ Poderes»
         en la mesa: con una legendaria, <b>Rayos X</b> (ves las cartas de todos durante una mano); con una épica,{' '}
         <b>Chivatazo</b> (ves las de un rival al azar). La mesa verá un aviso en el chat.
       </p>
       <p>
-        Puedes <b>vender</b> cualquier carta tuya desde tu colección: el dinero va a tu saldo de la semana (una común, unos
-        700 €; una mítica, unos 19.000 €) y la carta vuelve a poder salir. En «Colecciones» ves las cartas de todo el mundo y
+        Puedes <b>vender</b> cualquier carta tuya desde tu biblioteca: el dinero va a tu saldo de la semana (una común, unos
+        700 €; una legendaria, unos 19.000 €) y la carta vuelve a poder salir. En «Bibliotecas» ves las cartas de todo el mundo y
         en «Cartas», todas las que pueden tocar y con qué probabilidad.
       </p>
       <table className="gacha-odds">
@@ -348,7 +361,7 @@ function Rules({ prices }) {
       </table>
       <p className="gacha-note">
         Las cartas son políticos españoles de la democracia. La rareza sale de lo conocido que es cada uno (en cuántas
-        Wikipedias tiene artículo). Tu colección no se reinicia el domingo; tu saldo, sí.
+        Wikipedias tiene artículo). Tu biblioteca no se reinicia el domingo; tu saldo, sí.
       </p>
     </Help>
   )
@@ -437,7 +450,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
           </dd>
         </div>
         <div>
-          <dt>Colección</dt>
+          <dt>Biblioteca</dt>
           <dd>
             {state ? state.owned : '–'}
             <small>{state?.owned === 1 ? 'carta tuya' : 'cartas tuyas'}</small>
@@ -481,7 +494,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                 type="button"
                 className="hub-btn gacha-premium"
                 disabled={busy || !state || balance < premiumPrice}
-                title="Épica o mítica, sin dueño, directa a tu colección"
+                title="Épica o legendaria, sin dueño, directa a tu biblioteca"
                 onClick={() => roll(true)}
               >
                 ✦ Premium · {eur(premiumPrice)}
@@ -544,7 +557,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       )}
 
       {tab === 'coleccion' && (
-        <Collection data={collection} busy={busy} onSell={(card) => act('vender', { card }).then(() => load('coleccion'))} />
+        <Library data={collection} busy={busy} onSell={(card) => act('vender', { card }).then(() => load('coleccion'))} />
       )}
       {tab === 'colecciones' && <Collectors list={ranking} onOpen={openCollection} />}
       {tab === 'cartas' && <CardTable list={cards} onOpen={openCollection} />}

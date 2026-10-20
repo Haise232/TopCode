@@ -47,7 +47,7 @@ function PowerButton({ request, send, state, mine }) {
             </button>
           </header>
           <p className="pw-note">
-            Cada carta épica o mítica de tu colección del gacha tiene un poder para una mano de póker. Se puede usar una vez al
+            Cada carta épica o legendaria de tu biblioteca del gacha tiene un poder para una mano de póker. Se puede usar una vez al
             día y la mesa verá un aviso en el chat.
           </p>
           <ul className="pw-list">

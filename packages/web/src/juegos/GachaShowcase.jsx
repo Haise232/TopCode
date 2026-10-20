@@ -59,7 +59,7 @@ function GachaShowcase({ juegos, online, onOpen }) {
             <dd className={claimReady ? 'is-ready' : ''}>{state ? (claimReady ? 'Listo' : wait(state.claimAt - t)) : '–'}</dd>
           </div>
           <div>
-            <dt>Colección</dt>
+            <dt>Biblioteca</dt>
             <dd>{state ? state.owned : '–'}</dd>
           </div>
         </dl>
@@ -68,7 +68,7 @@ function GachaShowcase({ juegos, online, onOpen }) {
             {open.length ? 'Ir a reclamar' : 'Tirar'}
           </button>
           <button type="button" className="hub-btn" disabled={!online} onClick={() => onOpen('colecciones')}>
-            Colecciones
+            Bibliotecas
           </button>
         </div>
       </div>
