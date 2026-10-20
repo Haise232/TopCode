@@ -4,7 +4,7 @@ import GachaCard from './GachaCard.jsx'
 import GachaPowers from './GachaPowers.jsx'
 import Help from './Help.jsx'
 import { eur } from './money.js'
-import { playCard, playSpin, playWin, playZap } from './sound.js'
+import { playBoom, playCard, playSpin, playWin, playZap } from './sound.js'
 import { ODDS, RARITIES, RARITY, pct, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
@@ -66,17 +66,30 @@ function Move({ move, t, onOpen }) {
   )
 }
 
+// El canal enseña los últimos movimientos; el resto, al pulsar «Ver más».
+const FEED_SHOWN = 8
 const CHARGE_MS = 1300
-const BURST_MS = 650
-const SPARKS = 28
+// Cuanto más rara, más larga y más bestia: la carga de color (build) y el estallido (burst) duran más.
+const BUILD_MS = { comun: 0, rara: 600, epica: 1600, mitica: 3400 }
+const BURST_MS = { comun: 650, rara: 750, epica: 950, mitica: 1300 }
+const SPARKS = { rara: 12, epica: 32, mitica: 64 }
+const WAVES = { rara: 1, epica: 2, mitica: 3 }
+const IMPLODE = 26
+const BOLTS = 7
+const CONFETTI = 46
+const range = (n) => Array.from({ length: n }, (_, i) => i)
 
-// La invocación: la carta llega boca abajo y se carga de energía, estalla con el color de su rareza y se da la vuelta.
-// Las épicas y legendarias traen rayos y chispas; las legendarias, además, un destello dorado y un temblor.
-// stage: charge (esperando al servidor) | burst | show.
+// La invocación: la carta llega boca abajo y se carga de energía (charge, esperando al servidor). Si es rara o mejor,
+// se va tiñendo del color de su rareza (build): las épicas vibran y absorben partículas; las legendarias pasan por
+// todos los colores hasta el dorado, les caen rayos y se agrietan. Luego estalla con ondas expansivas (burst) y se da
+// la vuelta (show); la legendaria, con explosión dorada, temblor, «¡LEGENDARIA!» letra a letra y lluvia de confeti.
 function Summon({ summon, busy, onDecide }) {
   const { stage, result } = summon
   const rarity = result?.card.rarity ?? 'comun'
-  const big = rarity === 'mitica' || rarity === 'epica'
+  const legend = rarity === 'mitica'
+  const sparks = SPARKS[rarity] ?? 0
+  const waves = WAVES[rarity] ?? 0
+  const title = legend ? '¡LEGENDARIA!' : RARITY[rarity]
   return (
     <div
       className={`gacha-summon is-${stage} gacha-summon--${stage === 'charge' ? 'unknown' : rarity}`}
@@ -85,19 +98,68 @@ function Summon({ summon, busy, onDecide }) {
       aria-label="Tirada del gacha"
     >
       <span className="gacha-summon__rays" aria-hidden="true" />
+      {legend && stage === 'show' && <span className="gacha-summon__rays gacha-summon__rays--back" aria-hidden="true" />}
       <span className="gacha-summon__flash" aria-hidden="true" />
-      {big && stage !== 'charge' && (
+      {stage === 'build' && (rarity === 'epica' || legend) && (
+        <span className="gacha-summon__implode" aria-hidden="true">
+          {range(IMPLODE).map((i) => (
+            <i key={i} style={{ '--a': `${(360 / IMPLODE) * i + (i % 3) * 7}deg`, '--d': `${220 + ((i * 53) % 220)}px`, '--t': `${(i % 7) * 0.13}s` }} />
+          ))}
+        </span>
+      )}
+      {stage === 'build' && legend && (
+        <span className="gacha-summon__bolts" aria-hidden="true">
+          {range(BOLTS).map((i) => (
+            <i key={i} style={{ '--a': `${-70 + i * 23 + (i % 2) * 9}deg`, '--t': `${1.2 + ((i * 0.37) % 1.8)}s` }} />
+          ))}
+        </span>
+      )}
+      {(stage === 'burst' || stage === 'show') &&
+        range(waves).map((i) => <span key={i} className="gacha-summon__wave" style={{ '--t': `${i * 0.18}s` }} aria-hidden="true" />)}
+      {sparks > 0 && stage !== 'charge' && stage !== 'build' && (
         <span className="gacha-summon__sparks" aria-hidden="true">
-          {Array.from({ length: SPARKS }, (_, i) => (
-            <i key={i} style={{ '--a': `${(360 / SPARKS) * i}deg`, '--d': `${120 + ((i * 37) % 160)}px`, '--t': `${(i % 5) * 0.05}s` }} />
+          {range(sparks).map((i) => (
+            <i
+              key={i}
+              style={{
+                '--a': `${(360 / sparks) * i}deg`,
+                '--d': `${(legend ? 160 : 110) + ((i * 37) % (legend ? 260 : 160))}px`,
+                '--t': `${(i % 5) * 0.05}s`,
+              }}
+            />
+          ))}
+        </span>
+      )}
+      {legend && stage === 'show' && (
+        <span className="gacha-summon__confetti" aria-hidden="true">
+          {range(CONFETTI).map((i) => (
+            <i
+              key={i}
+              style={{
+                '--x': `${(i * 61) % 100}vw`,
+                '--t': `${((i * 0.29) % 3.2).toFixed(2)}s`,
+                '--s': `${2.6 + ((i * 0.41) % 2.2)}s`,
+                '--r': `${(i % 2 ? 1 : -1) * (180 + ((i * 47) % 540))}deg`,
+                '--c': ['#f2c14e', '#fff4c7', '#e8a33a', '#ffffff'][i % 4],
+              }}
+            />
           ))}
         </span>
       )}
       <div className="gacha-summon__stage">
         {stage === 'show' ? (
           <>
-            <span className="gacha-summon__title">{rarity === 'mitica' ? '¡LEGENDARIA!' : RARITY[rarity]}</span>
+            <span className={`gacha-summon__title ${legend ? 'gacha-summon__title--legend' : ''}`} aria-label={title}>
+              {legend
+                ? [...title].map((ch, i) => (
+                    <span key={i} style={{ '--t': `${0.5 + i * 0.07}s` }} aria-hidden="true">
+                      {ch}
+                    </span>
+                  ))
+                : title}
+            </span>
             <div className="gacha-summon__card">
+              {legend && <span className="gacha-summon__aura" aria-hidden="true" />}
               <GachaCard card={result.card} big />
             </div>
             <p className="gacha-summon__name">{result.card.name}</p>
@@ -114,6 +176,16 @@ function Summon({ summon, busy, onDecide }) {
         ) : (
           <div className="gacha-summon__card">
             <span className="gacha-summon__back" />
+            {stage === 'build' && legend && (
+              <svg className="gacha-summon__cracks" viewBox="0 0 100 150" aria-hidden="true">
+                <path d="M50 75 L38 52 L44 40 L30 18" />
+                <path d="M50 75 L66 60 L62 44 L78 26" />
+                <path d="M50 75 L34 90 L40 104 L22 128" />
+                <path d="M50 75 L64 96 L58 112 L74 136" />
+                <path d="M50 75 L80 78 L92 70" />
+                <path d="M50 75 L20 72 L8 80" />
+              </svg>
+            )}
           </div>
         )}
       </div>
@@ -443,6 +515,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   const [tab, setTab] = useState(initialTab)
   const [busy, setBusy] = useState(false)
   const [summon, setSummon] = useState(null)
+  const [feedOpen, setFeedOpen] = useState(false)
   const t = useServerNow(offset)
   const balance = juegos.me?.balance ?? 0
 
@@ -465,11 +538,17 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     if (!result) return setSummon(null)
     if (reduced) return setSummon({ stage: 'show', result })
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, CHARGE_MS - (Date.now() - started))))
+    const rarity = result.card.rarity
+    if (BUILD_MS[rarity]) {
+      setSummon({ stage: 'build', result })
+      playSpin(BUILD_MS[rarity])
+      await new Promise((resolve) => setTimeout(resolve, BUILD_MS[rarity]))
+    }
     setSummon({ stage: 'burst', result })
     playZap()
-    await new Promise((resolve) => setTimeout(resolve, BURST_MS))
+    if (rarity === 'mitica') playBoom()
+    await new Promise((resolve) => setTimeout(resolve, BURST_MS[rarity]))
     setSummon({ stage: 'show', result })
-    const rarity = result.card.rarity
     if (rarity === 'mitica' || rarity === 'epica') playWin(rarity === 'mitica')
     else playCard()
   }
@@ -647,11 +726,18 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
               {feed.length === 0 ? (
                 <p className="gacha-empty">{state ? 'Todavía no ha pasado nada.' : 'Cargando…'}</p>
               ) : (
-                <ul className="gacha-rolls">
-                  {feed.map((move) => (
-                    <Move key={move.id} move={move} t={t} onOpen={openCollection} />
-                  ))}
-                </ul>
+                <>
+                  <ul className="gacha-rolls">
+                    {(feedOpen ? feed : feed.slice(0, FEED_SHOWN)).map((move) => (
+                      <Move key={move.id} move={move} t={t} onOpen={openCollection} />
+                    ))}
+                  </ul>
+                  {feed.length > FEED_SHOWN && (
+                    <button type="button" className="hub-btn gacha-feed__more" onClick={() => setFeedOpen((v) => !v)}>
+                      {feedOpen ? 'Ver menos' : `Ver más (${feed.length - FEED_SHOWN})`}
+                    </button>
+                  )}
+                </>
               )}
             </section>
           </div>
