@@ -10,16 +10,25 @@ import PowerButton from './PowerButton.jsx'
 import { Cheer, FrogShape, Pad, Pond } from './FrogArt.jsx'
 import './Frog.css'
 
-// Estanque (unidades del viewBox): un nenúfar por multiplicador, de ×1 a ×MAX_MULT, en una línea ondulada.
+// Estanque (viewBox W × H): un nenúfar por multiplicador, de ×1 a ×MAX_MULT, en dos filas en zigzag (la de abajo se
+// recorre de derecha a izquierda). Nenúfares, rana y efectos se dibujan en coordenadas «lógicas» y se amplían SCALE veces.
 const W = 1000
-const GAP = (W - 120) / (MAX_MULT - 1)
+const H = 540
+const SCALE = 1.55
+const PER_ROW = Math.ceil(MAX_MULT / 2)
+const GAP = (W / SCALE - 124) / (PER_ROW - 1)
 const HOP_MS = 520
 const SINK_MS = 1100
 const GUARD_MS = 350 // tras un salto, un clic accidental (doble clic) no cuenta
 const AUTO_MS = 450 // pausa entre saltos del auto-cobro
 const HISTORY = 40
 const pads = Array.from({ length: MAX_MULT }, (_, i) => i + 1)
-const padPos = (mult) => ({ x: 60 + (mult - 1) * GAP, y: 200 + Math.sin(mult * 1.1) * 30 })
+const padPos = (mult) => {
+  const i = mult - 1
+  const row = i < PER_ROW ? 0 : 1
+  const col = row === 0 ? i : MAX_MULT - 1 - i
+  return { x: 62 + col * GAP, y: (row === 0 ? 108 : 250) + Math.sin(mult * 1.1) * 12 }
+}
 const framePos = (mult) => {
   const { x, y } = padPos(mult)
   return `translate(${x}px, ${y - 22}px)`
@@ -121,7 +130,7 @@ function Frog({ onExit, juegos }) {
     const b = padPos(hop.to)
     const frames = [
       { transform: framePos(hop.from) },
-      { transform: `translate(${(a.x + b.x) / 2}px, ${Math.min(a.y, b.y) - 100}px)`, offset: 0.5 },
+      { transform: `translate(${(a.x + b.x) / 2}px, ${Math.min(a.y, b.y) - 70}px)`, offset: 0.5 },
       { transform: framePos(hop.to) },
     ]
     const animation = el.animate(frames, { duration: reduced ? 120 : HOP_MS, easing: 'ease-in-out', fill: 'forwards' })
@@ -304,9 +313,7 @@ function Frog({ onExit, juegos }) {
   else if (sunk !== null) status = '¡Splash! La rana cayó al agua. Pierdes la apuesta.'
   else if (asking && run) status = `Saltando a ×${mult + 1}…`
   else if (run)
-    status = `Estás en ×${mult}: si cobras ahora recibes ${eur(worth)}. ¿Saltas a ×${mult + 1}? (${chance(mult)} % de acertar)${
-      auto ? ` Cobro automático en ×${auto}.` : ''
-    }`
+    status = `Estás en ×${mult}: ¿saltas a ×${mult + 1} o cobras?${auto ? ` Cobro automático en ×${auto}.` : ''}`
   else if (last?.net > 0) status = `¡Cobraste ×${last.mult}! Ganaste ${eur(last.net)}.`
   else if (last?.net === 0) status = '¡Cobraste ×1! Recuperas tu apuesta.'
   else if (last) status = `La rana no llegó a ×${last.mult}. Perdiste ${eur(last.stake)}.`
@@ -373,42 +380,51 @@ function Frog({ onExit, juegos }) {
           </p>
           <div className="frog__pond">
             <Pond
+              w={W}
+              h={H}
               key={last?.round ?? 'idle'}
               label={`Estanque con ${MAX_MULT} nenúfares; la rana está en el ×${at}`}
               tone={run ? '' : lastWon ? 'won' : last ? 'lost' : ''}
             >
-              {pads.map((m) => {
-                const { x, y } = padPos(m)
-                const state = sunk === m ? 'is-splash' : m < at ? 'is-past' : m === at ? 'is-here' : m === mult + 1 && run ? 'is-next' : ''
-                return <Pad key={m} m={m} x={x} y={y} state={state} />
-              })}
-              <g ref={frogRef} className="frog__sprite" style={{ transform: framePos(at) }}>
-                <FrogShape
-                  sunk={sunk !== null}
-                  mood={lastWon && !run ? 'happy' : sunk !== null ? 'scared' : 'idle'}
-                  pose={hop !== null ? 'air' : asking ? 'crouch' : 'sit'}
-                  look={look}
-                  puffed={Boolean(run)}
-                />
+              <g transform={`scale(${SCALE})`}>
+                {pads.map((m) => {
+                  const { x, y } = padPos(m)
+                  const state = sunk === m ? 'is-splash' : m < at ? 'is-past' : m === at ? 'is-here' : m === mult + 1 && run ? 'is-next' : ''
+                  return <Pad key={m} m={m} x={x} y={y} state={state} />
+                })}
+                <g ref={frogRef} className="frog__sprite" style={{ transform: framePos(at) }}>
+                  <FrogShape
+                    sunk={sunk !== null}
+                    mood={lastWon && !run ? 'happy' : sunk !== null ? 'scared' : 'idle'}
+                    pose={hop !== null ? 'air' : asking ? 'crouch' : 'sit'}
+                    look={look}
+                    puffed={Boolean(run)}
+                  />
+                </g>
+                {cheer && <Cheer key={cheer.id} x={cheer.x} y={cheer.y} />}
               </g>
-              {cheer && <Cheer key={cheer.id} x={cheer.x} y={cheer.y} />}
             </Pond>
           </div>
         </section>
 
         <aside className="frog__panel">
-          {run && (
-            <div className="frog__group">
-              <h2>Ahora</h2>
-              <span className="frog__amount" aria-hidden="true">
-                ×{mult} · {eur(worth)}
-              </span>
-              <p className="frog__odds">
-                Si saltas: <b>{eur(nextWorth)}</b> (×{mult + 1}) con <b>{chance(mult)} %</b> de acertar
-                <span className="frog__odds-bar" style={{ '--p': chance(mult) / 100 }} />
-              </p>
-            </div>
-          )}
+          {/* Siempre ocupa su sitio: si el panel crece y encoge en cada salto, el juego se mueve con él. */}
+          <div className="frog__group frog__now">
+            <h2>Ahora</h2>
+            {run ? (
+              <>
+                <span className="frog__amount" aria-hidden="true">
+                  ×{mult} · {eur(worth)}
+                </span>
+                <p className="frog__odds">
+                  Si saltas: <b>{eur(nextWorth)}</b> (×{mult + 1}) con <b>{chance(mult)} %</b> de acertar
+                  <span className="frog__odds-bar" style={{ '--p': chance(mult) / 100 }} />
+                </p>
+              </>
+            ) : (
+              <p className="frog__hint">Sin rana en marcha. Elige la apuesta y lánzala.</p>
+            )}
+          </div>
 
           <div className="frog__group">
             <h2>Apuesta</h2>
@@ -443,7 +459,7 @@ function Frog({ onExit, juegos }) {
                 Máx
               </button>
             </div>
-            {run && <p className="frog__hint">La apuesta no se cambia mientras la rana está en marcha.</p>}
+            <p className={`frog__hint ${run ? '' : 'is-off'}`}>La apuesta no se cambia mientras la rana está en marcha.</p>
           </div>
 
           <div className="frog__group">

@@ -2,19 +2,23 @@
 
 .juegos-root .frog {
   display: grid;
-  grid-template-columns: minmax(0, auto) minmax(240px, 320px);
-  justify-content: center;
+  /* Medidas fijas: el tamaño del juego no depende del texto ni de los bloques del panel, así que no se mueve al saltar. */
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 25vw, 340px);
+  grid-template-rows: minmax(0, 1fr);
   align-items: center;
-  gap: clamp(20px, 3.4vw, 56px);
+  gap: clamp(16px, 2.6vw, 40px);
   min-height: 0;
 }
 
 /* Mueble: madera con filo de latón, como Plinko y la tragamonedas. */
 .juegos-root .frog__machine {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  justify-self: center;
+  width: 100%;
+  /* El estanque llena el ancho, pero sin pasar del alto de la ventana (su proporción es 1000 × 540). */
+  max-width: calc((100svh - 250px) * 1000 / 540 + 48px);
   min-height: 0;
-  max-height: 100%;
   padding: clamp(12px, 1.8vw, 24px);
   border-radius: 20px;
   background:
@@ -26,7 +30,10 @@
     0 18px 40px rgba(4, 16, 24, 0.55);
 }
 .juegos-root .frog__machine .status {
-  min-height: 2.8em;
+  /* Alto fijo de dos líneas: un mensaje más largo o más corto no cambia el tamaño del estanque. */
+  height: 2.9em;
+  overflow: hidden;
+  line-height: 1.4;
   margin: 0 0 12px;
   font-size: clamp(15px, min(1.6vw, 2.4vh), 20px);
 }
@@ -34,6 +41,7 @@
 /* Estanque: ventana con marco de latón y reflejo de cristal. El agua la dibuja el SVG. */
 .juegos-root .frog__pond {
   position: relative;
+  aspect-ratio: 1000 / 540;
   min-height: 0;
   overflow: hidden;
   border-radius: 14px;
@@ -54,11 +62,8 @@
 }
 .juegos-root .frog__pond svg {
   display: block;
-  width: min(100%, 880px);
-  height: auto;
-  max-height: calc(100svh - 300px);
-  min-height: 160px;
-  margin-inline: auto;
+  width: 100%;
+  height: 100%;
   overflow: visible;
 }
 
@@ -862,8 +867,24 @@
 .juegos-root .frog__panel {
   display: grid;
   align-content: center;
-  gap: clamp(14px, 2.4vh, 24px);
+  gap: clamp(10px, 1.8vh, 20px);
   min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+/* Bloques que cambian de contenido según la partida: reservan su alto para que el panel no crezca ni encoja. */
+.juegos-root .frog__now {
+  min-height: 134px;
+}
+.juegos-root .frog__hint.is-off {
+  visibility: hidden;
+}
+.juegos-root .frog__panel > .frog__group:last-child {
+  min-height: 96px;
+}
+.juegos-root .frog__actions {
+  min-height: 132px;
+  align-content: start;
 }
 .juegos-root .frog__group h2 {
   margin: 0 0 8px;
@@ -1189,13 +1210,19 @@
 @media (max-width: 900px) {
   .juegos-root .frog {
     grid-template-columns: minmax(0, 1fr);
-    align-content: center;
+    /* Filas del tamaño de su contenido: si no cabe, la pantalla se desplaza en vez de apretar el estanque. */
+    grid-template-rows: max-content max-content;
+    overflow-y: auto;
+    align-content: start;
     align-items: stretch;
     gap: 12px;
   }
-  .juegos-root .frog__pond svg {
-    max-height: calc(100svh - 430px);
-    min-height: 0;
+  .juegos-root .frog__machine {
+    max-width: none;
+  }
+  .juegos-root .frog__panel {
+    max-height: none;
+    overflow: visible;
   }
   .juegos-root .frog__tag {
     scale: 1.25;
@@ -1212,7 +1239,7 @@
     border-radius: 14px;
   }
   .juegos-root .frog__machine .status {
-    min-height: 2.6em;
+    height: 4.2em; /* hasta tres líneas en pantallas estrechas */
     margin-bottom: 6px;
     font-size: 14px;
   }
@@ -1240,6 +1267,15 @@
   }
   .juegos-root .frog__amount {
     font-size: 24px;
+  }
+  .juegos-root .frog__now {
+    min-height: 108px;
+  }
+  .juegos-root .frog__actions {
+    min-height: 110px;
+  }
+  .juegos-root .frog__panel > .frog__group:last-child {
+    min-height: 72px;
   }
 }
 

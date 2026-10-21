@@ -4,7 +4,7 @@
  * degradados (<defs>) se declaran allí y el resto los referencia por id (frog-*).
  *
  * COMPONENTES Y PROPS
- *   <Pond w={1000} h={330} label="..." tone="won"|"lost"|"" ambient={true}>   (hijos: pads, sprite, efectos)
+ *   <Pond w={1000} h={540} label="..." tone="won"|"lost"|"" ambient={true}>   (hijos: pads, sprite, efectos)
  *       Crea el <svg viewBox> con agua, ondas, rayos de luz, peces, juncos, libélula y luciérnagas.
  *       tone: "won" baña el agua de oro un instante al cobrar; "lost" la oscurece al caer. Pónganse al liquidar y
  *       quítense (o déjense: la animación solo se dispara al cambiar el valor; para repetir, cambiar `key`).
@@ -63,6 +63,9 @@ const FIREFLIES = [
   { x: 790, y: 56, dx: 36, dy: 24, d: 3, t: 8.5 },
   { x: 915, y: 112, dx: -28, dy: -24, d: 5, t: 9.5 },
   { x: 40, y: 140, dx: 24, dy: -30, d: 6, t: 11 },
+  { x: 210, y: 400, dx: 30, dy: -20, d: 2.5, t: 9 },
+  { x: 560, y: 450, dx: -36, dy: 18, d: 4.5, t: 10 },
+  { x: 880, y: 380, dx: 26, dy: 22, d: 1.5, t: 8 },
 ]
 
 const SPARKS = [
@@ -74,6 +77,11 @@ const SPARKS = [
   [860, 140, 2.4, 0.3],
   [960, 270, 2.6, 2.6],
   [430, 310, 2, 1],
+  [110, 420, 2.6, 0.9],
+  [300, 500, 2.2, 2.3],
+  [620, 440, 2.8, 1.1],
+  [780, 510, 2.4, 0.2],
+  [930, 400, 2.2, 1.9],
 ]
 
 function Water({ w, h, ambient }) {
@@ -81,13 +89,13 @@ function Water({ w, h, ambient }) {
     <g className="frog__water" aria-hidden="true">
       <rect className="frog__depth" x="-40" y="-40" width={w + 80} height={h + 80} fill="url(#frog-water)" />
       <g className="frog__rays">
-        <polygon points="120,-40 210,-40 90,360 -20,360" fill="url(#frog-ray)" />
-        <polygon points="420,-40 540,-40 400,360 270,360" fill="url(#frog-ray)" />
-        <polygon points="760,-40 850,-40 760,360 650,360" fill="url(#frog-ray)" />
+        <polygon points={`120,-40 210,-40 90,${h + 30} -20,${h + 30}`} fill="url(#frog-ray)" />
+        <polygon points={`420,-40 540,-40 400,${h + 30} 270,${h + 30}`} fill="url(#frog-ray)" />
+        <polygon points={`760,-40 850,-40 760,${h + 30} 650,${h + 30}`} fill="url(#frog-ray)" />
       </g>
       {ambient && (
         <g className="frog__fish">
-          <g transform="translate(0 292)">
+          <g transform={`translate(0 ${h - 38})`}>
             <g className="frog__fish-swim" style={{ '--from': '-80px', '--to': '1080px', animationDuration: '46s' }}>
               <g className="frog__fish-body">
                 <path d="M0 0 C10 -7 26 -7 38 0 C26 7 10 7 0 0Z" />
@@ -95,7 +103,7 @@ function Water({ w, h, ambient }) {
               </g>
             </g>
           </g>
-          <g transform="translate(0 262)">
+          <g transform={`translate(0 ${h - 68})`}>
             <g className="frog__fish-swim" style={{ '--from': '1080px', '--to': '-80px', animationDuration: '62s', animationDelay: '-24s' }}>
               <g transform="scale(-1 1) scale(.75)" className="frog__fish-body">
                 <path d="M0 0 C10 -7 26 -7 38 0 C26 7 10 7 0 0Z" />
@@ -107,15 +115,15 @@ function Water({ w, h, ambient }) {
       )}
       <g className="frog__reeds">
         {[
-          [14, 232, 6],
-          [26, 246, -4],
-          [986, 236, -6],
-          [972, 250, 5],
-        ].map(([x, y, lean]) => (
-          <g key={x} transform={`translate(${x} 336)`}>
+          [14, 106, 6],
+          [26, 90, -4],
+          [986, 100, -6],
+          [972, 84, 5],
+        ].map(([x, up, lean]) => (
+          <g key={x} transform={`translate(${x} ${h + 6})`}>
             <g className="frog__reed" style={{ animationDelay: `${(x % 7) * -0.6}s` }}>
-              <path d={`M0 0 Q${lean * 0.5} ${(y - 336) / 2} ${lean} ${y - 336}`} />
-              <ellipse cx={lean} cy={y - 336 - 8} rx="3.4" ry="10" />
+              <path d={`M0 0 Q${lean * 0.5} ${-up / 2} ${lean} ${-up}`} />
+              <ellipse cx={lean} cy={-up - 8} rx="3.4" ry="10" />
             </g>
           </g>
         ))}
@@ -124,9 +132,9 @@ function Water({ w, h, ambient }) {
         <circle key={x} className="frog__spark" cx={x} cy={y} r={r} style={{ animationDelay: `${d}s` }} />
       ))}
       {[
-        [196, 0.34, 11, 0, "24s"],
-        [214, 0.28, 8, 0, "17s"],
-        [236, 0.22, 6, 0, "12s"],
+        [h * 0.3, 0.34, 11, 0, "24s"],
+        [h * 0.55, 0.28, 8, 0, "17s"],
+        [h * 0.8, 0.22, 6, 0, "12s"],
       ].map(([y, op, amp, , dur], i) => (
         <path
           key={y}
@@ -166,7 +174,7 @@ function Water({ w, h, ambient }) {
   )
 }
 
-export function Pond({ w = 1000, h = 330, label, tone = '', ambient = true, children }) {
+export function Pond({ w = 1000, h = 540, label, tone = '', ambient = true, children }) {
   return (
     <svg className={`frog__svg ${tone ? `is-${tone}` : ''}`} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
       <defs>
