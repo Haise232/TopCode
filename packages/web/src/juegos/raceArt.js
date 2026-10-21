@@ -397,9 +397,9 @@ function carSprite(info, num) {
   g.scale(K, K)
   const col = info.color
   const acc = info.accent
-  const dark = shade(col, -0.55)
-  const mid = shade(col, -0.2)
-  const light = shade(col, 0.4)
+  const dark = shade(col, -0.42)
+  const mid = shade(col, -0.05)
+  const light = shade(col, 0.55)
 
   // suelo / difusor
   g.fillStyle = '#080a0d'
@@ -470,9 +470,27 @@ function carSprite(info, num) {
   sh.addColorStop(1, 'rgba(255,255,255,0)')
   g.fillStyle = sh
   g.fill(body)
-  g.strokeStyle = 'rgba(255,255,255,0.3)'
-  g.lineWidth = 0.35
+  g.strokeStyle = 'rgba(255,255,255,0.5)'
+  g.lineWidth = 0.4
   g.stroke(body)
+  // reflejos secos del barniz y luz de contorno en los pontones
+  g.fillStyle = 'rgba(255,255,255,0.55)'
+  g.beginPath()
+  g.ellipse(-8, -2.6, 6, 0.45, -0.04, 0, 7)
+  g.fill()
+  g.beginPath()
+  g.ellipse(12, 1.7, 5, 0.35, 0.08, 0, 7)
+  g.fill()
+  g.strokeStyle = acc
+  g.globalAlpha = 0.55
+  g.lineWidth = 0.5
+  for (const s of [-1, 1]) {
+    g.beginPath()
+    g.moveTo(-15, s * 10.6)
+    g.lineTo(5, s * 10.6)
+    g.stroke()
+  }
+  g.globalAlpha = 1
 
   // toma de aire y cubierta del motor
   g.fillStyle = '#06080b'
@@ -565,6 +583,89 @@ function flameSprite() {
   return c
 }
 
+function nitroSprite() {
+  const c = canvasOf(160, 40)
+  const g = c.getContext('2d')
+  const gr = g.createLinearGradient(0, 0, 160, 0)
+  gr.addColorStop(0, 'rgba(255,255,255,1)')
+  gr.addColorStop(0.12, 'rgba(190,235,255,0.98)')
+  gr.addColorStop(0.4, 'rgba(70,160,255,0.75)')
+  gr.addColorStop(1, 'rgba(30,70,255,0)')
+  g.fillStyle = gr
+  g.beginPath()
+  g.moveTo(0, 14)
+  g.quadraticCurveTo(60, 0, 160, 20)
+  g.quadraticCurveTo(60, 40, 0, 26)
+  g.closePath()
+  g.fill()
+  // el núcleo
+  const g2 = g.createLinearGradient(0, 0, 90, 0)
+  g2.addColorStop(0, 'rgba(255,255,255,1)')
+  g2.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = g2
+  g.beginPath()
+  g.moveTo(0, 17)
+  g.quadraticCurveTo(40, 12, 90, 20)
+  g.quadraticCurveTo(40, 28, 0, 23)
+  g.closePath()
+  g.fill()
+  return c
+}
+
+function nitroTrailSprite() {
+  const c = canvasOf(256, 32)
+  const g = c.getContext('2d')
+  const gr = g.createLinearGradient(0, 0, 256, 0)
+  gr.addColorStop(0, 'rgba(160,215,255,0.55)')
+  gr.addColorStop(1, 'rgba(60,120,255,0)')
+  g.fillStyle = gr
+  g.beginPath()
+  g.moveTo(0, 10)
+  g.lineTo(256, 15)
+  g.lineTo(256, 17)
+  g.lineTo(0, 22)
+  g.closePath()
+  g.fill()
+  return c
+}
+
+// Charcos y reflejos de asfalto mojado (se pinta una vez en la capa estática).
+export function drawWet(g) {
+  const R = rng(11)
+  const o = { x: 0, y: 0, tx: 1, ty: 0, k: 0 }
+  g.save()
+  for (let i = 0; i < 60; i++) {
+    at(R(), (R() - 0.5) * (TRACK_W - 40), o)
+    const rx = 26 + R() * 70
+    const ry = 8 + R() * 18
+    const ang = Math.atan2(o.ty, o.tx) + (R() - 0.5) * 0.4
+    g.save()
+    g.translate(o.x, o.y)
+    g.rotate(ang)
+    const gr = g.createRadialGradient(0, 0, 1, 0, 0, rx)
+    gr.addColorStop(0, 'rgba(8,16,30,0.38)')
+    gr.addColorStop(0.7, 'rgba(10,22,38,0.2)')
+    gr.addColorStop(1, 'rgba(10,22,38,0)')
+    g.fillStyle = gr
+    g.scale(1, ry / rx)
+    g.beginPath()
+    g.arc(0, 0, rx, 0, 7)
+    g.fill()
+    g.restore()
+    // reflejo de neón en el charco
+    g.save()
+    g.globalCompositeOperation = 'lighter'
+    g.translate(o.x, o.y)
+    g.rotate(ang)
+    g.fillStyle = ['rgba(60,200,255,0.06)', 'rgba(255,70,150,0.05)', 'rgba(255,200,110,0.06)'][i % 3]
+    g.beginPath()
+    g.ellipse(rx * 0.15, 0, rx * 0.5, ry * 0.35, 0, 0, 7)
+    g.fill()
+    g.restore()
+  }
+  g.restore()
+}
+
 function asphaltTile() {
   const c = canvasOf(160, 160)
   const g = c.getContext('2d')
@@ -599,6 +700,8 @@ export function makeSprites() {
     shadow: shadowSprite(),
     cone: coneSprite(),
     flame: flameSprite(),
+    nitro: nitroSprite(),
+    nitroTrail: nitroTrailSprite(),
     asphalt: asphaltTile(),
     smoke: glowSprite(64, [[0, 'rgba(225,230,238,0.9)'], [0.5, 'rgba(200,208,220,0.4)'], [1, 'rgba(190,200,215,0)']]),
     lamp: glowSprite(128, [[0, 'rgba(210,235,255,0.55)'], [0.35, 'rgba(120,180,255,0.2)'], [1, 'rgba(60,120,255,0)']]),
@@ -617,6 +720,8 @@ export const P_CONFETTI = 2
 export const P_FIRE = 3
 export const P_FLAME = 4
 export const P_STREAK = 5
+export const P_FLASH = 6
+export const P_NITRO = 7
 
 export class Pool {
   constructor(n, palette) {
@@ -635,6 +740,7 @@ export class Pool {
     this.col = new Uint8Array(n)
     this.head = 0
     this.sprite = null
+    this.sprite2 = null
     this.age.fill(9)
     this.max.fill(1)
   }
@@ -730,6 +836,24 @@ export class Pool {
         g.globalAlpha = (1 - a) * 0.8
         g.beginPath()
         g.arc(this.x[i], this.y[i], this.size[i] * (1 - a * 0.6), 0, 7)
+        g.fill()
+      }
+    } else if (kind === P_FLASH) {
+      for (let i = 0; i < n; i++) {
+        if (kd[i] !== kind || age[i] >= max[i]) continue
+        const a = age[i] / max[i]
+        g.globalAlpha = a < 0.25 ? a * 4 : 1 - (a - 0.25) / 0.75
+        const r = this.size[i] * (0.6 + a * 0.5)
+        g.drawImage(this.sprite2, this.x[i] - r, this.y[i] - r, r * 2, r * 2)
+      }
+    } else if (kind === P_NITRO) {
+      g.fillStyle = '#8fd8ff'
+      for (let i = 0; i < n; i++) {
+        if (kd[i] !== kind || age[i] >= max[i]) continue
+        const a = age[i] / max[i]
+        g.globalAlpha = (1 - a) * 0.85
+        g.beginPath()
+        g.arc(this.x[i], this.y[i], this.size[i] * (1 - a * 0.7), 0, 7)
         g.fill()
       }
     } else if (kind === P_STREAK) {

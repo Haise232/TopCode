@@ -250,3 +250,137 @@ export function startEngine() {
     return null
   }
 }
+
+// Motor agresivo de la carrera frenética: dientes de sierra desafinados + subgrave, saturación, silbido de turbo y chirrido de
+// neumáticos. set(tono 0..1, volumen 0..1, turbo 0..1, chirrido 0..1). Devuelve null si está en silencio.
+export function startEngine2() {
+  const ac = audio()
+  if (!ac) return null
+  try {
+    const out = ac.createGain()
+    out.gain.value = 0
+    const shaper = ac.createWaveShaper()
+    const curve = new Float32Array(256)
+    for (let i = 0; i < 256; i++) {
+      const x = (i / 255) * 2 - 1
+      curve[i] = Math.tanh(x * 3.2)
+    }
+    shaper.curve = curve
+    const filter = ac.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 700
+    filter.Q.value = 3
+    const a = ac.createOscillator()
+    const b = ac.createOscillator()
+    const c = ac.createOscillator()
+    a.type = 'sawtooth'
+    b.type = 'sawtooth'
+    c.type = 'square'
+    const pre = ac.createGain()
+    pre.gain.value = 0.35
+    const cg = ac.createGain()
+    cg.gain.value = 0.6
+    a.connect(pre)
+    b.connect(pre)
+    c.connect(cg).connect(pre)
+    pre.connect(shaper).connect(filter).connect(out).connect(master)
+    // silbido del turbo
+    const whistle = ac.createOscillator()
+    whistle.type = 'sine'
+    const wg = ac.createGain()
+    wg.gain.value = 0
+    whistle.connect(wg).connect(master)
+    // chirrido: ruido de banda estrecha
+    const len = ac.sampleRate
+    const buf = ac.createBuffer(1, len, ac.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+    const noise = ac.createBufferSource()
+    noise.buffer = buf
+    noise.loop = true
+    const bp = ac.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 1700
+    bp.Q.value = 7
+    const sg = ac.createGain()
+    sg.gain.value = 0
+    noise.connect(bp).connect(sg).connect(master)
+    a.start()
+    b.start()
+    c.start()
+    whistle.start()
+    noise.start()
+    let dead = false
+    return {
+      set(pitch, vol, turbo = 0, screech = 0) {
+        if (dead) return
+        const t = ac.currentTime
+        const f = 48 + pitch * 230
+        a.frequency.setTargetAtTime(f, t, 0.03)
+        b.frequency.setTargetAtTime(f * 1.012, t, 0.03)
+        c.frequency.setTargetAtTime(f * 0.5, t, 0.03)
+        filter.frequency.setTargetAtTime(420 + pitch * 2300, t, 0.05)
+        out.gain.setTargetAtTime(vol * 0.075, t, 0.1)
+        whistle.frequency.setTargetAtTime(1900 + turbo * 2600, t, 0.08)
+        wg.gain.setTargetAtTime(turbo * vol * 0.018, t, 0.06)
+        bp.frequency.setTargetAtTime(1300 + screech * 900 + pitch * 300, t, 0.05)
+        sg.gain.setTargetAtTime(screech * vol * 0.05, t, 0.05)
+      },
+      stop() {
+        if (dead) return
+        dead = true
+        const t = ac.currentTime
+        try {
+          out.gain.setTargetAtTime(0, t, 0.05)
+          wg.gain.setTargetAtTime(0, t, 0.05)
+          sg.gain.setTargetAtTime(0, t, 0.05)
+          for (const n of [a, b, c, whistle, noise]) n.stop(t + 0.4)
+        } catch {
+          // ya parado
+        }
+      },
+    }
+  } catch {
+    return null
+  }
+}
+
+// Ovación final: la grada rugiendo, con ráfagas de aplausos y un claxon doble.
+export function playOvation() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 392, dur: 0.6, type: 'square', peak: 0.05 })
+  tone(ac, { freq: 523, dur: 0.6, type: 'square', peak: 0.04 })
+  tone(ac, { freq: 659, at: 0.18, dur: 0.7, type: 'square', peak: 0.04 })
+  try {
+    const dur = 3.2
+    const len = Math.floor(ac.sampleRate * dur)
+    const buf = ac.createBuffer(1, len, ac.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) {
+      const t = i / ac.sampleRate
+      const env = Math.min(1, t * 5) * Math.exp(-t * 0.7)
+      const clap = 0.55 + 0.45 * Math.sin(t * 46) * Math.sin(t * 17 + 1)
+      data[i] = (Math.random() * 2 - 1) * env * clap
+    }
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    const bp = ac.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 1800
+    bp.Q.value = 0.7
+    const gain = ac.createGain()
+    gain.gain.value = 0.32
+    src.connect(bp).connect(gain).connect(master)
+    src.start()
+  } catch {
+    // sin ruido en este navegador
+  }
+}
+
+// Aviso de última vuelta: tres pitidos que suben.
+export function playLastLap() {
+  const ac = audio()
+  if (!ac) return
+  for (let i = 0; i < 3; i++) tone(ac, { freq: 660 * 2 ** (i / 6), at: i * 0.11, dur: 0.1, type: 'square', peak: 0.06 })
+}

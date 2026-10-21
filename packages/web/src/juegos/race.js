@@ -1,23 +1,32 @@
 // Reglas puras de la Carrera de coches (en vivo): las usan la pantalla para pintar y el servidor (api/_juegos/solo.mjs)
-// para sortear y pagar con el saldo semanal. Una carrera cada ROUND_MS para todos, como la ruleta y el cohete: se apuesta
-// a un coche y cobra según el puesto en que acaba (1.º, 2.º o 3.º). Los seis coches son igual de rápidos: la llegada es un
-// orden al azar, así que apostar a cualquiera vale lo mismo. Los importes van en euros enteros y los premios en centésimas
-// (340 = ×3,40).
-export const ROUND_MS = 55000
-export const BETS_MS = 20000 // apuestas abiertas
-export const GRID_MS = 6000 // parrilla de salida y semáforo (las apuestas ya están cerradas y se conoce la carrera)
-export const RACE_MAX_MS = 24000 // la carrera más larga: el último coche cruza la meta antes de esto
+// para sortear y pagar con el saldo semanal. Una carrera cada ROUND_MS para todos, como la ruleta y el cohete. Los seis coches
+// son igual de rápidos: la llegada es un orden al azar, así que ningún coche es favorito. Los importes van en euros enteros y
+// los premios en centésimas de lo apostado, con la apuesta incluida (340 = ×3,40).
+export const RULES = 2 // versión de las reglas: una apuesta guardada con otra versión se devuelve en vez de pagarse
+export const ROUND_MS = 42000
+export const BETS_MS = 18000 // apuestas abiertas
+export const GRID_MS = 4000 // parrilla de salida y semáforo (las apuestas ya están cerradas y se conoce la carrera)
+export const RACE_MAX_MS = 17500 // la carrera más larga: el último coche cruza la meta antes de esto
 export const CARS = 6
 export const LAPS = 3
-export const HOUSE = 0.96 // retorno esperado de cualquier forma de apostar: por debajo del 100 % el Score no se puede «cultivar»
+export const HOUSE = 0.96 // retorno esperado como mucho: por debajo del 100 % el Score no se puede «cultivar»
 
 export const CHIPS = [10, 50, 100, 500]
 export const STEP = CHIPS[0]
-export const MAX_TOTAL = 5000 // lo máximo que se juega entre todos los coches de una carrera
+export const MAX_TOTAL = 5000 // lo máximo que se juega entre todas las apuestas de una carrera
+export const MAX_BETS = 30 // apuestas distintas por carrera
 
-// Premio por puesto de llegada (1.º, 2.º, 3.º), en centésimas de lo apostado, con la apuesta incluida. Mantienen la proporción
-// 10 : 5 : 2 de la idea original, escalados para que el retorno sea HOUSE: (340 + 170 + 66) / 6 coches = 96 %.
+// Premio de la apuesta «Podio» por puesto de llegada (1.º, 2.º, 3.º): (340 + 170 + 66) / 6 coches = 96 %.
 export const PODIUM = [340, 170, 66]
+
+// Tipos de apuesta: cuántos coches se eligen y cuánto pagan si se acierta. Retorno de cada una (con 6 coches igual de
+// rápidos): Podio 96 %, Ganador 570/6 = 95 %, Exacta 2850/30 = 95 %, Trifecta 11400/120 = 95 %.
+export const KINDS = {
+  podium: { name: 'Podio', picks: 1, pays: null, text: 'Cobra si tu coche acaba 1.º, 2.º o 3.º' },
+  win: { name: 'Ganador', picks: 1, pays: 570, text: 'Cobra si tu coche gana' },
+  exacta: { name: 'Exacta', picks: 2, pays: 2850, text: 'Aciertas el 1.º y el 2.º, en orden' },
+  trifecta: { name: 'Trifecta', picks: 3, pays: 11400, text: 'Aciertas el 1.º, el 2.º y el 3.º, en orden' },
+}
 
 // Los coches: nombre, color de la carrocería y del dorsal.
 export const CAR_INFO = [
@@ -29,21 +38,48 @@ export const CAR_INFO = [
   { name: 'Ártico', color: '#37c6d6', accent: '#d6f8fc' },
 ]
 
-// Lo que cobras por `amount` a un coche que acaba en el puesto `place` (0 = 1.º). Del 4.º en adelante, nada.
-export const payout = (amount, place) => (place < PODIUM.length ? Math.floor((amount * PODIUM[place]) / 100) : 0)
+// Una apuesta: { kind, cars: [coche, …] (en el orden que se apuesta), amount }.
+export const keyOf = (bet) => `${bet.kind}:${bet.cars.join('-')}`
 
-// Apuestas: [{ car, amount }], un máximo de una por coche.
+// Lo que cobra una apuesta con el orden de llegada `order` (los 6 coches, el ganador primero), con la apuesta incluida.
+export function payoutOf(bet, order) {
+  const { kind, cars, amount } = bet
+  if (kind === 'podium') {
+    const place = order.indexOf(cars[0])
+    return place < PODIUM.length ? Math.floor((amount * PODIUM[place]) / 100) : 0
+  }
+  const hit = cars.every((car, i) => order[i] === car)
+  return hit ? Math.floor((amount * KINDS[kind].pays) / 100) : 0
+}
+
+// Lo máximo que puede pagar una apuesta (para enseñarlo antes de apostar).
+export const bestOf = (bet) => Math.floor((bet.amount * (bet.kind === 'podium' ? PODIUM[0] : KINDS[bet.kind].pays)) / 100)
+
+export const validBet = (b) => {
+  const kind = KINDS[b?.kind]
+  return (
+    Boolean(kind) &&
+    Array.isArray(b.cars) &&
+    b.cars.length === kind.picks &&
+    new Set(b.cars).size === b.cars.length &&
+    b.cars.every((car) => Number.isInteger(car) && car >= 0 && car < CARS) &&
+    Number.isInteger(b.amount) &&
+    b.amount >= STEP &&
+    b.amount % STEP === 0
+  )
+}
+
 export const validBets = (bets) =>
   Array.isArray(bets) &&
-  bets.length <= CARS &&
-  new Set(bets.map((b) => b?.car)).size === bets.length &&
-  bets.every((b) => Number.isInteger(b?.car) && b.car >= 0 && b.car < CARS && Number.isInteger(b.amount) && b.amount >= STEP && b.amount % STEP === 0) &&
+  bets.length <= MAX_BETS &&
+  bets.every(validBet) &&
+  new Set(bets.map(keyOf)).size === bets.length &&
   totalOf(bets) <= MAX_TOTAL
 
 export const totalOf = (bets) => bets.reduce((sum, b) => sum + b.amount, 0)
 
-// «×3,4», «×0,66»
-export const fmtOdds = (odds) => `×${(odds / 100).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}`
+// «×3,4», «×0,66», «×114»
+export const fmtOdds = (odds) => `×${(odds / 100).toLocaleString('es-ES', { maximumFractionDigits: 2 })}`
 
 // Fase de la ronda según el reloj del servidor. La carrera dura hasta RACE_MAX_MS; cuándo acaba de verdad lo dicen los tiempos.
 export function phaseAt(t) {
@@ -57,13 +93,16 @@ export function phaseAt(t) {
 export const startOf = (round) => round * ROUND_MS + BETS_MS + GRID_MS
 
 // Cuánto ha avanzado un coche a los `ms` desde la salida, como fracción de la distancia total (1 = meta, tras LAPS vueltas).
-// `finish` es el tiempo en que cruza la meta y `wobble` = [a1, a2, a3] los altibajos de su ritmo: así adelanta y es adelantado
-// pero siempre llega a la meta justo en `finish`. Es monótona (nunca marcha atrás). Pasada la meta sigue rodando, sin parar de golpe.
+// `finish` es el tiempo en que cruza la meta y `wobble` = [a1, a2, …] los altibajos de su ritmo (armónicos de una senoide):
+// así adelanta y es adelantado varias veces, pero siempre llega a la meta justo en `finish`. El servidor limita la suma de
+// j·|aj| para que sea monótona (nunca marcha atrás). Pasada la meta sigue rodando, sin parar de golpe.
 export function progress(finish, wobble, ms) {
   if (ms <= 0) return 0
   if (ms >= finish) return 1 + ((ms - finish) / finish) * 0.4
   const tau = ms / finish
-  return tau + wobble[0] * Math.sin(Math.PI * tau) + wobble[1] * Math.sin(2 * Math.PI * tau) + wobble[2] * Math.sin(3 * Math.PI * tau)
+  let at = tau
+  for (let j = 0; j < wobble.length; j++) at += wobble[j] * Math.sin(Math.PI * (j + 1) * tau)
+  return at
 }
 
 // Posiciones (0 = líder) de todos los coches a los `ms` de la salida.

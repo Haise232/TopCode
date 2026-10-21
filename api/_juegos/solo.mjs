@@ -278,17 +278,19 @@ export function raceDraw(secret, round) {
     const j = rand(i + 1)
     ;[order[i], order[j]] = [order[j], order[i]]
   }
-  // Tiempos: el ganador tarda 17-19 s y el resto llega después; a veces, foto finish.
+  // Tiempos: el ganador tarda 12-13,5 s y el resto llega muy cerca; una de cada tres, foto finish entre los dos primeros.
   const finish = Array(race.CARS).fill(0)
-  let time = 17000 + rand(2001)
+  let time = 12000 + rand(1501)
   order.forEach((car, place) => {
-    if (place === 1) time += rand(100) < 15 ? 30 + rand(121) : 250 + rand(1451)
-    else if (place > 1) time += 150 + rand(900)
+    if (place === 1) time += rand(100) < 35 ? 20 + rand(131) : 150 + rand(551)
+    else if (place > 1) time += 80 + rand(521)
     // El tope se escalona por puesto para que nunca haya dos coches con el mismo tiempo.
     finish[car] = Math.min(time, race.RACE_MAX_MS - 500 - (race.CARS - 1 - place) * 30)
   })
+  // Ritmo de cada coche: cuatro armónicos con Σ j·|aj| ≤ 0,263 < 1/π, así que nunca va marcha atrás (ver race.progress).
+  // Bastante amplitud para que haya muchos adelantamientos antes de la llegada.
   const swing = (limit) => (rand(2 * limit + 1) - limit) / 10000
-  const wobble = finish.map(() => [swing(500), swing(300), swing(200)])
+  const wobble = finish.map(() => [swing(600), swing(400), swing(250), swing(120)])
   const draw = { winner: order[0], order, finish, wobble, end: Math.max(...finish) }
   if (raceDraws.size > 5000) raceDraws.clear()
   raceDraws.set(round, draw)
@@ -314,7 +316,6 @@ export function raceView(saved, balance, { now: t, secret }) {
   return {
     now: t,
     round,
-    podium: race.PODIUM,
     race: revealed ? { start: race.startOf(round), finish: draw.finish, wobble: draw.wobble, winner: draw.winner, order: draw.order } : null,
     bets: saved?.round === round ? (saved.bets ?? []) : [],
     seat: saved?.seatRound === round ? saved.seat : null,
@@ -324,7 +325,8 @@ export function raceView(saved, balance, { now: t, secret }) {
   }
 }
 
-// msg.a: «sync» (ponerse al día), «bet» (tus apuestas de esta carrera, [{ car, amount }]; una lista vacía las retira)
+// msg.a: «sync» (ponerse al día), «bet» (tus apuestas de esta carrera, [{ kind, cars, amount }] (race.KINDS); una lista
+// vacía las retira)
 // o «seat» (pilotar un coche libre de esta carrera con tu nombre: car 0-5, o null para dejarlo; no cambia el pago).
 export async function raceLive(msg, balance, saved, _rand, ctx) {
   const t = ctx.now
@@ -333,13 +335,17 @@ export async function raceLive(msg, balance, saved, _rand, ctx) {
   let changed = false
   // 1. Se paga la apuesta de una carrera que ya acabó (si es de otra semana, el saldo ya se reinició: se descarta).
   if (raceDue(state, t, ctx.secret)) {
-    if (state.week === ctx.week) {
+    const stake = state.bets.reduce((sum, b) => sum + (b.amount ?? 0), 0)
+    if (state.week === ctx.week && state.v !== race.RULES) {
+      // Apuesta hecha con unas reglas anteriores (cambiaron mientras la carrera estaba en juego): se devuelve.
+      delta += stake
+    } else if (state.week === ctx.week) {
       const draw = raceDraw(ctx.secret, state.round)
-      const stake = race.totalOf(state.bets)
-      // Cada apuesta cobra según el puesto en que acabó su coche.
-      const paid = state.bets.reduce((sum, b) => sum + race.payout(b.amount, draw.order.indexOf(b.car)), 0)
-      delta += paid
-      state = { ...state, last: { round: state.round, winner: draw.winner, order: draw.order, stake, payout: paid, net: paid - stake, bets: state.bets } }
+      // Cada apuesta cobra según su tipo y el orden de llegada.
+      const paid = state.bets.map((b) => race.payoutOf(b, draw.order))
+      const total = paid.reduce((sum, p) => sum + p, 0)
+      delta += total
+      state = { ...state, last: { round: state.round, winner: draw.winner, order: draw.order, stake, payout: total, net: total - stake, bets: state.bets, paid } }
     }
     state = { ...state, bets: [] }
     changed = true
@@ -350,11 +356,11 @@ export async function raceLive(msg, balance, saved, _rand, ctx) {
     const placed = msg.bets
     if (!Array.isArray(placed) || (placed.length > 0 && !race.validBets(placed))) return { error: 'BAD_MESSAGE' }
     // Lo que ya tenías en esta carrera vuelve al saldo y se cobra la apuesta nueva entera.
-    const before = state.round === round ? race.totalOf(state.bets ?? []) : 0
+    const before = state.round === round ? (state.bets ?? []).reduce((sum, b) => sum + (b.amount ?? 0), 0) : 0
     const stake = race.totalOf(placed)
     if (stake - before > balance + delta) return { error: 'INSUFFICIENT_FUNDS' }
     delta += before - stake
-    state = { ...state, round, week: ctx.week, bets: placed.map(({ car, amount }) => ({ car, amount })) }
+    state = { ...state, round, week: ctx.week, v: race.RULES, bets: placed.map(({ kind, cars, amount }) => ({ kind, cars: [...cars], amount })) }
     changed = true
   } else if (msg.a === 'seat') {
     if (msg.round !== round || offset >= race.BETS_MS) return { error: 'BETS_CLOSED' }
