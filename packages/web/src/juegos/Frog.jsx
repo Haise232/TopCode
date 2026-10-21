@@ -1,42 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEffectEvent } from './useEffectEvent.js'
-import { MAX_MULT, MIN_BET, STEP, chance, maxBetFor, payout } from './frog.js'
+import { HOUSE, MAX_MULT, MIN_BET, STEP, chance, clampBet, maxBetFor, payout, tension, toneOf } from './frog.js'
 import { eur } from './money.js'
-import { isMuted, playChip, playLose, playPeg, playWin, setMuted } from './sound.js'
+import { buzz, isMuted, playCash, playChip, playHop, playLand, playSplash, playWin, setMuted } from './sound.js'
 import { useCountUp } from './useCountUp.js'
 import WinBurst from './WinBurst.jsx'
 import Help from './Help.jsx'
 import PowerButton from './PowerButton.jsx'
+import { Cheer, FrogShape, Pad, Pond } from './FrogArt.jsx'
 import './Frog.css'
 
 // Estanque (unidades del viewBox): un nenúfar por multiplicador, de ×1 a ×MAX_MULT, en una línea ondulada.
 const W = 1000
-const H = 330
-const PAD_R = 40
 const GAP = (W - 120) / (MAX_MULT - 1)
 const HOP_MS = 520
 const SINK_MS = 1100
+const GUARD_MS = 350 // tras un salto, un clic accidental (doble clic) no cuenta
+const AUTO_MS = 450 // pausa entre saltos del auto-cobro
+const HISTORY = 40
 const pads = Array.from({ length: MAX_MULT }, (_, i) => i + 1)
 const padPos = (mult) => ({ x: 60 + (mult - 1) * GAP, y: 200 + Math.sin(mult * 1.1) * 30 })
 const framePos = (mult) => {
   const { x, y } = padPos(mult)
   return `translate(${x}px, ${y - 22}px)`
-}
-
-function FrogShape({ sunk }) {
-  return (
-    <g className={`frog__frog ${sunk ? 'is-sunk' : ''}`}>
-      <ellipse className="frog__leg" cx="-17" cy="10" rx="10" ry="6" />
-      <ellipse className="frog__leg" cx="17" cy="10" rx="10" ry="6" />
-      <ellipse className="frog__body" cx="0" cy="0" rx="21" ry="16" />
-      <ellipse className="frog__belly" cx="0" cy="6" rx="12" ry="8" />
-      <circle className="frog__eye" cx="-10" cy="-14" r="8" />
-      <circle className="frog__eye" cx="10" cy="-14" r="8" />
-      <circle className="frog__pupil" cx="-10" cy="-14" r="3.6" />
-      <circle className="frog__pupil" cx="10" cy="-14" r="3.6" />
-      <path className="frog__mouth" d="M-10 -1 Q0 6 10 -1" />
-    </g>
-  )
 }
 
 // La rana la sortea el servidor con el saldo semanal (cuenta en el Score): cada salto lo pide el jugador y aquí solo se anima.
@@ -49,10 +35,14 @@ function Frog({ onExit, juegos }) {
   const [sunk, setSunk] = useState(null) // nenúfar donde cayó al agua
   const [asking, setAsking] = useState(false)
   const [last, setLast] = useState(null) // última partida liquidada
+  const [history, setHistory] = useState([]) // últimas partidas: { id, mult (0 = cayó), stake }
+  const [auto, setAuto] = useState(0) // auto-cobrar al llegar a ×N (0 = a mano)
   const [burst, setBurst] = useState(null)
+  const [cheer, setCheer] = useState(null) // destello de victoria sobre el nenúfar donde se cobró
   const [ready, setReady] = useState(false)
   const frogRef = useRef(null)
   const lock = useRef(false) // una petición a la vez, aunque se pulse dos veces en el mismo instante
+  const guardUntil = useRef(0) // hasta cuándo se ignoran los clics manuales tras un salto
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
   const { request } = juegos
   const serverBalance = juegos.me?.balance ?? 0
@@ -64,37 +54,64 @@ function Frog({ onExit, juegos }) {
   }, [serverBalance, animating, asking])
   const shownBank = useCountUp(balance)
 
+  // Anota una partida liquidada en el historial (sin repetirla).
+  const record = (result) => {
+    setLast(result)
+    setHistory((list) => {
+      if (list.some((h) => h.id === result.round)) return list
+      return [{ id: result.round, mult: result.net >= 0 ? result.mult : 0, stake: result.stake }, ...list].slice(0, HISTORY)
+    })
+  }
+
+  // Pone la pantalla al día con el servidor (al entrar, o si una petición falló a mitad de partida).
+  const resync = useEffectEvent(async () => {
+    const body = await request({ t: 'solo_frog', a: 'sync' })
+    const view = body?.solo
+    if (!view) return false
+    if (view.bet > 0) {
+      setRun({ bet: view.bet, mult: view.mult })
+      setAt(view.mult)
+      setBet(view.bet)
+    } else {
+      setRun(null)
+      setAt(1)
+    }
+    if (view.last) record(view.last)
+    setBalance(view.balance)
+    return true
+  })
   // Al entrar: si había una rana en marcha (recarga de la página), se recupera.
   useEffect(() => {
     let alive = true
-    request({ t: 'solo_frog', a: 'sync' }).then((body) => {
-      if (!alive) return
-      const view = body?.solo
-      if (view?.bet > 0) {
-        setRun({ bet: view.bet, mult: view.mult })
-        setAt(view.mult)
-        setBet(view.bet)
-      }
-      if (view?.last) setLast(view.last)
-      setReady(true)
-    })
+    resync().then(() => alive && setReady(true))
     return () => {
       alive = false
     }
-  }, [request])
+  }, [])
 
   const mult = run?.mult ?? 1
   const maxBet = maxBetFor(balance)
-  const shownBet = run ? run.bet : Math.max(MIN_BET, Math.min(bet, maxBet))
+  const shownBet = run ? run.bet : clampBet(bet, maxBet)
   const broke = !run && !animating && balance < MIN_BET
   const busy = asking || animating || !ready
   const worth = run ? payout(run.bet, mult) : 0
+  const nextWorth = run ? payout(run.bet, mult + 1) : 0
+  // Hacia dónde miran las pupilas: el siguiente nenúfar.
+  const look = run ? { dx: padPos(Math.min(mult + 1, MAX_MULT)).x - padPos(at).x, dy: padPos(Math.min(mult + 1, MAX_MULT)).y - padPos(at).y } : null
+  const level = run ? tension(mult) : 0
+  const best = history.reduce((top, h) => Math.max(top, h.mult), 0)
+  let streak = 0
+  for (const h of history) {
+    if (h.mult <= 0) break
+    streak += 1
+  }
 
   // Salto animado: arco hasta el siguiente nenúfar. Al acabar se ejecuta hop.after.
   const finishHop = useEffectEvent(() => {
     const { to, after } = hop
     setAt(to)
     setHop(null)
+    guardUntil.current = Date.now() + GUARD_MS
     after()
   })
   useEffect(() => {
@@ -128,14 +145,38 @@ function Frog({ onExit, juegos }) {
     return () => clearTimeout(timer)
   }, [sunk, reduced])
 
+  // Tras cobrar, la rana vuelve de un salto al ×1 mientras se celebra.
+  useEffect(() => {
+    if (run || animating || at === 1) return
+    const timer = setTimeout(() => setHop({ from: at, to: 1, after: () => {} }), reduced ? 200 : 900)
+    return () => clearTimeout(timer)
+  }, [run, animating, at, reduced])
+
+  // El destello dura ~1,4 s.
+  useEffect(() => {
+    if (!cheer) return
+    const timer = setTimeout(() => setCheer(null), 1400)
+    return () => clearTimeout(timer)
+  }, [cheer])
+
+  // Una petición al servidor. Devuelve la vista, o null si falló (entonces se vuelve a sincronizar).
+  // Si sale bien, el llamador debe llamar a release() cuando ya haya puesto el nuevo estado.
   async function act(message) {
     if (busy || lock.current) return null
     lock.current = true
     setAsking(true)
     const body = await request({ t: 'solo_frog', ...message })
-    setAsking(false)
+    const view = body?.solo ?? null
+    if (!view) {
+      setAuto(0)
+      await resync()
+      release()
+    }
+    return view
+  }
+  function release() {
     lock.current = false
-    return body?.solo ?? null
+    setAsking(false)
   }
 
   async function start() {
@@ -148,6 +189,7 @@ function Frog({ onExit, juegos }) {
     setBalance(view.balance)
     setRun({ bet: view.bet, mult: 1 })
     setAt(1)
+    release()
   }
 
   async function jump() {
@@ -156,12 +198,13 @@ function Frog({ onExit, juegos }) {
     if (!view) return
     const from = at
     const to = view.to
+    playHop(to)
     if (view.ev === 'jump') {
       setHop({
         from,
         to,
         after: () => {
-          playPeg(to)
+          playLand(to)
           setRun({ bet: view.bet, mult: view.mult })
         },
       })
@@ -172,17 +215,20 @@ function Frog({ onExit, juegos }) {
         to,
         after: () => {
           setRun(null)
-          setLast(view.last)
+          record(view.last)
           setBalance(view.balance)
           if (view.ev === 'fall') {
             setSunk(to)
-            playLose()
+            playSplash()
+            buzz([40, 40, 120])
           } else {
+            playLand(to)
             finish(view.last)
           }
         },
       })
     }
+    release()
   }
 
   async function cash() {
@@ -190,43 +236,85 @@ function Frog({ onExit, juegos }) {
     const view = await act({ a: 'cash' })
     if (!view) return
     setRun(null)
-    setLast(view.last)
+    record(view.last)
     setBalance(view.balance)
     finish(view.last)
+    release()
   }
 
   function finish(result) {
     if (result.net > 0) {
+      playCash(result.mult)
       playWin(result.mult >= 5)
+      buzz(result.mult >= 5 ? [60, 40, 60, 40, 160] : [60, 40, 80])
+      setCheer({ id: result.round, ...padPos(result.mult) })
       setBurst({ id: result.round, amount: result.net, mult: result.mult, stake: result.stake })
     }
   }
 
-  const onPrimary = useEffectEvent(() => (run ? jump() : start()))
-  // Espacio salta (o lanza la rana si aún no hay partida). Si el foco está en un botón por teclado, se respeta su acción.
+  // Acciones del jugador: ignoran el clic accidental justo tras un salto y paran el auto-cobro.
+  const manual = (fn) => () => {
+    if (Date.now() < guardUntil.current) return
+    setAuto(0)
+    fn()
+  }
+  const onJump = manual(jump)
+  const onCash = manual(cash)
+
+  // Auto-cobro: salta uno a uno con las mismas peticiones y cobra al llegar al objetivo. Cualquier fallo lo apaga.
+  const step = useEffectEvent(() => (mult >= auto ? cash() : jump()))
   useEffect(() => {
-    const onKey = (event) => {
-      if (event.code !== 'Space' || event.repeat) return
-      if (event.target instanceof Element && event.target.matches('button:focus-visible, input')) return
+    if (!run || !auto || busy) return
+    const timer = setTimeout(step, reduced ? 150 : AUTO_MS)
+    return () => clearTimeout(timer)
+  }, [run, auto, busy, reduced])
+
+  const nudge = (delta) => setBet(clampBet(shownBet + delta, maxBet))
+  const canBet = !run && !animating && !asking && maxBet > MIN_BET
+
+  const onKeys = useEffectEvent((event) => {
+    if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
+    const target = event.target instanceof Element ? event.target : null
+    if (event.code === 'Space') {
+      if (target?.matches('button:focus-visible, input, select')) return
       event.preventDefault()
-      onPrimary()
+      if (run) onJump()
+      else start()
+    } else if (event.code === 'KeyC' || event.code === 'Enter') {
+      if (target?.matches('button, input, select, a')) return
+      if (!run) return
+      event.preventDefault()
+      onCash()
+    } else if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+      if (target?.matches('input, select')) return
+      if (!canBet) return
+      event.preventDefault()
+      nudge((event.code === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1) * STEP)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+  })
+  useEffect(() => {
+    window.addEventListener('keydown', onKeys)
+    return () => window.removeEventListener('keydown', onKeys)
   }, [])
 
   let status = 'Elige tu apuesta con la barra y deja a la rana en el nenúfar.'
   if (juegos.error) status = juegos.error
+  else if (!ready) status = 'Conectando con el estanque…'
   else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
   else if (sunk !== null) status = '¡Splash! La rana cayó al agua. Pierdes la apuesta.'
-  else if (run) status = `Estás en ×${mult}: si cobras ahora recibes ${eur(worth)}. ¿Saltas a ×${mult + 1}? (${chance(mult)} % de acertar)`
+  else if (asking && run) status = `Saltando a ×${mult + 1}…`
+  else if (run)
+    status = `Estás en ×${mult}: si cobras ahora recibes ${eur(worth)}. ¿Saltas a ×${mult + 1}? (${chance(mult)} % de acertar)${
+      auto ? ` Cobro automático en ×${auto}.` : ''
+    }`
   else if (last?.net > 0) status = `¡Cobraste ×${last.mult}! Ganaste ${eur(last.net)}.`
+  else if (last?.net === 0) status = '¡Cobraste ×1! Recuperas tu apuesta.'
   else if (last) status = `La rana no llegó a ×${last.mult}. Perdiste ${eur(last.stake)}.`
   else if (balance < MIN_BET) status = 'No te alcanza para la apuesta mínima.'
   const lastWon = !run && last?.net > 0
 
   return (
-    <main className="app frog-app">
+    <main className="app frog-app" data-tension={level}>
       <header className="top">
         <h1>Rana</h1>
         <div className="hud">
@@ -265,7 +353,12 @@ function Frog({ onExit, juegos }) {
                 apuesta. Cuanto más lejos, más difícil es el siguiente salto: el primero sale {chance(1)} de cada 100 veces.
               </p>
               <p>
-                Al llegar a ×{MAX_MULT} cobras solo. Pulsa <kbd>Espacio</kbd> para saltar.
+                Al llegar a ×{MAX_MULT} cobras solo. Con <b>Cobrar en</b> eliges un objetivo antes de lanzar: la rana salta sola y
+                cobra al llegar a él (si pulsas algo, vuelves a mandar tú).
+              </p>
+              <p>
+                Teclado: <kbd>Espacio</kbd> lanza y salta, <kbd>C</kbd> o <kbd>Intro</kbd> cobra, <kbd>←</kbd> <kbd>→</kbd> cambian
+                la apuesta de 10 en 10 (con <kbd>Mayús</kbd>, de 100 en 100).
               </p>
               <p>Juegas con tu saldo de la semana: lo que ganes o pierdas cuenta en el Score.</p>
             </Help>
@@ -279,30 +372,44 @@ function Frog({ onExit, juegos }) {
             {status}
           </p>
           <div className="frog__pond">
-            <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Estanque con ${MAX_MULT} nenúfares; la rana está en el ×${at}`}>
+            <Pond
+              key={last?.round ?? 'idle'}
+              label={`Estanque con ${MAX_MULT} nenúfares; la rana está en el ×${at}`}
+              tone={run ? '' : lastWon ? 'won' : last ? 'lost' : ''}
+            >
               {pads.map((m) => {
                 const { x, y } = padPos(m)
                 const state = sunk === m ? 'is-splash' : m < at ? 'is-past' : m === at ? 'is-here' : m === mult + 1 && run ? 'is-next' : ''
-                return (
-                  <g key={m} className={`frog__pad ${state}`} transform={`translate(${x} ${y})`}>
-                    <ellipse className="frog__ripple" rx={PAD_R + 12} ry={(PAD_R + 12) * 0.42} cy="6" />
-                    <ellipse className="frog__leaf" rx={PAD_R} ry={PAD_R * 0.42} />
-                    <path className="frog__notch" d={`M0 0 L${PAD_R * 0.9} ${-PAD_R * 0.12}`} />
-                    <text className="frog__mult" y={PAD_R * 0.72}>
-                      ×{m}
-                    </text>
-                    {sunk === m && <circle className="frog__splash" r="6" />}
-                  </g>
-                )
+                return <Pad key={m} m={m} x={x} y={y} state={state} />
               })}
               <g ref={frogRef} className="frog__sprite" style={{ transform: framePos(at) }}>
-                <FrogShape sunk={sunk !== null} />
+                <FrogShape
+                  sunk={sunk !== null}
+                  mood={lastWon && !run ? 'happy' : sunk !== null ? 'scared' : 'idle'}
+                  pose={hop !== null ? 'air' : asking ? 'crouch' : 'sit'}
+                  look={look}
+                  puffed={Boolean(run)}
+                />
               </g>
-            </svg>
+              {cheer && <Cheer key={cheer.id} x={cheer.x} y={cheer.y} />}
+            </Pond>
           </div>
         </section>
 
         <aside className="frog__panel">
+          {run && (
+            <div className="frog__group">
+              <h2>Ahora</h2>
+              <span className="frog__amount" aria-hidden="true">
+                ×{mult} · {eur(worth)}
+              </span>
+              <p className="frog__odds">
+                Si saltas: <b>{eur(nextWorth)}</b> (×{mult + 1}) con <b>{chance(mult)} %</b> de acertar
+                <span className="frog__odds-bar" style={{ '--p': chance(mult) / 100 }} />
+              </p>
+            </div>
+          )}
+
           <div className="frog__group">
             <h2>Apuesta</h2>
             <label className="frog__slider">
@@ -313,7 +420,7 @@ function Frog({ onExit, juegos }) {
                 max={Math.max(maxBet, MIN_BET)}
                 step={STEP}
                 value={shownBet}
-                disabled={Boolean(run) || animating || maxBet <= MIN_BET}
+                disabled={!canBet}
                 aria-label="Apuesta"
                 onChange={(event) => setBet(Number(event.target.value))}
               />
@@ -322,32 +429,74 @@ function Frog({ onExit, juegos }) {
                 <span>{eur(Math.max(maxBet, MIN_BET))}</span>
               </span>
             </label>
+            <div className="frog__quick" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 8 }}>
+              <button type="button" disabled={!canBet} onClick={() => setBet(MIN_BET)} aria-label="Apuesta mínima">
+                Mín
+              </button>
+              <button type="button" disabled={!canBet} onClick={() => setBet(clampBet(shownBet / 2, maxBet))} aria-label="Mitad de la apuesta">
+                ½
+              </button>
+              <button type="button" disabled={!canBet} onClick={() => setBet(clampBet(shownBet * 2, maxBet))} aria-label="Doblar la apuesta">
+                ×2
+              </button>
+              <button type="button" disabled={!canBet} onClick={() => setBet(maxBet)} aria-label="Apuesta máxima">
+                Máx
+              </button>
+            </div>
             {run && <p className="frog__hint">La apuesta no se cambia mientras la rana está en marcha.</p>}
+          </div>
+
+          <div className="frog__group">
+            <label className="frog__hint" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              Cobrar en
+              <select value={auto} disabled={Boolean(run) || animating || asking} onChange={(event) => setAuto(Number(event.target.value))}>
+                <option value={0}>A mano</option>
+                {pads.slice(1).map((m) => (
+                  <option key={m} value={m}>
+                    ×{m} ({Math.round((HOUSE / m) * 100)} % de llegar)
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <div className="actions frog__actions">
             {!run && !broke && (
-              <button type="button" className="primary" disabled={busy || shownBet > balance || animating} onClick={start}>
-                Lanzar rana <kbd>Espacio</kbd>
+              <button type="button" className="primary" disabled={busy || shownBet > balance} onClick={start}>
+                {asking ? 'Lanzando…' : 'Lanzar rana'} <kbd>Espacio</kbd>
               </button>
             )}
             {run && (
               <>
-                <button type="button" className="primary" disabled={busy} onClick={jump}>
-                  Saltar a ×{mult + 1} <kbd>Espacio</kbd>
+                <button type="button" className="primary" disabled={busy} onClick={onJump}>
+                  {asking ? 'Saltando…' : `Saltar a ×${mult + 1}`} <kbd>Espacio</kbd>
                 </button>
-                <button type="button" className="frog__cash" disabled={busy} onClick={cash}>
-                  Cobrar {eur(worth)}
+                <button type="button" className={`frog__cash ${run ? 'is-ready' : ''}`} disabled={busy} onClick={onCash}>
+                  Cobrar {eur(worth)} <kbd>C</kbd>
                 </button>
               </>
             )}
           </div>
 
-          {run && (
-            <p className="frog__odds">
-              Siguiente salto: <b>{chance(mult)} %</b> de acertar
-            </p>
-          )}
+          <div className="frog__group">
+            <h2>Últimas partidas</h2>
+            {history.length === 0 ? (
+              <p className="frog__hint">Todavía no has jugado ninguna.</p>
+            ) : (
+              <>
+                <ol className="plinko__history" aria-label="Últimas partidas">
+                  {history.slice(0, 10).map((h) => (
+                    <li key={h.id} className={`plinko__chip plinko__chip--${toneOf(h.mult)}`}>
+                      {h.mult > 0 ? `×${h.mult}` : 'Agua'}
+                    </li>
+                  ))}
+                </ol>
+                <p className="frog__hint">
+                  Mejor: ×{best || '–'} · Racha: {streak}
+                </p>
+              </>
+            )}
+          </div>
         </aside>
       </div>
 

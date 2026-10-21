@@ -112,3 +112,45 @@ export function playBoom() {
   tone(ac, { freq: 140, to: 40, dur: 0.5, type: 'sawtooth', peak: 0.14 })
   tone(ac, { freq: 90, to: 30, dur: 0.7, type: 'square', peak: 0.06, at: 0.04 })
 }
+
+// Vibración corta en móvil (cae, cobra…). Respeta el interruptor de Sonido.
+export function buzz(pattern) {
+  if (muted) return
+  try {
+    navigator.vibrate?.(pattern)
+  } catch {
+    // sin vibración en este navegador
+  }
+}
+
+// Despegue de la rana: un «boing» que sube de tono con cada nenúfar (y gana un tictac grave cuando hay tensión).
+export function playHop(mult = 1) {
+  const ac = audio()
+  if (!ac) return
+  const base = 300 + mult * 55
+  tone(ac, { freq: base, to: base * 1.8, dur: 0.14, type: 'sine', peak: 0.1 })
+  if (mult >= 7) tone(ac, { freq: 70, to: 55, at: 0.02, dur: 0.18, type: 'sine', peak: 0.12 })
+}
+
+// Aterrizaje sobre el nenúfar: toquecito, más agudo cuanto más lejos.
+export function playLand(mult = 1) {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 520 + mult * 90, dur: 0.09, type: 'triangle', peak: 0.09 })
+}
+
+// Caída al agua: chapuzón (ruido grave que baja) y burbujas.
+export function playSplash() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 700, to: 120, dur: 0.35, type: 'sawtooth', peak: 0.06 })
+  tone(ac, { freq: 300, to: 600, at: 0.12, dur: 0.07, type: 'sine', peak: 0.07 })
+  tone(ac, { freq: 380, to: 760, at: 0.24, dur: 0.07, type: 'sine', peak: 0.06 })
+}
+
+// Cobro: monedas que suben tanto más cuanto mayor es el multiplicador.
+export function playCash(mult = 1) {
+  const ac = audio()
+  if (!ac) return
+  const n = Math.min(7, 2 + Math.floor(mult / 2))
+  for (let i = 0; i < n; i++) tone(ac, { freq: 988 * 2 ** (i / 6), at: i * 0.06, dur: 0.12, type: 'square', peak: 0.04 })
+}
