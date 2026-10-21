@@ -12,6 +12,7 @@ import Roulette from './Roulette.jsx'
 import Crash from './Crash.jsx'
 import Slots from './Slots.jsx'
 import Plinko from './Plinko.jsx'
+import Frog from './Frog.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
 import SlotSymbol from './SlotSymbol.jsx'
@@ -78,6 +79,21 @@ const SOLO = [
         <rect x="3" y="31" width="9" height="6" rx="1.5" className="game__plinko-hot" />
         <rect x="15.5" y="31" width="9" height="6" rx="1.5" className="game__plinko-cold" />
         <rect x="28" y="31" width="9" height="6" rx="1.5" className="game__plinko-hot" />
+      </svg>
+    ),
+  },
+  {
+    id: 'frog',
+    name: 'Rana',
+    blurb: 'Salta de nenúfar en nenúfar y cobra cuando quieras.',
+    art: (
+      <svg className="game__frog" viewBox="0 0 40 40">
+        <ellipse cx="20" cy="29" rx="16" ry="7" className="game__frog-pad" />
+        <ellipse cx="20" cy="19" rx="9" ry="7" className="game__frog-body" />
+        <circle cx="15" cy="12" r="3.6" className="game__frog-eye" />
+        <circle cx="25" cy="12" r="3.6" className="game__frog-eye" />
+        <circle cx="15" cy="12" r="1.5" className="game__frog-pupil" />
+        <circle cx="25" cy="12" r="1.5" className="game__frog-pupil" />
       </svg>
     ),
   },
@@ -464,7 +480,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | slots | plinko | gacha | join | score
+  // screen: lobby | roulette | crash | slots | plinko | frog | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -526,6 +542,7 @@ function JuegosScreens() {
   if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
   if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
+  if (screen === 'frog') return <Frog onExit={exit} juegos={juegos} />
   if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />

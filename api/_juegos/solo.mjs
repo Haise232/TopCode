@@ -1,4 +1,4 @@
-// Juegos en solitario (ruleta, cohete, tragamonedas y Plinko) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, tragamonedas, Plinko y la rana) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
 // el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
@@ -7,8 +7,9 @@ import * as roulette from '../../packages/web/src/juegos/roulette.js'
 import * as slots from '../../packages/web/src/juegos/slots.js'
 import * as plinko from '../../packages/web/src/juegos/plinko.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
+import * as frog from '../../packages/web/src/juegos/frog.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_plinko: 'plinko', solo_crash: 'crash' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -250,4 +251,50 @@ export function crashLive(msg, balance, saved, _rand, ctx) {
   }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, plinko: plinkoDrop, crash: crashLive }
+// --- Rana: la apuesta queda en juego (ya salió del saldo) y en cada salto el jugador decide si salta o cobra. ---
+// El servidor sortea cada salto con randomInt, así que la pantalla no puede adelantarse. saved: { bet, mult, week, last }
+// con bet > 0 mientras hay una rana en marcha; last es la última partida liquidada (para el aviso y el gacha).
+function frogView(state, balance, ev = null, to = null) {
+  const live = state.bet > 0
+  return { bet: live ? state.bet : 0, mult: live ? state.mult : 1, last: state.last ?? null, balance, ev, to }
+}
+
+// msg.a: «sync» (ponerse al día), «start» (bet), «jump» (saltar al siguiente nenúfar) o «cash» (cobrar ya).
+export function frogPlay(msg, balance, saved, rand, ctx) {
+  // Una rana de otra semana ya no existe: el saldo se reinició.
+  let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
+  const live = state.bet > 0
+  const settle = (mult) => {
+    const paid = frog.payout(state.bet, mult)
+    state = { ...state, bet: 0, mult: 1, last: { round: ctx.now, stake: state.bet, mult, payout: paid, net: paid - state.bet } }
+    return paid
+  }
+  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: frogView(state, balance) }
+  if (msg.a === 'start') {
+    if (live) return { error: 'BAD_PHASE' }
+    if (!frog.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
+    if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+    state = { ...state, bet: msg.bet, mult: 1, week: ctx.week }
+    return { delta: -msg.bet, played: true, saved: state, result: frogView(state, balance - msg.bet, 'start') }
+  }
+  if (!live) return { error: 'BAD_PHASE' }
+  if (msg.a === 'cash') {
+    const paid = settle(state.mult)
+    return { delta: paid, played: true, saved: state, result: frogView(state, balance + paid, 'cash') }
+  }
+  if (msg.a !== 'jump') return { error: 'BAD_MESSAGE' }
+  const to = state.mult + 1
+  if (!frog.survives(state.mult, rand)) {
+    settle(0)
+    state.last.mult = to // el nenúfar al que no llegó
+    return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'fall', to) }
+  }
+  if (to >= frog.MAX_MULT) {
+    const paid = settle(to)
+    return { delta: paid, played: true, saved: state, result: frogView(state, balance + paid, 'top', to) }
+  }
+  state = { ...state, mult: to }
+  return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'jump', to) }
+}
+
+export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, plinko: plinkoDrop, crash: crashLive, frog: frogPlay }

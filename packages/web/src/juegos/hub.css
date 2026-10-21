@@ -661,6 +661,26 @@
 .juegos-root .game__plinko-cold {
   fill: #5f87a0;
 }
+.juegos-root .hub-row__art .game__frog {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #14586a;
+  box-shadow: inset 0 0 0 2px var(--brass);
+}
+.juegos-root .game__frog-pad {
+  fill: #3f9a52;
+}
+.juegos-root .game__frog-body {
+  fill: #7ccf4a;
+}
+.juegos-root .game__frog-eye {
+  fill: #fff;
+}
+.juegos-root .game__frog-pupil {
+  fill: #16161b;
+}
 
 /* Hover solo con puntero: al tocar no se queda a medias. */
 @media (hover: hover) {

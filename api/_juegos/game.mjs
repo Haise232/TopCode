@@ -734,7 +734,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         return reply
       }
       case 'solo_slots':
-      case 'solo_plinko': {
+      case 'solo_plinko':
+      case 'solo_frog': {
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
