@@ -13,6 +13,7 @@ import Crash from './Crash.jsx'
 import Slots from './Slots.jsx'
 import Plinko from './Plinko.jsx'
 import Frog from './Frog.jsx'
+import Race from './Race.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
 import SlotSymbol from './SlotSymbol.jsx'
@@ -46,6 +47,24 @@ const SOLO = [
     blurb: 'Sube para todos cada 30 s. Retira a tiempo.',
     live: true,
     art: <span className="game__rocket" />,
+  },
+  {
+    id: 'race',
+    name: 'Carrera',
+    blurb: 'Una carrera cada 55 s. Apuesta a un coche y cobra si acaba en el podio.',
+    live: true,
+    art: (
+      <svg className="game__race" viewBox="0 0 40 40">
+        <rect x="0" y="27" width="40" height="13" className="game__race-road" />
+        <path d="M0 33.5 H40" className="game__race-line" />
+        <path d="M5 26 L7 20 Q8 18.5 10 18.5 H15 L19 13.5 Q20 12.5 22 12.5 H27 Q28.5 12.5 29.5 14 L31.5 18.5 Q35 19 35.5 22 V26 Z" className="game__race-body" />
+        <path d="M17 18 L20.5 14.5 H26 L28.5 18 Z" className="game__race-glass" />
+        <circle cx="12" cy="26.5" r="4.2" className="game__race-wheel" />
+        <circle cx="29" cy="26.5" r="4.2" className="game__race-wheel" />
+        <circle cx="12" cy="26.5" r="1.5" className="game__race-hub" />
+        <circle cx="29" cy="26.5" r="1.5" className="game__race-hub" />
+      </svg>
+    ),
   },
   {
     id: 'slots',
@@ -480,7 +499,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | slots | plinko | frog | gacha | join | score
+  // screen: lobby | roulette | crash | slots | plinko | frog | race | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -543,6 +562,7 @@ function JuegosScreens() {
   if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
   if (screen === 'frog') return <Frog onExit={exit} juegos={juegos} />
+  if (screen === 'race') return <Race onExit={exit} juegos={juegos} />
   if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />

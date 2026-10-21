@@ -10,7 +10,7 @@ import { storedTimers } from './engine/timers.mjs'
 import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
-import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, rouletteDue, rouletteView } from './solo.mjs'
+import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView } from './solo.mjs'
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 
 // Alta: 10, figura o as. Para las pistas de los poderes del gacha.
@@ -553,8 +553,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     const game = SOLO_GAMES[msg.t]
     const t = now()
     const week = weekOf(t)
-    const ctx = { now: t, secret, week: week.key }
+    const ctx = { now: t, secret, week: week.key, userId: user.id }
     return db.tx(async (q) => {
+      ctx.q = q // la carrera mira quién pilota cada coche dentro de la misma transacción
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
       const accounts = new TxAccounts(accRows, week.day)
       const balance = accounts.get(user.id).balance
@@ -563,7 +564,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         game === 'slots' || game === 'plinko'
           ? null
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
-      const out = SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
+      const out = await SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
       if (out.error) return out
       // Seguro o premio del gacha activo para este juego: se aplica cuando se liquida una jugada.
       const settled = settlementOf(game, msg, saved, out)
@@ -616,6 +617,17 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return rows[0].n
   }
 
+  // Pilotos de una carrera: quién lleva cada coche (los demás los lleva la IA).
+  async function raceSeats(round) {
+    const { rows } = await db.query(
+      `select (s.estado->>'seat')::int as car, c.nombre as name, c.avatar
+       from public.juegos_solo s join public.juegos_cuentas c on c.usuario_id = s.usuario_id
+       where s.juego = 'race' and s.estado->>'seatRound' = $1 and s.estado->>'seat' is not null`,
+      [String(round)],
+    )
+    return rows.map((r) => ({ car: r.car, name: r.name, avatar: r.avatar ?? null }))
+  }
+
   // Quién ganó en una ronda ya jugada de la ruleta o el cohete (para anunciarlo a todos), de más a menos.
   async function soloWinners(game, round, userId) {
     const { rows } = await db.query(
@@ -633,6 +645,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   const LIVE_SOLO = {
     solo_roulette: { game: 'roulette', due: rouletteDue, view: rouletteView },
     solo_crash: { game: 'crash', due: (saved, t) => crashDue(saved, t, secret), view: crashView },
+    solo_race: { game: 'race', due: (saved, t) => raceDue(saved, t, secret), view: raceView },
   }
 
   // Acciones que se aplican a la mesa en la que estás.
@@ -652,6 +665,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Jugadores de la ronda y, si se piden, ganadores de una ronda ya jugada.
   async function liveExtras(game, msg, reply) {
     reply.solo.players = await soloPlayers(game, reply.solo.round)
+    if (game === 'race') reply.solo.seats = await raceSeats(reply.solo.round)
     if (Number.isSafeInteger(msg.winners)) reply.solo.winners = await soloWinners(game, msg.winners, reply.me.id)
   }
 
@@ -706,7 +720,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         return reply
       }
       case 'solo_roulette':
-      case 'solo_crash': {
+      case 'solo_crash':
+      case 'solo_race': {
         const live = LIVE_SOLO[msg.t]
         let play = msg
         // Espera larga del cohete: se responde justo cuando explota (sin tocar la BD mientras tanto), así cada

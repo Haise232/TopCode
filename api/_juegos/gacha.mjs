@@ -107,8 +107,8 @@ const SOLO_SHAPES = [
     [80, 6],
   ],
 ]
-const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', slots: 'las tragamonedas', plinko: 'el Plinko', frog: 'la rana' }
-const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', slots: 'tragamonedas', plinko: 'Plinko', frog: 'rana' }
+const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', slots: 'las tragamonedas', plinko: 'el Plinko', frog: 'la rana', race: 'la carrera' }
+const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', slots: 'tragamonedas', plinko: 'Plinko', frog: 'rana', race: 'carrera' }
 const SOLO_GAMES = Object.keys(SOLO_IN)
 export const POWER_GAMES = ['poker', 'blackjack', ...SOLO_GAMES]
 const euros = (n) => `${n.toLocaleString('es-ES')} €`

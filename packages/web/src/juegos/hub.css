@@ -681,6 +681,35 @@
 .juegos-root .game__frog-pupil {
   fill: #16161b;
 }
+.juegos-root .hub-row__art .game__race {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #1c3b4d;
+  box-shadow: inset 0 0 0 2px var(--brass);
+}
+.juegos-root .game__race-road {
+  fill: #3a444c;
+}
+.juegos-root .game__race-line {
+  fill: none;
+  stroke: #f1e9d6;
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+.juegos-root .game__race-body {
+  fill: #e2463c;
+}
+.juegos-root .game__race-glass {
+  fill: #d4e6ff;
+}
+.juegos-root .game__race-wheel {
+  fill: #16161b;
+}
+.juegos-root .game__race-hub {
+  fill: #c8a24b;
+}
 
 /* Hover solo con puntero: al tocar no se queda a medias. */
 @media (hover: hover) {

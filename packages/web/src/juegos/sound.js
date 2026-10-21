@@ -154,3 +154,99 @@ export function playCash(mult = 1) {
   const n = Math.min(7, 2 + Math.floor(mult / 2))
   for (let i = 0; i < n; i++) tone(ac, { freq: 988 * 2 ** (i / 6), at: i * 0.06, dur: 0.12, type: 'square', peak: 0.04 })
 }
+
+// ---- Carrera de coches ----
+// Pitido del semáforo (luz n de 5) y «¡ya!» al apagarse.
+export function playBeep(n = 1) {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 440 + n * 18, dur: 0.22, type: 'square', peak: 0.07 })
+}
+
+export function playGo() {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 880, dur: 0.55, type: 'square', peak: 0.08 })
+}
+
+// Un coche pasa rozando: silbido grave que baja (efecto Doppler barato).
+export function playPass() {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 520, to: 150, dur: 0.38, type: 'sawtooth', peak: 0.035 })
+}
+
+// Claxon de meta + aplauso (ruido filtrado en ráfagas).
+export function playCheer() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 392, dur: 0.5, type: 'square', peak: 0.05 })
+  tone(ac, { freq: 494, dur: 0.5, type: 'square', peak: 0.04 })
+  try {
+    const len = Math.floor(ac.sampleRate * 1.6)
+    const buf = ac.createBuffer(1, len, ac.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) {
+      const t = i / ac.sampleRate
+      data[i] = (Math.random() * 2 - 1) * (0.5 + 0.5 * Math.sin(t * 38)) * Math.min(1, t * 8) * Math.exp(-t * 1.6)
+    }
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    const filter = ac.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.value = 2400
+    const gain = ac.createGain()
+    gain.gain.value = 0.22
+    src.connect(filter).connect(gain).connect(master)
+    src.start()
+  } catch {
+    // sin ruido en este navegador
+  }
+}
+
+// Motor continuo: dos osciladores y un filtro; set(tono 0..1, volumen 0..1). Devuelve null si está en silencio.
+export function startEngine() {
+  const ac = audio()
+  if (!ac) return null
+  try {
+    const out = ac.createGain()
+    out.gain.value = 0
+    const filter = ac.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 500
+    const a = ac.createOscillator()
+    const b = ac.createOscillator()
+    a.type = 'sawtooth'
+    b.type = 'square'
+    a.frequency.value = 60
+    b.frequency.value = 30
+    const bg = ac.createGain()
+    bg.gain.value = 0.5
+    a.connect(filter)
+    b.connect(bg).connect(filter)
+    filter.connect(out).connect(master)
+    a.start()
+    b.start()
+    let dead = false
+    return {
+      set(pitch, vol) {
+        if (dead) return
+        const t = ac.currentTime
+        a.frequency.setTargetAtTime(55 + pitch * 190, t, 0.06)
+        b.frequency.setTargetAtTime(27 + pitch * 94, t, 0.06)
+        filter.frequency.setTargetAtTime(380 + pitch * 1500, t, 0.08)
+        out.gain.setTargetAtTime(vol * 0.07, t, 0.12)
+      },
+      stop() {
+        if (dead) return
+        dead = true
+        try {
+          out.gain.setTargetAtTime(0, ac.currentTime, 0.05)
+          a.stop(ac.currentTime + 0.3)
+          b.stop(ac.currentTime + 0.3)
+        } catch {
+          // ya parado
+        }
+      },
+    }
+  } catch {
+    return null
+  }
+}

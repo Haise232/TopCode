@@ -1,0 +1,618 @@
+/* Escrito a mano (no generado): la Carrera de coches en vivo. La pista la dibuja RaceScene; aquí está el marco, el estado y el panel de apuestas.
+   Todo lo que cambia de contenido según la fase reserva su tamaño, para que nada salte. */
+
+.juegos-root .race {
+  --race-w: calc((100svh - 390px) * 16 / 9);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 30vw, 460px);
+  grid-template-rows: max-content max-content max-content;
+  grid-template-areas:
+    'status panel'
+    'scene panel'
+    'strip panel';
+  align-content: center;
+  column-gap: clamp(16px, 2.6vw, 40px);
+  row-gap: 10px;
+  min-height: 0;
+}
+.juegos-root .race__status,
+.juegos-root .race__scene,
+.juegos-root .race__strip {
+  width: 100%;
+  max-width: var(--race-w);
+  min-width: 0;
+  justify-self: center;
+}
+.juegos-root .race__status {
+  grid-area: status;
+}
+.juegos-root .race__scene {
+  grid-area: scene;
+}
+.juegos-root .race__strip {
+  grid-area: strip;
+}
+.juegos-root .race__panel {
+  grid-area: panel;
+  align-self: center;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* ---------- Estado: aro, fases y mensaje ---------- */
+.juegos-root .race__status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 96px;
+  position: relative;
+}
+.juegos-root .race-count {
+  --size: 64px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--baize-deep) 78%, transparent 80% 100%),
+    conic-gradient(var(--brass) calc(var(--left) * 360deg), rgba(241, 233, 214, 0.15) 0);
+  font-family: var(--display);
+  font-size: 27px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ivory);
+}
+.juegos-root .race-count--grid {
+  background:
+    radial-gradient(closest-side, var(--baize-deep) 78%, transparent 80% 100%),
+    conic-gradient(#58c47c calc(var(--left) * 360deg), rgba(241, 233, 214, 0.15) 0);
+}
+.juegos-root .race-count--last {
+  background:
+    radial-gradient(closest-side, var(--baize-deep) 78%, transparent 80% 100%),
+    conic-gradient(var(--red) calc(var(--left) * 360deg), rgba(241, 233, 214, 0.15) 0);
+  animation: race-pulse 1s ease-in-out infinite;
+}
+.juegos-root .race-count--race,
+.juegos-root .race-count--result {
+  background:
+    radial-gradient(closest-side, var(--baize-deep) 78%, transparent 80% 100%),
+    conic-gradient(rgba(241, 233, 214, 0.15) 0 360deg);
+  color: var(--brass);
+}
+@keyframes race-pulse {
+  50% {
+    scale: 1.08;
+  }
+}
+.juegos-root .race__call {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.juegos-root .race__phases {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .race__phases li {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px rgba(157, 182, 196, 0.35);
+}
+.juegos-root .race__phases li.is-now {
+  background: var(--brass);
+  color: #1b1405;
+  box-shadow: none;
+}
+.juegos-root .race__call strong {
+  overflow: hidden;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(20px, 2.6vw, 30px);
+  line-height: 1.15;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ivory);
+}
+.juegos-root .race__call span {
+  display: -webkit-box;
+  overflow: hidden;
+  height: 2.6em;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--muted);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.juegos-root .race__call .is-win {
+  color: var(--brass);
+}
+/* Mensaje solo para lectores de pantalla (cambia por fase, no por segundo). */
+.juegos-root .race__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Pista ---------- */
+.juegos-root .race__scene {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #0b1d2b;
+  box-shadow:
+    0 0 0 3px var(--brass),
+    0 0 0 5px rgba(0, 0, 0, 0.35),
+    0 16px 36px rgba(4, 16, 24, 0.5);
+}
+.juegos-root .race__scene > * {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Resultados: historial y tu última carrera ---------- */
+.juegos-root .race__strip {
+  display: grid;
+  grid-template-rows: 30px 52px;
+  gap: 6px;
+  height: 88px;
+}
+.juegos-root .race__history {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+.juegos-root .race__history h2 {
+  flex: none;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .race__history ol {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+.juegos-root .race-dot {
+  display: block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--car);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.juegos-root .race__muted {
+  flex: 1;
+  font-size: 14px;
+  color: var(--muted);
+}
+.juegos-root .race__players {
+  flex: none;
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--muted);
+}
+.juegos-root .race__last {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--ivory);
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(241, 233, 214, 0.25);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.juegos-root .race__last.is-win {
+  color: var(--bolt);
+  box-shadow: inset 0 0 0 1px var(--brass);
+}
+.juegos-root .race__last.is-loss {
+  color: #ffc9c4;
+}
+
+/* ---------- Panel de apuestas ---------- */
+.juegos-root .race__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.juegos-root .race__head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .race__max {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+/* Leyenda del podio: lo que cobras por euro según el puesto. */
+.juegos-root .race__podium {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  align-content: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .race__podium li {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ivory);
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(200, 162, 75, 0.6);
+}
+.juegos-root .race__podium li b {
+  color: var(--bolt);
+}
+.juegos-root .race__podium .race__podium-none {
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px rgba(157, 182, 196, 0.35);
+}
+
+.juegos-root .race__cars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .race-car {
+  display: grid;
+  grid-template-rows: 24px 22px 40px;
+  gap: 2px;
+  width: 100%;
+  height: 100px;
+  padding: 8px 10px 6px 12px;
+  border: 2px solid rgba(241, 233, 214, 0.28);
+  border-left: 7px solid var(--car);
+  border-radius: 10px;
+  text-align: left;
+  color: var(--ivory);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.36));
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+.juegos-root .race-car:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.juegos-root .race-car:not(:disabled):hover {
+  border-color: var(--car);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.3));
+}
+.juegos-root .race-car:not(:disabled):active {
+  transform: translateY(2px);
+}
+.juegos-root .race-car.is-picked {
+  border-color: var(--bolt);
+  border-left-color: var(--car);
+}
+.juegos-root .race-car.has-bet {
+  background: linear-gradient(180deg, rgba(255, 226, 122, 0.12), rgba(0, 0, 0, 0.34));
+}
+.juegos-root .race-car.is-winner {
+  box-shadow: 0 0 0 3px var(--bolt);
+}
+.juegos-root .race-car:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 2px;
+}
+.juegos-root .race-car__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.juegos-root .race-car__num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  color: #10141a;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 3px var(--car);
+}
+.juegos-root .race-car__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.juegos-root .race-car__place {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ivory);
+  background: rgba(157, 182, 196, 0.3);
+}
+.juegos-root .race-car__place.is-podium {
+  color: #1b1405;
+  background: var(--brass);
+}
+.juegos-root .race-car__pilot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .race-car__pilot > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.juegos-root .race-car__tag {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1b1405;
+  background: var(--bolt);
+}
+.juegos-root .race-car__bet {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+}
+.juegos-root .race-car__bet b {
+  font-size: 18px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--bolt);
+}
+.juegos-root .race-car__bet small {
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* Fichas */
+.juegos-root .race__chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  justify-items: center;
+  align-items: end;
+  padding-top: 8px;
+  height: 66px;
+}
+.juegos-root .race__chips .chip {
+  width: 56px;
+  height: 56px;
+  font-size: 17px;
+}
+.juegos-root .chip--10 {
+  --chip: #e9e1cf;
+  --chip-text: #23201a;
+  border-color: #8f866f;
+}
+.juegos-root .chip--50 {
+  --chip: #23805a;
+}
+
+/* Quitar / Vaciar / Repetir / Doblar */
+.juegos-root .race__actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.juegos-root .race__actions button,
+.juegos-root .race__drive {
+  min-height: 46px;
+  border: 2px solid rgba(200, 162, 75, 0.7);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ivory);
+}
+.juegos-root .race__actions button:not(:disabled):hover,
+.juegos-root .race__drive:not(:disabled):hover {
+  background: rgba(200, 162, 75, 0.22);
+  border-color: var(--brass);
+}
+.juegos-root .race__actions button:not(:disabled):active,
+.juegos-root .race__drive:not(:disabled):active {
+  transform: translateY(2px);
+}
+.juegos-root .race__actions button:disabled,
+.juegos-root .race__drive:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.juegos-root .race__actions button:focus-visible,
+.juegos-root .race__drive:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 2px;
+}
+
+/* Asiento de piloto */
+.juegos-root .race__seat {
+  display: grid;
+  gap: 4px;
+}
+.juegos-root .race__drive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  padding: 0 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.juegos-root .race__drive[aria-pressed='true'] {
+  background: var(--brass);
+  border-color: #fff0b0;
+  color: #1b1405;
+}
+.juegos-root .race__wheel {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 3px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 3px 60% no-repeat;
+}
+.juegos-root .race__seat p {
+  min-height: 1.35em;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.juegos-root .race__seat p.is-warn {
+  color: var(--bolt);
+}
+.juegos-root .race__keys {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.juegos-root .race__keys kbd,
+.juegos-root .race kbd {
+  padding: 0 5px;
+  border-radius: 4px;
+  font-family: inherit;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+/* ---------- Tablet y móvil: el panel debajo de la pista ---------- */
+@media (max-width: 900px) {
+  .juegos-root .race {
+    --race-w: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: max-content max-content max-content max-content;
+    grid-template-areas:
+      'status'
+      'scene'
+      'panel'
+      'strip';
+    align-content: start;
+    row-gap: 12px;
+    overflow-y: auto;
+    padding-bottom: 12px;
+  }
+  .juegos-root .race__panel {
+    max-height: none;
+    overflow: visible;
+  }
+  .juegos-root .race__chips .chip {
+    width: 58px;
+    height: 58px;
+  }
+}
+@media (max-width: 640px) {
+  .juegos-root .race__status {
+    height: 92px;
+    gap: 10px;
+  }
+  .juegos-root .race-count {
+    --size: 54px;
+    font-size: 22px;
+  }
+  .juegos-root .race__phases {
+    gap: 4px;
+  }
+  .juegos-root .race__phases li {
+    padding: 2px 6px;
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+  .juegos-root .race__call span {
+    font-size: 14px;
+  }
+  .juegos-root .race__scene {
+    /* La escena está pensada más alta en el móvil (RaceScene.css): con 16:9 los coches salían diminutos. */
+    aspect-ratio: 5 / 6;
+    max-height: 62svh;
+    border-radius: 12px;
+  }
+  .juegos-root .race__keys {
+    display: none;
+  }
+  .juegos-root .race__players {
+    display: none;
+  }
+}
+
+@media (max-height: 800px) and (min-width: 901px) {
+  .juegos-root .race__keys {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .race-count--last {
+    animation: none;
+  }
+  .juegos-root .race-car,
+  .juegos-root .race__chips .chip {
+    transition: none;
+  }
+}

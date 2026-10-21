@@ -1,4 +1,4 @@
-// Juegos en solitario (ruleta, cohete, tragamonedas, Plinko y la rana) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, tragamonedas, Plinko, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
 // el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
@@ -8,8 +8,9 @@ import * as slots from '../../packages/web/src/juegos/slots.js'
 import * as plinko from '../../packages/web/src/juegos/plinko.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
+import * as race from '../../packages/web/src/juegos/race.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -251,6 +252,131 @@ export function crashLive(msg, balance, saved, _rand, ctx) {
   }
 }
 
+// --- Carrera de coches en vivo: una carrera para todos cada race.ROUND_MS; se apuesta al coche ganador. ---
+// Como la ruleta: todo sale de HMAC(secreto, ronda). El servidor no suelta la carrera (quién gana y los tiempos) hasta que
+// se cierran las apuestas, y entonces los navegadores la animan con las mismas reglas puras (race.js), así que todos ven lo mismo.
+const RACE_HISTORY = 12
+const raceDraws = new Map()
+
+// Entero uniforme de 0 a n-1 a partir de un flujo de enteros de 32 bits (rechazo, sin sesgo).
+const uniform = (next32) => (n) => {
+  const limit = 2 ** 32 - (2 ** 32 % n)
+  for (;;) {
+    const value = next32()
+    if (value < limit) return value % n
+  }
+}
+
+// Sorteo de una carrera: orden de llegada (todos los órdenes son igual de probables), tiempos y ritmos.
+export function raceDraw(secret, round) {
+  const hit = raceDraws.get(round)
+  if (hit) return hit
+  const rand = uniform(hmacStream(secret, `carrera:${round}`))
+  // Orden de llegada: una permutación al azar de los coches (Fisher-Yates), el primero es el ganador.
+  const order = Array.from({ length: race.CARS }, (_, i) => i)
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = rand(i + 1)
+    ;[order[i], order[j]] = [order[j], order[i]]
+  }
+  // Tiempos: el ganador tarda 17-19 s y el resto llega después; a veces, foto finish.
+  const finish = Array(race.CARS).fill(0)
+  let time = 17000 + rand(2001)
+  order.forEach((car, place) => {
+    if (place === 1) time += rand(100) < 15 ? 30 + rand(121) : 250 + rand(1451)
+    else if (place > 1) time += 150 + rand(900)
+    // El tope se escalona por puesto para que nunca haya dos coches con el mismo tiempo.
+    finish[car] = Math.min(time, race.RACE_MAX_MS - 500 - (race.CARS - 1 - place) * 30)
+  })
+  const swing = (limit) => (rand(2 * limit + 1) - limit) / 10000
+  const wobble = finish.map(() => [swing(500), swing(300), swing(200)])
+  const draw = { winner: order[0], order, finish, wobble, end: Math.max(...finish) }
+  if (raceDraws.size > 5000) raceDraws.clear()
+  raceDraws.set(round, draw)
+  return draw
+}
+
+// ¿Hay una apuesta guardada de una carrera que ya acabó? Entonces se paga antes de nada.
+export const raceDue = (saved, t, secret) => Boolean(saved?.bets?.length) && t >= race.startOf(saved.round) + raceDraw(secret, saved.round).end
+
+// Últimos ganadores de carreras ya terminadas, de la más reciente a la más antigua.
+function raceHistory(secret, t) {
+  const out = []
+  for (let r = race.phaseAt(t).round; out.length < RACE_HISTORY && r >= 0; r--) {
+    if (t >= race.startOf(r) + raceDraw(secret, r).end) out.push(raceDraw(secret, r).winner)
+  }
+  return out
+}
+
+export function raceView(saved, balance, { now: t, secret }) {
+  const round = race.phaseAt(t).round
+  const draw = raceDraw(secret, round)
+  const revealed = t >= round * race.ROUND_MS + race.BETS_MS + GRACE_MS
+  return {
+    now: t,
+    round,
+    podium: race.PODIUM,
+    race: revealed ? { start: race.startOf(round), finish: draw.finish, wobble: draw.wobble, winner: draw.winner, order: draw.order } : null,
+    bets: saved?.round === round ? (saved.bets ?? []) : [],
+    seat: saved?.seatRound === round ? saved.seat : null,
+    last: saved?.last ?? null,
+    history: raceHistory(secret, t),
+    balance,
+  }
+}
+
+// msg.a: «sync» (ponerse al día), «bet» (tus apuestas de esta carrera, [{ car, amount }]; una lista vacía las retira)
+// o «seat» (pilotar un coche libre de esta carrera con tu nombre: car 0-5, o null para dejarlo; no cambia el pago).
+export async function raceLive(msg, balance, saved, _rand, ctx) {
+  const t = ctx.now
+  let state = { ...(saved ?? {}) }
+  let delta = 0
+  let changed = false
+  // 1. Se paga la apuesta de una carrera que ya acabó (si es de otra semana, el saldo ya se reinició: se descarta).
+  if (raceDue(state, t, ctx.secret)) {
+    if (state.week === ctx.week) {
+      const draw = raceDraw(ctx.secret, state.round)
+      const stake = race.totalOf(state.bets)
+      // Cada apuesta cobra según el puesto en que acabó su coche.
+      const paid = state.bets.reduce((sum, b) => sum + race.payout(b.amount, draw.order.indexOf(b.car)), 0)
+      delta += paid
+      state = { ...state, last: { round: state.round, winner: draw.winner, order: draw.order, stake, payout: paid, net: paid - stake, bets: state.bets } }
+    }
+    state = { ...state, bets: [] }
+    changed = true
+  }
+  const { round, offset } = race.phaseAt(t)
+  if (msg.a === 'bet') {
+    if (msg.round !== round || offset >= race.BETS_MS + GRACE_MS) return { error: 'BETS_CLOSED' }
+    const placed = msg.bets
+    if (!Array.isArray(placed) || (placed.length > 0 && !race.validBets(placed))) return { error: 'BAD_MESSAGE' }
+    // Lo que ya tenías en esta carrera vuelve al saldo y se cobra la apuesta nueva entera.
+    const before = state.round === round ? race.totalOf(state.bets ?? []) : 0
+    const stake = race.totalOf(placed)
+    if (stake - before > balance + delta) return { error: 'INSUFFICIENT_FUNDS' }
+    delta += before - stake
+    state = { ...state, round, week: ctx.week, bets: placed.map(({ car, amount }) => ({ car, amount })) }
+    changed = true
+  } else if (msg.a === 'seat') {
+    if (msg.round !== round || offset >= race.BETS_MS) return { error: 'BETS_CLOSED' }
+    const car = msg.car ?? null
+    if (car !== null && !(Number.isInteger(car) && car >= 0 && car < race.CARS)) return { error: 'BAD_MESSAGE' }
+    if (car !== null) {
+      // Un solo piloto por coche: se cierra el paso a los demás con un candado de transacción mientras se mira.
+      await ctx.q(`select pg_advisory_xact_lock(hashtext('juegos-carrera'))`)
+      const { rows } = await ctx.q(
+        `select 1 from public.juegos_solo where juego = 'race' and usuario_id <> $1 and estado->>'seatRound' = $2 and estado->>'seat' = $3`,
+        [ctx.userId, String(round), String(car)],
+      )
+      if (rows.length) return { error: 'SEAT_TAKEN' }
+    }
+    state = { ...state, seat: car, seatRound: car === null ? null : round }
+    changed = true
+  } else if (msg.a !== 'sync') {
+    return { error: 'BAD_MESSAGE' }
+  }
+  return { delta, played: changed, saved: changed ? state : null, result: raceView(state, balance + delta, ctx) }
+}
+
 // --- Rana: la apuesta queda en juego (ya salió del saldo) y en cada salto el jugador decide si salta o cobra. ---
 // El servidor sortea cada salto con randomInt, así que la pantalla no puede adelantarse. saved: { bet, mult, week, last }
 // con bet > 0 mientras hay una rana en marcha; last es la última partida liquidada (para el aviso y el gacha).
@@ -297,4 +423,4 @@ export function frogPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'jump', to) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, plinko: plinkoDrop, crash: crashLive, frog: frogPlay }
+export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive }
