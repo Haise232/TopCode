@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Eye, EyeOff, GraduationCap, ArrowRight, Sparkles, BarChart3, MessageCircle, FolderOpen, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import AlertModal from '../components/AlertModal'
@@ -26,7 +26,6 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [modal, setModal]       = useState<{ title: string; message: string } | null>(null)
-  const navigate = useNavigate()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -37,11 +36,8 @@ export default function Login() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) {
-      setModal({ title: 'Error al entrar', message: traducirError(error.message) })
-    } else {
-      navigate('/')
-    }
+    // Si entra bien no hace falta navegar: PublicRoute ve la sesión y vuelve a la página de la que venía (o al inicio).
+    if (error) setModal({ title: 'Error al entrar', message: traducirError(error.message) })
   }
 
   return (

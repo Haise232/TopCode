@@ -27,6 +27,8 @@ interface AuthContextValue {
   user: User | null
   usuario: Usuario | null
   loading: boolean
+  /** false hasta que Supabase ha dicho si hay sesión (la primera vez que se recupera de la memoria del navegador) */
+  sessionReady: boolean
   /** true cuando hay sesión pero el perfil no se pudo cargar (red, RPC caída, timeout) */
   perfilError: boolean
   refreshUsuario: () => Promise<void>
@@ -37,6 +39,7 @@ export const AuthContext = createContext<AuthContextValue>({
   user: null,
   usuario: null,
   loading: true,
+  sessionReady: false,
   perfilError: false,
   refreshUsuario: async () => {},
 })
@@ -47,6 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(getCachedUsuario)
   const [loading, setLoading] = useState(() => getCachedUsuario() === null)
   const [perfilError, setPerfilError] = useState(false)
+  // Con el perfil en caché `loading` empieza en false, pero la sesión aún no se ha leído: sin esto, al recargar una
+  // página las rutas veían «sin sesión» un instante y mandaban al login, que luego te dejaba en el inicio.
+  const [sessionReady, setSessionReady] = useState(false)
 
   // Espejo síncrono de `usuario`: el timeout de seguridad necesita saber si ya
   // hay perfil sin depender del closure del estado.
@@ -165,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, sess) => {
         setSession(sess)
+        setSessionReady(true)
 
         setTimeout(async () => {
           try {
@@ -226,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: session?.user ?? null,
       usuario,
       loading,
+      sessionReady,
       perfilError,
       refreshUsuario,
     }}>

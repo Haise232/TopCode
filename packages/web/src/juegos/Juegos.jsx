@@ -513,6 +513,18 @@ function Notice({ title, children, actions }) {
   )
 }
 
+// Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
+const SCREEN_KEY = 'juegos-pantalla'
+const KEEP = new Set(['roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'bribe', 'gacha', 'score'])
+function savedScreen() {
+  try {
+    const screen = sessionStorage.getItem(SCREEN_KEY)
+    return KEEP.has(screen) ? { screen } : { screen: 'lobby' }
+  } catch {
+    return { screen: 'lobby' }
+  }
+}
+
 function JuegosScreens() {
   const navigate = useNavigate()
   // screen: lobby | roulette | crash | dungeon | plinko | frog | race | bribe | gacha | join | score
@@ -520,13 +532,21 @@ function JuegosScreens() {
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
     const game = params.get('juego')
-    if (!Object.hasOwn(LIVE, game)) return { screen: 'lobby' }
+    if (!Object.hasOwn(LIVE, game)) return savedScreen()
     return { screen: 'join', game, as: 'player', code: params.get('mesa') ?? undefined }
   })
   const juegos = useJuegos()
   useEffect(() => {
     if (params.has('juego') || params.has('mesa')) setParams({}, { replace: true })
   }, [params, setParams])
+  useEffect(() => {
+    try {
+      if (KEEP.has(view.screen)) sessionStorage.setItem(SCREEN_KEY, view.screen)
+      else sessionStorage.removeItem(SCREEN_KEY)
+    } catch {
+      // sin almacenamiento: al recargar se vuelve al selector
+    }
+  }, [view.screen])
   const exit = () => setView({ screen: 'lobby' })
   const home = () => navigate('/')
 

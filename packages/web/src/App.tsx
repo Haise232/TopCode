@@ -25,9 +25,9 @@ const Juegos      = lazy(() => import('./juegos/Juegos'))
 
 // bare: a pantalla completa, sin el menú de TopCode (la sección de juegos trae su propia navegación).
 function ProtectedRoute({ children, bare = false }: { children: React.ReactNode; bare?: boolean }) {
-  const { session, usuario, loading, perfilError } = useAuth()
+  const { session, sessionReady, usuario, loading, perfilError } = useAuth()
   const location = useLocation()
-  if (loading) return <Loading />
+  if (loading || !sessionReady) return <Loading />
   if (!session) return <Navigate to="/login" state={{ from: location }} replace />
   // Sin perfil no se sabe si la cuenta está aprobada: mostrar un error real en
   // lugar de asumir que la solicitud está pendiente.
@@ -95,10 +95,18 @@ function AccessPending() {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth()
-  if (loading) return <Loading />
-  if (session) return <Navigate to="/" replace />
+  const { session, sessionReady, loading } = useAuth()
+  const location = useLocation()
+  if (loading || !sessionReady) return <Loading />
+  // Con sesión, de vuelta a la página desde la que se llegó al login (o al inicio).
+  if (session) return <Navigate to={fromOf(location.state)} replace />
   return <>{children}</>
+}
+
+// La página que mandó al login (ProtectedRoute la deja en state.from), con su búsqueda.
+function fromOf(state: unknown): string {
+  const from = (state as { from?: { pathname?: string; search?: string } } | null)?.from
+  return from?.pathname && from.pathname !== '/login' ? `${from.pathname}${from.search ?? ''}` : '/'
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
