@@ -62,25 +62,6 @@
   box-shadow: 0 14px 30px rgba(4, 16, 24, 0.55);
 }
 
-.juegos-root .game__reels {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 14px;
-  background: var(--wood);
-  box-shadow:
-    inset 0 0 0 3px var(--brass),
-    0 14px 30px rgba(4, 16, 24, 0.55);
-}
-
-.juegos-root .game__reels .symbol {
-    width: clamp(64px, 9vw, 116px);
-    height: clamp(64px, 9vw, 116px);
-    padding: 10px;
-    border-radius: 6px;
-    background: #f6efdd;
-  }
-
 /* Dos cartas en abanico: as de picas y rey de corazones. */
 .juegos-root .game__cards {
   display: flex;
@@ -387,16 +368,6 @@
     height: min(100%, 96px);
     border-width: 5px;
   }
-.juegos-root .game--row .game__reels {
-    gap: 3px;
-    padding: 5px;
-  }
-.juegos-root .game--row .game__reels .symbol {
-      width: clamp(24px, min(2.4vw, 4.4vh), 40px);
-      height: clamp(24px, min(2.4vw, 4.4vh), 40px);
-      padding: 3px;
-      border-radius: 4px;
-    }
 .juegos-root .game--row .game__cards .card {
     --card-w: clamp(36px, min(3.4vw, 6.5vh), 60px);
   }

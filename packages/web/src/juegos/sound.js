@@ -384,3 +384,36 @@ export function playLastLap() {
   if (!ac) return
   for (let i = 0; i < 3; i++) tone(ac, { freq: 660 * 2 ** (i / 6), at: i * 0.11, dur: 0.1, type: 'square', peak: 0.06 })
 }
+
+// ---- Laberinto ----
+// Puerta que se abre: crujido de bisagra (sierra que baja y vuelve a subir).
+export function playCreak() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 180, to: 120, dur: 0.25, type: 'sawtooth', peak: 0.035 })
+  tone(ac, { freq: 140, to: 260, at: 0.2, dur: 0.3, type: 'sawtooth', peak: 0.03 })
+}
+
+// Rugido del monstruo: grave, áspero y que se hunde.
+export function playGrowl() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 110, to: 55, dur: 0.6, type: 'sawtooth', peak: 0.12 })
+  tone(ac, { freq: 75, to: 40, at: 0.05, dur: 0.7, type: 'square', peak: 0.06 })
+}
+
+// Trampa: chasquido metálico y golpe seco.
+export function playClank() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 1800, to: 900, dur: 0.08, type: 'square', peak: 0.06 })
+  tone(ac, { freq: 160, to: 60, at: 0.06, dur: 0.3, type: 'triangle', peak: 0.14 })
+}
+
+// Pasillo vacío: dos pasos que resuenan.
+export function playSteps() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 140, to: 90, dur: 0.08, type: 'triangle', peak: 0.1 })
+  tone(ac, { freq: 130, to: 85, at: 0.28, dur: 0.08, type: 'triangle', peak: 0.08 })
+}

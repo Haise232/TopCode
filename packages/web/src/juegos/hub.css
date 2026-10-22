@@ -630,16 +630,27 @@
   font-size: 18px;
   line-height: 1;
 }
-.juegos-root .hub-row__art .game__reels {
-  gap: 2px;
-  padding: 4px;
+.juegos-root .hub-row__art .game__door {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #2a272d;
   box-shadow: inset 0 0 0 2px var(--brass);
 }
-.juegos-root .hub-row__art .game__reels .symbol {
-  width: 16px;
-  height: 16px;
-  padding: 1px;
-  border-radius: 3px;
+.juegos-root .game__door-gap {
+  fill: #f2c94c;
+}
+.juegos-root .game__door-leaf {
+  fill: #7a4a24;
+  stroke: #3b2008;
+  stroke-width: 1;
+}
+.juegos-root .game__door-knob {
+  fill: #c8a24b;
+}
+.juegos-root .game__door-gold {
+  fill: #fff1b0;
 }
 .juegos-root .hub-row__art .game__plinko {
   width: 46px;

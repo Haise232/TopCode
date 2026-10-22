@@ -10,13 +10,13 @@ import './index.css'
 import './App.css'
 import Roulette from './Roulette.jsx'
 import Crash from './Crash.jsx'
-import Slots from './Slots.jsx'
+import Dungeon from './Dungeon.jsx'
 import Plinko from './Plinko.jsx'
 import Frog from './Frog.jsx'
 import Race from './Race.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
-import SlotSymbol from './SlotSymbol.jsx'
+import { DoorIcon } from './DungeonArt.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
 import { useJuegos } from './useJuegos.js'
@@ -67,16 +67,10 @@ const SOLO = [
     ),
   },
   {
-    id: 'slots',
-    name: 'Tragamonedas',
-    blurb: 'Cinco rodillos y diez líneas.',
-    art: (
-      <span className="game__reels">
-        <SlotSymbol name="seven" />
-        <SlotSymbol name="seven" />
-        <SlotSymbol name="seven" />
-      </span>
-    ),
+    id: 'dungeon',
+    name: 'Laberinto',
+    blurb: 'Elige puertas, esquiva monstruos y llega al tesoro.',
+    art: <DoorIcon />,
   },
   {
     id: 'plinko',
@@ -499,7 +493,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | slots | plinko | frog | race | gacha | join | score
+  // screen: lobby | roulette | crash | dungeon | plinko | frog | race | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -559,7 +553,7 @@ function JuegosScreens() {
   const { screen } = view
   if (screen === 'roulette') return <Roulette onExit={exit} juegos={juegos} />
   if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
-  if (screen === 'slots') return <Slots onExit={exit} juegos={juegos} />
+  if (screen === 'dungeon') return <Dungeon onExit={exit} juegos={juegos} />
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
   if (screen === 'frog') return <Frog onExit={exit} juegos={juegos} />
   if (screen === 'race') return <Race onExit={exit} juegos={juegos} />

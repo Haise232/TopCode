@@ -10,7 +10,7 @@
   min-height: 0;
 }
 
-/* Mueble: madera con filo de latón, como Plinko y la tragamonedas. */
+/* Mueble: madera con filo de latón, como Plinko. */
 .juegos-root .frog__machine {
   display: grid;
   grid-template-rows: auto auto;

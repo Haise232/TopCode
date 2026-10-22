@@ -22,7 +22,7 @@ function hitText(hit) {
 // Poderes de tus cartas del gacha para el juego en el que estás (las reglas, en api/_juegos/gacha.mjs y game.mjs).
 // Solo aparece si tienes alguna carta con poder para este juego. En las mesas (póker, blackjack) se usan durante una
 // mano; en los juegos en solitario se activa un seguro o un premio para las próximas jugadas.
-// game: poker | blackjack | roulette | crash | slots | plinko | frog. send, state y mine solo hacen falta en las mesas.
+// game: poker | blackjack | roulette | crash | dungeon | plinko | frog. send, state y mine solo hacen falta en las mesas.
 // hit: el último efecto que se aplicó (para volver a pedir la lista y que se vean los usos que quedan).
 function PowerButton({ request, game, send, state, mine, hit }) {
   const dialog = useRef(null)

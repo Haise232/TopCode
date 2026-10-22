@@ -540,9 +540,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   }
 
   // Lo apostado y lo ganado (o perdido) en la jugada que acaba de liquidarse, o null si no se liquidó ninguna.
-  // Tragamonedas y Plinko se liquidan en cada jugada; ruleta y cohete, cuando aparece un «last» de otra ronda.
+  // Plinko se liquida en cada jugada; los demás, cuando aparece un «last» de otra ronda o partida.
   function settlementOf(game, msg, saved, out) {
-    if (game === 'slots' || game === 'plinko') return { stake: msg.bet, net: out.delta }
+    if (game === 'plinko') return { stake: msg.bet, net: out.delta }
     const last = out.saved?.last
     if (!last || last.round === saved?.last?.round) return null
     return { stake: last.stake, net: last.net }
@@ -559,9 +559,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
       const accounts = new TxAccounts(accRows, week.day)
       const balance = accounts.get(user.id).balance
-      // Tragamonedas y Plinko no guardan nada entre jugadas.
+      // Plinko no guarda nada entre jugadas.
       const saved =
-        game === 'slots' || game === 'plinko'
+        game === 'plinko'
           ? null
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
       const out = await SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
@@ -748,7 +748,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         if (reply.solo) await liveExtras(live.game, msg, reply)
         return reply
       }
-      case 'solo_slots':
+      case 'solo_dungeon':
       case 'solo_plinko':
       case 'solo_frog': {
         const out = await playSolo(user, msg)

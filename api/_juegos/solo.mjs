@@ -1,16 +1,16 @@
-// Juegos en solitario (ruleta, cohete, tragamonedas, Plinko, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, laberinto, Plinko, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
 // el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
 import { createHmac } from 'node:crypto'
 import * as roulette from '../../packages/web/src/juegos/roulette.js'
-import * as slots from '../../packages/web/src/juegos/slots.js'
+import * as dungeon from '../../packages/web/src/juegos/dungeon.js'
 import * as plinko from '../../packages/web/src/juegos/plinko.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
 import * as race from '../../packages/web/src/juegos/race.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_slots: 'slots', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -130,16 +130,6 @@ export function rouletteLive(msg, balance, saved, _rand, ctx) {
   }
 }
 
-export function slotsSpin(msg, balance, _saved, rand) {
-  if (!slots.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
-  if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
-  const stops = slots.spinStops(rand)
-  const { payout } = slots.evaluate(stops, msg.bet)
-  const delta = payout - msg.bet
-  return { delta, played: true, saved: null, result: { stops, payout, balance: balance + delta } }
-}
-
-// Plinko: una bola por petición; el servidor sortea el recorrido entero y la pantalla solo lo anima.
 export function plinkoDrop(msg, balance, _saved, rand) {
   if (!plinko.validBet(msg.bet) || !plinko.validRisk(msg.risk)) return { error: 'BAD_MESSAGE' }
   if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
@@ -429,4 +419,51 @@ export function frogPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'jump', to) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, slots: slotsSpin, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive }
+// --- Laberinto: como la rana, la apuesta queda en juego (ya salió del saldo) como botín y en cada sala el jugador
+// elige una puerta o sale con lo que lleva. El servidor baraja las puertas de la sala con randomInt después de recibir
+// la elegida, así que la pantalla no puede saber qué hay detrás. saved: { bet, pot, room, week, last } con bet > 0
+// mientras hay una partida en marcha; last es la última partida liquidada (para el aviso y el gacha).
+function dungeonView(state, balance, ev = null, doors = null, pick = null, room = null) {
+  const live = state.bet > 0
+  return { bet: live ? state.bet : 0, pot: live ? state.pot : 0, room: live ? state.room : 0, last: state.last ?? null, balance, ev, doors, pick, at: room }
+}
+
+// msg.a: «sync», «start» (bet), «open» (door: 0, 1 o 2) o «cash» (salir con el botín).
+export function dungeonPlay(msg, balance, saved, rand, ctx) {
+  let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
+  const live = state.bet > 0
+  const settle = (paid, end) => {
+    state = { ...state, bet: 0, pot: 0, last: { round: ctx.now, stake: state.bet, payout: paid, net: paid - state.bet, room: state.room, end } }
+    return paid
+  }
+  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: dungeonView(state, balance) }
+  if (msg.a === 'start') {
+    if (live) return { error: 'BAD_PHASE' }
+    if (!dungeon.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
+    if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+    state = { ...state, bet: msg.bet, pot: msg.bet, room: 0, week: ctx.week }
+    return { delta: -msg.bet, played: true, saved: state, result: dungeonView(state, balance - msg.bet, 'start') }
+  }
+  if (!live) return { error: 'BAD_PHASE' }
+  if (msg.a === 'cash') {
+    const paid = settle(state.pot, 'cash')
+    return { delta: paid, played: true, saved: state, result: dungeonView(state, balance + paid, 'cash') }
+  }
+  if (msg.a !== 'open' || !dungeon.validDoor(msg.door)) return { error: 'BAD_MESSAGE' }
+  const room = state.room
+  const doors = dungeon.layout(room, rand)
+  const kind = doors[msg.door]
+  if (dungeon.loses(kind)) {
+    settle(0, kind)
+    return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, kind, doors, msg.door, room) }
+  }
+  const pot = kind === 'chest' ? dungeon.grow(state.pot, room) : state.pot
+  state = { ...state, pot, room: room + 1 }
+  if (state.room >= dungeon.DEPTH) {
+    const paid = settle(pot, 'treasure')
+    return { delta: paid, played: true, saved: state, result: dungeonView(state, balance + paid, kind, doors, msg.door, room) }
+  }
+  return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, kind, doors, msg.door, room) }
+}
+
+export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive }
