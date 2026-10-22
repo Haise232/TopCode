@@ -4,7 +4,7 @@ import GachaCard from './GachaCard.jsx'
 import GachaPowers from './GachaPowers.jsx'
 import Help from './Help.jsx'
 import { eur } from './money.js'
-import { playBoom, playCard, playSpin, playWin, playZap } from './sound.js'
+import { playBoom, playCard, playGrowl, playHeartbeat, playOvation, playSiren, playSpin, playWin, playZap } from './sound.js'
 import { ODDS, RARITIES, RARITY, pct, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
@@ -74,6 +74,11 @@ const BUILD_MS = { comun: 0, rara: 600, epica: 1600, mitica: 3400, unica: 4600 }
 const BURST_MS = { comun: 650, rara: 750, epica: 950, mitica: 1300, unica: 1700 }
 const SPARKS = { rara: 12, epica: 32, mitica: 64, unica: 110 }
 const WAVES = { rara: 1, epica: 2, mitica: 3, unica: 5 }
+// La mítica tiene dos actos más: un presagio antes de la carga (pantalla negra, latido y grietas) y un apagón antes del
+// estallido.
+const OMEN_MS = 3000
+const BLACKOUT_MS = 900
+const EMBERS = 40
 const IMPLODE = 26
 const BOLTS = 7
 const CONFETTI = 46
@@ -91,6 +96,8 @@ function Summon({ summon, busy, onDecide }) {
   const sparks = SPARKS[rarity] ?? 0
   const waves = WAVES[rarity] ?? 0
   const title = rarity === 'unica' ? '¡MÍTICA!' : legend ? '¡LEGENDARIA!' : RARITY[rarity]
+  const mythic = rarity === 'unica'
+  if (stage === 'omen' || stage === 'blackout') return <MythicOmen stage={stage} />
   return (
     <div
       className={`gacha-summon is-${stage} gacha-summon--${stage === 'charge' ? 'unknown' : rarity}`}
@@ -147,9 +154,24 @@ function Summon({ summon, busy, onDecide }) {
           ))}
         </span>
       )}
+      {mythic && stage === 'show' && (
+        <span className="gacha-summon__embers" aria-hidden="true">
+          {range(EMBERS).map((i) => (
+            <i
+              key={i}
+              style={{ '--x': `${(i * 37) % 100}vw`, '--t': `${((i * 0.23) % 4).toFixed(2)}s`, '--s': `${3 + ((i * 0.37) % 3)}s`, '--z': `${3 + (i % 4) * 2}px` }}
+            />
+          ))}
+        </span>
+      )}
       <div className="gacha-summon__stage">
         {stage === 'show' ? (
           <>
+            {mythic && (
+              <span className="gacha-summon__crown" aria-hidden="true">
+                ♛
+              </span>
+            )}
             <span className={`gacha-summon__title ${legend ? 'gacha-summon__title--legend' : ''}`} aria-label={title}>
               {legend
                 ? [...title].map((ch, i) => (
@@ -164,6 +186,7 @@ function Summon({ summon, busy, onDecide }) {
               <GachaCard card={result.card} big />
             </div>
             <p className="gacha-summon__name">{result.card.name}</p>
+            {mythic && <p className="gacha-summon__one">1 de 1 · única en TopCode</p>}
             <div className="gacha-decide">
               <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => onDecide(true)} autoFocus>
                 Guardar en mi biblioteca
@@ -190,6 +213,38 @@ function Summon({ summon, busy, onDecide }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Los actos previos de la mítica: presagio (latido rojo, grietas por toda la pantalla, «anomalía» parpadeando y la carta
+// boca abajo temblando) y apagón (negro total con un punto de luz justo antes de estallar).
+function MythicOmen({ stage }) {
+  return (
+    <div className={`gacha-omen is-${stage}`} role="dialog" aria-modal="true" aria-label="Tirada del gacha">
+      {stage === 'omen' ? (
+        <>
+          <span className="gacha-omen__pulse" aria-hidden="true" />
+          <span className="gacha-omen__static" aria-hidden="true" />
+          <svg className="gacha-omen__cracks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M50 50 L42 38 L46 26 L34 10 L30 0" />
+            <path d="M50 50 L61 41 L58 28 L72 14 L80 0" />
+            <path d="M50 50 L66 54 L80 48 L100 52" />
+            <path d="M50 50 L34 56 L20 50 L0 58" />
+            <path d="M50 50 L44 64 L52 78 L46 100" />
+            <path d="M50 50 L60 66 L74 74 L86 100" />
+            <path d="M50 50 L36 70 L18 82 L8 100" />
+          </svg>
+          <p className="gacha-omen__text" data-text="⚠ ANOMALÍA DETECTADA ⚠">
+            ⚠ ANOMALÍA DETECTADA ⚠
+          </p>
+          <div className="gacha-summon__card gacha-omen__card">
+            <span className="gacha-summon__back" />
+          </div>
+        </>
+      ) : (
+        <span className="gacha-omen__dot" aria-hidden="true" />
+      )}
     </div>
   )
 }
@@ -546,18 +601,31 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     if (reduced) return setSummon({ stage: 'show', result })
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, CHARGE_MS - (Date.now() - started))))
     const rarity = result.card.rarity
+    if (rarity === 'unica') {
+      setSummon({ stage: 'omen', result })
+      playGrowl()
+      for (let k = 0; k < 4; k++) setTimeout(playHeartbeat, 300 + k * 650)
+      setTimeout(playSiren, OMEN_MS - 700)
+      await new Promise((resolve) => setTimeout(resolve, OMEN_MS))
+    }
     if (BUILD_MS[rarity]) {
       setSummon({ stage: 'build', result })
       playSpin(BUILD_MS[rarity])
       await new Promise((resolve) => setTimeout(resolve, BUILD_MS[rarity]))
     }
+    if (rarity === 'unica') {
+      setSummon({ stage: 'blackout', result })
+      await new Promise((resolve) => setTimeout(resolve, BLACKOUT_MS))
+    }
     setSummon({ stage: 'burst', result })
     playZap()
     if (rarity === 'mitica' || rarity === 'unica') playBoom()
+    if (rarity === 'unica') setTimeout(playBoom, 260)
     await new Promise((resolve) => setTimeout(resolve, BURST_MS[rarity]))
     setSummon({ stage: 'show', result })
     if (rarity === 'unica' || rarity === 'mitica' || rarity === 'epica') playWin(rarity !== 'epica')
     else playCard()
+    if (rarity === 'unica') setTimeout(playOvation, 700)
   }
 
   async function decide(keep) {

@@ -1938,3 +1938,275 @@
   margin-top: 2px;
   color: var(--ivory);
 }
+
+/* ---------- Mítica: presagio, apagón y revelación a lo grande ---------- */
+.juegos-root .gacha-omen {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #050002;
+  animation: gacha-omen-shake 0.18s linear infinite;
+}
+.juegos-root .gacha-omen.is-blackout {
+  background: #000;
+  animation: none;
+}
+/* Latido rojo desde los bordes. */
+.juegos-root .gacha-omen__pulse {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(255, 30, 60, 0.55) 95%);
+  animation: gacha-omen-beat 0.65s ease-out 0.3s infinite;
+  opacity: 0;
+}
+/* Interferencia: rayas que se mueven. */
+.juegos-root .gacha-omen__static {
+  position: absolute;
+  inset: -50%;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3px);
+  animation: gacha-omen-static 0.25s steps(3) infinite;
+  mix-blend-mode: screen;
+}
+/* Grietas que se abren desde el centro hasta los bordes de la pantalla. */
+.juegos-root .gacha-omen__cracks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.juegos-root .gacha-omen__cracks path {
+  fill: none;
+  stroke: #ff3b5c;
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  filter: drop-shadow(0 0 4px #ff3b5c) drop-shadow(0 0 10px #ff9a3c);
+  animation: gacha-omen-crack 2.4s cubic-bezier(0.6, 0, 0.4, 1) 0.4s forwards;
+}
+.juegos-root .gacha-omen__cracks path:nth-child(2n) {
+  animation-delay: 0.9s;
+}
+.juegos-root .gacha-omen__cracks path:nth-child(3n) {
+  animation-delay: 1.4s;
+}
+.juegos-root .gacha-omen__text {
+  position: absolute;
+  top: 14%;
+  margin: 0;
+  font-family: 'Impact', 'Arial Black', var(--sans), sans-serif;
+  font-size: clamp(20px, 4vw, 40px);
+  letter-spacing: 0.12em;
+  color: #ff3b5c;
+  text-shadow: 0 0 18px rgba(255, 59, 92, 0.8);
+  animation: gacha-omen-blink 0.4s steps(2) infinite;
+}
+.juegos-root .gacha-omen__text::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: #ffd25a;
+  mix-blend-mode: screen;
+  animation: gacha-omen-glitch 0.3s steps(2) infinite;
+}
+.juegos-root .gacha-omen__card {
+  position: relative;
+  animation: gacha-omen-tremble 0.09s linear infinite;
+}
+.juegos-root .gacha-omen__card .gacha-summon__back {
+  border-color: #ff3b5c;
+  box-shadow:
+    0 0 40px rgba(255, 59, 92, 0.7),
+    0 0 120px rgba(255, 59, 92, 0.35);
+}
+/* Apagón: un punto de luz que crece y se apaga justo antes del estallido. */
+.juegos-root .gacha-omen__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 30px 10px #fff;
+  animation: gacha-omen-dot 0.9s ease-in forwards;
+}
+
+/* Revelación: corona, brasas que suben, brillo holográfico y el sello de única. */
+.juegos-root .gacha-summon--unica.is-burst {
+  animation: gacha-omen-shake 0.12s linear 6;
+}
+.juegos-root .gacha-summon__crown {
+  display: block;
+  margin-bottom: -6px;
+  font-size: clamp(44px, 8vw, 72px);
+  line-height: 1;
+  color: #ffd25a;
+  text-align: center;
+  text-shadow:
+    0 0 20px #ffd25a,
+    0 0 50px #ff3b5c;
+  animation:
+    gacha-crown-drop 0.8s cubic-bezier(0.2, 1.6, 0.4, 1) 0.4s both,
+    gacha-crown-bob 2.4s ease-in-out 1.2s infinite;
+}
+.juegos-root .gacha-summon--unica.is-show .gacha-summon__card {
+  position: relative;
+  animation: gacha-mythic-spin 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.juegos-root .gacha-summon--unica.is-show .gacha-summon__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 16px;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 45%, rgba(255, 120, 200, 0.35) 52%, rgba(120, 220, 255, 0.35) 58%, transparent 70%);
+  background-size: 250% 100%;
+  mix-blend-mode: overlay;
+  animation: gacha-mythic-holo 2.2s ease-in-out 1.4s infinite;
+}
+.juegos-root .gacha-summon__one {
+  margin: 4px 0 0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1b0508;
+  background: linear-gradient(90deg, #ffd25a, #ff3b5c, #ffd25a);
+  background-size: 200% 100%;
+  box-shadow: 0 0 24px rgba(255, 59, 92, 0.6);
+  animation:
+    gacha-one-in 0.5s ease-out 1.6s both,
+    gacha-one-slide 3s linear 2s infinite;
+}
+.juegos-root .gacha-summon__embers i {
+  position: absolute;
+  bottom: -20px;
+  left: var(--x);
+  width: var(--z);
+  height: var(--z);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff3b0, #ff9a3c 50%, rgba(255, 59, 92, 0));
+  animation: gacha-ember var(--s) linear var(--t) infinite;
+}
+
+@keyframes gacha-omen-shake {
+  25% {
+    translate: -3px 2px;
+  }
+  50% {
+    translate: 3px -2px;
+  }
+  75% {
+    translate: -2px -3px;
+  }
+}
+@keyframes gacha-omen-beat {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gacha-omen-static {
+  to {
+    transform: translateY(6px);
+  }
+}
+@keyframes gacha-omen-crack {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes gacha-omen-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes gacha-omen-glitch {
+  0% {
+    transform: translate(3px, -2px);
+    clip-path: inset(0 0 60% 0);
+  }
+  100% {
+    transform: translate(-3px, 2px);
+    clip-path: inset(55% 0 0 0);
+  }
+}
+@keyframes gacha-omen-tremble {
+  50% {
+    transform: rotate(1.5deg) scale(1.02);
+  }
+}
+@keyframes gacha-omen-dot {
+  60% {
+    transform: scale(3);
+  }
+  100% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+@keyframes gacha-crown-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-120px) scale(2);
+  }
+}
+@keyframes gacha-crown-bob {
+  50% {
+    transform: translateY(-6px) rotate(-5deg);
+  }
+}
+@keyframes gacha-mythic-spin {
+  from {
+    transform: perspective(900px) rotateY(-720deg) scale(0.3);
+    filter: brightness(3);
+  }
+  70% {
+    filter: brightness(1.4);
+  }
+}
+@keyframes gacha-mythic-holo {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+@keyframes gacha-one-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes gacha-one-slide {
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes gacha-ember {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-110vh) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .gacha-summon__crown,
+  .juegos-root .gacha-summon--unica.is-show .gacha-summon__card,
+  .juegos-root .gacha-summon--unica.is-show .gacha-summon__card::after,
+  .juegos-root .gacha-summon__one,
+  .juegos-root .gacha-summon__embers i {
+    animation: none;
+  }
+}

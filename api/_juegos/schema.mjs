@@ -97,7 +97,8 @@ create table if not exists public.juegos_gacha_jugadores (
   tiradas           int not null default 0,
   reclamo_listo     timestamptz not null default 'epoch',
   pendiente         text,
-  pendiente_premium boolean not null default false
+  pendiente_premium boolean not null default false,
+  forzada           text -- carta preparada por el master para su próxima tirada de pago (una vez)
 );
 
 -- Poder del gacha activo en un juego en solitario: un seguro o un premio para las próximas «usos» jugadas.

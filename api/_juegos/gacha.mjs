@@ -269,8 +269,8 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
   // Estado del jugador, bloqueado para la transacción.
   async function player(q, userId) {
     await q(`insert into public.juegos_gacha_jugadores (usuario_id) values ($1) on conflict (usuario_id) do nothing`, [userId])
-    const row = (await q(`select pendiente, pendiente_premium from public.juegos_gacha_jugadores where usuario_id = $1 for update`, [userId])).rows[0]
-    return { pending: row.pendiente, pendingPremium: row.pendiente_premium }
+    const row = (await q(`select pendiente, pendiente_premium, forzada from public.juegos_gacha_jugadores where usuario_id = $1 for update`, [userId])).rows[0]
+    return { pending: row.pendiente, pendingPremium: row.pendiente_premium, forced: row.forzada }
   }
 
   // Cartas que no pueden salir: con dueño, en la mesa o pendientes de decisión.
@@ -362,7 +362,12 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
       const st = await player(q, user.id)
       if (st.pending) return { error: 'GACHA_PENDING' }
       // Primero la carta y después el cobro: si no queda ninguna libre, no se cobra.
-      const card = draw(premium, await takenCards(q), luck())
+      // forzada: carta que el master dejó preparada para la próxima tirada de pago de esta persona (una sola vez, y
+      // solo si sigue libre).
+      const taken = await takenCards(q)
+      const forced = st.forced && cards.has(st.forced) && !taken.has(st.forced) ? cards.get(st.forced) : null
+      const card = forced ?? draw(premium, taken, luck())
+      if (st.forced) await q(`update public.juegos_gacha_jugadores set forzada = null where usuario_id = $1`, [user.id])
       if (!card) return { error: 'GACHA_EMPTY' }
       if ((await charge(q, user.id, premium ? PREMIUM_COST : ROLL_COST)) === null) return { error: 'GACHA_FUNDS' }
       await q(`update public.juegos_gacha_jugadores set pendiente = $2, pendiente_premium = $3 where usuario_id = $1`, [user.id, card.id, premium])

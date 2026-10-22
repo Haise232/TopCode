@@ -407,6 +407,14 @@ export function playCreak() {
 }
 
 // Rugido del monstruo: grave, áspero y que se hunde.
+// Latido grave (bum-bum) del presagio de la carta mítica.
+export function playHeartbeat() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 70, to: 45, dur: 0.16, type: 'sine', peak: 0.3 })
+  tone(ac, { freq: 64, to: 40, at: 0.22, dur: 0.2, type: 'sine', peak: 0.24 })
+}
+
 export function playGrowl() {
   const ac = audio()
   if (!ac) return
