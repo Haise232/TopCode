@@ -18,9 +18,10 @@ const MEMES = [
   // Mítica: solo una
   ['El Xokas', 'Codificando…', 'unica', 'twitch:elxokas', 'https://i.ytimg.com/vi/E3hVCGug0yo/frame0.jpg'],
   // Legendarias
-  ['Ibai Llanos', 'La Velada del Año', 'mitica', 'Ibai Llanos'],
+  ['Ibai Llanos', 'La Velada del Año', 'mitica', 'Ibai Llanos', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2yDyywg49FO0nk5D3IEdrFJ0Xe_qk3CdZ-lGIF7lfhR5x6Y19YoBb13g&s=10'],
   ['Zona Gemelos', 'La casa de los gemelos', 'mitica', 'twitch:zonagemelos', 'https://cdn-pro.elsalvador.com/wp-content/uploads/2023/12/dandy-barcelona.jpg'],
   ['El Dandy de Barcelona', 'Ocho infartos', 'mitica', 'url:https://www.youtube.com/watch?v=T76OKMcz8Pg', 'https://i.ytimg.com/vi/T76OKMcz8Pg/hqdefault.jpg'],
+  ['Fernando Alonso', 'El 33', 'mitica', 'Fernando Alonso', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfmbma4YZFUO0MS1y-CtDNSLU0y5DPIN5nYXGKWUTGCToMd9mlVOVu2fA&s=10'],
   ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
   ['Antonio Recio', 'Mayorista, no limpio pescado', 'mitica', 'Jordi Sánchez (actor)'],
   // Épicas
@@ -28,8 +29,7 @@ const MEMES = [
   ['Julio Iglesias', 'Y lo sabes', 'epica', 'Julio Iglesias'],
   ['IlloJuan', 'El de Málaga', 'epica', 'twitch:illojuan'],
   ['AuronPlay', 'Las bromas telefónicas', 'epica', 'yt:auronplay'],
-  ['El Rubius', 'El rey de YouTube', 'epica', 'yt:ElRubiusOMG'],
-  ['Fernando Alonso', 'El 33', 'epica', 'Fernando Alonso'],
+  ['El Rubius', 'El rey de YouTube', 'epica', 'yt:ElRubiusOMG', 'https://i.pinimg.com/736x/4e/bf/36/4ebf36e70670e2605c5e0a9ed4f008e3.jpg'],
   ['David Broncano', '¿Cuánto dinero tienes?', 'epica', 'David Broncano'],
   ['Josep Pedrerol', '¡Jijantes!', 'epica', 'Josep Pedrerol'],
   ['TheGrefg', 'Su skin de Fortnite', 'epica', 'yt:TheGrefg'],
