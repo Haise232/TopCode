@@ -1,120 +1,112 @@
-// Genera el catálogo del gacha (api/_juegos/gacha-catalogo.json): personajes de meme de España, reales y de ficción.
-// La lista y la rareza de cada uno están a mano en MEMES; la foto sale de su artículo en la Wikipedia en español y, si
-// allí no tiene (los personajes de ficción suelen tener solo imagen no libre), de la inglesa o de Wikidata.
-// Se ejecuta a mano cuando se quiera renovar el catálogo:
+// Genera el catálogo del gacha (api/_juegos/gacha-catalogo.json): memes de España que conoce la gente joven:
+// streamers, youtubers, tele, fútbol y series. La lista y la rareza de cada uno están a mano en MEMES. La foto de los
+// streamers es el avatar de su canal de Twitch o YouTube; la del resto sale de su artículo en la Wikipedia en español
+// y, si allí no tiene (los personajes de ficción suelen tener solo imagen no libre), de la inglesa o de Wikidata.
+// Se ejecuta a mano cuando se quiera renovar el catálogo (si alguien cambia de avatar, su enlace se rompe y la carta
+// enseña sus iniciales hasta volver a ejecutarlo):
 //   node scripts/gacha/importar.mjs
-// Las imágenes no se descargan: se enlazan a Wikimedia (la página del gacha cita la fuente).
+// Las imágenes no se descargan: se enlazan (la página del gacha cita la fuente).
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de clase sin fines comerciales)'
 
-// [nombre en la carta, de dónde sale, rareza, artículo de la Wikipedia en español]. Los personajes de series sin
-// artículo propio usan el de su actor (y su foto). Un quinto elemento fija la imagen cuando la del artículo no es
-// la del meme. El orden dentro de cada rareza es el de fama: el primero vale más.
+// [nombre en la carta, de dónde sale, rareza, fuente de la foto]. La fuente es «twitch:usuario», «yt:canal» o el
+// artículo de la Wikipedia en español; los personajes de series sin artículo propio usan el de su actor. Un quinto
+// elemento fija la imagen cuando la del artículo no es la del meme. El orden dentro de cada rareza es el de fama: el
+// primero vale más.
 const MEMES = [
   // Legendarias
+  ['El Xokas', 'Codificando…', 'mitica', 'twitch:elxokas'],
+  ['Ibai Llanos', 'La Velada del Año', 'mitica', 'Ibai Llanos'],
   ['El Risitas', 'Las paelleras', 'mitica', 'El Risitas'],
-  ['Chiquito de la Calzada', '¡Fistro pecadorl!', 'mitica', 'Chiquito de la Calzada'],
-  ['Julio Iglesias', 'Y lo sabes', 'mitica', 'Julio Iglesias'],
   ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
-  ['Belén Esteban', 'Yo por mi hija mato', 'mitica', 'Belén Esteban'],
+  ['Antonio Recio', 'Mayorista, no limpio pescado', 'mitica', 'Jordi Sánchez (actor)'],
+  ['Julio Iglesias', 'Y lo sabes', 'mitica', 'Julio Iglesias'],
+  // Épicas
+  ['IlloJuan', 'El de Málaga', 'epica', 'twitch:illojuan'],
+  ['AuronPlay', 'Las bromas telefónicas', 'epica', 'yt:auronplay'],
+  ['El Rubius', 'El rey de YouTube', 'epica', 'yt:ElRubiusOMG'],
+  ['Fernando Alonso', 'El 33', 'epica', 'Fernando Alonso'],
+  ['David Broncano', '¿Cuánto dinero tienes?', 'epica', 'David Broncano'],
+  ['Josep Pedrerol', '¡Jijantes!', 'epica', 'Josep Pedrerol'],
+  ['TheGrefg', 'Su skin de Fortnite', 'epica', 'yt:TheGrefg'],
+  ['Jordi Wild', 'The Wild Project', 'epica', 'twitch:jordiwild'],
+  ['Amador Rivas', '¡Merengue, merengue!', 'epica', 'Pablo Chiapella'],
+  ['Chiquito de la Calzada', '¡Fistro pecadorl!', 'epica', 'Chiquito de la Calzada'],
   [
     'Ecce Homo de Borja',
     'La restauración',
-    'mitica',
+    'epica',
     'Ecce Homo (Elías García Martínez)',
     'https://upload.wikimedia.org/wikipedia/en/6/61/Attempted_restoration_of_Ecce_Homo.jpg',
   ],
-  ['Lola Flores', 'Si me queréis, irse', 'mitica', 'Lola Flores'],
-  // Épicas
-  ['El Fary', 'Torito guapo', 'epica', 'El Fary'],
-  ['Antonio Recio', 'La que se avecina', 'epica', 'Jordi Sánchez (actor)'],
-  ['Amador Rivas', 'La que se avecina', 'epica', 'Pablo Chiapella'],
-  ['Paquita Salas', 'Paquita Salas', 'epica', 'Brays Efe'],
-  ['Manolo el del Bombo', 'La Selección', 'epica', 'Manolo el del Bombo'],
-  ['Carlos Jesús', 'Raticulín', 'epica', 'Carlos Jesús'],
-  ['Leticia Sabater', 'Toma pepinazo', 'epica', 'Leticia Sabater'],
-  ['Rappel', 'El vidente', 'epica', 'Rappel (vidente)'],
-  ['Jordi Hurtado', 'Saber y ganar desde siempre', 'epica', 'Jordi Hurtado'],
-  ['Mauricio Colmenero', 'Aída', 'epica', 'Mariano Peña'],
-  ['Rodolfo Chikilicuatre', 'Chiki chiki', 'epica', 'Rodolfo Chikilicuatre'],
-  ['Isabel Pantoja', 'Dientes, dientes', 'epica', 'Isabel Pantoja'],
-  ['Ruiz-Mateos', '¡Que te pego, leche!', 'epica', 'José María Ruiz-Mateos'],
+  ['Paquita Salas', 'Lo que no puede ser no puede ser', 'epica', 'Brays Efe'],
   // Raras
-  ['Carmen de Mairena', 'Crónicas marcianas', 'rara', 'Carmen de Mairena'],
-  ['Leonardo Dantés', 'Crónicas marcianas', 'rara', 'Leonardo Dantés'],
-  ['Tamara Seisdedos', 'No cambié', 'rara', 'Yurena'],
-  ['John Cobra', '¡Fuera de aquí!', 'rara', 'John Cobra'],
-  ['El Pequeño Nicolás', 'Asesor de todo el mundo', 'rara', 'Francisco Nicolás Gómez Iglesias'],
-  ['Mario Vaquerizo', 'Nancys Rubias', 'rara', 'Mario Vaquerizo'],
-  ['Jesulín de Ubrique', 'Im-presionante', 'rara', 'Jesulín de Ubrique'],
-  ['Marujita Díaz', 'Cine y copla', 'rara', 'Marujita Díaz'],
-  ['El Dioni', 'El furgón blindado', 'rara', 'Dionisio Rodríguez Martín'],
-  ['Kiko Rivera', 'Paquirrín', 'rara', 'Kiko Rivera'],
-  ['Karlos Arguiñano', 'Rico, rico', 'rara', 'Karlos Arguiñano'],
-  ['Alberto Chicote', 'Pesadilla en la cocina', 'rara', 'Alberto Chicote'],
+  ['Mangel', 'El colega de Rubius', 'rara', 'yt:mangelrogel'],
+  ['Lolito Fernández', 'Streamer', 'rara', 'yt:LolitoFernandez'],
+  ['Alexby11', 'Streamer', 'rara', 'twitch:alexby11'],
+  ['DjMaRiiO', 'El del FIFA', 'rara', 'yt:DjMaRiiO'],
+  ['Cristinini', 'Streamer', 'rara', 'yt:cristinini'],
+  ['Knekro', 'Streamer', 'rara', 'yt:knekro'],
+  ['Perxitaa', 'Streamer', 'rara', 'yt:Perxitaa'],
+  ['Dalas Review', 'Polémicas de YouTube', 'rara', 'yt:DalasReview'],
+  ['Wismichu', 'Bromas y Bollywood', 'rara', 'yt:wismichu'],
+  ['Mikecrack', 'Los Compas', 'rara', 'yt:mikecrack'],
+  ['Willyrex', 'Minecraft', 'rara', 'yt:willyrex'],
+  ['Vegetta777', 'Minecraft', 'rara', 'yt:vegetta777'],
+  ['Gerard Piqué', 'Kings League', 'rara', 'Gerard Piqué'],
+  ['Luis Rubiales', 'No voy a dimitir', 'rara', 'Luis Rubiales'],
+  ['Omar Montes', 'Alocao', 'rara', 'Omar Montes'],
+  ['Quevedo', 'Quédate', 'rara', 'Quevedo (cantante)'],
+  ['Frank Cuesta', 'Frank de la Jungla', 'rara', 'Frank Cuesta'],
+  ['Isabel Pantoja', 'Dientes, dientes', 'rara', 'Isabel Pantoja'],
+  ['Leticia Sabater', 'Toma pepinazo', 'rara', 'Leticia Sabater'],
+  ['Jordi Hurtado', 'Saber y ganar desde siempre', 'rara', 'Jordi Hurtado'],
   ['Iker Jiménez', 'Cuarto milenio', 'rara', 'Iker Jiménez'],
-  ['Ibai Llanos', 'Streamer', 'rara', 'Ibai Llanos'],
-  ['El Rubius', 'Streamer', 'rara', 'ElRubius'],
-  ['AuronPlay', 'Streamer', 'rara', 'AuronPlay'],
-  ['Jordi Wild', 'The Wild Project', 'rara', 'Jordi Wild'],
-  ['Enrique Pastor', 'La que se avecina', 'rara', 'José Luis Gil'],
-  ['Juan Cuesta', 'Aquí no hay quien viva', 'rara', 'Juan Cuesta'],
-  ['Emilio Delgado', 'Aquí no hay quien viva', 'rara', 'Fernando Tejero'],
-  ['Espinete', 'Barrio Sésamo', 'rara', 'Espinete'],
-  ['Makinavaja', 'El último choriso', 'rara', 'Makinavaja'],
-  ['Melody', 'El baile del gorila', 'rara', 'Melody (cantante)'],
-  ['Ramón García', 'La capa de las campanadas', 'rara', 'Ramón García'],
+  ['Alberto Chicote', 'Pesadilla en la cocina', 'rara', 'Alberto Chicote'],
+  ['Mauricio Colmenero', 'Aída', 'rara', 'Mariano Peña'],
+  ['Ignatius Farray', 'Comedia a gritos', 'rara', 'Ignatius Farray'],
+  ['Juan Cuesta', 'Aquí no hay quien viva', 'rara', 'José Luis Gil'],
   // Comunes
-  ['Los del Río', 'Macarena', 'comun', 'Los del Río'],
-  ['Georgie Dann', 'El chiringuito', 'comun', 'Georgie Dann'],
-  ['Chimo Bayo', 'Así me gusta a mí', 'comun', 'Chimo Bayo'],
-  ['Camilo Sesto', 'Vivir así es morir de amor', 'comun', 'Camilo Sesto'],
-  ['Raphael', 'Mi gran noche', 'comun', 'Raphael (cantante)'],
-  ['Rocío Jurado', 'La más grande', 'comun', 'Rocío Jurado'],
-  ['Bertín Osborne', 'Mi casa es la tuya', 'comun', 'Bertín Osborne'],
-  ['Ana Obregón', 'Ana y los siete', 'comun', 'Ana Obregón'],
-  ['Carmen Lomana', 'Socialité', 'comun', 'Carmen Lomana'],
-  ['Kiko Matamoros', 'Sálvame', 'comun', 'Kiko Matamoros'],
-  ['Jorge Javier Vázquez', 'Sálvame', 'comun', 'Jorge Javier Vázquez'],
-  ['Karmele Marchante', 'Tómbola', 'comun', 'Karmele Marchante'],
-  ['Pocholo', 'Mamma mía', 'comun', 'Pocholo Martínez-Bordiú'],
-  ['Dinio', 'La noche me confundió', 'comun', 'Dinio García'],
-  ['Yola Berrocal', 'Crónicas marcianas', 'comun', 'Yola Berrocal'],
-  ['Boris Izaguirre', 'Crónicas marcianas', 'comun', 'Boris Izaguirre'],
-  ['Javier Cárdenas', 'Crónicas marcianas', 'comun', 'Javier Cárdenas'],
-  ['Jesús Quintero', 'El loco de la colina', 'comun', 'Jesús Quintero'],
-  ['Miliki', 'Los Payasos de la Tele', 'comun', 'Miliki'],
-  ['Fofito', 'Los Payasos de la Tele', 'comun', 'Fofito'],
-  ['Martes y Trece', 'Encarna de noche', 'comun', 'Martes y Trece'],
-  ['Cruz y Raya', '¡Mírala, mírala!', 'comun', 'Cruz y Raya'],
-  ['José Mota', 'Las gallinas que entran', 'comun', 'José Mota'],
-  ['Los Morancos', 'Omaíta', 'comun', 'Los Morancos'],
-  ['Paco Martínez Soria', 'La ciudad no es para mí', 'comun', 'Paco Martínez Soria'],
-  ['Alfredo Landa', 'Landismo', 'comun', 'Alfredo Landa'],
-  ['Fernando Esteso', 'La Ramona', 'comun', 'Fernando Esteso'],
-  ['Andrés Pajares', 'Comedia de los 80', 'comun', 'Andrés Pajares'],
-  ['Lina Morgan', 'Agradecida y emocionada', 'comun', 'Lina Morgan'],
-  ['Jesús Calleja', 'Desafío extremo', 'comun', 'Jesús Calleja'],
-  ['Paco Lobatón', '¿Quién sabe dónde?', 'comun', 'Paco Lobatón'],
-  ['Mariló Montero', 'La mañana', 'comun', 'Mariló Montero'],
-  ['Anne Igartiburu', 'Las campanadas', 'comun', 'Anne Igartiburu'],
-  ['Tomás Roncero', 'El chiringuito', 'comun', 'Tomás Roncero'],
-  ['Josep Pedrerol', 'El chiringuito', 'comun', 'Josep Pedrerol'],
+  ['Plex', 'YouTube', 'comun', 'yt:Plex'],
+  ['Carreraaa', 'Streamer', 'comun', 'yt:carreraaa'],
+  ['Gerard Romero', 'Jijantes FC', 'comun', 'twitch:gerardromero'],
+  ['Nil Ojeda', 'Streamer', 'comun', 'yt:NilOjeda'],
+  ['Zorman', 'Streamer', 'comun', 'twitch:zormanworld'],
+  ['ByViruZz', 'YouTube', 'comun', 'yt:ByViruZz'],
+  ['Outconsumer', 'YouTube', 'comun', 'yt:Outconsumer'],
+  ['Spursito', 'Streamer', 'comun', 'yt:spursito'],
+  ['Kidd Keo', 'Trap', 'comun', 'yt:kiddkeo'],
+  ['C. Tangana', 'El Madrileño', 'comun', 'C. Tangana'],
+  ['Aitana', 'Pop', 'comun', 'Aitana (cantante)'],
+  ['Chanel', 'SloMo', 'comun', 'Chanel (cantante)'],
+  ['Bad Gyal', 'Trap', 'comun', 'Bad Gyal'],
+  ['Rosalía', 'Motomami', 'comun', 'Rosalía'],
+  ['Lalachus', 'La vaquilla de las campanadas', 'comun', 'Lalachus'],
+  ['Grison', 'La Revuelta', 'comun', 'Grison'],
+  ['Jorge Ponce', 'La Revuelta', 'comun', 'Jorge Ponce'],
+  ['Pablo Motos', 'El Hormiguero', 'comun', 'Pablo Motos'],
+  ['Tamara Falcó', 'El Hormiguero', 'comun', 'Tamara Falcó'],
+  ['Tomás Roncero', 'El Chiringuito', 'comun', 'Tomás Roncero'],
   ['Joaquín Sánchez', 'El del Betis', 'comun', 'Joaquín Sánchez Rodríguez'],
-  ['Fernando Alonso', 'El 33', 'comun', 'Fernando Alonso'],
-  ['TheGrefg', 'Streamer', 'comun', 'TheGrefg'],
-  ['Willyrex', 'Streamer', 'comun', 'Willyrex'],
-  ['Vegetta777', 'Streamer', 'comun', 'Vegetta777'],
-  ['Juan Tamariz', 'Tararí que te vi', 'comun', 'Juan Tamariz'],
-  ['Arturo Valls', '¡Ahora caigo!', 'comun', 'Arturo Valls'],
+  ['Sergio Ramos', 'El 4', 'comun', 'Sergio Ramos'],
+  ['Roberto Brasero', 'El tiempo', 'comun', 'Roberto Brasero'],
+  ['Matías Prats', 'Las noticias', 'comun', 'Matías Prats Luque'],
+  ['Joaquín Reyes', 'Muchachada Nui', 'comun', 'Joaquín Reyes'],
+  ['Ernesto Sevilla', 'Muchachada Nui', 'comun', 'Ernesto Sevilla'],
+  ['Carlos Areces', 'Muchachada Nui', 'comun', 'Carlos Areces'],
+  ['Raúl Cimas', 'Muchachada Nui', 'comun', 'Raúl Cimas'],
+  ['Miguel Noguera', 'Ultrashow', 'comun', 'Miguel Noguera'],
+  ['Berto Romero', 'Mira lo que has hecho', 'comun', 'Berto Romero'],
+  ['Karlos Arguiñano', 'Rico, rico', 'comun', 'Karlos Arguiñano'],
+  ['Kiko Rivera', 'Paquirrín', 'comun', 'Kiko Rivera'],
+  ['Ana Obregón', 'Ana y los siete', 'comun', 'Ana Obregón'],
+  ['Emilio Delgado', 'Aquí no hay quien viva', 'comun', 'Fernando Tejero'],
   ['Coque', 'La que se avecina', 'comun', 'Nacho Guerreros'],
-  ['Mariano Delgado', 'Aquí no hay quien viva', 'comun', 'Eduardo Gómez'],
-  ['Vicenta', 'Aquí no hay quien viva', 'comun', 'Gemma Cuervo'],
   ['Machupichu', 'Aída', 'comun', 'Óscar Reyes'],
-  ['Carpanta', 'Tebeos de Bruguera', 'comun', 'Carpanta'],
-  ['Pepe Gotera y Otilio', 'Chapuzas a domicilio', 'comun', 'Pepe Gotera y Otilio'],
-  ['Zipi y Zape', 'Tebeos de Bruguera', 'comun', 'Zipi y Zape'],
+  ['Manolo el del Bombo', 'La Selección', 'comun', 'Manolo el del Bombo'],
+  ['Rodolfo Chikilicuatre', 'Chiki chiki', 'comun', 'Rodolfo Chikilicuatre'],
+  ['Ramón García', 'La capa de las campanadas', 'comun', 'Ramón García'],
 ]
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -196,37 +188,54 @@ async function wikidata(ids) {
   return found
 }
 
+// Avatar de un canal de Twitch (con decapi.me) o de YouTube (la imagen og:image de su página), a 300-400 px.
+async function avatar(source) {
+  const [kind, user] = source.split(':')
+  if (kind === 'twitch') {
+    const res = await fetch(`https://decapi.me/twitch/avatar/${user}`, { headers: { 'user-agent': UA } })
+    const url = (await res.text()).trim()
+    return { img: url.startsWith('https://') ? url : null, src: `https://www.twitch.tv/${user}` }
+  }
+  const res = await fetch(`https://www.youtube.com/@${user}`, { headers: { 'user-agent': 'Mozilla/5.0', 'accept-language': 'es' } })
+  const og = (await res.text()).match(/<meta property="og:image" content="([^"]+)"/)?.[1]
+  return { img: og ? og.replace(/=s\d+-/, '=s400-') : null, src: `https://www.youtube.com/@${user}` }
+}
+
 async function memes() {
-  const es = await pages('es', MEMES.map(([, , , title]) => title))
+  const channel = ([, , , source]) => /^(twitch|yt):/.test(source)
+  const es = await pages('es', MEMES.filter((m) => !channel(m)).map(([, , , title]) => title))
   const wd = await wikidata([...new Set([...es.values()].map((p) => p.qid).filter(Boolean))])
   const enTitles = [...es.values()].filter((p) => !p.img && p.qid && wd.get(p.qid)?.enwiki).map((p) => wd.get(p.qid).enwiki)
   const en = await pages('en', enTitles)
   const out = []
-  for (const [name, series, rarity, title, fixed] of MEMES) {
-    const page = es.get(title)
-    if (!page) {
-      console.log(`sin artículo: ${title}`)
-      continue
+  for (const meme of MEMES) {
+    const [name, series, rarity, source, fixed] = meme
+    let img
+    let src
+    let pop = 0
+    if (channel(meme)) {
+      ;({ img, src } = await avatar(source))
+      await sleep(500)
+    } else {
+      const page = es.get(source)
+      if (!page) {
+        console.log(`sin artículo: ${source}`)
+        continue
+      }
+      const info = wd.get(page.qid)
+      img =
+        fixed ??
+        page.img ??
+        (info?.enwiki ? en.get(info.enwiki)?.img : null) ??
+        (info?.file ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(info.file)}?width=400` : null)
+      src = `https://es.wikipedia.org/wiki/${encodeURIComponent(page.title.replaceAll(' ', '_'))}`
+      pop = info?.links ?? 0
     }
-    const info = wd.get(page.qid)
-    const img =
-      fixed ??
-      page.img ??
-      (info?.enwiki ? en.get(info.enwiki)?.img : null) ??
-      (info?.file ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(info.file)}?width=400` : null)
     if (!img) {
       console.log(`sin imagen: ${name}`)
       continue
     }
-    out.push({
-      id: `meme:${slug(name)}`,
-      name,
-      series,
-      rarity,
-      img,
-      pop: info?.links ?? 0,
-      src: `https://es.wikipedia.org/wiki/${encodeURIComponent(page.title.replaceAll(' ', '_'))}`,
-    })
+    out.push({ id: `meme:${slug(name)}`, name, series, rarity, img, pop, src })
   }
   console.log(`memes: ${out.length} de ${MEMES.length}`)
   return out

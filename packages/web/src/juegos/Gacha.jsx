@@ -499,8 +499,8 @@ function Rules({ prices }) {
         </tbody>
       </table>
       <p className="gacha-note">
-        Las cartas son personajes de meme de España, reales y de ficción. La rareza sale de lo mítico que es cada meme.
-        Tu biblioteca no se reinicia el domingo; tu saldo, sí.
+        Las cartas son memes de España: streamers, youtubers, tele, fútbol y series. La rareza sale de lo mítico que es
+        cada meme. Tu biblioteca no se reinicia el domingo; tu saldo, sí.
       </p>
     </Help>
   )
@@ -733,7 +733,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
 
       {summon && <Summon summon={summon} busy={busy} onDecide={decide} />}
 
-      <footer className="gacha-foot">Fotos enlazadas desde Wikipedia y Wikimedia Commons. Solo para TopCode, sin fines comerciales.</footer>
+      <footer className="gacha-foot">Fotos enlazadas desde Wikipedia, Wikimedia Commons, Twitch y YouTube. Solo para TopCode, sin fines comerciales.</footer>
     </main>
   )
 }
