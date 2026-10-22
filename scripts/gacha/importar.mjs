@@ -10,20 +10,22 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de clase sin fines comerciales)'
 
-// [nombre en la carta, de dónde sale, rareza, fuente de la foto]. La fuente es «twitch:usuario», «yt:canal» o el
-// artículo de la Wikipedia en español; los personajes de series sin artículo propio usan el de su actor. Un quinto
-// elemento fija la imagen cuando la del artículo no es la del meme. El orden dentro de cada rareza es el de fama: el
+// [nombre en la carta, de dónde sale, rareza, fuente de la foto]. La fuente es «twitch:usuario», «yt:canal», «url:página»
+// (solo con la imagen fijada) o el artículo de la Wikipedia en español; los personajes de series sin artículo propio
+// usan el de su actor. Un quinto elemento fija la imagen cuando la del artículo o el canal no es la del meme. El orden dentro de cada rareza es el de fama: el
 // primero vale más.
 const MEMES = [
   // Mítica: solo una
   ['El Xokas', 'Codificando…', 'unica', 'twitch:elxokas', 'https://i.ytimg.com/vi/E3hVCGug0yo/frame0.jpg'],
   // Legendarias
   ['Ibai Llanos', 'La Velada del Año', 'mitica', 'Ibai Llanos'],
-  ['El Risitas', 'Las paelleras', 'mitica', 'El Risitas'],
+  ['Zona Gemelos', 'La casa de los gemelos', 'mitica', 'twitch:zonagemelos', 'https://cdn-pro.elsalvador.com/wp-content/uploads/2023/12/dandy-barcelona.jpg'],
+  ['El Dandy de Barcelona', 'Ocho infartos', 'mitica', 'url:https://www.youtube.com/watch?v=T76OKMcz8Pg', 'https://i.ytimg.com/vi/T76OKMcz8Pg/hqdefault.jpg'],
   ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
   ['Antonio Recio', 'Mayorista, no limpio pescado', 'mitica', 'Jordi Sánchez (actor)'],
-  ['Julio Iglesias', 'Y lo sabes', 'mitica', 'Julio Iglesias'],
   // Épicas
+  ['El Risitas', 'Las paelleras', 'epica', 'El Risitas'],
+  ['Julio Iglesias', 'Y lo sabes', 'epica', 'Julio Iglesias'],
   ['IlloJuan', 'El de Málaga', 'epica', 'twitch:illojuan'],
   ['AuronPlay', 'Las bromas telefónicas', 'epica', 'yt:auronplay'],
   ['El Rubius', 'El rey de YouTube', 'epica', 'yt:ElRubiusOMG'],
@@ -203,7 +205,7 @@ async function avatar(source) {
 }
 
 async function memes() {
-  const channel = ([, , , source]) => /^(twitch|yt):/.test(source)
+  const channel = ([, , , source]) => /^(twitch|yt|url):/.test(source)
   const es = await pages('es', MEMES.filter((m) => !channel(m)).map(([, , , title]) => title))
   const wd = await wikidata([...new Set([...es.values()].map((p) => p.qid).filter(Boolean))])
   const enTitles = [...es.values()].filter((p) => !p.img && p.qid && wd.get(p.qid)?.enwiki).map((p) => wd.get(p.qid).enwiki)
@@ -215,9 +217,14 @@ async function memes() {
     let src
     let pop = 0
     if (channel(meme)) {
-      ;({ img, src } = await avatar(source))
-      img = fixed ?? img
-      await sleep(500)
+      if (fixed) {
+        img = fixed
+        const [kind, user] = source.split(/:(.*)/)
+        src = kind === 'url' ? user : kind === 'twitch' ? `https://www.twitch.tv/${user}` : `https://www.youtube.com/@${user}`
+      } else {
+        ;({ img, src } = await avatar(source))
+        await sleep(500)
+      }
     } else {
       const page = es.get(source)
       if (!page) {
