@@ -23,6 +23,7 @@ const MEMES = [
   ['El Dandy de Barcelona', 'Ocho infartos', 'mitica', 'url:https://www.youtube.com/watch?v=T76OKMcz8Pg', 'https://i.ytimg.com/vi/T76OKMcz8Pg/hqdefault.jpg'],
   ['Fernando Alonso', 'El 33', 'mitica', 'Fernando Alonso', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfmbma4YZFUO0MS1y-CtDNSLU0y5DPIN5nYXGKWUTGCToMd9mlVOVu2fA&s=10'],
   ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
+  ['El Fary', 'El Toro Guapo', 'mitica', 'El Fary', 'https://imagenes.elpais.com/resizer/v2/BSF3ZXW5SNMBPO3XYRHGJZP3D4.jpg?auth=edaeeb35fe7fc73e944710890add7aa93520c519b741b3d6763c3575fa5d07e1&width=414'],
   // Épicas
   ['Antonio Recio', 'Mayorista, no limpio pescado', 'epica', 'Jordi Sánchez (actor)'],
   ['El Risitas', 'Las paelleras', 'epica', 'El Risitas'],
