@@ -70,10 +70,10 @@ function Move({ move, t, onOpen }) {
 const FEED_SHOWN = 8
 const CHARGE_MS = 1300
 // Cuanto más rara, más larga y más bestia: la carga de color (build) y el estallido (burst) duran más.
-const BUILD_MS = { comun: 0, rara: 600, epica: 1600, mitica: 3400 }
-const BURST_MS = { comun: 650, rara: 750, epica: 950, mitica: 1300 }
-const SPARKS = { rara: 12, epica: 32, mitica: 64 }
-const WAVES = { rara: 1, epica: 2, mitica: 3 }
+const BUILD_MS = { comun: 0, rara: 600, epica: 1600, mitica: 3400, unica: 4600 }
+const BURST_MS = { comun: 650, rara: 750, epica: 950, mitica: 1300, unica: 1700 }
+const SPARKS = { rara: 12, epica: 32, mitica: 64, unica: 110 }
+const WAVES = { rara: 1, epica: 2, mitica: 3, unica: 5 }
 const IMPLODE = 26
 const BOLTS = 7
 const CONFETTI = 46
@@ -82,14 +82,15 @@ const range = (n) => Array.from({ length: n }, (_, i) => i)
 // La invocación: la carta llega boca abajo y se carga de energía (charge, esperando al servidor). Si es rara o mejor,
 // se va tiñendo del color de su rareza (build): las épicas vibran y absorben partículas; las legendarias pasan por
 // todos los colores hasta el dorado, les caen rayos y se agrietan. Luego estalla con ondas expansivas (burst) y se da
-// la vuelta (show); la legendaria, con explosión dorada, temblor, «¡LEGENDARIA!» letra a letra y lluvia de confeti.
+// la vuelta (show); la legendaria, con explosión dorada, temblor, «¡LEGENDARIA!» letra a letra y lluvia de confeti. La
+// mítica hace lo mismo que la legendaria, más larga y en rojo, con «¡MÍTICA!».
 function Summon({ summon, busy, onDecide }) {
   const { stage, result } = summon
   const rarity = result?.card.rarity ?? 'comun'
-  const legend = rarity === 'mitica'
+  const legend = rarity === 'mitica' || rarity === 'unica'
   const sparks = SPARKS[rarity] ?? 0
   const waves = WAVES[rarity] ?? 0
-  const title = legend ? '¡LEGENDARIA!' : RARITY[rarity]
+  const title = rarity === 'unica' ? '¡MÍTICA!' : legend ? '¡LEGENDARIA!' : RARITY[rarity]
   return (
     <div
       className={`gacha-summon is-${stage} gacha-summon--${stage === 'charge' ? 'unknown' : rarity}`}
@@ -218,8 +219,8 @@ function Pending({ pending, busy, onDecide }) {
 }
 
 // Nombre de una rareza en plural o singular: «2 legendarias», «1 común».
-const WORDS = { mitica: ['legendaria', 'legendarias'], epica: ['épica', 'épicas'], rara: ['rara', 'raras'], comun: ['común', 'comunes'] }
-const SHELF = { mitica: 'Legendarias', epica: 'Épicas', rara: 'Raras', comun: 'Comunes' }
+const WORDS = { unica: ['mítica', 'míticas'], mitica: ['legendaria', 'legendarias'], epica: ['épica', 'épicas'], rara: ['rara', 'raras'], comun: ['común', 'comunes'] }
+const SHELF = { unica: 'Mítica', mitica: 'Legendarias', epica: 'Épicas', rara: 'Raras', comun: 'Comunes' }
 
 // «2 legendarias, 3 épicas y 1 rara».
 function summary(counts) {
@@ -454,7 +455,10 @@ function Rules({ prices }) {
         carta): dos cartas de la misma rareza casi nunca tienen los mismos. Cuanto más rara, más fuerte, y cada uno tiene{' '}
         <b>★ su punto fuerte</b>: un juego en el que su poder es de la rareza siguiente. Se usan con el botón «✦ Poderes» de
         cada juego y <b>son de un solo uso</b>: al usar el poder de una carta, la gastas, sale de tu biblioteca y vuelve a
-        quedar libre para que le toque a otro.
+        quedar libre para que le toque a otro. Salvo la <b>mítica</b>, el Xokas (un 0,1 % por tirada y un 0,5 % en las
+        premium): tiene lo máximo en todos los juegos (Omnisciencia en el póker, el crupier comprado en el blackjack y un
+        seguro total o un premio triple durante diez jugadas en los demás) y <b>no se gasta</b>: cada poder se recarga en
+        un día.
       </p>
       <ul className="gacha-powers">
         <li>
@@ -492,8 +496,8 @@ function Rules({ prices }) {
               <td>
                 <em>{RARITY[r]}</em>
               </td>
-              <td>{ODDS.normal[r] ?? 0} %</td>
-              <td>{ODDS.premium[r] ?? 0} %</td>
+              <td>{(ODDS.normal[r] ?? 0).toLocaleString('es-ES')} %</td>
+              <td>{(ODDS.premium[r] ?? 0).toLocaleString('es-ES')} %</td>
             </tr>
           ))}
         </tbody>
@@ -549,10 +553,10 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     }
     setSummon({ stage: 'burst', result })
     playZap()
-    if (rarity === 'mitica') playBoom()
+    if (rarity === 'mitica' || rarity === 'unica') playBoom()
     await new Promise((resolve) => setTimeout(resolve, BURST_MS[rarity]))
     setSummon({ stage: 'show', result })
-    if (rarity === 'mitica' || rarity === 'epica') playWin(rarity === 'mitica')
+    if (rarity === 'unica' || rarity === 'mitica' || rarity === 'epica') playWin(rarity !== 'epica')
     else playCard()
   }
 

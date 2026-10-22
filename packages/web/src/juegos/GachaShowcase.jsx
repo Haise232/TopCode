@@ -8,7 +8,7 @@ function GachaShowcase({ juegos, online, onOpen }) {
   const { state, offset } = useGacha(juegos.request)
   const t = useServerNow(offset)
   const table = state?.table ?? []
-  const best = table.find((e) => e.card.rarity === 'mitica') ?? table.find((e) => e.card.rarity === 'epica')
+  const best = ['unica', 'mitica', 'epica'].map((r) => table.find((e) => e.card.rarity === r)).find(Boolean)
 
   let headline = 'Memes de España: cada hora sale una carta gratis en la mesa. Cógela antes que nadie.'
   if (best) headline = `¡En la mesa hay una ${RARITY[best.card.rarity].toLowerCase()}: ${best.card.name}!`

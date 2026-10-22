@@ -15,8 +15,9 @@ const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de 
 // elemento fija la imagen cuando la del artículo no es la del meme. El orden dentro de cada rareza es el de fama: el
 // primero vale más.
 const MEMES = [
+  // Mítica: solo una
+  ['El Xokas', 'Codificando…', 'unica', 'twitch:elxokas', 'https://i.ytimg.com/vi/E3hVCGug0yo/frame0.jpg'],
   // Legendarias
-  ['El Xokas', 'Codificando…', 'mitica', 'twitch:elxokas'],
   ['Ibai Llanos', 'La Velada del Año', 'mitica', 'Ibai Llanos'],
   ['El Risitas', 'Las paelleras', 'mitica', 'El Risitas'],
   ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
@@ -215,6 +216,7 @@ async function memes() {
     let pop = 0
     if (channel(meme)) {
       ;({ img, src } = await avatar(source))
+      img = fixed ?? img
       await sleep(500)
     } else {
       const page = es.get(source)
@@ -242,8 +244,8 @@ async function memes() {
 }
 
 // Valor base de cada rareza. Dentro de su rareza, el primero de la lista vale un 60 % más que el último.
-const BASE = { mitica: 600, epica: 200, rara: 80, comun: 30 }
-const ORDER = ['mitica', 'epica', 'rara', 'comun']
+const BASE = { unica: 2500, mitica: 600, epica: 200, rara: 80, comun: 30 }
+const ORDER = ['unica', 'mitica', 'epica', 'rara', 'comun']
 
 function rank(cat, list) {
   const out = []

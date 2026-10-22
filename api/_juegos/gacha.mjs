@@ -6,7 +6,7 @@
 // Todo se paga y se cobra con el saldo de la semana (cuenta en el Score): las tiradas y vender una carta tuya (SELL_RATE €
 // por punto de valor; la carta queda libre otra vez).
 // Cada carta tiene además un poder para cada juego (powersOf), distinto en cada meme y más fuerte cuanto más rara
-// es, con un juego como punto fuerte: ver cartas en el póker o
+// es (la mítica, el Xokas, lo máximo en todo y sin gastarse), con un juego como punto fuerte: ver cartas en el póker o
 // el blackjack (lo aplica game.mjs en la mesa, que ve un aviso en el chat) o un seguro o un premio para las próximas
 // jugadas de un juego en solitario (juegos_gacha_efectos, que aplica applyEffect al liquidar cada jugada). Usar un poder
 // gasta la carta: deja de ser tuya y vuelve a poder salir para cualquiera (consumePower).
@@ -30,8 +30,9 @@ export const POWER_COOLDOWN_MS = 24 * HOUR
 export const BONUS_CAP = 10000
 // Poderes. Cada carta tiene uno por juego, sacado al azar (pero fijo: depende de su id) de las variantes de su nivel,
 // así que dos cartas de la misma rareza casi nunca coinciden. Además cada meme tiene su punto fuerte: un juego en
-// el que su poder sube un nivel (★). Niveles: 0 común, 1 rara, 2 épica, 3 legendaria, 4 legendaria en su punto fuerte.
-const TIER = { comun: 0, rara: 1, epica: 2, mitica: 3 }
+// el que su poder sube un nivel (★). Niveles: 0 común, 1 rara, 2 épica, 3 legendaria, 4 legendaria en su punto fuerte,
+// 5 mítica (la única es el Xokas: lo máximo en todos los juegos, sin punto fuerte, y su poder no gasta la carta).
+const TIER = { comun: 0, rara: 1, epica: 2, mitica: 3, unica: 5 }
 // Póker: a quién mira (target: azar, rico = más fichas, apuesta = más apostado en la mano), cuántos rivales (rivals,
 // o 'all'), si ve sus dos cartas (full) o una, y qué ve de la mesa que falta por salir (board: hint = si la próxima es
 // alta o baja, next = la próxima, all = todas). game.mjs lo aplica a la mano en curso.
@@ -60,6 +61,7 @@ const POKER_POWERS = [
     { name: 'Profeta', target: 'rico', rivals: 2, full: true, board: 'all', text: 'Ves las cartas de los dos rivales con más fichas y todas las que faltan por salir en la mesa.' },
   ],
   [{ name: 'Omnisciencia', target: 'azar', rivals: 'all', full: true, board: 'all', text: 'Ves las cartas de todos y las que faltan por salir en la mesa durante una mano de póker.' }],
+  [{ name: 'Dios del póker', target: 'azar', rivals: 'all', full: true, board: 'all', text: 'Ves las cartas de todos y las que faltan por salir en la mesa durante una mano de póker.' }],
 ]
 // Blackjack: ver la carta tapada del crupier (dealer) o solo si es alta o baja (hole), la próxima carta del mazo siempre
 // (live), una vez al usarlo (next) o solo si será alta o baja (nextHint).
@@ -79,6 +81,7 @@ const BLACKJACK_POWERS = [
   ],
   [{ name: 'Ojo del crupier y mazo marcado', dealer: true, live: true, text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.' }],
   [{ name: 'Crupier comprado', dealer: true, live: true, text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.' }],
+  [{ name: 'La banca soy yo', dealer: true, live: true, text: 'Ves la carta tapada del crupier y siempre la próxima carta del mazo durante una mano de blackjack.' }],
 ]
 // Seguros y premios de los juegos en solitario: [% , jugadas] posibles en cada nivel (más jugadas, menos %).
 const SOLO_SHAPES = [
@@ -107,6 +110,8 @@ const SOLO_SHAPES = [
     [80, 6],
   ],
 ]
+// La mítica: seguro total o premio triple durante diez jugadas.
+const MYTHIC_SOLO = { seguro: [100, 10], premio: [200, 10] }
 const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', dungeon: 'el laberinto', plinko: 'el Plinko', frog: 'la rana', race: 'la carrera', bribe: 'los sobornos' }
 const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', dungeon: 'laberinto', plinko: 'Plinko', frog: 'rana', race: 'carrera', bribe: 'sobornos' }
 const SOLO_GAMES = Object.keys(SOLO_IN)
@@ -125,7 +130,7 @@ function soloPower(kind, game, pct, uses) {
   }
   return {
     ...base,
-    name: `${pct === 100 ? 'Premio doble' : `Premio +${pct} %`}${times}`,
+    name: `${pct === 200 ? 'Premio triple' : pct === 100 ? 'Premio doble' : `Premio +${pct} %`}${times}`,
     text: `Si ganas en ${where}, cobras un ${pct} % más de lo ganado (hasta ${euros(BONUS_CAP)} por jugada).`,
   }
 }
@@ -146,7 +151,8 @@ function seeded(id) {
 function powersFor(card) {
   const rnd = seeded(card.id)
   const choose = (list) => list[Math.floor(rnd() * list.length)]
-  const strong = choose(STRONG_GAMES)
+  const mythic = card.rarity === 'unica'
+  const strong = mythic ? null : choose(STRONG_GAMES)
   const tierOf = (game) => TIER[card.rarity] + (game === strong ? 1 : 0)
   const mark = (game, power) => (game === strong ? { ...power, strong: true } : power)
   const powers = {}
@@ -154,25 +160,27 @@ function powersFor(card) {
   powers.blackjack = mark('blackjack', { id: 'blackjack', kind: 'blackjack', game: 'blackjack', ...choose(BLACKJACK_POWERS[tierOf('blackjack')]) })
   for (const game of SOLO_GAMES) {
     const kind = rnd() < 0.5 ? 'seguro' : 'premio'
-    const [pct, uses] = choose(SOLO_SHAPES[tierOf(game)])
+    const [pct, uses] = mythic ? MYTHIC_SOLO[kind] : choose(SOLO_SHAPES[tierOf(game)])
     powers[game] = mark(game, soloPower(kind, game, pct, uses))
   }
   return powers
 }
-const RARITY_ORDER = { mitica: 0, epica: 1, rara: 2, comun: 3 }
+const RARITY_ORDER = { unica: -1, mitica: 0, epica: 1, rara: 2, comun: 3 }
 const FEED_SIZE = 30
 const KEEP_DAYS = 7
-// Probabilidad de cada rareza (en milésimas).
+// Probabilidad de cada rareza (en milésimas): la mítica, un 0,1 % en la mesa y las tiradas y un 0,5 % en las premium.
 const WEIGHTS = {
   normal: [
-    ['comun', 700],
+    ['comun', 699],
     ['rara', 230],
     ['epica', 60],
     ['mitica', 10],
+    ['unica', 1],
   ],
   premium: [
     ['epica', 750],
-    ['mitica', 250],
+    ['mitica', 245],
+    ['unica', 5],
   ],
 }
 
@@ -239,10 +247,12 @@ function draw(premium, taken) {
   const [rarity] = weights.find(([, w]) => (r -= w) < 0)
   const free = (list) => (taken ? list.filter((c) => !taken.has(c.id)) : list)
   let pool = free(byRarity.get(rarity) ?? [])
-  // Si en esa rareza ya no queda nada libre, cualquier carta libre que no sea común (o cualquiera).
-  if (pool.length === 0) pool = free(catalogo.cartas.filter((c) => c.rarity !== 'comun'))
-  if (pool.length === 0) pool = free(catalogo.cartas)
-  if (pool.length === 0) pool = catalogo.cartas
+  // Si en esa rareza ya no queda nada libre, cualquier carta libre que no sea común (o cualquiera); la mítica solo sale
+  // cuando toca su rareza.
+  const rest = catalogo.cartas.filter((c) => c.rarity !== 'unica')
+  if (pool.length === 0) pool = free(rest.filter((c) => c.rarity !== 'comun'))
+  if (pool.length === 0) pool = free(rest)
+  if (pool.length === 0) pool = rest
   return pick(pool)
 }
 
@@ -517,8 +527,10 @@ export function createGacha({ db, ping, now, charge }) {
     })
   }
 
-  // Usar el poder gasta la carta: sale de tu biblioteca y queda libre para que le toque a otro.
+  // Usar el poder gasta la carta: sale de tu biblioteca y queda libre para que le toque a otro. La mítica no se gasta:
+  // solo se recarga (POWER_COOLDOWN_MS).
   async function consumePower(userId, cardId, t) {
+    if (cards.get(cardId)?.rarity === 'unica') return
     const gone = await db.tx(async (q) => {
       const { rows } = await q(`delete from public.juegos_gacha_cartas where carta = $1 and usuario_id = $2 returning carta`, [cardId, userId])
       if (rows.length) await log(q, 'usada', userId, cardId, false, t)

@@ -6,6 +6,26 @@
   --r-rara: #5fa8ff;
   --r-epica: #b06cff;
   --r-mitica: #f2c14e;
+  --r-unica: #ff3b5c;
+}
+/* La mítica (el Xokas) reutiliza los efectos de la legendaria con su color. */
+.juegos-root [class*='--unica'] {
+  --r-mitica: var(--r-unica);
+}
+/* Y su borde cambia de color sin parar. */
+.juegos-root .gacha-card--unica {
+  animation: gacha-mythic 2.4s linear infinite;
+}
+@keyframes gacha-mythic {
+  0%,
+  100% {
+    border-color: var(--r-unica);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--r-unica) 60%, transparent);
+  }
+  50% {
+    border-color: #ff9a3c;
+    box-shadow: 0 0 34px color-mix(in srgb, #ff9a3c 70%, transparent);
+  }
 }
 
 .juegos-root .app.gacha-app {
@@ -157,12 +177,14 @@
   --edge: var(--r-epica);
   box-shadow: 0 0 14px color-mix(in srgb, var(--r-epica) 35%, transparent);
 }
-.juegos-root .gacha-card--mitica {
+.juegos-root .gacha-card--mitica,
+.juegos-root .gacha-card--unica {
   --edge: var(--r-mitica);
   box-shadow: 0 0 20px color-mix(in srgb, var(--r-mitica) 50%, transparent);
 }
 /* El brillo de las míticas: el ::after es de la carta (position: relative), nunca de otra cosa. */
-.juegos-root .gacha-card--mitica::after {
+.juegos-root .gacha-card--mitica::after,
+.juegos-root .gacha-card--unica::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -276,13 +298,15 @@
 .juegos-root .gacha-reveal--epica {
   --glow: var(--r-epica);
 }
-.juegos-root .gacha-reveal--mitica {
+.juegos-root .gacha-reveal--mitica,
+.juegos-root .gacha-reveal--unica {
   --glow: var(--r-mitica);
 }
 .juegos-root .gacha-reveal .gacha-card {
   animation: gacha-flip 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
 }
-.juegos-root .gacha-reveal--mitica .gacha-card {
+.juegos-root .gacha-reveal--mitica .gacha-card,
+.juegos-root .gacha-reveal--unica .gacha-card {
   animation-duration: 1.1s;
 }
 @keyframes gacha-flip {
@@ -311,7 +335,8 @@
   pointer-events: none;
 }
 .juegos-root .gacha-reveal--epica .gacha-reveal__burst,
-.juegos-root .gacha-reveal--mitica .gacha-reveal__burst {
+.juegos-root .gacha-reveal--mitica .gacha-reveal__burst,
+.juegos-root .gacha-reveal--unica .gacha-reveal__burst {
   animation:
     gacha-burst-in 0.9s ease-out forwards,
     gacha-spin 14s linear infinite;
@@ -455,7 +480,8 @@
 .juegos-root .gacha-roll__name--epica em {
   color: var(--r-epica);
 }
-.juegos-root .gacha-roll__name--mitica em {
+.juegos-root .gacha-roll__name--mitica em,
+.juegos-root .gacha-roll__name--unica em {
   color: var(--r-mitica);
 }
 .juegos-root .gacha-roll__by {
@@ -580,7 +606,8 @@
   font-weight: 600;
   color: var(--muted);
 }
-.juegos-root .gacha-shelf--mitica {
+.juegos-root .gacha-shelf--mitica,
+.juegos-root .gacha-shelf--unica {
   --shelf: var(--r-mitica);
 }
 .juegos-root .gacha-shelf--epica {
@@ -868,13 +895,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .juegos-root .gacha-card--mitica::after,
+  .juegos-root .gacha-card--unica::after,
   .juegos-root .gacha-reveal .gacha-card,
   .juegos-root .gacha-reveal__burst,
   .juegos-root .gacha-reveal__rarity {
     animation: none;
   }
   .juegos-root .gacha-reveal--epica .gacha-reveal__burst,
-  .juegos-root .gacha-reveal--mitica .gacha-reveal__burst {
+  .juegos-root .gacha-reveal--mitica .gacha-reveal__burst,
+  .juegos-root .gacha-reveal--unica .gacha-reveal__burst {
     opacity: 0.4;
   }
   .juegos-root .gacha-timer i {
@@ -1052,7 +1081,8 @@
 .juegos-root .gacha-summon--epica {
   --glow: var(--r-epica);
 }
-.juegos-root .gacha-summon--mitica {
+.juegos-root .gacha-summon--mitica,
+.juegos-root .gacha-summon--unica {
   --glow: var(--r-mitica);
 }
 @keyframes gacha-summon-in {
@@ -1137,7 +1167,8 @@
 .juegos-root .gacha-summon.is-burst .gacha-summon__flash {
   animation: gacha-flash 0.65s ease-out;
 }
-.juegos-root .gacha-summon--mitica.is-show .gacha-summon__flash {
+.juegos-root .gacha-summon--mitica.is-show .gacha-summon__flash,
+.juegos-root .gacha-summon--unica.is-show .gacha-summon__flash {
   animation: gacha-flash 0.9s ease-out;
 }
 @keyframes gacha-flash {
@@ -1216,7 +1247,8 @@
   animation: gacha-pop 0.4s 0.9s both;
 }
 /* Legendaria: temblor de pantalla */
-.juegos-root .gacha-summon--mitica.is-show {
+.juegos-root .gacha-summon--mitica.is-show,
+.juegos-root .gacha-summon--unica.is-show {
   animation: gacha-quake 0.5s 0.1s linear;
 }
 @keyframes gacha-quake {
@@ -1318,11 +1350,13 @@
     filter: brightness(1.5) saturate(1.4);
   }
 }
-.juegos-root .gacha-summon--mitica.is-build {
+.juegos-root .gacha-summon--mitica.is-build,
+.juegos-root .gacha-summon--unica.is-build {
   background: radial-gradient(circle at 50% 45%, rgba(8, 14, 22, 0.99), #000);
   transition: background 0.6s;
 }
-.juegos-root .gacha-summon--mitica.is-build .gacha-summon__card {
+.juegos-root .gacha-summon--mitica.is-build .gacha-summon__card,
+.juegos-root .gacha-summon--unica.is-build .gacha-summon__card {
   animation:
     gacha-float 1.3s ease-in-out infinite,
     gacha-shake-hard 0.07s linear infinite;
@@ -1337,7 +1371,8 @@
     translate: 3px 0;
   }
 }
-.juegos-root .gacha-summon--mitica.is-build .gacha-summon__back {
+.juegos-root .gacha-summon--mitica.is-build .gacha-summon__back,
+.juegos-root .gacha-summon--unica.is-build .gacha-summon__back {
   animation: gacha-tint-mitica 3.4s ease-in forwards;
 }
 @keyframes gacha-tint-mitica {
@@ -1381,7 +1416,8 @@
   opacity: 0;
   animation: gacha-implode 0.9s var(--t) ease-in infinite;
 }
-.juegos-root .gacha-summon--mitica .gacha-summon__implode i {
+.juegos-root .gacha-summon--mitica .gacha-summon__implode i,
+.juegos-root .gacha-summon--unica .gacha-summon__implode i {
   animation-name: gacha-implode, gacha-ramp;
   animation-duration: 0.9s, 3.4s;
   animation-timing-function: ease-in, linear;
@@ -1511,10 +1547,12 @@
     border-width: 1px;
   }
 }
-.juegos-root .gacha-summon--mitica.is-burst {
+.juegos-root .gacha-summon--mitica.is-burst,
+.juegos-root .gacha-summon--unica.is-burst {
   animation: gacha-quake 0.25s linear 5;
 }
-.juegos-root .gacha-summon--mitica.is-burst .gacha-summon__flash {
+.juegos-root .gacha-summon--mitica.is-burst .gacha-summon__flash,
+.juegos-root .gacha-summon--unica.is-burst .gacha-summon__flash {
   background: radial-gradient(circle, #fff 0%, var(--r-mitica) 35%, transparent 80%);
   animation: gacha-flash-big 1.3s ease-out;
 }
@@ -1539,7 +1577,8 @@
     gacha-rays-in 0.6s ease-out forwards,
     gacha-spin 11s linear infinite reverse;
 }
-.juegos-root .gacha-summon--mitica.is-show .gacha-summon__card {
+.juegos-root .gacha-summon--mitica.is-show .gacha-summon__card,
+.juegos-root .gacha-summon--unica.is-show .gacha-summon__card {
   animation: gacha-reveal-legend 1.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 @keyframes gacha-reveal-legend {
@@ -1599,11 +1638,13 @@
     background-position: -200% 0;
   }
 }
-.juegos-root .gacha-summon--mitica .gacha-summon__name {
+.juegos-root .gacha-summon--mitica .gacha-summon__name,
+.juegos-root .gacha-summon--unica .gacha-summon__name {
   animation-delay: 1.4s;
   font-size: 24px;
 }
-.juegos-root .gacha-summon--mitica .hub-btn {
+.juegos-root .gacha-summon--mitica .hub-btn,
+.juegos-root .gacha-summon--unica .hub-btn {
   animation-delay: 1.7s;
 }
 .juegos-root .gacha-summon__confetti {
@@ -1749,7 +1790,8 @@
 .juegos-root .tp-cast--epica {
   --glow: var(--r-epica);
 }
-.juegos-root .tp-cast--mitica {
+.juegos-root .tp-cast--mitica,
+.juegos-root .tp-cast--unica {
   --glow: var(--r-mitica);
 }
 @keyframes tp-cast-out {
@@ -1838,7 +1880,8 @@
 .juegos-root .tp-seat--epica {
   --edge: var(--r-epica);
 }
-.juegos-root .tp-seat--mitica {
+.juegos-root .tp-seat--mitica,
+.juegos-root .tp-seat--unica {
   --edge: var(--r-mitica);
 }
 .juegos-root .tp-seat .gacha-card {
