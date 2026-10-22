@@ -22,6 +22,10 @@ const H = SLOT_Y + SLOT_H + 6
 const ROW_MS = 165
 const MAX_BALLS = 12
 const HISTORY = 14
+// Modo automático: cuántas bolas soltar seguidas (Infinity = hasta que lo pares) y cada cuánto.
+const AUTO_COUNTS = [10, 25, 50, 100, Infinity]
+const AUTO_GAP_MS = 320
+const BIG_WIN = 10 // con «Parar en ×10» el automático se para al caer en una casilla de este multiplicador o más
 
 const pegY = (row) => TOP + row * ROW_GAP
 // Clavo j de la fila r: cada fila tiene r + 3 clavos, centrados.
@@ -113,6 +117,9 @@ function Plinko({ onExit, juegos }) {
   const [hits, setHits] = useState({}) // casilla → id de la última bola que cayó en ella (para el rebote)
   const [last, setLast] = useState(null) // última bola caída
   const [burst, setBurst] = useState(null)
+  const [autoCount, setAutoCount] = useState(25) // cuántas bolas tirará el automático
+  const [autoLeft, setAutoLeft] = useState(0) // bolas que le quedan al automático en marcha (0 = parado)
+  const [stopOnBig, setStopOnBig] = useState(true)
   const nextId = useRef(1)
   const pegs = useRef(new Map())
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
@@ -141,7 +148,10 @@ function Plinko({ onExit, juegos }) {
     setAsking(true)
     const body = await request({ t: 'solo_plinko', bet, risk })
     setAsking(false)
-    if (!body?.solo) return
+    if (!body?.solo) {
+      setAutoLeft(0) // un error para el automático
+      return
+    }
     const { path, slot, payout } = body.solo
     setBalance(body.solo.balance)
     setBalls((list) => [...list, { id: nextId.current++, path, slot, payout, bet, risk, mult: MULTIPLIERS[risk][slot] }])
@@ -167,7 +177,25 @@ function Plinko({ onExit, juegos }) {
     if (ball.payout > ball.bet) playWin(ball.mult >= 10)
     else if (ball.payout < ball.bet) playLose()
     if (ball.mult >= 10) setBurst(ball)
+    if (stopOnBig && ball.mult >= BIG_WIN) setAutoLeft(0)
   }
+
+  // Automático: suelta una bola cada AUTO_GAP_MS mientras le queden y se pueda (saldo, bolas en el aire).
+  const running = autoLeft > 0
+  useEffect(() => {
+    if (!running) return
+    if (balance < bet && balls.length === 0 && !asking) {
+      setAutoLeft(0)
+      return
+    }
+    if (!canDrop) return
+    const timer = setTimeout(() => {
+      setAutoLeft((n) => (n === Infinity ? n : n - 1))
+      onDrop()
+    }, AUTO_GAP_MS)
+    return () => clearTimeout(timer)
+  }, [running, canDrop, autoLeft, balance, bet, balls.length, asking])
+  const toggleAuto = () => setAutoLeft(running ? 0 : autoCount)
 
   // Espacio suelta una bola. Si el foco está en un botón por teclado, se respeta su acción.
   useEffect(() => {
@@ -351,10 +379,28 @@ function Plinko({ onExit, juegos }) {
 
           <div className="actions plinko__drop">
             {!broke && (
-              <button type="button" className="primary" disabled={!canDrop} onClick={drop}>
+              <button type="button" className="primary" disabled={!canDrop || running} onClick={drop}>
                 Soltar bola <kbd>Espacio</kbd>
               </button>
             )}
+          </div>
+
+          <div className={`plinko__group plinko__auto ${running ? 'is-running' : ''}`}>
+            <h2>Automático</h2>
+            <div className="plinko__bets plinko__auto-counts" role="group" aria-label="Bolas del automático">
+              {AUTO_COUNTS.map((n) => (
+                <button key={n} type="button" aria-pressed={autoCount === n} disabled={running} onClick={() => setAutoCount(n)}>
+                  {n === Infinity ? '∞' : n}
+                </button>
+              ))}
+            </div>
+            <label className="plinko__auto-stop">
+              <input type="checkbox" checked={stopOnBig} onChange={(e) => setStopOnBig(e.target.checked)} />
+              Parar si cae en ×{BIG_WIN} o más
+            </label>
+            <button type="button" className={`plinko__auto-go ${running ? 'is-stop' : ''}`} disabled={!running && (broke || balance < bet)} onClick={toggleAuto}>
+              {running ? `Parar automático${autoLeft === Infinity ? '' : ` · quedan ${autoLeft}`}` : `Automático: ${autoCount === Infinity ? 'sin límite' : `${autoCount} bolas`}`}
+            </button>
           </div>
 
           <div className="plinko__group">

@@ -321,6 +321,61 @@
   --ink: #f1f6f9;
 }
 
+/* Automático: cuántas bolas, parar en un premio gordo y el botón de empezar o parar. */
+.juegos-root .plinko__auto-counts button {
+  font-size: 15px;
+}
+.juegos-root .plinko__auto-stop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.juegos-root .plinko__auto-stop input {
+  width: 18px;
+  height: 18px;
+  accent-color: #a46bff;
+}
+.juegos-root .plinko__auto-go {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  border: 1px solid rgba(164, 107, 255, 0.6);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e9e4ff;
+  background: linear-gradient(135deg, rgba(164, 107, 255, 0.25), rgba(58, 215, 255, 0.18));
+  cursor: pointer;
+}
+.juegos-root .plinko__auto-go:not(:disabled):hover {
+  background: linear-gradient(135deg, rgba(164, 107, 255, 0.4), rgba(58, 215, 255, 0.3));
+}
+.juegos-root .plinko__auto-go:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.juegos-root .plinko__auto-go:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 2px;
+}
+.juegos-root .plinko__auto-go.is-stop {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4f7a, #c8102e);
+  box-shadow: 0 0 18px rgba(255, 79, 122, 0.45);
+  animation: plinko-auto 1.2s ease-in-out infinite;
+}
+@keyframes plinko-auto {
+  50% {
+    box-shadow: 0 0 30px rgba(255, 79, 122, 0.7);
+  }
+}
+
 /* Tablet y móvil: el panel debajo del tablero. */
 @media (max-width: 900px) {
   .juegos-root .plinko {
