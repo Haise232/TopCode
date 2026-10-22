@@ -354,6 +354,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.juegos-root .sb-row__name > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .juegos-root .sb-row__name small {
   color: var(--brass);
 }
@@ -498,15 +502,12 @@
 }
 .juegos-root .sb-last__item {
   display: grid;
-  grid-template-columns: 26px 34px minmax(0, 1fr) auto;
+  grid-template-columns: 32px 34px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
   border-radius: 12px;
   background: var(--hub-surface-hi);
-}
-.juegos-root .sb-last__medal {
-  font-size: 20px;
 }
 .juegos-root .sb-last__name {
   overflow: hidden;

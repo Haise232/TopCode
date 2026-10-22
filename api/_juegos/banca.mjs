@@ -112,13 +112,33 @@ export function createBanca({ db, ping, now, credit }) {
     return rows.length ? rows : null
   }
 
+  // Jugadores (para elegir a quién) y los últimos movimientos de la banca.
   async function people() {
-    const { rows } = await db.query(
-      `select u.id, u.nombre as name, u.avatar_url as avatar, c.saldo as balance
-       from public.usuarios u left join public.juegos_cuentas c on c.usuario_id = u.id
-       where u.estado_acceso = 'aprobado' order by u.nombre`,
-    )
-    return { banca: { gente: rows.map((r) => ({ id: r.id, name: r.name, avatar: r.avatar ?? null, balance: r.balance === null ? null : Number(r.balance) })) } }
+    const [gente, hist] = await Promise.all([
+      db.query(
+        `select u.id, u.nombre as name, u.avatar_url as avatar, c.saldo as balance
+         from public.usuarios u left join public.juegos_cuentas c on c.usuario_id = u.id
+         where u.estado_acceso = 'aprobado' order by u.nombre`,
+      ),
+      db.query(
+        `select a.id, a.tipo, a.importe, a.texto, extract(epoch from a.creado) * 1000 as at, u.nombre as name
+         from public.juegos_avisos a left join public.usuarios u on u.id = a.usuario_id
+         order by a.id desc limit 8`,
+      ),
+    ])
+    return {
+      banca: {
+        gente: gente.rows.map((r) => ({ id: r.id, name: r.name, avatar: r.avatar ?? null, balance: r.balance === null ? null : Number(r.balance) })),
+        historial: hist.rows.map((r) => ({
+          id: Number(r.id),
+          tipo: r.tipo,
+          importe: r.importe === null ? null : Number(r.importe),
+          texto: r.texto,
+          at: Math.round(Number(r.at)),
+          para: r.name ?? null, // null: para todos
+        })),
+      },
+    }
   }
 
   async function give(user, msg) {

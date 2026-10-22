@@ -26,6 +26,15 @@ export interface Jugador {
   balance: number | null
 }
 
+export interface Movimiento {
+  id: number
+  tipo: 'dinero' | 'mensaje'
+  importe: number | null
+  texto: string | null
+  at: number
+  para: string | null // null: para todos
+}
+
 export interface BancaReply {
   banca?: {
     avisos?: Aviso[]
@@ -33,6 +42,7 @@ export interface BancaReply {
     master?: boolean
     ahora?: number
     gente?: Jugador[]
+    historial?: Movimiento[]
     hecho?: 'dinero' | 'mensaje'
     personas?: number
   }
@@ -55,7 +65,24 @@ export async function bancaCall(msg: Record<string, unknown>): Promise<BancaRepl
   return body as BancaReply
 }
 
-export const eur = (n: number) => `${n.toLocaleString('es-ES')} €`
+// 1.000 € con punto de miles también en las cifras de 4 dígitos (como money.js de Juegos).
+export const eur = (n: number) => `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}\u00a0€`
+
+// Lo que ofrece cada Admin Abuse, punto por punto (para la presentación a pantalla completa).
+export function abusePerks(a: Pick<Abuse, 'modo' | 'ambito'>): string[] {
+  const m = a.modo === 'x3' ? '×3' : '×2'
+  if (a.modo === 'gratis') {
+    return a.ambito === 'poker'
+      ? ['Si pierdes una mano de póker, la banca te devuelve lo apostado', 'Lo que ganes, para ti']
+      : ['Si pierdes en cualquier juego, la banca te lo devuelve', 'Lo que ganes, para ti', 'Tiradas del gacha gratis']
+  }
+  if (a.ambito === 'poker') return [`Todo lo que ganes en el póker, ${m}`, 'La banca pone la diferencia']
+  return [
+    `Premios ${m} en ruleta, cohete, carrera, plinko, rana, laberinto y sobornos`,
+    `Blackjack y póker: lo que ganes, ${m}`,
+    `Suerte ${m} en las tiradas del gacha`,
+  ]
+}
 
 // Título grande y explicación de cada Admin Abuse.
 export function abuseText(a: Pick<Abuse, 'modo' | 'ambito'>): { big: string; small: string } {

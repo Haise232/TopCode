@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { createPortal } from 'react-dom'
 import { onBroadcast } from '@topcode/shared'
 import { useAuth } from '../../hooks/useAuth'
-import { BANK_TOPIC, abuseText, bancaCall, eur, type Abuse, type Aviso } from './banca'
+import { BANK_TOPIC, abusePerks, abuseText, bancaCall, eur, type Abuse, type Aviso } from './banca'
+import { isMuted, playSiren, playWin } from '../sound.js'
 import './banca.css'
 
 // El Admin Abuse ya presentado (con su animación grande) en este navegador: se guarda su «desde».
 const SEEN_KEY = 'topcode-abuso-visto'
-const INTRO_MS = 5200
+const INTRO_MS = 11000 // la presentación se cierra sola pasado este rato (o antes, con «¡A jugar!»)
 
 const readSeen = () => {
   try {
@@ -121,20 +122,64 @@ export default function BancaAvisos() {
   )
 }
 
+// Presentación a pantalla completa: alarma, ADMIN ABUSE que cae de golpe, el multiplicador gigante, lo que ofrece y
+// cuánto dura, con la cuenta atrás en vivo. Suena una sirena y una fanfarria (si el sonido de Juegos está activado).
 function AbuseIntro({ abuse, left, onClose }: { abuse: Abuse; left: number; onClose: () => void }) {
   const text = abuseText(abuse)
+  const perks = abusePerks(abuse)
+  const minutes = Math.round((abuse.hasta - abuse.desde) / 60000)
+  const ends = new Date(abuse.hasta).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  const badge = abuse.modo === 'gratis' ? 'GRATIS' : abuse.modo === 'x3' ? '×3' : '×2'
+  const tape = 'ADMIN ABUSE ⚠ '.repeat(12)
+
+  useEffect(() => {
+    if (isMuted()) return
+    playSiren()
+    const siren = setTimeout(playSiren, 700)
+    const fanfare = setTimeout(() => playWin(true), 1500)
+    return () => {
+      clearTimeout(siren)
+      clearTimeout(fanfare)
+    }
+  }, [])
+
   return (
-    <div className={`banca-abuse banca-abuse--${abuse.modo}`} role="alertdialog" aria-label={`Admin Abuse: ${text.big}`} onClick={onClose}>
+    <div className={`banca-abuse banca-abuse--${abuse.modo}`} role="alertdialog" aria-modal="true" aria-label={`Admin Abuse: ${text.big}. Dura ${minutes} minutos.`}>
       <div className="banca-abuse__rays" aria-hidden="true" />
       <div className="banca-abuse__flash" aria-hidden="true" />
+      <div className="banca-abuse__tape banca-abuse__tape--top" aria-hidden="true">
+        <span>{tape}</span>
+        <span>{tape}</span>
+      </div>
+      <div className="banca-abuse__tape banca-abuse__tape--bottom" aria-hidden="true">
+        <span>{tape}</span>
+        <span>{tape}</span>
+      </div>
       <div className="banca-abuse__content">
-        <p className="banca-abuse__kicker">La banca ha activado</p>
+        <p className="banca-abuse__kicker">⚠ La banca ha activado ⚠</p>
         <h2 className="banca-abuse__title" data-text="ADMIN ABUSE">
           ADMIN ABUSE
         </h2>
-        <p className="banca-abuse__mode">{text.big}</p>
-        <p className="banca-abuse__small">{text.small}</p>
-        {left > 0 && <p className="banca-abuse__time">Durante {clock(left)}</p>}
+        <div className="banca-abuse__badge">
+          <b>{badge}</b>
+          <span>{abuse.ambito === 'poker' ? 'Solo en póker' : 'En todos los juegos'}</span>
+        </div>
+        <ul className="banca-abuse__perks">
+          {perks.map((perk, i) => (
+            <li key={perk} style={{ '--i': i } as CSSProperties}>
+              {perk}
+            </li>
+          ))}
+        </ul>
+        <div className="banca-abuse__time">
+          <span>
+            Dura <b>{minutes} min</b> · hasta las {ends}
+          </span>
+          {left > 0 && <strong>{clock(left)}</strong>}
+        </div>
+        <button type="button" className="banca-abuse__go" onClick={onClose} autoFocus>
+          ¡A jugar!
+        </button>
       </div>
       <div className="banca-abuse__sparks" aria-hidden="true">
         {Array.from({ length: 24 }, (_, i) => (

@@ -284,8 +284,10 @@ function Scoreboard({ juegos, onExit }) {
                       <span className={`sb-row__rank sb-row__rank--${p.rank}`}>{p.rank}</span>
                       <Avatar name={p.name} src={p.avatar} size={38} />
                       <span className="sb-row__name">
-                        {p.name}
-                        {p.me && <small> · tú</small>}
+                        <span>
+                          {p.name}
+                          {p.me && <small> · tú</small>}
+                        </span>
                         {today !== 0 && <em className={today > 0 ? 'up' : 'down'}>hoy {delta(today)}</em>}
                       </span>
                       <Sparkline values={seriesOf(p, starting)} up={up} />
@@ -316,8 +318,8 @@ function Scoreboard({ juegos, onExit }) {
                 <ol className="sb-last">
                   {last.podium.map((p, i) => (
                     <li key={i} className={`sb-last__item sb-last__item--${i + 1}`}>
-                      <span className="sb-last__medal" aria-hidden="true">
-                        {['🥇', '🥈', '🥉'][i]}
+                      <span className={`sb-row__rank sb-row__rank--${i + 1}`} aria-label={`${i + 1}.º`}>
+                        {i + 1}
                       </span>
                       <Avatar name={p.name} src={p.avatar} size={34} />
                       <span className="sb-last__name">{p.name}</span>
