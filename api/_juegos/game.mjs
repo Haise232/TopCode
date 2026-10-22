@@ -32,6 +32,7 @@ const CRASH_WAIT_MAX_MS = 20000 // el vuelo más largo del cohete dura 18 s
 const CRASH_WAIT_PAD_MS = 25
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const POKER_LIVE = new Set(['preflop', 'flop', 'turn', 'river'])
+const ONE_SHOT = new Set(['plinko', 'claw']) // juegos en solitario que se liquidan en cada jugada y no guardan nada
 const MAX_SCORES = 200
 const NO_DAYS = [null, null, null, null, null, null, null]
 // Array de Postgres como texto ({NULL,9000,…}): igual con cualquier driver.
@@ -540,9 +541,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   }
 
   // Lo apostado y lo ganado (o perdido) en la jugada que acaba de liquidarse, o null si no se liquidó ninguna.
-  // Plinko se liquida en cada jugada; los demás, cuando aparece un «last» de otra ronda o partida.
+  // Plinko y el gancho se liquidan en cada jugada; los demás, cuando aparece un «last» de otra ronda o partida.
   function settlementOf(game, msg, saved, out) {
-    if (game === 'plinko') return { stake: msg.bet, net: out.delta }
+    if (ONE_SHOT.has(game)) return { stake: msg.bet, net: out.delta }
     const last = out.saved?.last
     if (!last || last.round === saved?.last?.round) return null
     return { stake: last.stake, net: last.net }
@@ -559,9 +560,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
       const accounts = new TxAccounts(accRows, week.day)
       const balance = accounts.get(user.id).balance
-      // Plinko no guarda nada entre jugadas.
+      // Plinko y el gancho no guardan nada entre jugadas.
       const saved =
-        game === 'plinko'
+        ONE_SHOT.has(game)
           ? null
           : ((await q(`select estado from public.juegos_solo where usuario_id = $1 and juego = $2 for update`, [user.id, game])).rows[0]?.estado ?? null)
       const out = await SOLO_PLAY[game](msg, balance, saved, randomInt, ctx)
@@ -750,6 +751,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       case 'solo_dungeon':
       case 'solo_plinko':
+      case 'solo_claw':
       case 'solo_frog': {
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }

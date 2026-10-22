@@ -692,6 +692,50 @@
 .juegos-root .game__frog-pupil {
   fill: #16161b;
 }
+.juegos-root .hub-row__art .game__claw {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #3a1a4a;
+  box-shadow: inset 0 0 0 2px var(--brass);
+}
+.juegos-root .game__claw-cable {
+  fill: #aab3c2;
+}
+.juegos-root .game__claw-metal {
+  fill: #c4ccd8;
+  stroke: #2f3646;
+  stroke-width: 0.8;
+}
+.juegos-root .game__claw-red {
+  fill: #e2463c;
+}
+.juegos-root .game__claw-prong {
+  fill: none;
+  stroke: #6c7688;
+  stroke-width: 1.6;
+}
+.juegos-root .game__claw-gem {
+  fill: #7fe3f2;
+  stroke: #e9fdff;
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.juegos-root .game__claw-facet {
+  fill: none;
+  stroke: #e9fdff;
+  stroke-width: 0.6;
+}
+.juegos-root .game__claw-plush {
+  fill: #f08bb0;
+}
+.juegos-root .game__claw-plush2 {
+  fill: #6ec6c9;
+}
+.juegos-root .game__claw-gold {
+  fill: #f0c75a;
+}
 .juegos-root .hub-row__art .game__race {
   width: 46px;
   height: 46px;

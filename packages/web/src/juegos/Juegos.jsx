@@ -16,7 +16,9 @@ import Frog from './Frog.jsx'
 import Race from './Race.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
+import Claw from './Claw.jsx'
 import { DoorIcon } from './DungeonArt.jsx'
+import { ClawIcon } from './ClawArt.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
 import { useJuegos } from './useJuegos.js'
@@ -109,6 +111,12 @@ const SOLO = [
         <circle cx="25" cy="12" r="1.5" className="game__frog-pupil" />
       </svg>
     ),
+  },
+  {
+    id: 'claw',
+    name: 'Gancho',
+    blurb: 'Mueve el gancho y pesca premios de hasta ×200.',
+    art: <ClawIcon />,
   },
 ]
 
@@ -493,7 +501,7 @@ function Notice({ title, children, actions }) {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | dungeon | plinko | frog | race | gacha | join | score
+  // screen: lobby | roulette | crash | dungeon | plinko | frog | race | claw | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -557,6 +565,7 @@ function JuegosScreens() {
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
   if (screen === 'frog') return <Frog onExit={exit} juegos={juegos} />
   if (screen === 'race') return <Race onExit={exit} juegos={juegos} />
+  if (screen === 'claw') return <Claw onExit={exit} juegos={juegos} />
   if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
   if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />

@@ -147,7 +147,7 @@ aprobados, sin códigos: se entra con el nombre y la foto de TopCode.
   y se guarda el podio. Sin recargas.
 - **Score** con la clasificación de la semana y la evolución día a día de cada jugador.
 - **Chat** dentro de cada mesa.
-- **Solo**: ruleta, cohete, laberinto, Plinko, rana, carrera y blackjack contra el crupier con el mismo saldo semanal; los sortea el servidor y
+- **Solo**: ruleta, cohete, laberinto, Plinko, rana, carrera, gancho y blackjack contra el crupier con el mismo saldo semanal; los sortea el servidor y
   cuentan en el score.
 
 Cómo funciona sin servidor propio: la función de Vercel `api/juegos.mjs` guarda cada mesa en Postgres

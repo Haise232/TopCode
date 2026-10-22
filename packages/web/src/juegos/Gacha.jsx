@@ -467,7 +467,7 @@ function Rules({ prices }) {
           crupier (o solo si es alta o baja). Dura una mano.
         </li>
         <li>
-          <b>Ruleta, cohete, laberinto, Plinko, rana y carrera:</b> un <b>seguro</b> (si pierdes, te devuelven una parte) o un{' '}
+          <b>Ruleta, cohete, laberinto, Plinko, gancho, rana y carrera:</b> un <b>seguro</b> (si pierdes, te devuelven una parte) o un{' '}
           <b>premio</b> (si ganas, cobras más), fuerte para una jugada o más flojo para varias: una común da entre un 25 % una
           vez y un 10 % tres veces; una épica, hasta un 100 %; una legendaria, el 100 % durante tres jugadas o más.
         </li>

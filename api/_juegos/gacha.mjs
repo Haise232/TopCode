@@ -107,10 +107,13 @@ const SOLO_SHAPES = [
     [80, 6],
   ],
 ]
-const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', dungeon: 'el laberinto', plinko: 'el Plinko', frog: 'la rana', race: 'la carrera' }
-const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', dungeon: 'laberinto', plinko: 'Plinko', frog: 'rana', race: 'carrera' }
+const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', dungeon: 'el laberinto', plinko: 'el Plinko', frog: 'la rana', race: 'la carrera', claw: 'el gancho' }
+const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', dungeon: 'laberinto', plinko: 'Plinko', frog: 'rana', race: 'carrera', claw: 'gancho' }
 const SOLO_GAMES = Object.keys(SOLO_IN)
 export const POWER_GAMES = ['poker', 'blackjack', ...SOLO_GAMES]
+// El punto fuerte de cada carta se sortea solo entre los juegos que había al crear el gacha, para que añadir un juego
+// (al final de SOLO_IN) no cambie el punto fuerte ni los poderes de las cartas que ya tiene la gente.
+const STRONG_GAMES = POWER_GAMES.slice(0, 8)
 const euros = (n) => `${n.toLocaleString('es-ES')} €`
 
 function soloPower(kind, game, pct, uses) {
@@ -143,7 +146,7 @@ function seeded(id) {
 function powersFor(card) {
   const rnd = seeded(card.id)
   const choose = (list) => list[Math.floor(rnd() * list.length)]
-  const strong = choose(POWER_GAMES)
+  const strong = choose(STRONG_GAMES)
   const tierOf = (game) => TIER[card.rarity] + (game === strong ? 1 : 0)
   const mark = (game, power) => (game === strong ? { ...power, strong: true } : power)
   const powers = {}

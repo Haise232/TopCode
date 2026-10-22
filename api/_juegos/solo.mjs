@@ -1,4 +1,4 @@
-// Juegos en solitario (ruleta, cohete, laberinto, Plinko, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, laberinto, Plinko, gancho, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
 // el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
@@ -6,11 +6,12 @@ import { createHmac } from 'node:crypto'
 import * as roulette from '../../packages/web/src/juegos/roulette.js'
 import * as dungeon from '../../packages/web/src/juegos/dungeon.js'
 import * as plinko from '../../packages/web/src/juegos/plinko.js'
+import * as claw from '../../packages/web/src/juegos/claw.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
 import * as race from '../../packages/web/src/juegos/race.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race', solo_claw: 'claw' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -138,6 +139,17 @@ export function plinkoDrop(msg, balance, _saved, rand) {
   const payout = plinko.payoutOf(msg.bet, msg.risk, slot)
   const delta = payout - msg.bet
   return { delta, played: true, saved: null, result: { path, slot, payout, balance: balance + delta } }
+}
+
+// Gancho: como Plinko, cada intento se liquida al momento y no guarda nada. El premio sale de randomInt; la pantalla
+// solo anima el gancho hasta él.
+export function clawGrab(msg, balance, _saved, rand) {
+  if (!claw.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
+  if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+  const prize = claw.drawPrize(rand)
+  const payout = claw.payoutOf(msg.bet, prize)
+  const delta = payout - msg.bet
+  return { delta, played: true, saved: null, result: { prize, payout, balance: balance + delta } }
 }
 
 // --- Cohete en vivo: un multiplicador que sube para todos a la vez; quien retira antes de que explote, cobra. ---
@@ -466,4 +478,4 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, kind, doors, msg.door, room) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive }
+export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, claw: clawGrab }

@@ -417,3 +417,43 @@ export function playSteps() {
   tone(ac, { freq: 140, to: 90, dur: 0.08, type: 'triangle', peak: 0.1 })
   tone(ac, { freq: 130, to: 85, at: 0.28, dur: 0.08, type: 'triangle', peak: 0.08 })
 }
+
+// ---- Máquina de gancho ----
+// Motor del gancho al subir o bajar: zumbido grave que dura lo que el movimiento (ms).
+export function playMotor(ms = 900) {
+  const ac = audio()
+  if (!ac) return
+  const dur = ms / 1000
+  tone(ac, { freq: 70, to: 110, dur, type: 'sawtooth', peak: 0.025 })
+  tone(ac, { freq: 140, to: 220, dur, type: 'square', peak: 0.012 })
+}
+
+// Las pinzas se cierran: clic metálico y un tope seco.
+export function playGrab() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 2200, to: 1100, dur: 0.05, type: 'square', peak: 0.05 })
+  tone(ac, { freq: 220, to: 120, at: 0.05, dur: 0.14, type: 'triangle', peak: 0.12 })
+}
+
+// Aparece el premio bajo el gancho: un «pop» que sube.
+export function playPop() {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 420, to: 900, dur: 0.12, type: 'sine', peak: 0.09 })
+}
+
+// El premio cae por el conducto: golpe en la bandeja y monedas que tintinean.
+export function playPrizeDrop() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 150, to: 60, dur: 0.22, type: 'triangle', peak: 0.16 })
+  for (let i = 0; i < 4; i++) tone(ac, { freq: 1300 + i * 170, at: 0.08 + i * 0.07, dur: 0.1, type: 'square', peak: 0.035 })
+}
+
+// Se escurre de las pinzas: silbido que cae y un golpecito flojo al volver al montón.
+export function playSlip() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 900, to: 180, dur: 0.4, type: 'sine', peak: 0.08 })
+  tone(ac, { freq: 110, to: 70, at: 0.4, dur: 0.12, type: 'triangle', peak: 0.1 })
+}
