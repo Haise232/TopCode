@@ -58,6 +58,13 @@ export function createBanca({ db, ping, now, credit }) {
     return value && value.hasta > t ? value : null
   }
 
+  // El último Admin Abuse leído, sin consultar (para usarlo dentro de una transacción: una consulta aparte ahí podría
+  // quedarse esperando por una conexión libre). handle() de game.mjs lo refresca con abuse() al empezar cada petición.
+  function cached() {
+    const value = abuseCache.value
+    return value && value.hasta > now() ? value : null
+  }
+
   async function isMaster(userId) {
     const hit = masters.get(userId)
     if (hit && hit.until > Date.now()) return hit.value
@@ -200,5 +207,5 @@ export function createBanca({ db, ping, now, credit }) {
   // Limpieza: avisos de hace más de 7 días (se llama en el reinicio semanal).
   const sweep = (q) => q(`delete from public.juegos_avisos where creado < now() - interval '7 days'`)
 
-  return { handle, abuse, sweep }
+  return { handle, abuse, cached, sweep }
 }

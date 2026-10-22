@@ -686,8 +686,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.
   async function charge(q, userId, amount) {
-    // Admin Abuse «gratis»: el gacha no cobra.
-    if (abuseExtra(await banca.abuse(), 'gacha', -amount) > 0) amount = 0
+    // Admin Abuse «gratis»: el gacha no cobra (valor ya leído: aquí estamos dentro de una transacción).
+    if (abuseExtra(banca.cached(), 'gacha', -amount) > 0) amount = 0
     const week = weekOf(now())
     const rows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [userId])).rows
     const accounts = new TxAccounts(rows, week.day)
@@ -697,7 +697,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [userId, acc.balance, pgArray(acc.days), acc.played])
     return acc.balance
   }
-  const gacha = createGacha({ db, ping, now, charge, luck: async () => abuseLuck(await banca.abuse()) })
+  const gacha = createGacha({ db, ping, now, charge, luck: () => abuseLuck(banca.cached()) })
 
   // Jugadores con apuesta en una ronda de la ruleta o el cohete en vivo (la ronda se queda anotada aunque ya se haya pagado).
   async function soloPlayers(game, round) {
@@ -766,6 +766,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   async function handle(user, msg) {
     if (!msg || typeof msg.t !== 'string') throw new JuegosError('BAD_MESSAGE')
     await warm()
+    await banca.abuse() // deja leído el Admin Abuse para lo que lo mira dentro de una transacción (gacha)
     // La banca (avisos y panel del master) va aparte: no toca la cuenta ni cuenta como actividad en las mesas.
     if (msg.t.startsWith('banca')) {
       const out = await banca.handle(user, msg)

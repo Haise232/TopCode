@@ -187,6 +187,7 @@ const WEIGHTS = {
 export const GACHA_ERRORS = {
   GACHA_TAKEN: '¡Tarde! Otra persona la cogió antes.',
   GACHA_OWNED: 'Esa carta ya tiene dueño.',
+  GACHA_EMPTY: 'Todas las cartas tienen dueño: ahora mismo no queda ninguna libre. Vuelve cuando alguien venda alguna.',
   GACHA_FUNDS: 'No te llega el saldo de la semana.',
   GACHA_NOT_YOURS: 'Esa carta no es tuya.',
   GACHA_PENDING: 'Primero decide si guardas o descartas la carta que sacaste.',
@@ -249,13 +250,13 @@ function draw(premium, taken, luck = 1) {
   const [rarity] = weights.find(([, w]) => (r -= w) < 0)
   const free = (list) => (taken ? list.filter((c) => !taken.has(c.id)) : list)
   let pool = free(byRarity.get(rarity) ?? [])
-  // Si en esa rareza ya no queda nada libre, cualquier carta libre que no sea común (o cualquiera); la mítica solo sale
-  // cuando toca su rareza.
+  // Si en esa rareza ya no queda nada libre, cualquier carta libre que no sea común (o cualquiera); la única solo sale
+  // cuando toca su rareza. Si no queda ninguna libre, null: nunca se da una carta que ya tiene dueño (antes salía
+  // «repetida», se cobraba y luego no se podía guardar).
   const rest = catalogo.cartas.filter((c) => c.rarity !== 'unica')
   if (pool.length === 0) pool = free(rest.filter((c) => c.rarity !== 'comun'))
   if (pool.length === 0) pool = free(rest)
-  if (pool.length === 0) pool = rest
-  return pick(pool)
+  return pool.length ? pick(pool) : null
 }
 
 // Periodo de la mesa: sale una carta en cada uno.
@@ -264,7 +265,7 @@ const ms = (value) => (value instanceof Date ? value.getTime() : Number(value))
 
 // db: { query, tx } · ping(topic, event) avisa por Realtime · charge(q, userId, amount): cobra del saldo de la semana
 // (o paga, si amount es negativo) dentro de la transacción y devuelve el saldo nuevo, o null si no llega.
-export function createGacha({ db, ping, now, charge, luck = async () => 1 }) {
+export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
   // Estado del jugador, bloqueado para la transacción.
   async function player(q, userId) {
     await q(`insert into public.juegos_gacha_jugadores (usuario_id) values ($1) on conflict (usuario_id) do nothing`, [userId])
@@ -304,6 +305,7 @@ export function createGacha({ db, ping, now, charge, luck = async () => 1 }) {
       const taken = await takenCards(q)
       for (let i = 0; i < count; i++) {
         const card = draw(false, taken)
+        if (!card) break // no queda ninguna carta libre para la mesa
         taken.add(card.id)
         await q(`insert into public.juegos_gacha_mesa (carta, periodo, creada) values ($1, $2, to_timestamp($3 / 1000.0))`, [card.id, period, t])
         await log(q, 'mesa', null, card.id, false, t)
@@ -359,8 +361,10 @@ export function createGacha({ db, ping, now, charge, luck = async () => 1 }) {
     return db.tx(async (q) => {
       const st = await player(q, user.id)
       if (st.pending) return { error: 'GACHA_PENDING' }
+      // Primero la carta y después el cobro: si no queda ninguna libre, no se cobra.
+      const card = draw(premium, await takenCards(q), luck())
+      if (!card) return { error: 'GACHA_EMPTY' }
       if ((await charge(q, user.id, premium ? PREMIUM_COST : ROLL_COST)) === null) return { error: 'GACHA_FUNDS' }
-      const card = draw(premium, await takenCards(q), await luck())
       await q(`update public.juegos_gacha_jugadores set pendiente = $2, pendiente_premium = $3 where usuario_id = $1`, [user.id, card.id, premium])
       return { result: { card: cardView(card.id), premium } }
     })
