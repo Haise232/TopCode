@@ -10,7 +10,7 @@ import { storedTimers } from './engine/timers.mjs'
 import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
-import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView, wheelDue, wheelView } from './solo.mjs'
+import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView } from './solo.mjs'
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 import { DUEL_ERRORS, createDuelos } from './duelos.mjs'
 import { abuseExtra, abuseLuck, createBanca } from './banca.mjs'
@@ -239,6 +239,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
       await refundSoloBlackjack()
       await refundRetired('bribe', (estado) => (estado?.bet > 0 ? estado.bet : 0))
+      await refundRetired('wheel', (estado) => (estado?.bets ?? []).reduce((sum, b) => sum + (b.amount ?? 0), 0))
     })().catch((error) => {
       schemaReady = null
       throw error
@@ -260,7 +261,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     })
   }
 
-  // Un juego en solitario que se retiró (Sobornos, sustituido por la Rueda): a quien tenía una partida a medias se le
+  // Un juego en solitario que se retiró (Sobornos y la Rueda): a quien tenía una partida a medias se le
   // devuelve lo apostado y se borra. Tras la primera vez no queda ninguna fila.
   async function refundRetired(game, stakeOf) {
     await db.tx(async (q) => {
@@ -774,7 +775,6 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     solo_roulette: { game: 'roulette', due: rouletteDue, view: rouletteView },
     solo_crash: { game: 'crash', due: (saved, t) => crashDue(saved, t, secret), view: crashView },
     solo_race: { game: 'race', due: (saved, t) => raceDue(saved, t, secret), view: raceView },
-    solo_wheel: { game: 'wheel', due: wheelDue, view: wheelView },
   }
 
   // Acciones que se aplican a la mesa en la que estás.
@@ -857,8 +857,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       case 'solo_roulette':
       case 'solo_crash':
-      case 'solo_race':
-      case 'solo_wheel': {
+      case 'solo_race': {
         const live = LIVE_SOLO[msg.t]
         let play = msg
         // Espera larga del cohete: se responde justo cuando explota (sin tocar la BD mientras tanto), así cada

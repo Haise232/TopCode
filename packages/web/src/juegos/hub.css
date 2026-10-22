@@ -303,9 +303,6 @@
 .juegos-root .hub-tile--frog {
   --tint: 124, 207, 74;
 }
-.juegos-root .hub-tile--wheel {
-  --tint: 242, 193, 78;
-}
 .juegos-root .hub-tile--duel {
   --tint: 255, 79, 91;
 }
@@ -1208,12 +1205,7 @@
   }
 }
 
-/* Iconos de la Rueda y los Duelos en el selector. */
-.juegos-root .game__fortune {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
-}
+/* Icono de los Duelos en el selector. */
 .juegos-root .game__duel {
   display: grid;
   place-items: center;

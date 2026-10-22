@@ -17,7 +17,6 @@ import Race from './Race.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
 import { DoorIcon } from './DungeonArt.jsx'
-import Wheel from './Wheel.jsx'
 import Duel from './Duel.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
@@ -46,23 +45,6 @@ const SOLO = [
     name: 'Duelos',
     blurb: 'Reta a alguien 1 contra 1: el que gana se lo lleva todo.',
     art: <span className="game__duel" aria-hidden="true">⚔</span>,
-  },
-  {
-    id: 'wheel',
-    name: 'Rueda',
-    blurb: 'Una rueda gigante para todos cada 25 s. Hasta ×48.',
-    live: true,
-    art: (
-      <svg className="game__fortune" viewBox="0 0 40 40">
-        {['#3d9f89', '#2f7be0', '#8a4fd6', '#e0702b', '#d93b5c', '#f2c14e', '#3d9f89', '#2f7be0'].map((c, i) => {
-          const a0 = ((i * 45 - 90) * Math.PI) / 180
-          const a1 = (((i + 1) * 45 - 90) * Math.PI) / 180
-          return <path key={i} d={`M20 20 L${20 + 17 * Math.cos(a0)} ${20 + 17 * Math.sin(a0)} A17 17 0 0 1 ${20 + 17 * Math.cos(a1)} ${20 + 17 * Math.sin(a1)} Z`} fill={c} />
-        })}
-        <circle cx="20" cy="20" r="5" fill="#1b1405" stroke="#f2c14e" strokeWidth="2" />
-        <path d="M16 1 L24 1 L20 8 Z" fill="#fff6d6" />
-      </svg>
-    ),
   },
   {
     id: 'roulette',
@@ -532,7 +514,7 @@ function Notice({ title, children, actions }) {
 
 // Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
 const SCREEN_KEY = 'juegos-pantalla'
-const KEEP = new Set(['roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'wheel', 'duel', 'gacha', 'score'])
+const KEEP = new Set(['roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score'])
 function savedScreen() {
   try {
     const screen = sessionStorage.getItem(SCREEN_KEY)
@@ -544,7 +526,7 @@ function savedScreen() {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | dungeon | plinko | frog | race | wheel | duel | gacha | join | score
+  // screen: lobby | roulette | crash | dungeon | plinko | frog | race | duel | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -616,7 +598,6 @@ function JuegosScreens() {
   if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
   if (screen === 'frog') return <Frog onExit={exit} juegos={juegos} />
   if (screen === 'race') return <Race onExit={exit} juegos={juegos} />
-  if (screen === 'wheel') return <Wheel onExit={exit} juegos={juegos} />
   if (screen === 'duel') return <Duel onExit={exit} juegos={juegos} />
   if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />
   if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
