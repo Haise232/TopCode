@@ -3,7 +3,7 @@
 // a mitad del sorteo lo ve en el mismo punto que los demás. Tapa solo la pista: las apuestas siguen abiertas debajo.
 import { useEffect, useMemo, useRef } from 'react'
 import { CIRCUITS, DRAW_MS } from './race.js'
-import { WORLD_H, WORLD_W, outlineOf } from './raceArt.js'
+import { OUTLINE_BOX, outlineOf } from './raceArt.js'
 import { playReelTick, playReveal } from './sound.js'
 
 const SPIN_FROM = 350 // la pista se repinta con el circuito nuevo justo al empezar: la tira espera a que pase ese tirón
@@ -13,13 +13,26 @@ const ease = (x) => 1 - (1 - x) ** 4
 
 const shapes = CIRCUITS.map((_, i) => outlineOf(i))
 
+// Bandera de cuadros al final de una recta de aceleración.
+function Checker({ x, y }) {
+  const cells = []
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 3; c++) if ((r + c) % 2 === 0) cells.push(<rect key={`${r}-${c}`} x={x + c * 40} y={y + r * 40} width="40" height="40" />)
+  return (
+    <g className="race-draw__checker">
+      <rect x={x} y={y} width="120" height="240" fill="#f6f6f1" />
+      {cells}
+    </g>
+  )
+}
+
 function Card({ i, refFn }) {
   const c = CIRCUITS[i]
   return (
     <div className="race-draw__card" ref={refFn} style={{ '--c': c.color }}>
-      <svg viewBox={`0 0 ${WORLD_W} ${WORLD_H}`} aria-hidden="true">
+      <svg viewBox={`0 0 ${OUTLINE_BOX[0]} ${OUTLINE_BOX[1]}`} aria-hidden="true">
         <path d={shapes[i]} className="race-draw__glow" />
         <path d={shapes[i]} className="race-draw__road" />
+        {c.drag && <Checker x={OUTLINE_BOX[0] - 260} y={OUTLINE_BOX[1] / 2 - 120} />}
       </svg>
       <b>{c.name}</b>
       <small>{c.tag}</small>

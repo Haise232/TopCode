@@ -517,7 +517,9 @@ function Race({ onExit, juegos }) {
             <Help title="Cómo se juega">
               <p>
                 Una carrera cada {ROUND_MS / 1000} segundos, la misma para todos. Seis coches igual de rápidos: el orden de llegada
-                es al azar. Tienes {BETS_MS / 1000} segundos para apostar; luego salen de la parrilla y corren tres vueltas.
+                es al azar. Tienes {BETS_MS / 1000} segundos para apostar; luego salen de la parrilla y corren tres vueltas al
+                circuito que toque o, si sale una recta de aceleración, una sola pasada de 402 m. El circuito no cambia las
+                probabilidades.
               </p>
               <h3>Tipos de apuesta</h3>
               <p>

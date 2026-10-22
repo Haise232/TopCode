@@ -316,12 +316,18 @@
 }
 .juegos-root .race-draw__glow {
   stroke: var(--c);
-  stroke-width: 150;
+  stroke-width: 210;
   opacity: 0.28;
 }
 .juegos-root .race-draw__road {
   stroke: #f4f1ea;
-  stroke-width: 60;
+  stroke-width: 84;
+}
+.juegos-root .race-draw__checker rect {
+  fill: #0c0f13;
+}
+.juegos-root .race-draw__checker rect:first-child {
+  fill: #f6f6f1;
 }
 .juegos-root .race-draw__card b {
   font-family: var(--display);

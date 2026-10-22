@@ -17,8 +17,9 @@
 // Las posiciones salen SIEMPRE de progress(finish, wobble, getNow() - start): la escena solo anima, nunca decide.
 import { useEffect, useRef } from 'react'
 import './RaceScene.css'
-import { CAR_INFO, CARS, CIRCUITS, GRID_MS, LAPS, PODIUM, progress, startOf } from './race.js'
+import { CAR_INFO, CARS, CIRCUITS, GRID_MS, PODIUM, progress, startOf } from './race.js'
 import {
+  DRAG_TILE,
   LANE_GAP,
   LEN,
   P_CONFETTI,
@@ -36,6 +37,7 @@ import {
   at,
   centerPath,
   drawWet,
+  laps,
   makeBackground,
   makeSprites,
   neonInner,
@@ -46,6 +48,7 @@ import {
   setCircuit,
   shade,
   theme,
+  track,
 } from './raceArt.js'
 import { playBeep, playGo, playLastLap, playOvation, playPass, startEngine2 } from './sound.js'
 
@@ -54,12 +57,17 @@ const LAUNCH_MS = 1300 // arrancada: aceleración suave en vez de salir ya a tod
 const BRAKE_TAU = 900
 const REPLAY_MS = 1900 // la repetición del foto-finish es corta: no retrasa el resultado // frenada tras la meta
 const PARADE_V = 150 // unidades/s de la vuelta de formación
+const DRAG_WAIT = 600 // en una recta de aceleración no hay vuelta de formación: los coches esperan a esta distancia de su plaza
+const DRAG_BRAKE = 2600 // y tras la meta frenan hasta pararse (en un circuito siguen rodando la vuelta de honor)
 const LANE = [0, 3, 1, 4, 2, 5] // carril de cada coche (los de la columna izquierda de la parrilla, a un lado)
 const GRID_BACK = [0, 1, 2, 3, 4, 5].map((i) => 70 + Math.floor(i / 2) * 125 + (i & 1) * 52)
+// Distancia de cada coche a la salida en la parrilla: en una recta de aceleración salen todos en línea, cada uno en su carril.
+const gridBack = (i) => (track.open ? 40 : GRID_BACK[i])
 const GOLD = '#ffd75a'
 const SILVER = '#d5dde6'
 const BRONZE = '#d98b52'
 const PLACE_COL = [GOLD, SILVER, BRONZE]
+const TYRE = ['#ff3b3b', '#ffd23a', '#f4f4f4'] // compuestos: blando, medio, duro
 const PALETTE = [...CAR_INFO.map((c) => c.color), GOLD, '#ffffff', '#ff7ac8']
 const FIRE_PALETTE = [...CAR_INFO.map((c) => c.color), GOLD, '#ffffff', '#ffb36b']
 const TAU = Math.PI * 2
@@ -90,12 +98,13 @@ function shownProgress(race, i, ms) {
   const ve = Math.max(0, de / f)
   const vc = 0.4 / f
   const t = ms - f
+  if (track.open) return 1 + ve * DRAG_BRAKE * (1 - Math.exp(-t / DRAG_BRAKE))
   return 1 + vc * t + (ve - vc) * BRAKE_TAU * (1 - Math.exp(-t / BRAKE_TAU))
 }
 
 // Vueltas recorridas por el coche `i` a los `ms` de la salida (negativo = aún detrás de la meta, en la parrilla o desfilando).
 function carU(race, i, ms) {
-  const back = GRID_BACK[i] / LEN
+  const back = gridBack(i) / LEN
   if (ms < 0) {
     const tau = -ms - GRID_MS // ms que faltan para llegar a su plaza de parrilla
     let dist = 0
@@ -103,15 +112,25 @@ function carU(race, i, ms) {
       const T = 1500
       const v = PARADE_V / 1000
       dist = tau < T ? (v * tau * tau) / (2 * T) : (v * T) / 2 + v * (tau - T)
+      if (track.open) dist = Math.min(dist, DRAG_WAIT)
     }
     return -back - dist / LEN
   }
   if (!race) return -back
-  const d = shownProgress(race, i, ms) * LAPS
+  const d = shownProgress(race, i, ms) * laps
   return d - back * (1 - smooth(Math.min(1, d / 0.12)))
 }
 
 const _o = { x: 0, y: 0, tx: 1, ty: 0, k: 0 }
+
+// En las rectas de aceleración se cuenta en metros, como un cuarto de milla: la meta está a DRAG_M.
+const DRAG_M = 402
+const dragMeters = (race, ms) => Math.round(clamp(shownProgress(race, order0(race, ms), ms), 0, 1) * DRAG_M)
+function order0(race, ms) {
+  let best = 0
+  for (let i = 1; i < CARS; i++) if (shownProgress(race, i, ms) > shownProgress(race, best, ms)) best = i
+  return best
+}
 
 function makeState() {
   return {
@@ -142,8 +161,8 @@ function computeCars(S, race, ms) {
     const acc = (spd - spdB) / 0.16
     const gl = i & 1 ? 26 : -26
     const ll = (LANE[i] - 2.5) * LANE_GAP
-    const d = ms > 0 && race ? shownProgress(race, i, ms) * LAPS : 0
-    const blend = smooth(Math.min(1, d / 0.1))
+    const d = ms > 0 && race ? shownProgress(race, i, ms) * laps : 0
+    const blend = track.open ? 1 : smooth(Math.min(1, d / 0.1))
     const lat = gl + (ll - gl) * blend + Math.sin(ms / 900 + i * 2.1) * 2 * blend
     at(u1, lat, _o)
     const slip = Math.abs(_o.k) * spd
@@ -199,9 +218,13 @@ function mount(canvas, P) {
   let bg = makeBackground()
   const spr = makeSprites()
   const asphaltPattern = g.createPattern(spr.asphalt, 'repeat')
+  // Marcas de neumáticos. En una recta solo hace falta el principio (las salidas): el lienzo de toda la recta sería enorme.
   const marks = document.createElement('canvas')
-  marks.width = WORLD_W
-  marks.height = WORLD_H
+  const clearMarks = () => {
+    marks.width = Math.min(WORLD_W, 5200)
+    marks.height = WORLD_H
+  }
+  clearMarks()
   const mg = marks.getContext('2d')
   mg.lineCap = 'round'
   const world = new Pool(560, [])
@@ -464,23 +487,166 @@ function mount(canvas, P) {
   }
 
 
+  // Recta de aceleración: el tramo que se repite (fondo, pista con sus pianos, carriles, valla de neón y luz de las farolas).
+  const drawStaticDrag = (g) => {
+    const W = DRAG_TILE
+    const y0 = track.y0
+    const hw = TRACK_W / 2
+    const band = (half, fill) => {
+      g.fillStyle = fill
+      g.fillRect(0, y0 - half, W, half * 2)
+    }
+    g.drawImage(bg, 0, 0)
+    band((TRACK_W + 110) / 2, `rgba(${theme.neon},0.05)`)
+    band((TRACK_W + 70) / 2, `rgba(${theme.neon},0.07)`)
+    band((TRACK_W + 44) / 2, theme.runoff)
+    for (const s of [-1, 1]) {
+      const y = y0 + s * (hw + 5.5) - 5.5
+      g.fillStyle = theme.kerb[0]
+      g.fillRect(0, y, W, 11)
+      g.fillStyle = theme.kerb[1]
+      for (let x = 0; x < W; x += 48) g.fillRect(x, y, 24, 11)
+    }
+    band(hw + 1, '#f2f4f6')
+    band(hw - 2.5, theme.asphalt)
+    g.fillStyle = asphaltPattern
+    g.fillRect(0, y0 - hw + 2.5, W, TRACK_W - 5)
+    // goma de las salidas en el centro de cada carril y líneas discontinuas entre carriles
+    for (let l = 0; l < CARS; l++) {
+      const y = y0 + (l - 2.5) * LANE_GAP
+      const gr = g.createLinearGradient(0, y - 9, 0, y + 9)
+      gr.addColorStop(0, 'rgba(0,0,0,0)')
+      gr.addColorStop(0.5, 'rgba(0,0,0,0.28)')
+      gr.addColorStop(1, 'rgba(0,0,0,0)')
+      g.fillStyle = gr
+      g.fillRect(0, y - 9, W, 18)
+    }
+    g.fillStyle = 'rgba(255,255,255,0.32)'
+    for (let l = 1; l < CARS; l++) {
+      const y = y0 + (l - 3) * LANE_GAP
+      for (let x = 0; x < W; x += 60) g.fillRect(x, y - 1, 30, 2)
+    }
+    g.globalCompositeOperation = 'lighter'
+    for (const s of [-1, 1]) {
+      g.fillStyle = `rgba(${theme.neon},0.18)`
+      g.fillRect(0, y0 + s * (hw + 34) - 4.5, W, 9)
+      g.fillStyle = `rgba(${theme.neon},0.07)`
+      g.fillRect(0, y0 + s * (hw + 34) - 13, W, 26)
+    }
+    // charcos de luz de las farolas (en las mismas x que `poles`, que se repiten cada tramo)
+    for (let k = 0; k * 400 < W; k++) {
+      const side = k % 2 ? 1 : -1
+      const lx = k * 400 + 200
+      const ly = y0 + side * (hw + 56) - side * 70
+      g.globalAlpha = 0.85
+      g.drawImage(spr.lamp, lx - 190, ly - 190, 380, 380)
+      g.globalAlpha = 1
+      const gr = g.createLinearGradient(lx, ly, lx, ly + 90)
+      gr.addColorStop(0, `rgba(${theme.lamp},0.28)`)
+      gr.addColorStop(1, `rgba(${theme.lamp},0)`)
+      g.fillStyle = gr
+      g.beginPath()
+      g.ellipse(lx, ly + 44, 9, 48, 0, 0, TAU)
+      g.fill()
+    }
+    g.globalCompositeOperation = 'source-over'
+  }
+
+  // Recta de aceleración: lo que no se repite (salida, parrilla, distancias y meta), pintado en cada fotograma.
+  const drawDragLines = (g, cx, ext) => {
+    const hw = TRACK_W / 2
+    const near = (x, pad) => Math.abs(x - cx) < ext + pad
+    const checker = (u, cols) => {
+      at(u, 0, o)
+      if (!near(o.x, 200)) return
+      const n = Math.floor((TRACK_W - 8) / 12)
+      for (let r = 0; r < cols; r++) {
+        for (let c = 0; c < n; c++) {
+          g.fillStyle = (r + c) & 1 ? '#10141a' : '#f7f7f2'
+          g.fillRect(o.x - (cols * 12) / 2 + r * 12, o.y - n * 6 + c * 12, 12, 12)
+        }
+      }
+    }
+    checker(0, 2)
+    checker(1, 4)
+    // casillas de la parrilla, una por carril
+    g.strokeStyle = 'rgba(255,255,255,0.45)'
+    g.lineWidth = 2
+    for (let i = 0; i < CARS; i++) {
+      at(-(gridBack(i) / LEN), (LANE[i] - 2.5) * LANE_GAP, o2)
+      if (near(o2.x, 100)) g.strokeRect(o2.x - 34, o2.y - 15, 68, 30)
+    }
+    // distancia pintada en el asfalto y en carteles a los lados, cada 100 m
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    for (let m = 100; m < DRAG_M - 50; m += 100) {
+      at(m / DRAG_M, 0, o)
+      if (!near(o.x, 200)) continue
+      g.save()
+      g.translate(o.x, o.y)
+      g.rotate(-Math.PI / 2)
+      g.fillStyle = 'rgba(255,255,255,0.22)'
+      g.font = `900 64px ${FONT}`
+      g.fillText(String(m), 0, 0)
+      g.restore()
+      for (const s of [-1, 1]) {
+        g.fillStyle = '#0b1016'
+        rrPath(g, o.x - 34, o.y + s * (hw + 64) - 16, 68, 32, 6)
+        g.fill()
+        g.strokeStyle = `rgba(${theme.neonHi},0.8)`
+        g.stroke()
+        g.fillStyle = '#fff'
+        g.font = `800 20px ${FONT}`
+        g.fillText(`${m} m`, o.x, o.y + s * (hw + 64) + 1)
+      }
+    }
+    // la meta: pórtico de cuadros y META en el asfalto
+    at(1, 0, o)
+    if (near(o.x, 400)) {
+      g.save()
+      g.translate(o.x + 70, o.y)
+      g.rotate(-Math.PI / 2)
+      g.fillStyle = 'rgba(255,255,255,0.3)'
+      g.font = `900 70px ${FONT}`
+      g.fillText('META', 0, 0)
+      g.restore()
+      g.fillStyle = 'rgba(0,0,0,0.35)'
+      g.fillRect(o.x + 4, o.y - hw - 18, 22, TRACK_W + 36)
+      g.fillStyle = '#161c23'
+      rrPath(g, o.x - 12, o.y - hw - 16, 20, TRACK_W + 32, 4)
+      g.fill()
+      for (let c = 0; c < 2; c++) {
+        for (let r = 0; r * 8 < TRACK_W + 24; r++) {
+          g.fillStyle = (r + c) & 1 ? '#0c0f13' : '#f6f6f1'
+          g.fillRect(o.x - 10 + c * 8, o.y - hw - 12 + r * 8, 8, 8)
+        }
+      }
+    }
+  }
+
   // Capa estática (fondo, pista, líneas, charcos de luz): se pinta una sola vez y luego es un solo drawImage.
+  // En una recta de aceleración es un tramo de DRAG_TILE que se repite. Como mucho ~12 Mpx: los móviles no admiten más.
   const SS = window.devicePixelRatio > 1.5 && window.innerWidth >= 700 ? 2 : 1.5
   const stat = document.createElement('canvas')
-  stat.width = Math.round(WORLD_W * SS)
-  stat.height = Math.round(WORLD_H * SS)
   const sg = stat.getContext('2d')
-  sg.scale(SS, SS)
-  drawStatic(sg)
+  const paintStatic = () => {
+    const sw = track.open ? DRAG_TILE : WORLD_W
+    const ss = Math.min(SS, Math.sqrt(12e6 / (sw * WORLD_H)))
+    stat.width = Math.round(sw * ss)
+    stat.height = Math.round(WORLD_H * ss)
+    sg.setTransform(ss, 0, 0, ss, 0, 0)
+    if (track.open) drawStaticDrag(sg)
+    else drawStatic(sg)
+  }
+  paintStatic()
 
   // Cambio de circuito (al empezar cada ronda): se vuelven a pintar el fondo y la capa estática.
   const rebuild = (i) => {
     built = i
     setCircuit(i)
     bg = makeBackground()
-    sg.setTransform(SS, 0, 0, SS, 0, 0)
-    drawStatic(sg)
-    marks.width = WORLD_W
+    paintStatic()
+    clearMarks()
     snap = true
   }
 
@@ -493,8 +659,19 @@ function mount(canvas, P) {
     const sx0 = ox + w / 2
     const sy0 = oy + h / 2
     g.setTransform(dpr * ca, dpr * sa, -dpr * sa, dpr * ca, dpr * (sx0 - ca * cx + sa * cy), dpr * (sy0 - sa * cx - ca * cy))
-    g.drawImage(stat, 0, 0, WORLD_W, WORLD_H)
-    if (main) g.drawImage(marks, 0, 0)
+    if (track.open) {
+      // la recta: el tramo de fondo repetido solo donde se ve, y encima lo que no se repite
+      const ext = Math.hypot(w, h) / 2 / z + 20
+      const k1 = Math.floor((cx + ext) / DRAG_TILE)
+      for (let k = Math.max(0, Math.floor((cx - ext) / DRAG_TILE)); k <= k1; k++) {
+        g.drawImage(stat, 0, 0, stat.width, stat.height, k * DRAG_TILE, 0, DRAG_TILE + 0.5, WORLD_H)
+      }
+      if (main) g.drawImage(marks, 0, 0)
+      drawDragLines(g, cx, ext)
+    } else {
+      g.drawImage(stat, 0, 0, WORLD_W, WORLD_H)
+      if (main) g.drawImage(marks, 0, 0)
+    }
 
     // valla de neón (los destellos van animados)
     g.globalCompositeOperation = 'lighter'
@@ -547,7 +724,7 @@ function mount(canvas, P) {
         for (let j = 0; j < CARS; j++) {
           if (i === j || St.spd[j] < 500) continue
           let d = St.u[i] - St.u[j]
-          d -= Math.round(d)
+          if (!track.open) d -= Math.round(d)
           d *= LEN
           if (d < 30 || d > 230 || Math.abs(St.lat[i] - St.lat[j]) > 44) continue
           const k = 1 - d / 230
@@ -621,35 +798,39 @@ function mount(canvas, P) {
       g.rotate(St.h[i])
       const steer = clamp(St.k[i] * 90, -0.38, 0.38)
       const ph = (St.u[i] * LEN) % 9
+      // neumáticos de F1: los traseros más anchos, con la banda del compuesto (blando, medio o duro) en el flanco
+      const tyre = TYRE[i % TYRE.length]
       for (const s of [-1, 1]) {
         for (const front of [true, false]) {
-          const ww = front ? 13 : 15
-          const wh = front ? 6.4 : 7.6
-          const wx = front ? 18 : -17
-          const wy = s * (front ? 11.2 : 11.6)
+          const ww = front ? 12 : 13.5
+          const wh = front ? 6.8 : 8.4
+          const wx = front ? 19 : -19
+          const wy = s * (front ? 11.4 : 11.2)
           g.save()
           g.translate(wx, wy)
           if (front) g.rotate(steer)
           g.fillStyle = '#0c0e11'
-          rrPath(g, -ww / 2, -wh / 2, ww, wh, 2)
+          rrPath(g, -ww / 2, -wh / 2, ww, wh, 2.2)
           g.fill()
           g.fillStyle = 'rgba(255,255,255,0.13)'
-          for (let t = 0; t < 3; t++) g.fillRect(-ww / 2 + ((ph + t * 3) % 9) * (ww / 9) , -wh / 2 + 0.6, 1, wh - 1.2)
-          g.fillStyle = 'rgba(255,255,255,0.08)'
-          g.fillRect(-ww / 2 + 1, s * -0.5 - 0.5 + (s > 0 ? -wh / 2 + 0.3 : wh / 2 - 1.3), ww - 2, 1)
+          for (let t = 0; t < 3; t++) g.fillRect(-ww / 2 + ((ph + t * 3) % 9) * (ww / 9), -wh / 2 + 0.6, 1, wh - 1.2)
+          g.fillStyle = tyre
+          g.fillRect(-ww / 2 + 1.6, s > 0 ? wh / 2 - 1.3 : -wh / 2 + 0.5, ww - 3.2, 0.8)
+          g.fillStyle = '#3a4048'
+          g.beginPath()
+          g.arc(0, s > 0 ? -wh / 2 + 0.2 : wh / 2 - 0.2, 1.3, 0, TAU)
+          g.fill()
           g.restore()
         }
       }
       g.drawImage(spr.cars[i], -35, -20, 70, 40)
       // luces
       g.globalCompositeOperation = 'lighter'
-      for (const s of [-1, 1]) {
-        g.drawImage(spr.warm, 29 - 14, s * 5 - 14, 28, 28)
-        g.globalAlpha = 0.4 + 0.6 * St.brake[i]
-        const sz = 14 + 22 * St.brake[i]
-        g.drawImage(spr.red, -30 - sz / 2, s * 8 - sz / 2, sz, sz)
-        g.globalAlpha = 1
-      }
+      // luz de lluvia (la de un F1 es una sola, en el centro del alerón trasero): parpadea al frenar
+      g.globalAlpha = 0.45 + 0.55 * St.brake[i] * (0.6 + 0.4 * Math.sin(now / 40))
+      const sz = 16 + 24 * St.brake[i]
+      g.drawImage(spr.red, -27 - sz / 2, -sz / 2, sz, sz)
+      g.globalAlpha = 1
       // llama del escape y, al acelerar a fondo, llamarada azul de nitro con su estela
       const nit = St.thr[i]
       const idle = ms < 0 && St.spd[i] < 40 && !p.reduced ? 0.25 * (0.5 + 0.5 * Math.sin(now / 45 + i * 3)) : 0
@@ -820,7 +1001,7 @@ function mount(canvas, P) {
       for (let j = i + 1; j < CARS; j++) {
         if (spd < 500 || S.spd[j] < 500) continue
         let d = S.u[i] - S.u[j]
-        d -= Math.round(d)
+        if (!track.open) d -= Math.round(d)
         d *= LEN
         if (Math.abs(d) > 46 || Math.abs(S.lat[i] - S.lat[j]) > 46) continue
         if (Math.random() < 0.55) {
@@ -840,7 +1021,7 @@ function mount(canvas, P) {
     if (!reduced && info && ms >= info.t0 - 100 && ms < info.t0 + 3600) {
       for (let k = 0; k < 2; k++) {
         if (Math.random() < 0.7) {
-          at(-0.06 + Math.random() * 0.15, TRACK_W / 2 + 85 + Math.random() * 100, o)
+          at(track.open ? 0.96 + Math.random() * 0.08 : -0.06 + Math.random() * 0.15, TRACK_W / 2 + 85 + Math.random() * 100, o)
           world.spawn(P_FLASH, o.x, o.y, 0, 0, 0.12 + Math.random() * 0.14, 26 + Math.random() * 30)
         }
       }
@@ -895,7 +1076,7 @@ function mount(canvas, P) {
       key = rkey
       ev = null
       snap = true
-      marks.width = WORLD_W
+      clearMarks()
       world.clear()
       screen.clear()
       fire.clear()
@@ -930,7 +1111,7 @@ function mount(canvas, P) {
 
     // posiciones
     for (let i = 0; i < CARS; i++) {
-      if (!race || ms < 0) keys[i] = -GRID_BACK[i]
+      if (!race || ms < 0) keys[i] = -gridBack(i)
       else keys[i] = ms >= race.finish[i] ? 10 + (1e6 - race.finish[i]) / 1e6 : shownProgress(race, i, ms) * 0.9 + progress(race.finish[i], race.wobble[i], ms) * 0.1
     }
     for (let i = 0; i < CARS; i++) prevOrder[i] = order[i]
@@ -940,7 +1121,7 @@ function mount(canvas, P) {
     // eventos (solo los que vemos ocurrir; al entrar tarde no se repiten)
     const live = !!race
     if (!ev) {
-      ev = { lights: lightsAt(ms), started: ms >= 0, fin: new Uint8Array(CARS), winner: false, raceSeen: live, lastLap: ms > 0 && !!race && shownProgress(race, order[0], ms) * LAPS >= 2 }
+      ev = { lights: lightsAt(ms), started: ms >= 0, fin: new Uint8Array(CARS), winner: false, raceSeen: live, lastLap: laps < 2 || (ms > 0 && !!race && shownProgress(race, order[0], ms) * laps >= laps - 1) }
       if (race) {
         for (let i = 0; i < CARS; i++) ev.fin[i] = ms >= race.finish[i] ? 1 : 0
         ev.winner = ms >= info.t0
@@ -994,20 +1175,22 @@ function mount(canvas, P) {
     }
 
     // tensión, última vuelta y adelantamientos
-    const leadLaps = race && ms > 0 ? shownProgress(race, order[0], ms) * LAPS : 0
+    // tensión según lo recorrido por el líder (en fracción de la carrera, para que valga igual en una recta)
+    const leadLaps = race && ms > 0 ? shownProgress(race, order[0], ms) * laps : 0
+    const leadF = (leadLaps / laps) * 3
     const racing = race && ms > 300 && !(info && ms >= info.t0 - 150)
     if (race && ms > 0) {
-      const target = info && ms >= info.t0 ? Math.max(0, 1 - (ms - info.t0) / 2500) * 0.9 : leadLaps < 2 ? 0.15 + 0.2 * (leadLaps / 2) : 0.5 + 0.5 * clamp(leadLaps - 2, 0, 1)
+      const target = info && ms >= info.t0 ? Math.max(0, 1 - (ms - info.t0) / 2500) * 0.9 : leadF < 2 ? 0.15 + 0.2 * (leadF / 2) : 0.5 + 0.5 * clamp(leadF - 2, 0, 1)
       hype += (target - hype) * (1 - Math.exp(-dt * 2.5))
     } else hype += (0 - hype) * (1 - Math.exp(-dt * 3))
-    if (ev && racing && ev.raceSeen && !ev.lastLap && leadLaps >= 2) {
+    if (ev && racing && ev.raceSeen && !ev.lastLap && laps > 1 && leadLaps >= laps - 1) {
       ev.lastLap = true
       popup = { t: nowReal, text: '¡ÚLTIMA VUELTA!', sub: '', col: '#ff5a3c', big: 2 }
       lastPopup = nowReal
       punch = 1
       if (!reduced) flash = Math.max(flash, 0.12)
       if (!p.muted) playLastLap()
-    } else if (ev && leadLaps >= 2) ev.lastLap = true
+    } else if (ev && (laps < 2 || leadLaps >= laps - 1)) ev.lastLap = true
     for (let r = 0; r < CARS; r++) rank[order[r]] = r
     if (racing && prevRank[0] >= 0) {
       let mover = -1
@@ -1179,14 +1362,15 @@ function mount(canvas, P) {
 
   const describe = (race, info, ms) => {
     const nm = (c) => CAR_INFO[c].name
-    if (ms < -GRID_MS || !race) return ms < 0 ? 'Circuito nocturno: los coches desfilan hacia la parrilla de salida' : 'Carrera a punto de empezar'
+    if (ms < -GRID_MS || !race) return ms < 0 ? `${CIRCUITS[built].name}: los coches van hacia la salida` : 'Carrera a punto de empezar'
     if (ms < 0) return 'Parrilla de salida: cuenta atrás del semáforo'
     if (ms >= info.t0) {
       const done = info.order.filter((c) => ms >= race.finish[c])
       return `Meta: gana ${nm(info.order[0])}. ${done.slice(0, 3).map((c, i) => `${i + 1}.º ${nm(c)}`).join(', ')}`
     }
-    const lap = clamp(Math.floor(shownProgress(race, order[0], ms) * LAPS) + 1, 1, LAPS)
-    return `Carrera en curso, vuelta ${lap} de ${LAPS}: ${order.slice(0, 3).map((c, i) => `${i + 1}.º ${nm(c)}`).join(', ')}`
+    const lap = clamp(Math.floor(shownProgress(race, order[0], ms) * laps) + 1, 1, laps)
+    const where = track.open ? `${dragMeters(race, ms)} de ${DRAG_M} metros` : `vuelta ${lap} de ${laps}`
+    return `Carrera en curso, ${where}: ${order.slice(0, 3).map((c, i) => `${i + 1}.º ${nm(c)}`).join(', ')}`
   }
 
   // ----- sonido -----
@@ -1400,10 +1584,11 @@ function mount(canvas, P) {
     pill(x, y, w, total, 'rgba(6,14,20,0.66)', 'rgba(200,162,75,0.35)')
     // cabecera
     let head
-    if (!race || ms < -GRID_MS) head = 'VUELTA DE FORMACIÓN'
+    if (!race || ms < -GRID_MS) head = track.open ? 'A LA LÍNEA DE SALIDA' : 'VUELTA DE FORMACIÓN'
     else if (ms < 0) head = 'PARRILLA DE SALIDA'
     else if (info && ms >= info.t0) head = 'META'
-    else head = `VUELTA ${clamp(Math.floor(shownProgress(race, order[0], ms) * LAPS) + 1, 1, LAPS)} / ${LAPS}`
+    else if (track.open) head = `${dragMeters(race, ms)} / ${DRAG_M} M`
+    else head = `VUELTA ${clamp(Math.floor(shownProgress(race, order[0], ms) * laps) + 1, 1, laps)} / ${laps}`
     g.font = `800 ${11.5 * bu}px ${FONT}`
     g.fillStyle = '#c8a24b'
     g.textAlign = 'left'
@@ -1548,9 +1733,43 @@ function mount(canvas, P) {
     void p
   }
 
+  // En una recta, el minimapa es una barra de la salida a la meta con un punto por coche.
+  const drawDragBar = (p) => {
+    const w = u < 1 ? 120 : 200
+    const x = cw - w - 14 * u
+    const y = ch - 20 * u
+    pill(x - 10, y - 12, w + 20, 24, 'rgba(6,14,20,0.62)', 'rgba(200,162,75,0.3)')
+    g.fillStyle = 'rgba(255,255,255,0.18)'
+    g.fillRect(x, y - 2, w, 4)
+    g.fillStyle = '#fff'
+    g.fillRect(x - 1, y - 6, 2, 12)
+    for (let c = 0; c < 2; c++) {
+      for (let r = 0; r < 3; r++) {
+        g.fillStyle = (r + c) & 1 ? '#0c0f13' : '#f6f6f1'
+        g.fillRect(x + w - 4 + c * 4, y - 6 + r * 4, 4, 4)
+      }
+    }
+    for (let r = CARS - 1; r >= 0; r--) {
+      const c = order[r]
+      const px = x + clamp(S.u[c], 0, 1) * w
+      const py = y + (LANE[c] - 2.5) * 1.6 * u
+      g.fillStyle = CAR_INFO[c].color
+      g.strokeStyle = p.mySeat === c ? '#5ff0ff' : betOn[c] > 0 ? GOLD : 'rgba(0,0,0,0.6)'
+      g.lineWidth = p.mySeat === c || betOn[c] > 0 ? 2 : 1
+      g.beginPath()
+      g.arc(px, py, r === 0 ? 4.5 * u : 3.5 * u, 0, TAU)
+      g.fill()
+      g.stroke()
+    }
+  }
+
   const drawMinimap = (ms, info, p) => {
     void p
     if (info && ms >= info.t0 + 800 && u < 1) return
+    if (track.open) {
+      drawDragBar(p)
+      return
+    }
     const w = (u < 1 ? 104 : 168) * 1
     const s = w / WORLD_W
     const h = WORLD_H * s

@@ -1,9 +1,7 @@
 // Arte procedural de la Carrera de coches (canvas 2D, sin imágenes): circuito, fondo nocturno, sprites de los coches y partículas.
 // Todo se precalcula una sola vez (circuito, fondo, sprites) y la escena solo dibuja copias, para mantener 60 fps.
-import { CAR_INFO } from './race.js'
+import { CAR_INFO, CIRCUITS } from './race.js'
 
-export const WORLD_W = 1900
-export const WORLD_H = 1160
 export const TRACK_W = 230
 export const CAR_L = 60
 export const LANE_GAP = 34
@@ -61,60 +59,89 @@ export function rgba(hex, a) {
 }
 
 // ---------- los circuitos ----------
-// Cada circuito es una spline cerrada por puntos de control. Todos se recorren en sentido antihorario en pantalla, con la
-// recta de meta abajo hacia la derecha (de (560, 960) a (1440, 945)): así la parrilla, los boxes (dentro) y las gradas
-// (fuera) caben igual en todos. Las longitudes se parecen para que la velocidad de los coches sea la misma.
+// Dos clases de pista (race.CIRCUITS dice cuál es cuál):
+// - Circuitos: una spline cerrada por puntos de control en un mundo de 2700 × 1650. Todos se recorren en sentido antihorario
+//   en pantalla, con la recta de meta abajo hacia la derecha, para que la parrilla, los boxes (dentro) y las gradas (fuera)
+//   caben igual en todos. Las vueltas miden parecido (6000-6700) para que la velocidad de los coches sea la misma.
+// - Rectas de aceleración: una recta larga, de la salida (u = 0) a la meta (u = 1), con zona de frenada detrás. El fondo es
+//   un tramo de DRAG_TILE que se repite, porque un lienzo de toda la recta sería enorme.
 // El tema decide los colores del suelo, el decorado de fuera, los árboles, el lago y la valla de neón.
-const STRAIGHT_START = [560, 962]
+const CIRCUIT_WORLD = [2700, 1650]
+export const DRAG_LEN = 16000 // de la salida a la meta: lo mismo que tres vueltas, para que los coches vayan igual de rápido
+export const DRAG_TILE = 2400 // ancho del tramo de fondo que se repite (múltiplo de 48 y de la separación de las farolas)
+const DRAG_X0 = 1400 // x de la salida: detrás caben la parrilla y la espera de los coches
+const DRAG_H = 1100
+const DRAG_Y = 520
+const DRAG_POLE = 400
+
+const THEMES = {
+  city: {
+    ground: ['#0d2a1d', '#0b2418'], base: '#071219', speck: '160,255,190', outside: 'city', trees: 'round', leaf: ['#2f7d4a', '#0f3a24'],
+    water: ['#0f4a63', '#082a3a', '120,230,255'], neon: '60,210,255', neonHi: '120,240,255',
+    kerb: ['#c42f35', '#f4f1ea'], runoff: '#0d1a20', asphalt: '#2a2f36', wet: true, lamp: '255,236,190',
+  },
+  desert: {
+    ground: ['#4a3016', '#432a12'], base: '#2a1a0c', speck: '255,214,150', outside: 'dunes', trees: 'cactus', leaf: ['#6f9a45', '#2f4f1c'],
+    water: ['#1f8a8a', '#0d4d55', '140,255,235'], neon: '255,140,60', neonHi: '255,200,120',
+    kerb: ['#d9541e', '#fbe7c6'], runoff: '#3a2614', asphalt: '#34302d', wet: false, lamp: '255,210,150',
+  },
+  snow: {
+    ground: ['#8fa3b5', '#869aac'], base: '#6f8396', speck: '255,255,255', outside: 'snow', trees: 'pine', leaf: ['#3f6b5c', '#173a33'],
+    water: ['#bfe9ff', '#7cc4e8', '255,255,255'], neon: '120,170,255', neonHi: '200,225,255',
+    kerb: ['#2f62d9', '#ffffff'], runoff: '#5d6e7e', asphalt: '#30363e', wet: true, lamp: '220,235,255',
+  },
+  jungle: {
+    ground: ['#123b1c', '#0f3318'], base: '#06150a', speck: '190,255,160', outside: 'jungle', trees: 'palm', leaf: ['#3fae4f', '#0e4a1f'],
+    water: ['#0f6b5a', '#073a33', '150,255,210'], neon: '170,255,90', neonHi: '220,255,160',
+    kerb: ['#e0b51f', '#1d6b2c'], runoff: '#0c2412', asphalt: '#2b2f2c', wet: true, lamp: '230,255,200',
+  },
+}
+
+// En el mismo orden que race.CIRCUITS.
 export const LAYOUTS = [
   {
-    // Neón City: la ciudad nocturna de siempre.
+    // Neón City: circuito urbano de rectas y curvas en escalera entre los edificios.
     ctrl: [
-      [1130, 962], [1440, 945], [1700, 862], [1785, 665], [1705, 470], [1510, 380], [1320, 400], [1170, 515], [985, 590], [800, 525],
-      [748, 405], [700, 285], [585, 190], [400, 165], [225, 280], [165, 500], [225, 720], [330, 885], STRAIGHT_START,
+      [1500, 1400], [2150, 1395], [2400, 1330], [2470, 1150], [2440, 950], [2300, 830], [2050, 800], [1900, 700], [1860, 500], [1800, 320],
+      [1620, 240], [1300, 240], [1000, 250], [860, 360], [860, 560], [760, 680], [540, 680], [360, 720], [280, 900], [290, 1150], [400, 1340],
+      [700, 1400],
     ],
-    theme: {
-      ground: ['#0d2a1d', '#0b2418'], base: '#071219', speck: '160,255,190', outside: 'city', trees: 'round', leaf: ['#2f7d4a', '#0f3a24'],
-      lake: [640, 400, 150, 70, -0.2], water: ['#0f4a63', '#082a3a', '120,230,255'], neon: '60,210,255', neonHi: '120,240,255',
-      kerb: ['#c42f35', '#f4f1ea'], runoff: '#0d1a20', asphalt: '#2a2f36', wet: true, lamp: '255,236,190',
-    },
+    lake: [1330, 1010, 230, 100, -0.05],
+    theme: THEMES.city,
   },
   {
-    // Desierto Dorado: arena al atardecer, cactus y un oasis.
+    // Desierto Dorado: rectas larguísimas, una curva rápida enorme y una horquilla en medio.
     ctrl: [
-      [1130, 962], [1440, 950], [1680, 895], [1785, 730], [1745, 545], [1590, 430], [1420, 450], [1260, 540], [1100, 550], [980, 460],
-      [880, 310], [720, 200], [500, 180], [310, 210], [190, 380], [230, 570], [230, 770], [340, 925], STRAIGHT_START,
+      [1400, 1420], [2050, 1420], [2400, 1360], [2500, 1180], [2450, 950], [2300, 700], [2200, 450], [2050, 280], [1820, 250], [1650, 380],
+      [1600, 600], [1500, 780], [1300, 820], [1100, 700], [950, 480], [800, 300], [560, 250], [340, 330], [260, 560], [300, 820], [260, 1080],
+      [380, 1330], [700, 1420],
     ],
-    theme: {
-      ground: ['#4a3016', '#432a12'], base: '#2a1a0c', speck: '255,214,150', outside: 'dunes', trees: 'cactus', leaf: ['#6f9a45', '#2f4f1c'],
-      lake: [620, 470, 110, 56, 0.15], water: ['#1f8a8a', '#0d4d55', '140,255,235'], neon: '255,140,60', neonHi: '255,200,120',
-      kerb: ['#d9541e', '#fbe7c6'], runoff: '#3a2614', asphalt: '#34302d', wet: false, lamp: '255,210,150',
-    },
+    lake: [1950, 1100, 200, 90, 0.1],
+    theme: THEMES.desert,
   },
   {
-    // Glaciar Polar: nieve, pinos nevados y un lago helado.
+    // Glaciar Polar: un triángulo rápido con una horquilla profunda que se mete en el campo de hielo.
     ctrl: [
-      [1130, 962], [1450, 952], [1700, 880], [1790, 700], [1730, 480], [1560, 330], [1370, 280], [1195, 360], [1000, 290], [800, 200],
-      [560, 180], [340, 230], [200, 385], [180, 600], [240, 800], [360, 925], STRAIGHT_START,
+      [1400, 1420], [2050, 1420], [2350, 1350], [2470, 1150], [2380, 900], [2150, 720], [1950, 520], [1800, 300], [1580, 230], [1420, 360],
+      [1420, 600], [1300, 830], [1060, 830], [940, 600], [880, 350], [680, 240], [440, 300], [300, 500], [300, 800], [260, 1080], [380, 1330],
+      [700, 1420],
     ],
-    theme: {
-      ground: ['#8fa3b5', '#869aac'], base: '#6f8396', speck: '255,255,255', outside: 'snow', trees: 'pine', leaf: ['#3f6b5c', '#173a33'],
-      lake: [900, 610, 230, 80, -0.05], water: ['#bfe9ff', '#7cc4e8', '255,255,255'], neon: '120,170,255', neonHi: '200,225,255',
-      kerb: ['#2f62d9', '#ffffff'], runoff: '#5d6e7e', asphalt: '#30363e', wet: true, lamp: '220,235,255',
-    },
+    lake: [1950, 1060, 200, 90, 0.1],
+    theme: THEMES.snow,
   },
   {
-    // Selva Esmeralda: jungla espesa, un río y curvas enlazadas.
+    // Selva Esmeralda: eses enlazadas por toda la jungla.
     ctrl: [
-      [1130, 962], [1440, 948], [1690, 880], [1780, 700], [1730, 480], [1610, 280], [1430, 190], [1260, 250], [1200, 400], [1130, 530],
-      [1020, 590], [900, 550], [840, 410], [790, 250], [620, 180], [420, 180], [240, 260], [180, 450], [260, 620], [230, 790], [350, 930], STRAIGHT_START,
+      [1400, 1420], [2000, 1420], [2320, 1350], [2400, 1170], [2260, 1010], [2270, 830], [2450, 700], [2480, 480], [2300, 300], [2050, 330],
+      [1900, 520], [1700, 620], [1500, 500], [1400, 300], [1180, 240], [930, 300], [800, 500], [640, 620], [440, 560], [300, 640], [280, 900],
+      [300, 1150], [420, 1350], [700, 1420],
     ],
-    theme: {
-      ground: ['#123b1c', '#0f3318'], base: '#06150a', speck: '190,255,160', outside: 'jungle', trees: 'palm', leaf: ['#3fae4f', '#0e4a1f'],
-      lake: [540, 470, 120, 56, 0.3], water: ['#0f6b5a', '#073a33', '150,255,210'], neon: '170,255,90', neonHi: '220,255,160',
-      kerb: ['#e0b51f', '#1d6b2c'], runoff: '#0c2412', asphalt: '#2b2f2c', wet: true, lamp: '230,255,200',
-    },
+    lake: [1250, 960, 220, 100, 0.15],
+    theme: THEMES.jungle,
   },
+  // Rectas de aceleración.
+  { drag: true, theme: THEMES.city },
+  { drag: true, theme: THEMES.snow },
 ]
 
 export function buildTrack(ctrl) {
@@ -182,16 +209,22 @@ export function buildTrack(ctrl) {
     for (let w = -8; w <= 8; w++) s += kr[(i + w + M) % M]
     k[i] = s / 17
   }
-  return { M, L, ds, px, py, tx, ty, k }
+  return { M, L, ds, px, py, tx, ty, k, W: CIRCUIT_WORLD[0], H: CIRCUIT_WORLD[1] }
 }
 
+// Una recta de aceleración: no hace falta muestrear nada, at() la calcula directamente.
+const dragTrack = () => ({ open: true, L: DRAG_LEN, x0: DRAG_X0, y0: DRAG_Y, W: Math.round(DRAG_X0 + DRAG_LEN * 1.32 + 600), H: DRAG_H })
+
 const tracks = []
-export const trackOf = (i) => (tracks[i] ??= buildTrack(LAYOUTS[i].ctrl))
+export const trackOf = (i) => (tracks[i] ??= LAYOUTS[i].drag ? dragTrack() : buildTrack(LAYOUTS[i].ctrl))
 
 // El circuito que se dibuja ahora (los módulos que lo importan ven el cambio al momento: son enlaces vivos).
 export let circuit = -1
 export let track = null
 export let LEN = 0
+export let laps = 3
+export let WORLD_W = CIRCUIT_WORLD[0]
+export let WORLD_H = CIRCUIT_WORLD[1]
 export let theme = null
 export let centerPath = null
 export let neonInner = null
@@ -199,7 +232,16 @@ export let neonOuter = null
 export let poles = []
 
 // Punto del circuito a `u` vueltas (0 = línea de meta) y desplazamiento lateral `lat` (positivo = hacia el exterior).
+// En una recta de aceleración, `u` va de 0 (salida) a 1 (meta) sin dar la vuelta.
 export function at(u, lat, out) {
+  if (track.open) {
+    out.x = track.x0 + u * track.L
+    out.y = track.y0 + lat
+    out.tx = 1
+    out.ty = 0
+    out.k = 0
+    return out
+  }
   const { M, px, py, tx, ty, k } = track
   const f = (u - Math.floor(u)) * M
   const i0 = Math.floor(f)
@@ -224,6 +266,11 @@ export function at(u, lat, out) {
 function pathOf(lat, close = true) {
   const p = new Path2D()
   const o = { x: 0, y: 0 }
+  if (track.open) {
+    p.moveTo(0, track.y0 + lat)
+    p.lineTo(track.W, track.y0 + lat)
+    return p
+  }
   const n = track.M
   for (let i = 0; i < n; i++) {
     at(i / n, lat, o)
@@ -238,6 +285,14 @@ function pathOf(lat, close = true) {
 function polesOf() {
   const list = []
   const o = { x: 0, y: 0 }
+  if (track.open) {
+    // A distancia fija y alternando lado, para que coincidan con los charcos de luz del tramo de fondo que se repite.
+    for (let k = 0; k * DRAG_POLE < track.W; k++) {
+      const side = k % 2 ? 1 : -1
+      list.push({ x: k * DRAG_POLE + DRAG_POLE / 2, y: track.y0 + side * (TRACK_W / 2 + 56), tx: 1, ty: 0, side })
+    }
+    return list
+  }
   const n = 34
   for (let i = 0; i < n; i++) {
     const side = i % 2 ? 1 : -1
@@ -253,6 +308,9 @@ export function setCircuit(i) {
   circuit = i
   track = trackOf(i)
   LEN = track.L
+  laps = CIRCUITS[i].laps
+  WORLD_W = track.W
+  WORLD_H = track.H
   theme = LAYOUTS[i].theme
   centerPath = pathOf(0)
   neonInner = pathOf(-(TRACK_W / 2 + 34))
@@ -260,8 +318,11 @@ export function setCircuit(i) {
   poles = polesOf()
 }
 
-// Silueta de un circuito para enseñarlo pequeño (SVG): `n` puntos de la línea central dentro de un viewBox del mundo.
+// Silueta de un circuito para enseñarlo pequeño (SVG en un viewBox de 2700 × 1650): `n` puntos de la línea central.
+// Las rectas de aceleración se dibujan como una recta de lado a lado.
+export const OUTLINE_BOX = CIRCUIT_WORLD
 export function outlineOf(i, n = 90) {
+  if (LAYOUTS[i].drag) return `M200,${CIRCUIT_WORLD[1] / 2}L${CIRCUIT_WORLD[0] - 200},${CIRCUIT_WORLD[1] / 2}`
   const { M, px, py } = trackOf(i)
   const pts = []
   for (let k = 0; k < n; k++) {
@@ -272,6 +333,7 @@ export function outlineOf(i, n = 90) {
 }
 
 function insidePoly(x, y) {
+  if (track.open) return false
   const { px, py, M } = track
   let inside = false
   for (let i = 0, j = M - 1; i < M; j = i++) {
@@ -281,6 +343,7 @@ function insidePoly(x, y) {
 }
 
 function distToTrack(x, y) {
+  if (track.open) return Math.abs(y - track.y0)
   const { px, py, M } = track
   let best = 1e9
   for (let i = 0; i < M; i += 3) {
@@ -290,14 +353,19 @@ function distToTrack(x, y) {
   return Math.sqrt(best)
 }
 
-// Fuera de la pista: ¿es un sitio libre para el decorado de fuera (lejos de la pista y fuera del campo interior)?
-const outside = (x, y) => distToTrack(x, y) >= 260 && !insidePoly(x, y)
+// El lienzo que se está decorando (el mundo entero de un circuito, o el tramo que se repite de una recta), cuánto decorado
+// lleva (proporcional a su área) y dónde hay sitio libre para el decorado de fuera.
+let decoW = 1
+let decoH = 1
+let dens = 1
+let outside = () => false
+const many = (n) => Math.round(n * dens)
 
 // Ciudad nocturna: manzanas de edificios con ventanas encendidas y alguna luz de neón.
 function city(g, R) {
   const lights = []
-  for (let gy = 0; gy < WORLD_H; gy += 44) {
-    for (let gx = 0; gx < WORLD_W; gx += 44) {
+  for (let gy = 0; gy < decoH; gy += 44) {
+    for (let gx = 0; gx < decoW; gx += 44) {
       const x = gx + R() * 6
       const y = gy + R() * 6
       if (!outside(x + 20, y + 20)) continue
@@ -342,9 +410,9 @@ function glows(g, list, r) {
 
 // Desierto: dunas con su cara en sombra, rocas y alguna hoguera de campamento.
 function dunes(g, R) {
-  for (let i = 0; i < 260; i++) {
-    const x = R() * WORLD_W
-    const y = R() * WORLD_H
+  for (let i = 0; i < many(260); i++) {
+    const x = R() * decoW
+    const y = R() * decoH
     if (!outside(x, y)) continue
     const w = 70 + R() * 120
     const h = 18 + R() * 26
@@ -371,9 +439,9 @@ function dunes(g, R) {
     g.restore()
   }
   const fires = []
-  for (let i = 0; i < 140; i++) {
-    const x = R() * WORLD_W
-    const y = R() * WORLD_H
+  for (let i = 0; i < many(140); i++) {
+    const x = R() * decoW
+    const y = R() * decoH
     if (!outside(x, y)) continue
     rock(g, x, y, 6 + R() * 14, R, '#3b2617', '#5e4027')
     if (R() < 0.08) fires.push([x + 14, y + 10, '255,140,50', 0.7])
@@ -415,9 +483,9 @@ function rock(g, x, y, r, R, dark, light) {
 
 // Glaciar: ventisqueros con sombra azulada, bloques de hielo y cabañas con la luz encendida.
 function snowfield(g, R) {
-  for (let i = 0; i < 300; i++) {
-    const x = R() * WORLD_W
-    const y = R() * WORLD_H
+  for (let i = 0; i < many(300); i++) {
+    const x = R() * decoW
+    const y = R() * decoH
     if (!outside(x, y)) continue
     const w = 40 + R() * 90
     const h = 16 + R() * 22
@@ -438,9 +506,9 @@ function snowfield(g, R) {
     g.restore()
   }
   const lights = []
-  for (let i = 0; i < 90; i++) {
-    const x = R() * WORLD_W
-    const y = R() * WORLD_H
+  for (let i = 0; i < many(90); i++) {
+    const x = R() * decoW
+    const y = R() * decoH
     if (!outside(x, y)) continue
     if (R() < 0.22) {
       // cabaña: tejado nevado a dos aguas y una ventana cálida
@@ -464,9 +532,9 @@ function snowfield(g, R) {
 
 // Selva: copas de árboles muy juntas, flores y luciérnagas.
 function jungle(g, R) {
-  for (let i = 0; i < 2600; i++) {
-    const x = R() * WORLD_W
-    const y = R() * WORLD_H
+  for (let i = 0; i < many(2600); i++) {
+    const x = R() * decoW
+    const y = R() * decoH
     if (!outside(x, y)) continue
     const r = 14 + R() * 22
     g.fillStyle = 'rgba(0,0,0,0.4)'
@@ -489,9 +557,9 @@ function jungle(g, R) {
     }
   }
   const flies = []
-  for (let i = 0; i < 160; i++) {
-    const x = R() * WORLD_W
-    const y = R() * WORLD_H
+  for (let i = 0; i < many(160); i++) {
+    const x = R() * decoW
+    const y = R() * decoH
     if (distToTrack(x, y) > TRACK_W / 2 + 60) flies.push([x, y, '200,255,120', 0.35])
   }
   glows(g, flies, 12)
@@ -576,36 +644,132 @@ function tree(g, kind, x, y, r, R, leaf) {
   g.fill()
 }
 
-// ---------- fondo: el decorado del circuito actual (suelo, lo de fuera, árboles, lago, boxes y gradas) ----------
-export function makeBackground() {
+// Suelo a franjas diagonales (periodo 48: cabe justo en el tramo de las rectas, así que se repite sin costura) y motas.
+function ground(g, R, T) {
+  g.fillStyle = T.base
+  g.fillRect(0, 0, decoW, decoH)
+  for (let i = -decoH - 48; i < decoW + 48; i += 48) {
+    g.fillStyle = T.ground[(i / 48) & 1]
+    g.beginPath()
+    g.moveTo(i, 0)
+    g.lineTo(i + 24, 0)
+    g.lineTo(i + 24 + decoH, decoH)
+    g.lineTo(i + decoH, decoH)
+    g.fill()
+  }
+  for (let i = 0; i < many(5200); i++) {
+    g.fillStyle = `rgba(${R() < 0.5 ? T.speck : '0,0,0'},${0.03 + R() * 0.04})`
+    g.fillRect(R() * decoW, R() * decoH, 1 + R() * 2, 1 + R() * 2)
+  }
+}
+
+const OUTSIDE = { city, dunes, snow: snowfield, jungle }
+const CROWD = ['#ff5a5a', '#ffd35a', '#5ad2ff', '#f1e9d6', '#a97bff', '#ffffff']
+
+// ---------- fondo: el decorado de la pista actual ----------
+// Circuito: el mundo entero. Recta de aceleración: el tramo de DRAG_TILE que se repite a lo largo de la recta.
+export const makeBackground = () => (track.open ? dragBackground() : circuitBackground())
+
+// Recta de aceleración: suelo, gradas llenas a un lado (exterior, abajo), boxes y árboles al otro y el decorado del tema
+// más allá. Todo se pinta tres veces desplazado un tramo (con la misma semilla), así que los bordes casan al repetirlo.
+function dragBackground() {
+  const T = theme
+  const W = DRAG_TILE
+  const H = track.H
+  const y0 = track.y0
+  const hw = TRACK_W / 2
+  const c = canvasOf(W, H)
+  const g = c.getContext('2d')
+  decoW = W
+  decoH = H
+  dens = (W * H) / (1900 * 1160)
+  outside = (x, y) => y < y0 - hw - 200 || y > y0 + hw + 330
+  const wrap = (seed, paint) => {
+    for (const off of [-W, 0, W]) {
+      g.save()
+      g.translate(off, 0)
+      paint(rng(seed))
+      g.restore()
+    }
+  }
+  ground(g, rng(5), T)
+  wrap(7 + circuit * 101, (R) => OUTSIDE[T.outside](g, R))
+  // árboles entre la recta y el decorado del lado de dentro
+  wrap(9, (R) => {
+    for (let i = 0; i < 70; i++) {
+      const x = R() * W
+      const y = y0 - hw - 120 - R() * 90
+      tree(g, T.trees, x, y, 9 + R() * 11, R, T.leaf)
+    }
+  })
+  // boxes: un edificio corrido con sus puertas de colores
+  g.fillStyle = '#1a232b'
+  g.fillRect(0, y0 - hw - 62, W, 34)
+  g.fillStyle = '#2a3640'
+  g.fillRect(0, y0 - hw - 104, W, 42)
+  for (let x = 0; x < W; x += 100) {
+    g.fillStyle = CAR_INFO[(x / 100) % 6].color
+    g.fillRect(x + 20, y0 - hw - 40, 60, 12)
+    g.fillStyle = 'rgba(255,255,255,0.25)'
+    g.fillRect(x + 20, y0 - hw - 72, 60, 8)
+  }
+  // gradas (fuera): siete filas de público
+  g.fillStyle = '#121a22'
+  g.fillRect(0, y0 + hw + 70, W, 120)
+  wrap(13, (R) => {
+    for (let r = 0; r < 7; r++) {
+      const l0 = y0 + hw + 78 + r * 15
+      g.fillStyle = r & 1 ? '#1d2832' : '#18222b'
+      g.fillRect(-1, l0, W + 2, 9)
+      for (let x = 0; x < W; x += 7) {
+        if (R() < 0.18) continue
+        g.fillStyle = CROWD[Math.floor(R() * 6)]
+        g.globalAlpha = 0.55 + R() * 0.4
+        g.beginPath()
+        g.arc(x + 3.5, l0 + 4.5, 2.4, 0, TAU)
+        g.fill()
+        g.globalAlpha = 1
+      }
+    }
+  })
+  g.fillStyle = '#05090c'
+  g.fillRect(0, y0 + hw + 188, W, 16)
+  // letreros de neón en la valla de fuera
+  g.globalCompositeOperation = 'lighter'
+  for (let i = 0; i < 12; i++) {
+    g.fillStyle = rgba(CAR_INFO[i % 6].color, 0.5)
+    g.fillRect(i * 200 + 30, y0 + hw + 46, 140, 12)
+  }
+  g.globalCompositeOperation = 'source-over'
+  // oscurecer arriba y abajo
+  const vg = g.createLinearGradient(0, 0, 0, H)
+  vg.addColorStop(0, 'rgba(0,0,0,0.5)')
+  vg.addColorStop(0.3, 'rgba(0,0,0,0)')
+  vg.addColorStop(0.75, 'rgba(0,0,0,0)')
+  vg.addColorStop(1, 'rgba(0,0,0,0.5)')
+  g.fillStyle = vg
+  g.fillRect(0, 0, W, H)
+  return c
+}
+
+// Circuito: suelo, lo de fuera, árboles, lago, boxes y gradas.
+function circuitBackground() {
   const T = theme
   const c = canvasOf(WORLD_W, WORLD_H)
   const g = c.getContext('2d')
   const R = rng(7 + circuit * 101)
-  g.fillStyle = T.base
-  g.fillRect(0, 0, WORLD_W, WORLD_H)
-
-  // Suelo a franjas en todo el mundo (lo de fuera lo tapará).
-  for (let i = -WORLD_H; i < WORLD_W; i += 46) {
-    g.fillStyle = T.ground[(i / 46) & 1]
-    g.beginPath()
-    g.moveTo(i, 0)
-    g.lineTo(i + 23, 0)
-    g.lineTo(i + 23 + WORLD_H, WORLD_H)
-    g.lineTo(i + WORLD_H, WORLD_H)
-    g.fill()
-  }
-  for (let i = 0; i < 5200; i++) {
-    g.fillStyle = `rgba(${R() < 0.5 ? T.speck : '0,0,0'},${0.03 + R() * 0.04})`
-    g.fillRect(R() * WORLD_W, R() * WORLD_H, 1 + R() * 2, 1 + R() * 2)
-  }
+  decoW = WORLD_W
+  decoH = WORLD_H
+  dens = (WORLD_W * WORLD_H) / (1900 * 1160)
+  outside = (x, y) => distToTrack(x, y) >= 260 && !insidePoly(x, y)
+  ground(g, R, T)
 
   // Lo de fuera de la pista.
-  ;({ city, dunes, snow: snowfield, jungle })[T.outside](g, R)
+  OUTSIDE[T.outside](g, R)
 
   // Árboles en el campo interior y alrededor.
-  const [lx, ly, lrx, lry, lrot] = T.lake
-  for (let i = 0; i < 520; i++) {
+  const [lx, ly, lrx, lry, lrot] = LAYOUTS[circuit].lake
+  for (let i = 0; i < many(520); i++) {
     const x = R() * WORLD_W
     const y = R() * WORLD_H
     const d = distToTrack(x, y)
@@ -671,7 +835,7 @@ export function makeBackground() {
     for (let i = 0; i < steps; i++) {
       if (R() < 0.18) continue
       at(-0.062 + (0.148 * i) / steps, l0 + 4.5, o)
-      g.fillStyle = ['#ff5a5a', '#ffd35a', '#5ad2ff', '#f1e9d6', '#a97bff', '#ffffff'][Math.floor(R() * 6)]
+      g.fillStyle = CROWD[Math.floor(R() * 6)]
       g.globalAlpha = 0.55 + R() * 0.4
       g.beginPath()
       g.arc(o.x, o.y, 2.4, 0, 7)
@@ -712,6 +876,9 @@ function glowSprite(size, stops) {
 }
 
 const K = 5 // píxeles del sprite por unidad de mundo
+// Un F1 visto desde arriba, mirando hacia +x (las ruedas las pinta la escena para poder girarlas): alerón delantero de tres
+// planos, morro largo, suspensiones, pontones con su toma de aire, halo y casco, toma del motor con aleta de tiburón,
+// suelo, y alerón trasero con DRS y luz de lluvia. Unidades del mundo: el coche mide unos 63 de largo y 29 de ancho.
 function carSprite(info, num) {
   const w = 70 * K
   const h = 40 * K
@@ -721,152 +888,224 @@ function carSprite(info, num) {
   g.scale(K, K)
   const col = info.color
   const acc = info.accent
-  const dark = shade(col, -0.42)
-  const mid = shade(col, -0.05)
-  const light = shade(col, 0.55)
-
-  // suelo / difusor
-  g.fillStyle = '#080a0d'
-  rr(g, -27, -8.5, 52, 17, 4)
-  g.fill()
-
-  // alerón trasero
-  g.fillStyle = '#12151a'
-  rr(g, -31, -13.5, 8, 27, 1.5)
-  g.fill()
-  g.fillStyle = shade('#222a33', 0.1)
-  g.fillRect(-29.5, -13, 2.2, 26)
-  g.fillStyle = col
-  rr(g, -31.5, -14, 9, 2.4, 1)
-  g.fill()
-  rr(g, -31.5, 11.6, 9, 2.4, 1)
-  g.fill()
-  g.fillStyle = acc
-  g.globalAlpha = 0.85
-  g.fillRect(-26.5, -12.6, 1, 25.2)
-  g.globalAlpha = 1
-
-  // pontones laterales
-  for (const s of [-1, 1]) {
-    const gr = g.createLinearGradient(0, s * 4, 0, s * 11)
-    gr.addColorStop(0, light)
-    gr.addColorStop(0.5, col)
-    gr.addColorStop(1, dark)
-    g.fillStyle = gr
-    rr(g, -17, s < 0 ? -11 : 3, 24, 8, 4)
-    g.fill()
-    g.fillStyle = '#05070a'
-    rr(g, 3.5, s < 0 ? -9.6 : 5.6, 3.2, 4, 1.2)
-    g.fill()
+  const dark = shade(col, -0.45)
+  const mid = shade(col, -0.08)
+  const light = shade(col, 0.5)
+  const carbon = '#111419'
+  const carbon2 = '#1d232b'
+  const across = (y0, y1, stops) => {
+    const gr = g.createLinearGradient(0, y0, 0, y1)
+    stops.forEach(([o, cc]) => gr.addColorStop(o, cc))
+    return gr
+  }
+  const shapeOf = (pts) => {
+    const p = new Path2D()
+    pts.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y)))
+    p.closePath()
+    return p
+  }
+  // Una pieza simétrica respecto al eje: se dan los puntos del lado de arriba (y <= 0), de delante hacia atrás.
+  const mirrored = (top) => {
+    const p = new Path2D()
+    top.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y)))
+    for (let i = top.length - 1; i >= 0; i--) p.lineTo(top[i][0], -top[i][1])
+    p.closePath()
+    return p
   }
 
-  // fuselaje
-  const body = new Path2D()
-  body.moveTo(-26, -3.6)
-  body.bezierCurveTo(-18, -6, -10, -6.6, -2, -6)
-  body.bezierCurveTo(6, -5.6, 12, -3.8, 20, -2.8)
-  body.lineTo(31.5, -1.5)
-  body.lineTo(31.5, 1.5)
-  body.lineTo(20, 2.8)
-  body.bezierCurveTo(12, 3.8, 6, 5.6, -2, 6)
-  body.bezierCurveTo(-10, 6.6, -18, 6, -26, 3.6)
-  body.closePath()
-  const bg = g.createLinearGradient(0, -7, 0, 7)
-  bg.addColorStop(0, dark)
-  bg.addColorStop(0.28, mid)
-  bg.addColorStop(0.5, light)
-  bg.addColorStop(0.72, mid)
-  bg.addColorStop(1, dark)
-  g.fillStyle = bg
-  g.fill(body)
-  // franja central
+  // suelo (fondo plano) con su borde, que asoma por los lados de los pontones
+  g.fillStyle = '#07090c'
+  g.fill(mirrored([[13, -4.5], [8, -10.4], [-13, -10.6], [-22, -7.5], [-24, -4]]))
+  g.strokeStyle = 'rgba(255,255,255,0.12)'
+  g.lineWidth = 0.35
+  g.stroke(mirrored([[13, -4.5], [8, -10.4], [-13, -10.6], [-22, -7.5], [-24, -4]]))
+
+  // suspensiones: brazos finos de la carrocería a los bujes
+  g.strokeStyle = '#2a313a'
+  g.lineWidth = 0.9
+  for (const s of [-1, 1]) {
+    for (const [x0, x1, y0, xh, yh] of [[22, 15, 2.2, 19, 9], [-12, -16, 3, -19, 9.5]]) {
+      g.beginPath()
+      g.moveTo(x0, s * y0)
+      g.lineTo(xh, s * yh)
+      g.lineTo(x1, s * y0)
+      g.stroke()
+    }
+  }
+
+  // alerón trasero: endplates del color del coche, plano principal y el DRS
+  g.fillStyle = carbon
+  g.fillRect(-31.2, -9, 6.4, 18)
+  g.fillStyle = across(-9, 9, [[0, carbon2], [0.5, '#3a434e'], [1, carbon2]])
+  g.fillRect(-30.6, -8.4, 2.6, 16.8)
+  g.fillStyle = across(-9, 9, [[0, '#0c0f13'], [0.5, '#2b333d'], [1, '#0c0f13']])
+  g.fillRect(-27.6, -8.4, 2.2, 16.8)
   g.fillStyle = acc
+  g.globalAlpha = 0.8
+  g.fillRect(-28.1, -8.4, 0.5, 16.8)
+  g.globalAlpha = 1
+  g.fillStyle = col
+  rr(g, -31.6, -9.8, 7.4, 1.8, 0.6)
+  g.fill()
+  rr(g, -31.6, 8, 7.4, 1.8, 0.6)
+  g.fill()
+  // pilar del alerón y luz de lluvia
+  g.fillStyle = carbon
+  g.fillRect(-26, -0.8, 3, 1.6)
+
+  // pontones: forma de botella de coca-cola, con la toma de aire delante
+  for (const s of [-1, 1]) {
+    const pod = shapeOf([[7, s * 3.5], [7.5, s * 9], [5, s * 9.8], [-6, s * 9.6], [-14, s * 7.6], [-21, s * 4.2], [-21, s * 3]])
+    g.fillStyle = across(s * 3, s * 10, [[0, light], [0.45, col], [1, dark]])
+    g.fill(pod)
+    g.strokeStyle = 'rgba(0,0,0,0.35)'
+    g.lineWidth = 0.4
+    g.stroke(pod)
+    // toma de aire
+    g.fillStyle = '#04060a'
+    rr(g, 5.2, s < 0 ? -9.2 : 4.4, 2.4, 4.8, 1)
+    g.fill()
+    // la franja de la decoración, a lo largo del pontón
+    g.strokeStyle = acc
+    g.lineWidth = 0.9
+    g.globalAlpha = 0.85
+    g.beginPath()
+    g.moveTo(4, s * 8.2)
+    g.bezierCurveTo(-4, s * 8.6, -10, s * 7.6, -19, s * 4.4)
+    g.stroke()
+    g.globalAlpha = 1
+    // salidas de aire calientes
+    g.fillStyle = 'rgba(0,0,0,0.45)'
+    for (let k = 0; k < 4; k++) g.fillRect(-9 - k * 2, s * (5.4 - k * 0.25) - 0.3, 1.1, 0.6)
+  }
+
+  // carrocería central: morro largo y estrecho, monocasco y cubierta del motor que se estrecha hacia atrás
+  const body = mirrored([[31.2, -0.9], [28, -1.3], [20, -2.2], [13, -3.4], [6, -4.3], [-2, -4.6], [-10, -4], [-18, -2.8], [-24.5, -1.8]])
+  g.fillStyle = across(-5, 5, [[0, dark], [0.22, mid], [0.5, light], [0.78, mid], [1, dark]])
+  g.fill(body)
+  // morro de otro color (la punta) y la franja central
+  g.save()
+  g.clip(body)
+  g.fillStyle = acc
+  g.fillRect(24, -3, 8, 6)
+  g.fillStyle = col
   g.globalAlpha = 0.9
-  g.fillRect(-25, -0.9, 38, 1.8)
-  g.fillRect(-25, -2.4, 38, 0.5)
-  g.fillRect(-25, 1.9, 38, 0.5)
+  g.fillRect(-25, -0.55, 49, 1.1)
   g.globalAlpha = 1
   // brillo del barniz
-  const sh = g.createLinearGradient(-26, -5, 28, 2)
+  const sh = g.createLinearGradient(-24, -4, 30, 2)
   sh.addColorStop(0, 'rgba(255,255,255,0)')
-  sh.addColorStop(0.35, 'rgba(255,255,255,0.3)')
-  sh.addColorStop(0.6, 'rgba(255,255,255,0.05)')
+  sh.addColorStop(0.4, 'rgba(255,255,255,0.32)')
+  sh.addColorStop(0.65, 'rgba(255,255,255,0.05)')
   sh.addColorStop(1, 'rgba(255,255,255,0)')
   g.fillStyle = sh
-  g.fill(body)
-  g.strokeStyle = 'rgba(255,255,255,0.5)'
-  g.lineWidth = 0.4
+  g.fillRect(-26, -5, 58, 10)
+  g.restore()
+  g.strokeStyle = 'rgba(255,255,255,0.45)'
+  g.lineWidth = 0.35
   g.stroke(body)
-  // reflejos secos del barniz y luz de contorno en los pontones
-  g.fillStyle = 'rgba(255,255,255,0.55)'
-  g.beginPath()
-  g.ellipse(-8, -2.6, 6, 0.45, -0.04, 0, 7)
-  g.fill()
-  g.beginPath()
-  g.ellipse(12, 1.7, 5, 0.35, 0.08, 0, 7)
-  g.fill()
-  g.strokeStyle = acc
-  g.globalAlpha = 0.55
-  g.lineWidth = 0.5
-  for (const s of [-1, 1]) {
-    g.beginPath()
-    g.moveTo(-15, s * 10.6)
-    g.lineTo(5, s * 10.6)
-    g.stroke()
-  }
-  g.globalAlpha = 1
 
-  // toma de aire y cubierta del motor
-  g.fillStyle = '#06080b'
-  rr(g, -12, -2.2, 6, 4.4, 2)
-  g.fill()
-  // cabina + piloto
+  // toma de aire del motor (encima del piloto) y aleta de tiburón
   g.fillStyle = '#05070a'
   g.beginPath()
-  g.ellipse(4, 0, 7.5, 4.4, 0, 0, 7)
+  g.ellipse(-6.4, 0, 1.6, 2.1, 0, 0, TAU)
   g.fill()
-  g.fillStyle = acc
-  g.beginPath()
-  g.arc(3.6, 0, 3.3, 0, 7)
-  g.fill()
-  g.fillStyle = '#0a1620'
-  g.beginPath()
-  g.ellipse(5.1, 0, 1.8, 2.6, 0, 0, 7)
-  g.fill()
-  g.fillStyle = 'rgba(160,230,255,0.55)'
-  g.beginPath()
-  g.ellipse(5.6, -0.8, 0.8, 1.2, 0, 0, 7)
-  g.fill()
-  g.strokeStyle = '#1b2026'
-  g.lineWidth = 0.9
-  g.beginPath()
-  g.arc(4, 0, 6.2, -1.9, 1.9)
-  g.stroke()
-
-  // dorsal en el morro
+  g.fillStyle = shade(col, -0.25)
+  g.fillRect(-23, -0.35, 15, 0.7)
+  // dorsal en la cubierta del motor
   g.fillStyle = '#fdfdf8'
-  g.beginPath()
-  g.arc(19.5, 0, 3.7, 0, 7)
-  g.fill()
-  g.fillStyle = '#10161c'
-  g.font = '700 5.6px system-ui, sans-serif'
+  g.font = '800 5px system-ui, sans-serif'
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  g.fillText(String(num), 19.5, 0.4)
+  g.save()
+  g.translate(-14, 0)
+  g.rotate(Math.PI / 2)
+  g.fillText(String(num), 0, 0.3)
+  g.restore()
 
-  // alerón delantero
-  g.fillStyle = '#10141a'
-  rr(g, 24, -14, 6.5, 28, 1.4)
+  // cabina: hueco negro, casco del piloto con visera y el halo
+  g.fillStyle = '#05070a'
+  g.beginPath()
+  g.ellipse(0.5, 0, 5, 3.3, 0, 0, TAU)
   g.fill()
-  g.fillStyle = shade('#222a33', 0.15)
-  g.fillRect(25.4, -13.2, 1.6, 26.4)
+  const helmet = g.createRadialGradient(-0.6, -0.8, 0.3, 0, 0, 2.8)
+  helmet.addColorStop(0, '#ffffff')
+  helmet.addColorStop(0.35, acc)
+  helmet.addColorStop(1, shade(acc, -0.4))
+  g.fillStyle = helmet
+  g.beginPath()
+  g.arc(-0.2, 0, 2.5, 0, TAU)
+  g.fill()
+  g.fillStyle = '#0b1722'
+  g.beginPath()
+  g.ellipse(1.5, 0, 0.9, 1.9, 0, 0, TAU)
+  g.fill()
+  g.fillStyle = 'rgba(150,225,255,0.6)'
+  g.beginPath()
+  g.ellipse(1.8, -0.7, 0.35, 0.7, 0, 0, TAU)
+  g.fill()
+  // halo: el aro de titanio alrededor de la cabeza y su pilar central
+  g.strokeStyle = '#2b3139'
+  g.lineWidth = 1.1
+  g.beginPath()
+  g.ellipse(-0.2, 0, 4.4, 3.4, 0, -2.3, 2.3)
+  g.stroke()
+  g.strokeStyle = 'rgba(255,255,255,0.35)'
+  g.lineWidth = 0.35
+  g.beginPath()
+  g.ellipse(-0.2, 0, 4.4, 3.4, 0, -2.0, -0.6)
+  g.stroke()
+  g.fillStyle = '#2b3139'
+  g.fillRect(3.8, -0.5, 3.4, 1)
+  // retrovisores
+  for (const s of [-1, 1]) {
+    g.strokeStyle = carbon
+    g.lineWidth = 0.5
+    g.beginPath()
+    g.moveTo(4.5, s * 4)
+    g.lineTo(4.5, s * 6.4)
+    g.stroke()
+    g.fillStyle = col
+    rr(g, 3.4, s < 0 ? -7.6 : 5.8, 2.2, 1.8, 0.6)
+    g.fill()
+  }
+
+  // dorsal pequeño en el morro
+  g.fillStyle = '#10161c'
+  g.font = '800 2.6px system-ui, sans-serif'
+  g.save()
+  g.translate(22, 0)
+  g.rotate(Math.PI / 2)
+  g.fillText(String(num), 0, 0.2)
+  g.restore()
+
+  // alerón delantero: tres planos curvos de lado a lado, endplates y el pilón que lo une al morro
+  g.fillStyle = carbon
+  g.fillRect(27, -0.8, 3, 1.6)
+  for (let k = 0; k < 3; k++) {
+    const x = 26 + k * 1.9
+    const flap = new Path2D()
+    flap.moveTo(x + 1.4, -14)
+    flap.quadraticCurveTo(x + 4.2 - k * 0.6, 0, x + 1.4, 14)
+    flap.lineTo(x, 14)
+    flap.quadraticCurveTo(x + 2.8 - k * 0.6, 0, x, -14)
+    flap.closePath()
+    g.fillStyle = k === 0 ? col : k === 1 ? '#202731' : shade(col, -0.2)
+    g.fill(flap)
+  }
+  g.strokeStyle = acc
+  g.globalAlpha = 0.7
+  g.lineWidth = 0.4
+  g.beginPath()
+  g.moveTo(27.4, -13.6)
+  g.quadraticCurveTo(30.2, 0, 27.4, 13.6)
+  g.stroke()
+  g.globalAlpha = 1
   g.fillStyle = col
-  rr(g, 23, -14.6, 8.5, 2.4, 1)
+  rr(g, 25.2, -14.8, 7, 1.8, 0.6)
   g.fill()
-  rr(g, 23, 12.2, 8.5, 2.4, 1)
+  rr(g, 25.2, 13, 7, 1.8, 0.6)
   g.fill()
-  g.fillStyle = acc
-  g.fillRect(28.6, -12.6, 1, 25.2)
   return c
 }
 

@@ -8,7 +8,7 @@ export const BETS_MS = 18000 // apuestas abiertas
 export const GRID_MS = 4000 // parrilla de salida y semáforo (las apuestas ya están cerradas y se conoce la carrera)
 export const RACE_MAX_MS = 17500 // la carrera más larga: el último coche cruza la meta antes de esto
 export const CARS = 6
-export const LAPS = 3
+export const LAPS = 3 // vueltas de un circuito normal (las rectas de aceleración son una sola pasada: CIRCUITS[i].laps)
 export const HOUSE = 0.96 // retorno esperado como mucho: por debajo del 100 % el Score no se puede «cultivar»
 
 export const CHIPS = [10, 50, 100, 500]
@@ -38,13 +38,16 @@ export const CAR_INFO = [
   { name: 'Ártico', color: '#37c6d6', accent: '#d6f8fc' },
 ]
 
-// Los circuitos (el trazado y el decorado están en raceArt.js, en el mismo orden). Solo cambian el aspecto: los coches
-// siguen siendo igual de rápidos y el sorteo del servidor no los mira.
+// Los circuitos (el trazado y el decorado están en raceArt.js, en el mismo orden): unos de tres vueltas y otros de
+// aceleración (`drag`: una sola recta de la salida a la meta). Solo cambian el aspecto: los coches siguen igual de rápidos y el
+// sorteo del servidor no los mira.
 export const CIRCUITS = [
-  { name: 'Neón City', tag: 'Ciudad de noche', color: '#3cc8ff' },
-  { name: 'Desierto Dorado', tag: 'Dunas al atardecer', color: '#ff8c3c' },
-  { name: 'Glaciar Polar', tag: 'Nieve y hielo', color: '#9ab8ff' },
-  { name: 'Selva Esmeralda', tag: 'Jungla y curvas', color: '#9cff5a' },
+  { name: 'Neón City', tag: 'Circuito urbano', color: '#3cc8ff', laps: 3 },
+  { name: 'Desierto Dorado', tag: 'Rectas largas y horquilla', color: '#ff8c3c', laps: 3 },
+  { name: 'Glaciar Polar', tag: 'Horquilla sobre el hielo', color: '#9ab8ff', laps: 3 },
+  { name: 'Selva Esmeralda', tag: 'Eses en la jungla', color: '#9cff5a', laps: 3 },
+  { name: 'Autopista Neón', tag: 'Aceleración · 402 m', color: '#ff4fd8', laps: 1, drag: true },
+  { name: 'Lago Helado', tag: 'Aceleración sobre hielo', color: '#d6f2ff', laps: 1, drag: true },
 ]
 
 export const DRAW_MS = 4300 // el sorteo del circuito se ve al abrirse las apuestas, durante este rato
