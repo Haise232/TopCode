@@ -1,32 +1,126 @@
-// Genera el catálogo del gacha (api/_juegos/gacha-catalogo.json): políticos españoles con cargo en la democracia
-// (Wikidata), con foto de Wikimedia Commons. La rareza sale de la popularidad (en cuántas Wikipedias aparece cada uno).
+// Genera el catálogo del gacha (api/_juegos/gacha-catalogo.json): personajes de meme de España, reales y de ficción.
+// La lista y la rareza de cada uno están a mano en MEMES; la foto sale de su artículo en la Wikipedia en español y, si
+// allí no tiene (los personajes de ficción suelen tener solo imagen no libre), de la inglesa o de Wikidata.
 // Se ejecuta a mano cuando se quiera renovar el catálogo:
 //   node scripts/gacha/importar.mjs
 // Las imágenes no se descargan: se enlazan a Wikimedia (la página del gacha cita la fuente).
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
-// Mínimo de Wikipedias con artículo propio: por debajo, casi nadie los conocería.
-const MIN_LINKS = 9
-// Partidos cuyos miembros entran aunque no hayan tenido uno de los CARGOS (eurodiputados, parlamentos autonómicos…),
-// con su propio mínimo de Wikipedias: Vox y Se Acabó La Fiesta (Alvise Pérez).
-// Legendarias y épicas aunque su popularidad no llegue (Santiago Abascal y Alvise Pérez; Vito Quiles).
-const LEGENDARIAS = new Set(['Q11703587', 'Q121434583'])
-const EPICAS = new Set(['Q134389895'])
-const PARTIDOS = [
-  ['Q15630787', 5],
-  ['Q125882694', 1],
-]
 const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de clase sin fines comerciales)'
-// Franquistas puros que el filtro de Wikidata deja pasar por un escaño o cargo después de 1977, y escritores que
-// fueron senadores o diputados pero a los que se conoce por sus libros.
-const POLITICA_FUERA = ['Carlos Arias Navarro', 'Blas Piñar', 'Camilo José Cela', 'Rafael Alberti']
-// Cargos: presidente del Gobierno, diputado, senador, presidente de la Comunidad de Madrid, alcalde de Madrid y Barcelona.
-const CARGOS = ['Q844587', 'Q18171345', 'Q19323171', 'Q3133837', 'Q17078548', 'Q12155639']
+
+// [nombre en la carta, de dónde sale, rareza, artículo de la Wikipedia en español]. Los personajes de series sin
+// artículo propio usan el de su actor (y su foto). Un quinto elemento fija la imagen cuando la del artículo no es
+// la del meme. El orden dentro de cada rareza es el de fama: el primero vale más.
+const MEMES = [
+  // Legendarias
+  ['El Risitas', 'Las paelleras', 'mitica', 'El Risitas'],
+  ['Chiquito de la Calzada', '¡Fistro pecadorl!', 'mitica', 'Chiquito de la Calzada'],
+  ['Julio Iglesias', 'Y lo sabes', 'mitica', 'Julio Iglesias'],
+  ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
+  ['Belén Esteban', 'Yo por mi hija mato', 'mitica', 'Belén Esteban'],
+  [
+    'Ecce Homo de Borja',
+    'La restauración',
+    'mitica',
+    'Ecce Homo (Elías García Martínez)',
+    'https://upload.wikimedia.org/wikipedia/en/6/61/Attempted_restoration_of_Ecce_Homo.jpg',
+  ],
+  ['Lola Flores', 'Si me queréis, irse', 'mitica', 'Lola Flores'],
+  // Épicas
+  ['El Fary', 'Torito guapo', 'epica', 'El Fary'],
+  ['Antonio Recio', 'La que se avecina', 'epica', 'Jordi Sánchez (actor)'],
+  ['Amador Rivas', 'La que se avecina', 'epica', 'Pablo Chiapella'],
+  ['Paquita Salas', 'Paquita Salas', 'epica', 'Brays Efe'],
+  ['Manolo el del Bombo', 'La Selección', 'epica', 'Manolo el del Bombo'],
+  ['Carlos Jesús', 'Raticulín', 'epica', 'Carlos Jesús'],
+  ['Leticia Sabater', 'Toma pepinazo', 'epica', 'Leticia Sabater'],
+  ['Rappel', 'El vidente', 'epica', 'Rappel (vidente)'],
+  ['Jordi Hurtado', 'Saber y ganar desde siempre', 'epica', 'Jordi Hurtado'],
+  ['Mauricio Colmenero', 'Aída', 'epica', 'Mariano Peña'],
+  ['Rodolfo Chikilicuatre', 'Chiki chiki', 'epica', 'Rodolfo Chikilicuatre'],
+  ['Isabel Pantoja', 'Dientes, dientes', 'epica', 'Isabel Pantoja'],
+  ['Ruiz-Mateos', '¡Que te pego, leche!', 'epica', 'José María Ruiz-Mateos'],
+  // Raras
+  ['Carmen de Mairena', 'Crónicas marcianas', 'rara', 'Carmen de Mairena'],
+  ['Leonardo Dantés', 'Crónicas marcianas', 'rara', 'Leonardo Dantés'],
+  ['Tamara Seisdedos', 'No cambié', 'rara', 'Yurena'],
+  ['John Cobra', '¡Fuera de aquí!', 'rara', 'John Cobra'],
+  ['El Pequeño Nicolás', 'Asesor de todo el mundo', 'rara', 'Francisco Nicolás Gómez Iglesias'],
+  ['Mario Vaquerizo', 'Nancys Rubias', 'rara', 'Mario Vaquerizo'],
+  ['Jesulín de Ubrique', 'Im-presionante', 'rara', 'Jesulín de Ubrique'],
+  ['Marujita Díaz', 'Cine y copla', 'rara', 'Marujita Díaz'],
+  ['El Dioni', 'El furgón blindado', 'rara', 'Dionisio Rodríguez Martín'],
+  ['Kiko Rivera', 'Paquirrín', 'rara', 'Kiko Rivera'],
+  ['Karlos Arguiñano', 'Rico, rico', 'rara', 'Karlos Arguiñano'],
+  ['Alberto Chicote', 'Pesadilla en la cocina', 'rara', 'Alberto Chicote'],
+  ['Iker Jiménez', 'Cuarto milenio', 'rara', 'Iker Jiménez'],
+  ['Ibai Llanos', 'Streamer', 'rara', 'Ibai Llanos'],
+  ['El Rubius', 'Streamer', 'rara', 'ElRubius'],
+  ['AuronPlay', 'Streamer', 'rara', 'AuronPlay'],
+  ['Jordi Wild', 'The Wild Project', 'rara', 'Jordi Wild'],
+  ['Enrique Pastor', 'La que se avecina', 'rara', 'José Luis Gil'],
+  ['Juan Cuesta', 'Aquí no hay quien viva', 'rara', 'Juan Cuesta'],
+  ['Emilio Delgado', 'Aquí no hay quien viva', 'rara', 'Fernando Tejero'],
+  ['Espinete', 'Barrio Sésamo', 'rara', 'Espinete'],
+  ['Makinavaja', 'El último choriso', 'rara', 'Makinavaja'],
+  ['Melody', 'El baile del gorila', 'rara', 'Melody (cantante)'],
+  ['Ramón García', 'La capa de las campanadas', 'rara', 'Ramón García'],
+  // Comunes
+  ['Los del Río', 'Macarena', 'comun', 'Los del Río'],
+  ['Georgie Dann', 'El chiringuito', 'comun', 'Georgie Dann'],
+  ['Chimo Bayo', 'Así me gusta a mí', 'comun', 'Chimo Bayo'],
+  ['Camilo Sesto', 'Vivir así es morir de amor', 'comun', 'Camilo Sesto'],
+  ['Raphael', 'Mi gran noche', 'comun', 'Raphael (cantante)'],
+  ['Rocío Jurado', 'La más grande', 'comun', 'Rocío Jurado'],
+  ['Bertín Osborne', 'Mi casa es la tuya', 'comun', 'Bertín Osborne'],
+  ['Ana Obregón', 'Ana y los siete', 'comun', 'Ana Obregón'],
+  ['Carmen Lomana', 'Socialité', 'comun', 'Carmen Lomana'],
+  ['Kiko Matamoros', 'Sálvame', 'comun', 'Kiko Matamoros'],
+  ['Jorge Javier Vázquez', 'Sálvame', 'comun', 'Jorge Javier Vázquez'],
+  ['Karmele Marchante', 'Tómbola', 'comun', 'Karmele Marchante'],
+  ['Pocholo', 'Mamma mía', 'comun', 'Pocholo Martínez-Bordiú'],
+  ['Dinio', 'La noche me confundió', 'comun', 'Dinio García'],
+  ['Yola Berrocal', 'Crónicas marcianas', 'comun', 'Yola Berrocal'],
+  ['Boris Izaguirre', 'Crónicas marcianas', 'comun', 'Boris Izaguirre'],
+  ['Javier Cárdenas', 'Crónicas marcianas', 'comun', 'Javier Cárdenas'],
+  ['Jesús Quintero', 'El loco de la colina', 'comun', 'Jesús Quintero'],
+  ['Miliki', 'Los Payasos de la Tele', 'comun', 'Miliki'],
+  ['Fofito', 'Los Payasos de la Tele', 'comun', 'Fofito'],
+  ['Martes y Trece', 'Encarna de noche', 'comun', 'Martes y Trece'],
+  ['Cruz y Raya', '¡Mírala, mírala!', 'comun', 'Cruz y Raya'],
+  ['José Mota', 'Las gallinas que entran', 'comun', 'José Mota'],
+  ['Los Morancos', 'Omaíta', 'comun', 'Los Morancos'],
+  ['Paco Martínez Soria', 'La ciudad no es para mí', 'comun', 'Paco Martínez Soria'],
+  ['Alfredo Landa', 'Landismo', 'comun', 'Alfredo Landa'],
+  ['Fernando Esteso', 'La Ramona', 'comun', 'Fernando Esteso'],
+  ['Andrés Pajares', 'Comedia de los 80', 'comun', 'Andrés Pajares'],
+  ['Lina Morgan', 'Agradecida y emocionada', 'comun', 'Lina Morgan'],
+  ['Jesús Calleja', 'Desafío extremo', 'comun', 'Jesús Calleja'],
+  ['Paco Lobatón', '¿Quién sabe dónde?', 'comun', 'Paco Lobatón'],
+  ['Mariló Montero', 'La mañana', 'comun', 'Mariló Montero'],
+  ['Anne Igartiburu', 'Las campanadas', 'comun', 'Anne Igartiburu'],
+  ['Tomás Roncero', 'El chiringuito', 'comun', 'Tomás Roncero'],
+  ['Josep Pedrerol', 'El chiringuito', 'comun', 'Josep Pedrerol'],
+  ['Joaquín Sánchez', 'El del Betis', 'comun', 'Joaquín Sánchez Rodríguez'],
+  ['Fernando Alonso', 'El 33', 'comun', 'Fernando Alonso'],
+  ['TheGrefg', 'Streamer', 'comun', 'TheGrefg'],
+  ['Willyrex', 'Streamer', 'comun', 'Willyrex'],
+  ['Vegetta777', 'Streamer', 'comun', 'Vegetta777'],
+  ['Juan Tamariz', 'Tararí que te vi', 'comun', 'Juan Tamariz'],
+  ['Arturo Valls', '¡Ahora caigo!', 'comun', 'Arturo Valls'],
+  ['Coque', 'La que se avecina', 'comun', 'Nacho Guerreros'],
+  ['Mariano Delgado', 'Aquí no hay quien viva', 'comun', 'Eduardo Gómez'],
+  ['Vicenta', 'Aquí no hay quien viva', 'comun', 'Gemma Cuervo'],
+  ['Machupichu', 'Aída', 'comun', 'Óscar Reyes'],
+  ['Carpanta', 'Tebeos de Bruguera', 'comun', 'Carpanta'],
+  ['Pepe Gotera y Otilio', 'Chapuzas a domicilio', 'comun', 'Pepe Gotera y Otilio'],
+  ['Zipi y Zape', 'Tebeos de Bruguera', 'comun', 'Zipi y Zape'],
+]
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const here = (path) => new URL(path, import.meta.url)
 
-// Wikimedia y AniList limitan las peticiones por minuto: ante un 429 se espera lo que digan (Retry-After) y se repite.
+// Wikimedia limita las peticiones por minuto: ante un 429 se espera lo que digan (Retry-After) y se repite.
 async function json(url, init = {}, tries = 8) {
   for (let i = 1; ; i++) {
     const res = await fetch(url, { ...init, headers: { 'user-agent': UA, ...(init.headers ?? {}) } })
@@ -52,120 +146,111 @@ async function cached(name, fn) {
 }
 
 const chunks = (list, n) => Array.from({ length: Math.ceil(list.length / n) }, (_, i) => list.slice(i * n, i * n + n))
+const slug = (s) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 
-// --- Wikidata: cuántas Wikipedias tienen artículo (popularidad) y nombre en español ---
+// Imagen principal (también las no libres) y elemento de Wikidata de cada artículo de una Wikipedia. Devuelve un Map
+// título pedido → { title, img, qid }.
+async function pages(lang, titles) {
+  const found = new Map()
+  for (const group of chunks(titles, 40)) {
+    const url =
+      `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&redirects=1&prop=pageimages|pageprops` +
+      `&piprop=thumbnail&pithumbsize=400&pilicense=any&ppprop=wikibase_item&titles=${encodeURIComponent(group.join('|'))}`
+    const body = await json(url)
+    const back = new Map()
+    for (const n of [...(body.query.normalized ?? []), ...(body.query.redirects ?? [])]) back.set(n.to, back.get(n.from) ?? n.from)
+    for (const p of Object.values(body.query.pages)) {
+      if (p.missing !== undefined) continue
+      found.set(back.get(p.title) ?? p.title, {
+        title: p.title,
+        img: p.thumbnail?.source?.replace(/\?.*$/, '') ?? null,
+        qid: p.pageprops?.wikibase_item ?? null,
+      })
+    }
+    await sleep(1000)
+  }
+  return found
+}
 
+// Artículo en la Wikipedia inglesa, foto (P18) y cuántas Wikipedias tienen artículo (popularidad) de cada elemento de Wikidata.
 async function wikidata(ids) {
   const found = new Map()
   for (const group of chunks(ids, 50)) {
-    const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=sitelinks|labels&languages=es|en&ids=${group.join('|')}`
-    const body = await json(url)
+    const body = await json(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=sitelinks|claims&ids=${group.join('|')}`)
     for (const [id, e] of Object.entries(body.entities ?? {})) {
       if (e.missing !== undefined) continue
       found.set(id, {
         links: Object.keys(e.sitelinks ?? {}).filter((k) => k.endsWith('wiki') && k !== 'commonswiki').length,
-        label: e.labels?.es?.value ?? e.labels?.en?.value ?? null,
-        eswiki: e.sitelinks?.eswiki?.title ?? null,
+        enwiki: e.sitelinks?.enwiki?.title ?? null,
+        file: e.claims?.P18?.[0]?.mainsnak?.datavalue?.value ?? null,
       })
     }
-    await sleep(1500)
+    await sleep(1000)
   }
   return found
 }
 
-// Miniatura de 400 px de cada archivo de Commons: el enlace final, sin pasar por la redirección de Special:FilePath.
-async function commonsThumbs(files) {
-  const found = new Map()
-  for (const group of chunks([...new Set(files)], 50)) {
-    const titles = group.map((f) => `File:${f}`).join('|')
-    const body = await json(
-      `https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&iiprop=url&iiurlwidth=400&titles=${encodeURIComponent(titles)}`,
-    )
-    const back = new Map((body.query.normalized ?? []).map((n) => [n.to, n.from]))
-    for (const p of Object.values(body.query.pages)) {
-      const url = p.imageinfo?.[0]?.thumburl
-      const asked = back.get(p.title) ?? p.title
-      if (url) found.set(asked.replace(/^File:/, ''), url)
-    }
-    await sleep(1500)
-  }
-  return found
-}
-
-// --- política ---
-
-async function politica() {
-  const query = `SELECT ?p ?img ?partyLabel ?born ?died WHERE {
-    { SELECT DISTINCT ?p WHERE { VALUES ?pos { ${CARGOS.map((q) => `wd:${q}`).join(' ')} } ?p wdt:P39 ?pos. } }
-    ?p wikibase:sitelinks ?links. FILTER(?links >= ${MIN_LINKS})
-    ?p wdt:P27 wd:Q29; wdt:P106 wd:Q82955; wdt:P18 ?img.
-    OPTIONAL { ?p wdt:P569 ?born. } OPTIONAL { ?p wdt:P570 ?died. } OPTIONAL { ?p p:P102 ?ps. ?ps ps:P102 ?party. FILTER NOT EXISTS { ?ps pq:P582 ?end. } }
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "es,en". } }`
-  const body = await json(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`, {}, 6)
-  const people = new Map()
-  for (const r of body.results.bindings) {
-    const qid = r.p.value.split('/').pop()
-    const born = Number(r.born?.value.slice(0, 4) ?? 0)
-    const died = r.died ? Number(r.died.value.slice(0, 4)) : null
-    if (born < 1900 || (died !== null && died <= 1977)) continue
-    if (!people.has(qid)) people.set(qid, { img: r.img.value, party: r.partyLabel?.value ?? '' })
-  }
-  const extra = `SELECT ?p ?img ?partyLabel WHERE {
-    VALUES (?party ?min) { ${PARTIDOS.map(([q, min]) => `(wd:${q} ${min})`).join(' ')} }
-    ?p wdt:P102 ?party; wdt:P18 ?img; wikibase:sitelinks ?links. FILTER(?links >= ?min)
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "es,en". } }`
-  const extraBody = await json(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(extra)}`, {}, 6)
-  for (const r of extraBody.results.bindings) {
-    const qid = r.p.value.split('/').pop()
-    if (!people.has(qid)) people.set(qid, { img: r.img.value, party: r.partyLabel?.value ?? '' })
-  }
-  const wd = await wikidata([...people.keys()])
-  const thumbs = await commonsThumbs([...people.values()].map((p) => decodeURIComponent(p.img.split('/').pop())))
+async function memes() {
+  const es = await pages('es', MEMES.map(([, , , title]) => title))
+  const wd = await wikidata([...new Set([...es.values()].map((p) => p.qid).filter(Boolean))])
+  const enTitles = [...es.values()].filter((p) => !p.img && p.qid && wd.get(p.qid)?.enwiki).map((p) => wd.get(p.qid).enwiki)
+  const en = await pages('en', enTitles)
   const out = []
-  for (const [qid, p] of people) {
-    const info = wd.get(qid)
-    const name = info?.label ?? info?.eswiki
-    if (!name || /^Q\d+$/.test(name) || POLITICA_FUERA.includes(name)) continue
-    const file = decodeURIComponent(p.img.split('/').pop())
+  for (const [name, series, rarity, title, fixed] of MEMES) {
+    const page = es.get(title)
+    if (!page) {
+      console.log(`sin artículo: ${title}`)
+      continue
+    }
+    const info = wd.get(page.qid)
+    const img =
+      fixed ??
+      page.img ??
+      (info?.enwiki ? en.get(info.enwiki)?.img : null) ??
+      (info?.file ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(info.file)}?width=400` : null)
+    if (!img) {
+      console.log(`sin imagen: ${name}`)
+      continue
+    }
     out.push({
-      id: `politica:${qid}`,
+      id: `meme:${slug(name)}`,
       name,
-      series: /^Q\d+$/.test(p.party) ? '' : p.party,
-      img: thumbs.get(file) ?? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=400`,
+      series,
+      rarity,
+      img,
       pop: info?.links ?? 0,
-      src: info?.eswiki ? `https://es.wikipedia.org/wiki/${encodeURIComponent(info.eswiki.replaceAll(' ', '_'))}` : `https://www.wikidata.org/wiki/${qid}`,
+      src: `https://es.wikipedia.org/wiki/${encodeURIComponent(page.title.replaceAll(' ', '_'))}`,
     })
   }
-  console.log(`politica: ${out.length}`)
+  console.log(`memes: ${out.length} de ${MEMES.length}`)
   return out
 }
 
-// --- rareza y valor según la posición en popularidad dentro de su categoría ---
-
-// [rareza, % de la categoría, mínimo de cartas, valor base]: en las categorías pequeñas (cine, política) el mínimo
-// asegura variedad de míticas y épicas.
-const RAREZAS = [
-  ['mitica', 0.02, 6, 600],
-  ['epica', 0.1, 26, 200],
-  ['rara', 0.35, 0, 80],
-  ['comun', 1, 0, 30],
-]
+// Valor base de cada rareza. Dentro de su rareza, el primero de la lista vale un 60 % más que el último.
+const BASE = { mitica: 600, epica: 200, rara: 80, comun: 30 }
+const ORDER = ['mitica', 'epica', 'rara', 'comun']
 
 function rank(cat, list) {
-  const sorted = [...list].sort((a, b) => b.pop - a.pop)
-  const limits = RAREZAS.map(([rarity, pct, min, base]) => [rarity, Math.max(Math.round(pct * sorted.length), min), base])
-  return sorted.map((c, i) => {
-    const pct = (i + 1) / sorted.length
-    const [rarity, , base] = limits.find(([, upTo]) => i < upTo)
-    if (LEGENDARIAS.has(c.id.split(':')[1])) return { ...c, cat, rank: i + 1, rarity: 'mitica', value: Math.round(RAREZAS[0][3] * 1.58) }
-    if (EPICAS.has(c.id.split(':')[1])) return { ...c, cat, rank: i + 1, rarity: 'epica', value: Math.round(RAREZAS[1][3] * 1.3) }
-    return { ...c, cat, rank: i + 1, rarity, value: Math.round(base * (1.6 - pct * 0.6)) }
-  })
+  const out = []
+  for (const rarity of ORDER) {
+    const group = list.filter((c) => c.rarity === rarity)
+    group.forEach((c, i) => {
+      const pct = (i + 1) / group.length
+      out.push({ ...c, cat, rank: out.length + 1, value: Math.round(BASE[rarity] * (1.6 - pct * 0.6)) })
+    })
+  }
+  return out
 }
 
-const catalogo = rank('politica', await cached('politica', politica))
+const catalogo = rank('meme', await cached('memes', memes))
 const resumen = {}
-for (const c of catalogo) resumen[`${c.cat}/${c.rarity}`] = (resumen[`${c.cat}/${c.rarity}`] ?? 0) + 1
+for (const c of catalogo) resumen[c.rarity] = (resumen[c.rarity] ?? 0) + 1
 console.log(resumen)
 await writeFile(here('../../api/_juegos/gacha-catalogo.json'), JSON.stringify({ generado: new Date().toISOString(), cartas: catalogo }))
 console.log(`api/_juegos/gacha-catalogo.json: ${catalogo.length} cartas`)

@@ -8,7 +8,7 @@ import { playBoom, playCard, playSpin, playWin, playZap } from './sound.js'
 import { ODDS, RARITIES, RARITY, pct, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
-// Gacha de políticos españoles al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el
+// Gacha de memes de España al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el
 // mundo, el primero que reclama se queda la carta, vender cartas por saldo de la semana y ver la colección de cualquiera.
 
 // Probabilidad de una carta concreta: «0,48 %», «0,0029 %».
@@ -350,12 +350,12 @@ function CardTable({ list, onOpen }) {
     <section className="gacha-cards" aria-labelledby="cards-title">
       <header className="gacha-cards__head">
         <h2 id="cards-title" className="hub-title">
-          Cartas <small>{`${list.length} políticos · ${taken} con dueño · ${list.length - taken} libres`}</small>
+          Cartas <small>{`${list.length} memes · ${taken} con dueño · ${list.length - taken} libres`}</small>
         </h2>
         <div className="gacha-filters">
           <label className="gacha-select">
             <span>Buscar</span>
-            <input type="search" value={query} placeholder="Nombre, partido o dueño" onChange={(e) => setQuery(e.target.value)} />
+            <input type="search" value={query} placeholder="Nombre, origen o dueño" onChange={(e) => setQuery(e.target.value)} />
           </label>
           <label className="gacha-select">
             <span>Rareza</span>
@@ -450,7 +450,7 @@ function Rules({ prices }) {
         <b>guardas</b> o la <b>descartas</b>; hasta decidirlo no puedes volver a tirar.
       </p>
       <p>
-        <b>Cada político tiene sus propios poderes</b>, uno para cada juego (míralos en «✦ Poderes en 6 juegos» de la
+        <b>Cada meme tiene sus propios poderes</b>, uno para cada juego (míralos en «✦ Poderes en 6 juegos» de la
         carta): dos cartas de la misma rareza casi nunca tienen los mismos. Cuanto más rara, más fuerte, y cada uno tiene{' '}
         <b>★ su punto fuerte</b>: un juego en el que su poder es de la rareza siguiente. Se usan con el botón «✦ Poderes» de
         cada juego y <b>son de un solo uso</b>: al usar el poder de una carta, la gastas, sale de tu biblioteca y vuelve a
@@ -499,8 +499,8 @@ function Rules({ prices }) {
         </tbody>
       </table>
       <p className="gacha-note">
-        Las cartas son políticos españoles de la democracia. La rareza sale de lo conocido que es cada uno (en cuántas
-        Wikipedias tiene artículo). Tu biblioteca no se reinicia el domingo; tu saldo, sí.
+        Las cartas son personajes de meme de España, reales y de ficción. La rareza sale de lo mítico que es cada meme.
+        Tu biblioteca no se reinicia el domingo; tu saldo, sí.
       </p>
     </Help>
   )
@@ -733,7 +733,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
 
       {summon && <Summon summon={summon} busy={busy} onDecide={decide} />}
 
-      <footer className="gacha-foot">Fotos de Wikimedia Commons y datos de Wikipedia. Solo para TopCode, sin fines comerciales.</footer>
+      <footer className="gacha-foot">Fotos enlazadas desde Wikipedia y Wikimedia Commons. Solo para TopCode, sin fines comerciales.</footer>
     </main>
   )
 }
