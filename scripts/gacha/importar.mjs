@@ -44,7 +44,7 @@ const MEMES = [
   ['Paquita Salas', 'Lo que no puede ser no puede ser', 'epica', 'Brays Efe'],
   // Raras
   ['Mangel', 'El colega de Rubius', 'rara', 'yt:mangelrogel'],
-  ['Lolito Fernández', 'Streamer', 'rara', 'yt:LolitoFernandez'],
+  ['Lolito Fernández', 'Streamer', 'rara', 'yt:LolitoFernandez', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYcoJpeuHrMS-eVm0NM7q1T8ZMT77dT96zCUBUmz8nNLo7pScTlzV9plzB  ['Lolito Fernández', 'Streamer', 'rara', 'yt:LolitoFernandez'],s=10'],
   ['Alexby11', 'Streamer', 'rara', 'twitch:alexby11'],
   ['DjMaRiiO', 'El del FIFA', 'rara', 'yt:DjMaRiiO'],
   ['Cristinini', 'Streamer', 'rara', 'yt:cristinini'],
