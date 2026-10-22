@@ -766,7 +766,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   async function handle(user, msg) {
     if (!msg || typeof msg.t !== 'string') throw new JuegosError('BAD_MESSAGE')
     await warm()
-    // La banca se consulta desde cualquier página de TopCode: no cuenta como «conectado a Juegos».
+    // La banca (avisos y panel del master) va aparte: no toca la cuenta ni cuenta como actividad en las mesas.
     if (msg.t.startsWith('banca')) {
       const out = await banca.handle(user, msg)
       if (out.error) throw new JuegosError(out.error)

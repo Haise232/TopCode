@@ -147,6 +147,28 @@
 .juegos-root .hub-btn:disabled {
   opacity: 0.45;
 }
+/* Botón de la banca, solo para el master: dorado, junto a tu perfil. */
+.juegos-root .hub-bank {
+  gap: 6px;
+  border-color: transparent;
+  background: linear-gradient(180deg, #ffe08a, #e0a21b);
+  color: #1b1405;
+  font-weight: 800;
+  box-shadow: 0 0 18px rgba(255, 196, 64, 0.35);
+}
+.juegos-root .hub-bank em {
+  font-style: normal;
+}
+.juegos-root .hub-bank span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1b1405;
+  color: #ffd36a;
+  font-size: 13px;
+}
 .juegos-root .hub-btn:focus-visible,
 .juegos-root .hub-seg:focus-visible,
 .juegos-root .hub-tile:focus-visible,
@@ -1103,6 +1125,12 @@
   }
   .juegos-root .hub-me__text small {
     max-width: 14ch;
+  }
+  .juegos-root .hub-bank {
+    padding: 0 11px;
+  }
+  .juegos-root .hub-bank em {
+    display: none;
   }
   .juegos-root .hub-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));

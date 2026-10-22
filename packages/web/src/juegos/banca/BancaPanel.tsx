@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Coins, MessageSquare, Zap, X, Search, Users } from 'lucide-react'
-import { ABUSE_MINUTES, abuseText, bancaCall, eur, type Abuse, type AbuseMode, type AbuseScope, type Jugador } from '../../lib/banca'
-import { cn } from '../ui/cn'
+import { ABUSE_MINUTES, abuseText, bancaCall, eur, type Abuse, type AbuseMode, type AbuseScope, type Jugador } from './banca'
+import { cn } from '../../components/ui/cn'
 import './banca.css'
 
 type Tab = 'dinero' | 'mensaje' | 'abuso'

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 // Fuentes de juegos, servidas por la propia app.
 import '@fontsource/abril-fatface/latin.css'
@@ -24,11 +24,16 @@ import PokerTable from './poker/PokerTable.jsx'
 import { useJuegos } from './useJuegos.js'
 import Scoreboard from './Scoreboard.jsx'
 import Avatar from './Avatar.jsx'
+import BancaAvisos from './banca/BancaAvisos'
+import { useAuth } from '../hooks/useAuth'
 import { delta, eur, until } from './money.js'
 import './Lobby.css'
 import './table/table.css'
 import './responsive.css'
 import './hub.css'
+
+// Panel de la banca: solo lo abre el master de TopCode, así que se carga al pulsar su botón.
+const BancaPanel = lazy(() => import('./banca/BancaPanel'))
 
 const LIVE = {
   blackjack: { name: 'Blackjack' },
@@ -345,6 +350,8 @@ function LiveGame({ game, tables, loaded, online, onJoin }) {
 
 function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
   const { me, lobby, conn, scores, send } = juegos
+  const master = useAuth().usuario?.es_superadmin === true
+  const [bank, setBank] = useState(false)
   const connected = conn === 'open' && Boolean(me)
   const online = connected && Boolean(lobby)
 
@@ -364,6 +371,11 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
 
   return (
     <main className="app app--lobby hub">
+      {bank && (
+        <Suspense fallback={null}>
+          <BancaPanel onClose={() => setBank(false)} />
+        </Suspense>
+      )}
       <header className="hub-top">
         <h1>Juegos</h1>
         <p className={`hub-status hub-status--${status.tone}`} role="status" aria-live="polite">
@@ -379,6 +391,12 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
                 <b>{eur(me.balance)}</b>
               </span>
             </div>
+          )}
+          {master && (
+            <button type="button" className="hub-btn hub-bank" onClick={() => setBank(true)} aria-label="La banca (master)" title="La banca">
+              <span aria-hidden="true">€</span>
+              <em>Banca</em>
+            </button>
           )}
           <button type="button" className="hub-btn hub-btn--ghost" onClick={onHome}>
             TopCode
@@ -582,6 +600,7 @@ export default function Juegos() {
   return (
     <div className="juegos-root">
       <JuegosScreens />
+      <BancaAvisos />
     </div>
   )
 }

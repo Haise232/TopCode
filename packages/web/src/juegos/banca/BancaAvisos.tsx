@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { createPortal } from 'react-dom'
 import { onBroadcast } from '@topcode/shared'
 import { useAuth } from '../../hooks/useAuth'
-import { BANK_TOPIC, abuseText, bancaCall, eur, type Abuse, type Aviso } from '../../lib/banca'
+import { BANK_TOPIC, abuseText, bancaCall, eur, type Abuse, type Aviso } from './banca'
 import './banca.css'
 
 // El Admin Abuse ya presentado (con su animación grande) en este navegador: se guarda su «desde».
@@ -29,8 +29,9 @@ const clock = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-// Avisos de la banca en toda TopCode: el dinero y los mensajes del master salen en el centro de la pantalla, uno detrás
-// de otro, y el Admin Abuse se presenta a lo grande y deja una cuenta atrás arriba mientras dure.
+// Avisos de la banca dentro de Juegos (en cualquier pantalla: selector, mesas o juegos). El dinero y los mensajes del
+// master salen en el centro de la pantalla, uno detrás de otro, y el Admin Abuse se presenta a lo grande y deja una
+// cuenta atrás arriba mientras dure.
 export default function BancaAvisos() {
   const { usuario } = useAuth()
   const [queue, setQueue] = useState<Aviso[]>([])

@@ -1,5 +1,5 @@
 // La banca de Juegos (api/_juegos/banca.mjs): avisos de dinero y mensajes del master, y el Admin Abuse.
-import { supabase } from './supabase'
+import { supabase } from '../../lib/supabase'
 
 export type AbuseMode = 'x2' | 'x3' | 'gratis'
 export type AbuseScope = 'todo' | 'poker'
