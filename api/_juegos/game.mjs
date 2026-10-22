@@ -72,6 +72,26 @@ export class JuegosError extends Error {
   }
 }
 
+// Blackjack de mesa. El motor (engine/room.mjs, copiado de Rule) bloquea al acabar el tiempo de apuestas la apuesta
+// propuesta de todos los sentados, también de quien está ausente, que así seguía apostando ronda tras ronda sin estar.
+// Aquí solo entra en la ronda quien sigue conectado; el ausente la mira hasta que vuelva o le saquen de la mesa.
+class BlackjackRoom extends Room {}
+BlackjackRoom.prototype.onTimer = {
+  ...Room.prototype.onTimer,
+  bets() {
+    for (const seat of this.seats) if (seat && !seat.locked && seat.connected && seat.sid) this.lock(seat)
+    if (this.seats.some((s) => s?.locked)) this.deal()
+    else this.afterBetChange()
+  },
+}
+
+// Al empezar ronda el motor libera el asiento de quien lleva un rato desconectado, pero no avisa a su sesión, que se queda
+// creyendo que sigue sentada: al volver no la dejaba sentarse otra vez (el motor contesta BAD_PHASE). Se corrige al abrir.
+function fixSeats(room) {
+  if (room.game !== 'blackjack') return
+  for (const m of room.members.values()) if (m.seat !== null && room.seats[m.seat]?.sid !== m.id) m.seat = null
+}
+
 const ROOM_STATIC = new Set(['accounts', 'randomInt', 'onClose', 'now', 'timers', 'timer', 'sweeper', 'members'])
 
 // --- saldos dentro de una transacción: el motor usa get/adjust como con el archivo de juegos original ---
@@ -105,11 +125,12 @@ function serialize(room) {
 }
 
 function restore(row, accounts, now) {
-  const Kind = row.juego === 'poker' ? PokerRoom : Room
+  const Kind = row.juego === 'poker' ? PokerRoom : BlackjackRoom
   const room = Object.create(Kind.prototype)
   Object.assign(room, row.estado.room, { accounts, randomInt, now, timers: storedTimers, timer: null, onClose: null })
   room.members = new Map()
   for (const m of row.estado.members) room.members.set(m.id, { ...m, ws: null, room })
+  fixSeats(room)
   return room
 }
 
@@ -295,6 +316,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       const wasIn = room.members.has(user.id)
       room.wake()
+      fixSeats(room) // el wake() puede haber empezado una ronda nueva y liberado asientos
       const error = fn(room, session) ?? null
 
       const changed = room.rev !== revBefore || presence
@@ -512,7 +534,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Inserta una mesa pública vacía. Si otra petición creó ya ese número a la vez, no hace nada (índice único).
   async function createTable(game, number, taken) {
     const code = newCode(taken)
-    const Kind = game === 'poker' ? PokerRoom : Room
+    const Kind = game === 'poker' ? PokerRoom : BlackjackRoom
     const label = `Mesa ${number}`
     const room = new Kind({ code, seats: PUBLIC_SEATS[game], accounts: new TxAccounts([], 0), randomInt, now: () => now(), label, persistent: number === 1, timers: storedTimers })
     room.number = number
