@@ -4,6 +4,8 @@ import {
   BETS_MS,
   CAR_INFO,
   CHIPS,
+  CIRCUITS,
+  DRAW_MS,
   GRID_MS,
   HOUSE,
   KINDS,
@@ -12,6 +14,7 @@ import {
   PODIUM,
   ROUND_MS,
   bestOf,
+  circuitOf,
   fmtOdds,
   keyOf,
   phaseAt,
@@ -25,6 +28,7 @@ import Avatar from './Avatar.jsx'
 import WinBurst from './WinBurst.jsx'
 import Help from './Help.jsx'
 import PowerButton from './PowerButton.jsx'
+import RaceDraw from './RaceDraw.jsx'
 import RaceScene from './RaceScene.jsx'
 import './Race.css'
 
@@ -186,6 +190,8 @@ function Race({ onExit, juegos }) {
   const now = clock()
   const { round, offset, phase: basePhase } = phaseAt(now)
   const ready = skew.current !== null
+  const circuit = circuitOf(round)
+  const drawing = ready && basePhase === 'betting' && offset < DRAW_MS
 
   const ask = useCallback(
     async (message) => {
@@ -449,7 +455,7 @@ function Race({ onExit, juegos }) {
   const announce = !ready
     ? ''
     : phase === 'betting'
-      ? `Apuestas abiertas. ${onTable > 0 && !dirty ? `Aceptado: ${summary}.` : 'Sin apuestas.'}`
+      ? `Apuestas abiertas. Circuito: ${CIRCUITS[circuit].name}. ${onTable > 0 && !dirty ? `Aceptado: ${summary}.` : 'Sin apuestas.'}`
       : phase === 'grid'
         ? 'Apuestas cerradas. Parrilla de salida.'
         : phase === 'race'
@@ -562,6 +568,9 @@ function Race({ onExit, juegos }) {
                   {label}
                 </li>
               ))}
+              <li className="race__circuit" style={{ '--c': CIRCUITS[circuit].color }}>
+                {CIRCUITS[circuit].name}
+              </li>
             </ol>
             <strong key={call} className={won ? 'is-win' : ''}>
               {call}
@@ -581,11 +590,15 @@ function Race({ onExit, juegos }) {
             seats={seats}
             bets={placed}
             mySeat={mySeat}
+            circuit={circuit}
             podium={PODIUM}
             muted={!sound}
             reduced={reduced}
             onEvent={onEvent}
           />
+          {drawing && (
+            <RaceDraw key={round} circuit={circuit} getNow={clock} startAt={round * ROUND_MS} muted={!sound} reduced={reduced} />
+          )}
         </section>
 
         <aside className="race__panel" aria-label="Apuestas">

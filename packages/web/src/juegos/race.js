@@ -38,6 +38,35 @@ export const CAR_INFO = [
   { name: 'Ártico', color: '#37c6d6', accent: '#d6f8fc' },
 ]
 
+// Los circuitos (el trazado y el decorado están en raceArt.js, en el mismo orden). Solo cambian el aspecto: los coches
+// siguen siendo igual de rápidos y el sorteo del servidor no los mira.
+export const CIRCUITS = [
+  { name: 'Neón City', tag: 'Ciudad de noche', color: '#3cc8ff' },
+  { name: 'Desierto Dorado', tag: 'Dunas al atardecer', color: '#ff8c3c' },
+  { name: 'Glaciar Polar', tag: 'Nieve y hielo', color: '#9ab8ff' },
+  { name: 'Selva Esmeralda', tag: 'Jungla y curvas', color: '#9cff5a' },
+]
+
+export const DRAW_MS = 4300 // el sorteo del circuito se ve al abrirse las apuestas, durante este rato
+
+// Circuito de cada ronda: sale de la ronda con un mezclador de enteros, así que todos los navegadores ven el mismo sin
+// preguntar al servidor, y casi nunca se repite el de la carrera anterior.
+const mix = (n) => {
+  let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b)
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35)
+  return (h ^ (h >>> 16)) >>> 0
+}
+export function circuitOf(round) {
+  // Se recorren unas cuantas rondas hacia atrás: si sale el mismo que la anterior, se salta a otro.
+  let prev = mix(round - 12) % CIRCUITS.length
+  for (let r = round - 11; r <= round; r++) {
+    let c = mix(r) % CIRCUITS.length
+    if (c === prev) c = (c + 1 + (mix(r + 0x5bd1e995) % (CIRCUITS.length - 1))) % CIRCUITS.length
+    prev = c
+  }
+  return prev
+}
+
 // Una apuesta: { kind, cars: [coche, …] (en el orden que se apuesta), amount }.
 export const keyOf = (bet) => `${bet.kind}:${bet.cars.join('-')}`
 

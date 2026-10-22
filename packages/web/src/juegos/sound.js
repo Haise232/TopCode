@@ -156,6 +156,18 @@ export function playCash(mult = 1) {
 }
 
 // ---- Carrera de coches ----
+// Sorteo del circuito: un clic por tarjeta que pasa y una fanfarria corta al elegirlo.
+export function playReelTick() {
+  const ac = audio()
+  if (ac) tone(ac, { freq: 1500, dur: 0.025, type: 'square', peak: 0.035 })
+}
+
+export function playReveal() {
+  const ac = audio()
+  if (!ac) return
+  ;[392, 523, 659, 784, 1047].forEach((freq, i) => tone(ac, { freq, at: i * 0.07, dur: i === 4 ? 0.5 : 0.16, type: i === 4 ? 'triangle' : 'square', peak: 0.05 }))
+}
+
 // Pitido del semáforo (luz n de 5) y «¡ya!» al apagarse.
 export function playBeep(n = 1) {
   const ac = audio()

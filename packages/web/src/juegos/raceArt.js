@@ -7,6 +7,7 @@ export const WORLD_H = 1160
 export const TRACK_W = 230
 export const CAR_L = 60
 export const LANE_GAP = 34
+const TAU = Math.PI * 2
 
 // ---------- utilidades ----------
 function rng(seed) {
@@ -59,21 +60,72 @@ export function rgba(hex, a) {
   return `rgba(${r},${g},${b},${a})`
 }
 
-// ---------- el circuito ----------
-const CTRL = [
-  [1130, 962], [1440, 945], [1700, 862], [1785, 665], [1705, 470], [1510, 380], [1320, 400], [1170, 515], [985, 590], [800, 525],
-  [748, 405], [700, 285], [585, 190], [400, 165], [225, 280], [165, 500], [225, 720], [330, 885], [560, 960],
+// ---------- los circuitos ----------
+// Cada circuito es una spline cerrada por puntos de control. Todos se recorren en sentido antihorario en pantalla, con la
+// recta de meta abajo hacia la derecha (de (560, 960) a (1440, 945)): así la parrilla, los boxes (dentro) y las gradas
+// (fuera) caben igual en todos. Las longitudes se parecen para que la velocidad de los coches sea la misma.
+// El tema decide los colores del suelo, el decorado de fuera, los árboles, el lago y la valla de neón.
+const STRAIGHT_START = [560, 962]
+export const LAYOUTS = [
+  {
+    // Neón City: la ciudad nocturna de siempre.
+    ctrl: [
+      [1130, 962], [1440, 945], [1700, 862], [1785, 665], [1705, 470], [1510, 380], [1320, 400], [1170, 515], [985, 590], [800, 525],
+      [748, 405], [700, 285], [585, 190], [400, 165], [225, 280], [165, 500], [225, 720], [330, 885], STRAIGHT_START,
+    ],
+    theme: {
+      ground: ['#0d2a1d', '#0b2418'], base: '#071219', speck: '160,255,190', outside: 'city', trees: 'round', leaf: ['#2f7d4a', '#0f3a24'],
+      lake: [640, 400, 150, 70, -0.2], water: ['#0f4a63', '#082a3a', '120,230,255'], neon: '60,210,255', neonHi: '120,240,255',
+      kerb: ['#c42f35', '#f4f1ea'], runoff: '#0d1a20', asphalt: '#2a2f36', wet: true, lamp: '255,236,190',
+    },
+  },
+  {
+    // Desierto Dorado: arena al atardecer, cactus y un oasis.
+    ctrl: [
+      [1130, 962], [1440, 950], [1680, 895], [1785, 730], [1745, 545], [1590, 430], [1420, 450], [1260, 540], [1100, 550], [980, 460],
+      [880, 310], [720, 200], [500, 180], [310, 210], [190, 380], [230, 570], [230, 770], [340, 925], STRAIGHT_START,
+    ],
+    theme: {
+      ground: ['#4a3016', '#432a12'], base: '#2a1a0c', speck: '255,214,150', outside: 'dunes', trees: 'cactus', leaf: ['#6f9a45', '#2f4f1c'],
+      lake: [620, 470, 110, 56, 0.15], water: ['#1f8a8a', '#0d4d55', '140,255,235'], neon: '255,140,60', neonHi: '255,200,120',
+      kerb: ['#d9541e', '#fbe7c6'], runoff: '#3a2614', asphalt: '#34302d', wet: false, lamp: '255,210,150',
+    },
+  },
+  {
+    // Glaciar Polar: nieve, pinos nevados y un lago helado.
+    ctrl: [
+      [1130, 962], [1450, 952], [1700, 880], [1790, 700], [1730, 480], [1560, 330], [1370, 280], [1195, 360], [1000, 290], [800, 200],
+      [560, 180], [340, 230], [200, 385], [180, 600], [240, 800], [360, 925], STRAIGHT_START,
+    ],
+    theme: {
+      ground: ['#8fa3b5', '#869aac'], base: '#6f8396', speck: '255,255,255', outside: 'snow', trees: 'pine', leaf: ['#3f6b5c', '#173a33'],
+      lake: [900, 610, 230, 80, -0.05], water: ['#bfe9ff', '#7cc4e8', '255,255,255'], neon: '120,170,255', neonHi: '200,225,255',
+      kerb: ['#2f62d9', '#ffffff'], runoff: '#5d6e7e', asphalt: '#30363e', wet: true, lamp: '220,235,255',
+    },
+  },
+  {
+    // Selva Esmeralda: jungla espesa, un río y curvas enlazadas.
+    ctrl: [
+      [1130, 962], [1440, 948], [1690, 880], [1780, 700], [1730, 480], [1610, 280], [1430, 190], [1260, 250], [1200, 400], [1130, 530],
+      [1020, 590], [900, 550], [840, 410], [790, 250], [620, 180], [420, 180], [240, 260], [180, 450], [260, 620], [230, 790], [350, 930], STRAIGHT_START,
+    ],
+    theme: {
+      ground: ['#123b1c', '#0f3318'], base: '#06150a', speck: '190,255,160', outside: 'jungle', trees: 'palm', leaf: ['#3fae4f', '#0e4a1f'],
+      lake: [540, 470, 120, 56, 0.3], water: ['#0f6b5a', '#073a33', '150,255,210'], neon: '170,255,90', neonHi: '220,255,160',
+      kerb: ['#e0b51f', '#1d6b2c'], runoff: '#0c2412', asphalt: '#2b2f2c', wet: true, lamp: '230,255,200',
+    },
+  },
 ]
 
-function buildTrack() {
-  const n = CTRL.length
+export function buildTrack(ctrl) {
+  const n = ctrl.length
   const raw = []
   const STEPS = 24
   for (let i = 0; i < n; i++) {
-    const p0 = CTRL[(i - 1 + n) % n]
-    const p1 = CTRL[i]
-    const p2 = CTRL[(i + 1) % n]
-    const p3 = CTRL[(i + 2) % n]
+    const p0 = ctrl[(i - 1 + n) % n]
+    const p1 = ctrl[i]
+    const p2 = ctrl[(i + 1) % n]
+    const p3 = ctrl[(i + 2) % n]
     for (let s = 0; s < STEPS; s++) {
       const t = s / STEPS
       const t2 = t * t
@@ -133,8 +185,18 @@ function buildTrack() {
   return { M, L, ds, px, py, tx, ty, k }
 }
 
-export const track = buildTrack()
-export const LEN = track.L
+const tracks = []
+export const trackOf = (i) => (tracks[i] ??= buildTrack(LAYOUTS[i].ctrl))
+
+// El circuito que se dibuja ahora (los módulos que lo importan ven el cambio al momento: son enlaces vivos).
+export let circuit = -1
+export let track = null
+export let LEN = 0
+export let theme = null
+export let centerPath = null
+export let neonInner = null
+export let neonOuter = null
+export let poles = []
 
 // Punto del circuito a `u` vueltas (0 = línea de meta) y desplazamiento lateral `lat` (positivo = hacia el exterior).
 export function at(u, lat, out) {
@@ -172,12 +234,8 @@ function pathOf(lat, close = true) {
   return p
 }
 
-export const centerPath = pathOf(0)
-export const neonInner = pathOf(-(TRACK_W / 2 + 34))
-export const neonOuter = pathOf(TRACK_W / 2 + 34)
-
 // Farolas: posición de la cabeza y del pie junto a la pista.
-export const poles = (() => {
+function polesOf() {
   const list = []
   const o = { x: 0, y: 0 }
   const n = 34
@@ -187,7 +245,31 @@ export const poles = (() => {
     list.push({ x: o.x, y: o.y, tx: o.tx, ty: o.ty, side })
   }
   return list
-})()
+}
+
+// Cambia el circuito que se dibuja (índice de LAYOUTS). Los trazados se calculan una vez y se guardan.
+export function setCircuit(i) {
+  if (i === circuit) return
+  circuit = i
+  track = trackOf(i)
+  LEN = track.L
+  theme = LAYOUTS[i].theme
+  centerPath = pathOf(0)
+  neonInner = pathOf(-(TRACK_W / 2 + 34))
+  neonOuter = pathOf(TRACK_W / 2 + 34)
+  poles = polesOf()
+}
+
+// Silueta de un circuito para enseñarlo pequeño (SVG): `n` puntos de la línea central dentro de un viewBox del mundo.
+export function outlineOf(i, n = 90) {
+  const { M, px, py } = trackOf(i)
+  const pts = []
+  for (let k = 0; k < n; k++) {
+    const j = Math.floor((k / n) * M)
+    pts.push(`${Math.round(px[j])},${Math.round(py[j])}`)
+  }
+  return `M${pts.join('L')}Z`
+}
 
 function insidePoly(x, y) {
   const { px, py, M } = track
@@ -208,37 +290,17 @@ function distToTrack(x, y) {
   return Math.sqrt(best)
 }
 
-// ---------- fondo: ciudad nocturna, césped, árboles, gradas ----------
-export function makeBackground() {
-  const c = canvasOf(WORLD_W, WORLD_H)
-  const g = c.getContext('2d')
-  const R = rng(7)
-  g.fillStyle = '#071219'
-  g.fillRect(0, 0, WORLD_W, WORLD_H)
+// Fuera de la pista: ¿es un sitio libre para el decorado de fuera (lejos de la pista y fuera del campo interior)?
+const outside = (x, y) => distToTrack(x, y) >= 260 && !insidePoly(x, y)
 
-  // Césped segado a franjas en todo el mundo (la ciudad lo tapará por fuera).
-  for (let i = -WORLD_H; i < WORLD_W; i += 46) {
-    g.fillStyle = (i / 46) & 1 ? '#0d2a1d' : '#0b2418'
-    g.beginPath()
-    g.moveTo(i, 0)
-    g.lineTo(i + 23, 0)
-    g.lineTo(i + 23 + WORLD_H, WORLD_H)
-    g.lineTo(i + WORLD_H, WORLD_H)
-    g.fill()
-  }
-  for (let i = 0; i < 5200; i++) {
-    g.fillStyle = `rgba(${R() < 0.5 ? '160,255,190' : '0,0,0'},${0.03 + R() * 0.04})`
-    g.fillRect(R() * WORLD_W, R() * WORLD_H, 1 + R() * 2, 1 + R() * 2)
-  }
-
-  // Ciudad al otro lado de la pista.
+// Ciudad nocturna: manzanas de edificios con ventanas encendidas y alguna luz de neón.
+function city(g, R) {
   const lights = []
   for (let gy = 0; gy < WORLD_H; gy += 44) {
     for (let gx = 0; gx < WORLD_W; gx += 44) {
       const x = gx + R() * 6
       const y = gy + R() * 6
-      const d = distToTrack(x + 20, y + 20)
-      if (d < 260 || insidePoly(x + 20, y + 20)) continue
+      if (!outside(x + 20, y + 20)) continue
       if (R() < 0.12) continue
       g.fillStyle = '#05090d'
       g.fillRect(gx - 4, gy - 4, 52, 52)
@@ -262,51 +324,313 @@ export function makeBackground() {
       if (R() < 0.18) lights.push([x + w / 2, y + h / 2, R() < 0.5 ? '255,60,90' : '70,200,255'])
     }
   }
+  glows(g, lights, 40)
+}
+
+// Halos de luz sumados (ventanas, hogueras, luciérnagas).
+function glows(g, list, r) {
   g.globalCompositeOperation = 'lighter'
-  for (const [x, y, col] of lights) {
-    const gr = g.createRadialGradient(x, y, 0, x, y, 40)
-    gr.addColorStop(0, `rgba(${col},0.5)`)
+  for (const [x, y, col, a = 0.5] of list) {
+    const gr = g.createRadialGradient(x, y, 0, x, y, r)
+    gr.addColorStop(0, `rgba(${col},${a})`)
     gr.addColorStop(1, `rgba(${col},0)`)
     g.fillStyle = gr
-    g.fillRect(x - 40, y - 40, 80, 80)
+    g.fillRect(x - r, y - r, r * 2, r * 2)
   }
   g.globalCompositeOperation = 'source-over'
+}
+
+// Desierto: dunas con su cara en sombra, rocas y alguna hoguera de campamento.
+function dunes(g, R) {
+  for (let i = 0; i < 260; i++) {
+    const x = R() * WORLD_W
+    const y = R() * WORLD_H
+    if (!outside(x, y)) continue
+    const w = 70 + R() * 120
+    const h = 18 + R() * 26
+    g.save()
+    g.translate(x, y)
+    g.rotate(-0.35 + (R() - 0.5) * 0.3)
+    g.fillStyle = 'rgba(30,16,6,0.45)'
+    g.beginPath()
+    g.ellipse(0, h * 0.35, w, h, 0, 0, TAU)
+    g.fill()
+    const gr = g.createLinearGradient(0, -h, 0, h)
+    gr.addColorStop(0, '#9a6a34')
+    gr.addColorStop(0.55, '#6e4720')
+    gr.addColorStop(1, '#4a2f14')
+    g.fillStyle = gr
+    g.beginPath()
+    g.ellipse(0, 0, w, h, 0, 0, TAU)
+    g.fill()
+    g.strokeStyle = 'rgba(255,220,160,0.18)'
+    g.lineWidth = 2
+    g.beginPath()
+    g.ellipse(0, -h * 0.1, w * 0.9, h * 0.75, 0, Math.PI * 1.1, Math.PI * 1.9)
+    g.stroke()
+    g.restore()
+  }
+  const fires = []
+  for (let i = 0; i < 140; i++) {
+    const x = R() * WORLD_W
+    const y = R() * WORLD_H
+    if (!outside(x, y)) continue
+    rock(g, x, y, 6 + R() * 14, R, '#3b2617', '#5e4027')
+    if (R() < 0.08) fires.push([x + 14, y + 10, '255,140,50', 0.7])
+  }
+  for (const [x, y] of fires) {
+    g.fillStyle = '#ffcf6a'
+    g.beginPath()
+    g.arc(x, y, 3, 0, TAU)
+    g.fill()
+  }
+  glows(g, fires, 46)
+}
+
+// Una roca vista desde arriba: polígono irregular con su sombra y un borde iluminado.
+function rock(g, x, y, r, R, dark, light) {
+  const n = 6 + Math.floor(R() * 3)
+  const pts = []
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * TAU
+    const rr0 = r * (0.7 + R() * 0.45)
+    pts.push([x + Math.cos(a) * rr0, y + Math.sin(a) * rr0 * 0.8])
+  }
+  const poly = (dx, dy) => {
+    g.beginPath()
+    pts.forEach(([px, py], k) => (k ? g.lineTo(px + dx, py + dy) : g.moveTo(px + dx, py + dy)))
+    g.closePath()
+  }
+  g.fillStyle = 'rgba(0,0,0,0.35)'
+  poly(4, 5)
+  g.fill()
+  g.fillStyle = dark
+  poly(0, 0)
+  g.fill()
+  g.fillStyle = light
+  g.beginPath()
+  g.ellipse(x - r * 0.25, y - r * 0.25, r * 0.45, r * 0.3, -0.5, 0, TAU)
+  g.fill()
+}
+
+// Glaciar: ventisqueros con sombra azulada, bloques de hielo y cabañas con la luz encendida.
+function snowfield(g, R) {
+  for (let i = 0; i < 300; i++) {
+    const x = R() * WORLD_W
+    const y = R() * WORLD_H
+    if (!outside(x, y)) continue
+    const w = 40 + R() * 90
+    const h = 16 + R() * 22
+    g.save()
+    g.translate(x, y)
+    g.rotate((R() - 0.5) * 0.6)
+    g.fillStyle = 'rgba(40,70,110,0.28)'
+    g.beginPath()
+    g.ellipse(6, h * 0.4, w, h, 0, 0, TAU)
+    g.fill()
+    const gr = g.createRadialGradient(-w * 0.3, -h * 0.4, 2, 0, 0, w)
+    gr.addColorStop(0, '#eef6ff')
+    gr.addColorStop(1, '#a9bdd0')
+    g.fillStyle = gr
+    g.beginPath()
+    g.ellipse(0, 0, w, h, 0, 0, TAU)
+    g.fill()
+    g.restore()
+  }
+  const lights = []
+  for (let i = 0; i < 90; i++) {
+    const x = R() * WORLD_W
+    const y = R() * WORLD_H
+    if (!outside(x, y)) continue
+    if (R() < 0.22) {
+      // cabaña: tejado nevado a dos aguas y una ventana cálida
+      const w = 34 + R() * 16
+      const h = 26 + R() * 10
+      g.fillStyle = 'rgba(20,40,70,0.4)'
+      g.fillRect(x + 4, y + 5, w, h)
+      g.fillStyle = '#5b3b26'
+      g.fillRect(x, y, w, h)
+      g.fillStyle = '#f4f8ff'
+      g.fillRect(x - 3, y - 3, w + 6, h / 2 + 3)
+      g.fillStyle = '#dfe9f5'
+      g.fillRect(x - 3, y + h / 2, w + 6, h / 2 - 4)
+      g.fillStyle = '#ffd27a'
+      g.fillRect(x + w * 0.4, y + h - 5, 8, 4)
+      lights.push([x + w * 0.4 + 4, y + h + 2, '255,190,90', 0.55])
+    } else rock(g, x, y, 8 + R() * 14, R, '#7d93a8', '#d8e6f2')
+  }
+  glows(g, lights, 44)
+}
+
+// Selva: copas de árboles muy juntas, flores y luciérnagas.
+function jungle(g, R) {
+  for (let i = 0; i < 2600; i++) {
+    const x = R() * WORLD_W
+    const y = R() * WORLD_H
+    if (!outside(x, y)) continue
+    const r = 14 + R() * 22
+    g.fillStyle = 'rgba(0,0,0,0.4)'
+    g.beginPath()
+    g.arc(x + 5, y + 6, r, 0, TAU)
+    g.fill()
+    const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.35, 1, x, y, r)
+    const tone = R()
+    gr.addColorStop(0, tone < 0.5 ? '#2f8a3e' : tone < 0.85 ? '#3c9a36' : '#5a8f2a')
+    gr.addColorStop(1, '#082a12')
+    g.fillStyle = gr
+    g.beginPath()
+    g.arc(x, y, r, 0, TAU)
+    g.fill()
+    if (R() < 0.06) {
+      g.fillStyle = ['#ff5aa8', '#ffd24a', '#ff7a3a'][Math.floor(R() * 3)]
+      g.beginPath()
+      g.arc(x + (R() - 0.5) * r, y + (R() - 0.5) * r, 2.5, 0, TAU)
+      g.fill()
+    }
+  }
+  const flies = []
+  for (let i = 0; i < 160; i++) {
+    const x = R() * WORLD_W
+    const y = R() * WORLD_H
+    if (distToTrack(x, y) > TRACK_W / 2 + 60) flies.push([x, y, '200,255,120', 0.35])
+  }
+  glows(g, flies, 12)
+}
+
+// Un árbol (o cactus) visto desde arriba, según el tema.
+function tree(g, kind, x, y, r, R, leaf) {
+  g.fillStyle = 'rgba(0,0,0,0.35)'
+  g.beginPath()
+  g.arc(x + 4, y + 5, r, 0, TAU)
+  g.fill()
+  if (kind === 'cactus') {
+    // saguaro: tronco con costillas y dos brazos
+    const arms = [[r * 0.9, -r * 0.2, r * 0.5], [-r * 0.8, r * 0.3, r * 0.45]]
+    for (const [dx, dy, ar] of [[0, 0, r * 0.62], ...arms]) {
+      const gr = g.createRadialGradient(x + dx - ar * 0.3, y + dy - ar * 0.3, 1, x + dx, y + dy, ar)
+      gr.addColorStop(0, leaf[0])
+      gr.addColorStop(1, leaf[1])
+      g.fillStyle = gr
+      g.beginPath()
+      g.arc(x + dx, y + dy, ar, 0, TAU)
+      g.fill()
+    }
+    g.strokeStyle = 'rgba(220,255,180,0.25)'
+    g.lineWidth = 1
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * TAU
+      g.beginPath()
+      g.moveTo(x, y)
+      g.lineTo(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6)
+      g.stroke()
+    }
+    return
+  }
+  if (kind === 'pine') {
+    // pino: estrella de ramas en capas, con nieve en las puntas
+    for (let layer = 0; layer < 3; layer++) {
+      const lr = r * (1 - layer * 0.28)
+      const n = 9
+      g.beginPath()
+      for (let k = 0; k < n * 2; k++) {
+        const a = (k / (n * 2)) * TAU + layer * 0.3
+        const d = k & 1 ? lr * 0.55 : lr
+        k ? g.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d) : g.moveTo(x + Math.cos(a) * d, y + Math.sin(a) * d)
+      }
+      g.closePath()
+      g.fillStyle = layer === 0 ? leaf[1] : layer === 1 ? leaf[0] : '#e9f3ff'
+      g.fill()
+    }
+    return
+  }
+  if (kind === 'palm') {
+    // palmera: hojas largas en abanico alrededor del tronco
+    const n = 7
+    const a0 = R() * TAU
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (k / n) * TAU
+      g.save()
+      g.translate(x, y)
+      g.rotate(a)
+      const gr = g.createLinearGradient(0, 0, r * 1.3, 0)
+      gr.addColorStop(0, leaf[1])
+      gr.addColorStop(1, leaf[0])
+      g.fillStyle = gr
+      g.beginPath()
+      g.ellipse(r * 0.65, 0, r * 0.7, r * 0.2, 0, 0, TAU)
+      g.fill()
+      g.restore()
+    }
+    g.fillStyle = '#6b4a22'
+    g.beginPath()
+    g.arc(x, y, r * 0.16, 0, TAU)
+    g.fill()
+    return
+  }
+  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r)
+  gr.addColorStop(0, leaf[0])
+  gr.addColorStop(1, leaf[1])
+  g.fillStyle = gr
+  g.beginPath()
+  g.arc(x, y, r, 0, TAU)
+  g.fill()
+}
+
+// ---------- fondo: el decorado del circuito actual (suelo, lo de fuera, árboles, lago, boxes y gradas) ----------
+export function makeBackground() {
+  const T = theme
+  const c = canvasOf(WORLD_W, WORLD_H)
+  const g = c.getContext('2d')
+  const R = rng(7 + circuit * 101)
+  g.fillStyle = T.base
+  g.fillRect(0, 0, WORLD_W, WORLD_H)
+
+  // Suelo a franjas en todo el mundo (lo de fuera lo tapará).
+  for (let i = -WORLD_H; i < WORLD_W; i += 46) {
+    g.fillStyle = T.ground[(i / 46) & 1]
+    g.beginPath()
+    g.moveTo(i, 0)
+    g.lineTo(i + 23, 0)
+    g.lineTo(i + 23 + WORLD_H, WORLD_H)
+    g.lineTo(i + WORLD_H, WORLD_H)
+    g.fill()
+  }
+  for (let i = 0; i < 5200; i++) {
+    g.fillStyle = `rgba(${R() < 0.5 ? T.speck : '0,0,0'},${0.03 + R() * 0.04})`
+    g.fillRect(R() * WORLD_W, R() * WORLD_H, 1 + R() * 2, 1 + R() * 2)
+  }
+
+  // Lo de fuera de la pista.
+  ;({ city, dunes, snow: snowfield, jungle })[T.outside](g, R)
 
   // Árboles en el campo interior y alrededor.
+  const [lx, ly, lrx, lry, lrot] = T.lake
   for (let i = 0; i < 520; i++) {
     const x = R() * WORLD_W
     const y = R() * WORLD_H
     const d = distToTrack(x, y)
-    if (d < TRACK_W / 2 + 120 || d > 330 && !insidePoly(x, y)) continue
-    const r = 9 + R() * 11
-    g.fillStyle = 'rgba(0,0,0,0.35)'
-    g.beginPath()
-    g.arc(x + 4, y + 5, r, 0, 7)
-    g.fill()
-    const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r)
-    gr.addColorStop(0, '#2f7d4a')
-    gr.addColorStop(1, '#0f3a24')
-    g.fillStyle = gr
-    g.beginPath()
-    g.arc(x, y, r, 0, 7)
-    g.fill()
+    if (d < TRACK_W / 2 + 120 || (d > 330 && !insidePoly(x, y))) continue
+    if (((x - lx) / (lrx + 30)) ** 2 + ((y - ly) / (lry + 30)) ** 2 < 1) continue
+    tree(g, T.trees, x, y, 9 + R() * 11, R, T.leaf)
   }
 
   // Un lago en el interior (reflejos de neón).
+  const [w0, w1, glint] = T.water
   g.save()
-  g.translate(640, 400)
-  const lake = g.createRadialGradient(0, 0, 10, 0, 0, 120)
-  lake.addColorStop(0, '#0f4a63')
-  lake.addColorStop(1, '#082a3a')
+  g.translate(lx, ly)
+  g.rotate(lrot)
+  const lake = g.createRadialGradient(0, 0, 10, 0, 0, Math.max(lrx, lry) * 0.8)
+  lake.addColorStop(0, w0)
+  lake.addColorStop(1, w1)
   g.fillStyle = lake
   g.beginPath()
-  g.ellipse(0, 0, 150, 70, -0.2, 0, 7)
+  g.ellipse(0, 0, lrx, lry, 0, 0, TAU)
   g.fill()
-  g.strokeStyle = 'rgba(120,230,255,0.25)'
+  g.strokeStyle = `rgba(${glint},0.25)`
   g.lineWidth = 2
   for (let i = -3; i <= 3; i++) {
     g.beginPath()
-    g.ellipse(i * 14, i * 4, 70 - Math.abs(i) * 14, 14, -0.2, 0, 7)
+    g.ellipse(i * 14, i * 4, Math.max(8, lrx * 0.47 - Math.abs(i) * 14), lry * 0.2, 0, 0, TAU)
     g.stroke()
   }
   g.restore()

@@ -1,4 +1,4 @@
-// La escena de la Carrera de coches: un circuito nocturno visto desde arriba, pintado entero en un canvas 2D.
+// La escena de la Carrera de coches: uno de los circuitos (race.CIRCUITS) visto desde arriba, pintado entero en un canvas 2D.
 //
 // <RaceScene
 //   getNow={() => ms}                 reloj del servidor (Date.now() + diferencia medida); la escena se anima sola con él
@@ -7,6 +7,7 @@
 //   seats={[{ car, name, avatar }]}   pilotos humanos de esta carrera; el resto de coches los lleva la IA
 //   bets={[{ kind, cars:[coche…], amount }]}   tus apuestas (se marcan todos los coches que apuestas; ★ si es a ganador)
 //   mySeat={number | null}            el coche que pilotas tú
+//   circuit={number}                  el circuito de esta ronda (race.circuitOf(round)); al cambiar se repinta la pista
 //   podium={number[]}                 opcional: premios del podio en centésimas (por defecto race.PODIUM)
 //   muted={boolean}  reduced={boolean}
 //   onEvent={(e) => void}             { type: 'lights', n } | { type: 'start' } | { type: 'finish', car, place } | { type: 'winner', car, photo }
@@ -16,7 +17,7 @@
 // Las posiciones salen SIEMPRE de progress(finish, wobble, getNow() - start): la escena solo anima, nunca decide.
 import { useEffect, useRef } from 'react'
 import './RaceScene.css'
-import { CAR_INFO, CARS, GRID_MS, LAPS, PODIUM, progress, startOf } from './race.js'
+import { CAR_INFO, CARS, CIRCUITS, GRID_MS, LAPS, PODIUM, progress, startOf } from './race.js'
 import {
   LANE_GAP,
   LEN,
@@ -42,7 +43,9 @@ import {
   poles,
   rgba,
   rrPath,
+  setCircuit,
   shade,
+  theme,
 } from './raceArt.js'
 import { playBeep, playGo, playLastLap, playOvation, playPass, startEngine2 } from './sound.js'
 
@@ -191,7 +194,9 @@ function initials(name) {
 // ---------- la escena ----------
 function mount(canvas, P) {
   const g = canvas.getContext('2d', { alpha: false })
-  const bg = makeBackground()
+  let built = P.current.circuit ?? 0 // el circuito pintado en la capa estática
+  setCircuit(built)
+  let bg = makeBackground()
   const spr = makeSprites()
   const asphaltPattern = g.createPattern(spr.asphalt, 'repeat')
   const marks = document.createElement('canvas')
@@ -353,26 +358,26 @@ function mount(canvas, P) {
     // pista: resplandor de neón, runoff, pianos, asfalto con textura
     g.lineJoin = 'round'
     g.lineCap = 'butt'
-    g.strokeStyle = 'rgba(70,190,255,0.05)'
+    g.strokeStyle = `rgba(${theme.neon},0.05)`
     g.lineWidth = TRACK_W + 110
     g.stroke(centerPath)
-    g.strokeStyle = 'rgba(70,190,255,0.07)'
+    g.strokeStyle = `rgba(${theme.neon},0.07)`
     g.lineWidth = TRACK_W + 70
     g.stroke(centerPath)
-    g.strokeStyle = '#0d1a20'
+    g.strokeStyle = theme.runoff
     g.lineWidth = TRACK_W + 44
     g.stroke(centerPath)
-    g.strokeStyle = '#c42f35'
+    g.strokeStyle = theme.kerb[0]
     g.lineWidth = TRACK_W + 22
     g.stroke(centerPath)
     g.setLineDash([24, 24])
-    g.strokeStyle = '#f4f1ea'
+    g.strokeStyle = theme.kerb[1]
     g.stroke(centerPath)
     g.setLineDash([])
     g.strokeStyle = '#f2f4f6'
     g.lineWidth = TRACK_W + 2
     g.stroke(centerPath)
-    g.strokeStyle = '#2a2f36'
+    g.strokeStyle = theme.asphalt
     g.lineWidth = TRACK_W - 5
     g.stroke(centerPath)
     g.strokeStyle = asphaltPattern
@@ -383,7 +388,7 @@ function mount(canvas, P) {
     g.strokeStyle = 'rgba(255,255,255,0.025)'
     g.lineWidth = 28
     g.stroke(centerPath)
-    drawWet(g)
+    if (theme.wet) drawWet(g)
     // reflejos de las farolas y de la valla de neón en el asfalto mojado
     g.globalCompositeOperation = 'lighter'
     for (const pl of poles) {
@@ -392,15 +397,15 @@ function mount(canvas, P) {
       const lx = pl.x - pl.side * nx * 70
       const ly = pl.y - pl.side * ny * 70
       const gr = g.createLinearGradient(lx, ly, lx, ly + 90)
-      gr.addColorStop(0, 'rgba(255,236,190,0.28)')
-      gr.addColorStop(1, 'rgba(255,236,190,0)')
+      gr.addColorStop(0, `rgba(${theme.lamp},0.28)`)
+      gr.addColorStop(1, `rgba(${theme.lamp},0)`)
       g.fillStyle = gr
       g.beginPath()
       g.ellipse(lx, ly + 44, 9, 48, 0, 0, TAU)
       g.fill()
     }
     for (const path of [neonInner, neonOuter]) {
-      g.strokeStyle = 'rgba(60,200,255,0.07)'
+      g.strokeStyle = `rgba(${theme.neon},0.07)`
       g.lineWidth = 26
       g.stroke(path)
     }
@@ -409,7 +414,7 @@ function mount(canvas, P) {
     // valla de neón
     g.globalCompositeOperation = 'lighter'
     for (const path of [neonInner, neonOuter]) {
-      g.strokeStyle = 'rgba(40,220,255,0.18)'
+      g.strokeStyle = `rgba(${theme.neon},0.18)`
       g.lineWidth = 9
       g.stroke(path)
     }
@@ -468,6 +473,17 @@ function mount(canvas, P) {
   sg.scale(SS, SS)
   drawStatic(sg)
 
+  // Cambio de circuito (al empezar cada ronda): se vuelven a pintar el fondo y la capa estática.
+  const rebuild = (i) => {
+    built = i
+    setCircuit(i)
+    bg = makeBackground()
+    sg.setTransform(SS, 0, 0, SS, 0, 0)
+    drawStatic(sg)
+    marks.width = WORLD_W
+    snap = true
+  }
+
   // ----- dibujo del mundo (también para la repetición) -----
   const worldDraw = (vp, St, ms, race, main, now, p) => {
     const { ox, oy, w, h, x: cx, y: cy, z } = vp
@@ -483,7 +499,7 @@ function mount(canvas, P) {
     // valla de neón (los destellos van animados)
     g.globalCompositeOperation = 'lighter'
     for (const path of [neonInner, neonOuter]) {
-      g.strokeStyle = 'rgba(120,240,255,0.7)'
+      g.strokeStyle = `rgba(${theme.neonHi},0.7)`
       g.lineWidth = 2.2
       g.setLineDash([46, 28])
       g.lineDashOffset = -now / 40
@@ -858,6 +874,7 @@ function mount(canvas, P) {
     }
     const p = P.current
     const reduced = !!p.reduced
+    if ((p.circuit ?? 0) !== built) rebuild(p.circuit ?? 0)
     const now = p.getNow()
     const race = p.race || null
     const startMs = race ? race.start : startOf(Number.isFinite(p.round) ? p.round : Math.floor(now / 55000))
@@ -1881,7 +1898,7 @@ export default function RaceScene(props) {
   useEffect(() => mount(canvas.current, latest), [])
   return (
     <div className="race-scene">
-      <canvas ref={canvas} role="img" aria-label="Circuito nocturno: los coches desfilan hacia la parrilla de salida" />
+      <canvas ref={canvas} role="img" aria-label={`Circuito ${CIRCUITS[props.circuit ?? 0].name}: la carrera vista desde arriba`} />
     </div>
   )
 }
