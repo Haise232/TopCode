@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { onBroadcast } from '@topcode/shared'
+import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { BANK_TOPIC, abusePerks, abuseText, bancaCall, eur, type Abuse, type Aviso } from './banca'
 import { isMuted, playSiren, playWin } from '../sound.js'
@@ -8,6 +8,7 @@ import './banca.css'
 
 // El Admin Abuse ya presentado (con su animación grande) en este navegador: se guarda su «desde».
 const SEEN_KEY = 'topcode-abuso-visto'
+const POLL_MS = 30000 // por si se pierde un aviso de Realtime (pestaña dormida, red que cae), se pregunta igualmente
 const INTRO_MS = 11000 // la presentación se cierra sola pasado este rato (o antes, con «¡A jugar!»)
 
 const readSeen = () => {
@@ -66,15 +67,24 @@ export default function BancaAvisos() {
   useEffect(() => {
     if (!usuario) return
     load()
-    const off = onBroadcast(BANK_TOPIC, 'cambio', () => {
-      load()
-    })
+    // Canal público, como el de las mesas de Juegos: el servidor avisa con la clave pública (auth.mjs, ping). Los canales
+    // privados de TopCode (onBroadcast de @topcode/shared) no reciben esos avisos.
+    const channel = supabase
+      .channel(BANK_TOPIC)
+      .on('broadcast', { event: 'cambio' }, () => {
+        load()
+      })
+      .subscribe()
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible') load()
+    }, POLL_MS)
     const onVisible = () => {
       if (document.visibilityState === 'visible') load()
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
-      off()
+      supabase.removeChannel(channel)
+      clearInterval(poll)
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [usuario, load])
