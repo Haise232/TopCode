@@ -63,6 +63,9 @@ function Sky({ clock, round, boom, auto, cashed, flags, sub, won }) {
         label.current.textContent = next
       }
       if (box.current.dataset.state !== state) box.current.dataset.state = state
+      // Tramo del multiplicador (color del número): oro, naranja, rosa y violeta.
+      const tier = state === 'waiting' ? 'none' : mult < 200 ? 'low' : mult < 500 ? 'mid' : mult < 1000 ? 'high' : 'epic'
+      if (box.current.dataset.tier !== tier) box.current.dataset.tier = tier
       bar.current.style.setProperty('--left', state === 'waiting' ? Math.max(0, -flown / BETS_MS) : 0)
       frame = requestAnimationFrame(draw)
     }

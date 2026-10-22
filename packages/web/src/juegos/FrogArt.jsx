@@ -298,7 +298,8 @@ export function Splash() {
   )
 }
 
-export function Pad({ m, x, y, r = PAD_R, state = '', flower = 'auto' }) {
+// value: lo que cobrarías al llegar (texto corto, «150 €»), o null.
+export function Pad({ m, x, y, r = PAD_R, state = '', flower = 'auto', value = null }) {
   const kind = flower === 'auto' ? (m >= 9 ? 'gold' : m >= 5 ? 'pink' : 'none') : flower
   const d = leafPath(r)
   const ry = r * 0.42
@@ -315,11 +316,16 @@ export function Pad({ m, x, y, r = PAD_R, state = '', flower = 'auto' }) {
         <ellipse className="frog__leaf-shine" cx={-r * 0.28} cy={-ry * 0.38} rx={r * 0.3} ry={ry * 0.2} />
         {kind !== 'none' && <Lotus gold={kind === 'gold'} />}
       </g>
-      <g className="frog__tag">
-        <rect className="frog__tag-bg" x="-26" y="17" width="52" height="24" rx="12" />
-        <text className="frog__mult" y="29.5">
+      <g className={`frog__tag ${value ? 'frog__tag--value' : ''}`}>
+        <rect className="frog__tag-bg" x={value ? -36 : -26} y="17" width={value ? 72 : 52} height={value ? 40 : 24} rx="12" />
+        <text className="frog__mult" y={value ? 28 : 29.5}>
           ×{m}
         </text>
+        {value && (
+          <text className="frog__value" y="46">
+            {value}
+          </text>
+        )}
       </g>
       {state.includes('is-splash') && <Splash />}
     </g>

@@ -10,7 +10,7 @@
   min-height: 0;
 }
 
-/* Mueble: madera con filo de latón, como Plinko. */
+/* Mueble: cristal oscuro con un marco que va del verde nenúfar al oro del loto. */
 .juegos-root .frog__machine {
   display: grid;
   grid-template-rows: auto auto;
@@ -19,15 +19,16 @@
   /* El estanque llena el ancho, pero sin pasar del alto de la ventana (su proporción es 1000 × 540). */
   max-width: calc((100svh - 250px) * 1000 / 540 + 48px);
   min-height: 0;
-  padding: clamp(12px, 1.8vw, 24px);
-  border-radius: 20px;
+  padding: clamp(12px, 1.8vw, 22px);
+  border: 2px solid transparent;
+  border-radius: 24px;
   background:
-    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 9px),
-    linear-gradient(180deg, #5a2e1d, var(--wood) 60%, #3c1d11);
+    radial-gradient(ellipse at 50% 0%, rgba(88, 196, 124, 0.16), transparent 60%) padding-box,
+    linear-gradient(180deg, #0f2a2c, #081a1d) padding-box,
+    linear-gradient(135deg, #58c47c, #2bb3a8 45%, #ffd25a) border-box;
   box-shadow:
-    inset 0 0 0 3px var(--brass),
-    inset 0 0 0 5px rgba(0, 0, 0, 0.35),
-    0 18px 40px rgba(4, 16, 24, 0.55);
+    0 0 36px rgba(88, 196, 124, 0.22),
+    0 20px 46px rgba(2, 10, 14, 0.6);
 }
 .juegos-root .frog__machine .status {
   /* Alto fijo de dos líneas: un mensaje más largo o más corto no cambia el tamaño del estanque. */
@@ -36,6 +37,11 @@
   line-height: 1.4;
   margin: 0 0 12px;
   font-size: clamp(15px, min(1.6vw, 2.4vh), 20px);
+  color: #e6f5ec;
+}
+.juegos-root .frog__machine .status--win {
+  color: #ffe48a;
+  text-shadow: 0 0 14px rgba(255, 210, 90, 0.5);
 }
 
 /* Estanque: ventana con marco de latón y reflejo de cristal. El agua la dibuja el SVG. */
@@ -44,9 +50,9 @@
   aspect-ratio: 1000 / 540;
   min-height: 0;
   overflow: hidden;
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #2b8f96, #176575 45%, #0a3347);
-  box-shadow: 0 0 0 2px rgba(200, 162, 75, 0.7);
+  box-shadow: 0 0 0 1px rgba(88, 196, 124, 0.5);
 }
 .juegos-root .frog__pond::after {
   content: '';
@@ -56,7 +62,7 @@
   pointer-events: none;
   background: linear-gradient(115deg, rgba(255, 255, 255, 0.1) 0 18%, transparent 18.2%);
   box-shadow:
-    inset 0 0 0 2px rgba(200, 162, 75, 0.6),
+    inset 0 0 0 1px rgba(88, 196, 124, 0.45),
     inset 0 10px 30px rgba(0, 0, 0, 0.4),
     inset 0 -30px 40px rgba(2, 20, 32, 0.35);
 }
@@ -334,6 +340,19 @@
 }
 .juegos-root .frog__tag {
   transform-origin: 0 29px;
+}
+/* Lo que cobrarías al llegar a ese nenúfar. */
+.juegos-root .frog__value {
+  font-size: 13px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+  fill: #ffd25a;
+  pointer-events: none;
+}
+.juegos-root .frog__pad.is-next .frog__value {
+  fill: #fff3b0;
 }
 
 /* Ya superado. */
@@ -866,11 +885,50 @@
 /* ---------- Panel: apuesta, botones y probabilidad ---------- */
 .juegos-root .frog__panel {
   display: grid;
-  align-content: center;
-  gap: clamp(10px, 1.8vh, 20px);
+  /* safe: si no cabe, se pega arriba y hace scroll en vez de cortar el principio. */
+  align-content: safe center;
+  gap: clamp(10px, 1.8vh, 18px);
   min-width: 0;
   max-height: 100%;
   overflow-y: auto;
+  padding: clamp(14px, 1.8vw, 22px);
+  border: 1px solid rgba(88, 196, 124, 0.28);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(15, 42, 44, 0.65), rgba(8, 26, 29, 0.65));
+  box-shadow: 0 18px 40px rgba(2, 10, 14, 0.4);
+}
+/* Sin rana en marcha: el premio máximo y la probabilidad del primer salto. */
+.juegos-root .frog__idle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.juegos-root .frog__idle p {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  margin: 0;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(88, 196, 124, 0.25);
+  text-align: center;
+}
+.juegos-root .frog__idle small {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .frog__idle b {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: #ffd25a;
+}
+.juegos-root .frog__idle span {
+  font-size: 12px;
+  color: var(--muted);
 }
 /* Bloques que cambian de contenido según la partida: reservan su alto para que el panel no crezca ni encoja. */
 .juegos-root .frog__now {
@@ -1009,6 +1067,23 @@
   width: 100%;
   min-height: 56px;
   font-size: 20px;
+}
+/* Lanzar y saltar: verde nenúfar. */
+.juegos-root .frog-app .frog__actions button.primary,
+.juegos-root .frog-app .frog__actions button.primary:not(:disabled):hover {
+  border: 0;
+  color: #04200f;
+  background: linear-gradient(180deg, #a6f0c6, #3fbf75 55%, #1f8a4f);
+  box-shadow:
+    0 4px 0 #13603a,
+    0 8px 18px rgba(0, 0, 0, 0.35);
+}
+.juegos-root .frog-app .frog__actions button.primary:not(:disabled):hover {
+  filter: brightness(1.06);
+}
+.juegos-root .frog-app .frog__actions button.primary:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #13603a;
 }
 .juegos-root .frog__cash {
   border: 2px solid #fff0b0;

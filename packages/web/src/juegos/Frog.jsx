@@ -10,6 +10,9 @@ import PowerButton from './PowerButton.jsx'
 import { Cheer, FrogShape, Pad, Pond } from './FrogArt.jsx'
 import './Frog.css'
 
+// Cantidad corta para las etiquetas de los nenúfares: «150 €», «1.200 €», «25k €».
+const short = (n) => (n >= 10000 ? `${Math.round(n / 1000)}k\u00a0€` : eur(n))
+
 // Estanque (viewBox W × H): un nenúfar por multiplicador, de ×1 a ×MAX_MULT, en dos filas en zigzag (la de abajo se
 // recorre de derecha a izquierda). Nenúfares, rana y efectos se dibujan en coordenadas «lógicas» y se amplían SCALE veces.
 const W = 1000
@@ -390,7 +393,7 @@ function Frog({ onExit, juegos }) {
                 {pads.map((m) => {
                   const { x, y } = padPos(m)
                   const state = sunk === m ? 'is-splash' : m < at ? 'is-past' : m === at ? 'is-here' : m === mult + 1 && run ? 'is-next' : ''
-                  return <Pad key={m} m={m} x={x} y={y} state={state} />
+                  return <Pad key={m} m={m} x={x} y={y} state={state} value={m > at ? short(payout(shownBet, m)) : null} />
                 })}
                 <g ref={frogRef} className="frog__sprite" style={{ transform: framePos(at) }}>
                   <FrogShape
@@ -422,7 +425,18 @@ function Frog({ onExit, juegos }) {
                 </p>
               </>
             ) : (
-              <p className="frog__hint">Sin rana en marcha. Elige la apuesta y lánzala.</p>
+              <div className="frog__idle">
+                <p>
+                  <small>Premio máximo</small>
+                  <b>{eur(payout(shownBet, MAX_MULT))}</b>
+                  <span>al llegar a ×{MAX_MULT}</span>
+                </p>
+                <p>
+                  <small>Primer salto</small>
+                  <b>{chance(1)} %</b>
+                  <span>de acertar</span>
+                </p>
+              </div>
             )}
           </div>
 

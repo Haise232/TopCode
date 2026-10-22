@@ -17,7 +17,7 @@ const ROW_GAP = S * 0.88
 const PEG_R = 4.2
 const BALL_R = 8.5
 const SLOT_Y = TOP + (ROWS - 1) * ROW_GAP + S * 0.95
-const SLOT_H = S * 0.9
+const SLOT_H = S * 1.15
 const H = SLOT_Y + SLOT_H + 6
 const ROW_MS = 165
 const MAX_BALLS = 12
@@ -56,15 +56,21 @@ function framesOf(path) {
   return frames
 }
 
+const TRAIL = [55, 110] // retraso (ms) de las dos sombras que dejan estela tras la bola
+const TONES = { hot: ['#ff7a6e', '#c4231b'], warm: ['#ffb45c', '#d9670f'], gold: ['#ffe48a', '#c99a1e'], even: ['#a6f0c6', '#3aa772'], cold: ['#8fb6cf', '#3d6580'] }
+
 // Una bola en vuelo. El recorrido ya lo decidió el servidor: aquí solo se anima.
 function Ball({ ball, reduced, onPeg, onLand }) {
   const ref = useRef(null)
+  const ghosts = useRef([])
   const land = useEffectEvent(() => onLand(ball))
   const peg = useEffectEvent((row, j) => onPeg(row, j))
   useEffect(() => {
     const duration = reduced ? 500 : (ROWS + 1.2) * ROW_MS
-    const animation = ref.current.animate(framesOf(ball.path), { duration, fill: 'forwards' })
+    const frames = framesOf(ball.path)
+    const animation = ref.current.animate(frames, { duration, fill: 'forwards' })
     animation.onfinish = () => land()
+    const trail = reduced ? [] : ghosts.current.filter(Boolean).map((el, i) => el.animate(frames, { duration, delay: TRAIL[i], fill: 'both' }))
     const timers = []
     if (!reduced) {
       let rights = 0
@@ -77,14 +83,22 @@ function Ball({ ball, reduced, onPeg, onLand }) {
     return () => {
       animation.onfinish = null
       animation.cancel()
+      trail.forEach((a) => a.cancel())
       timers.forEach(clearTimeout)
     }
   }, [ball, reduced])
+  const start = { transform: `translate(${W / 2}px, ${TOP - S}px)` }
   return (
-    <g ref={ref} className="plinko__ball" style={{ transform: `translate(${W / 2}px, ${TOP - S}px)` }}>
-      <circle r={BALL_R} />
-      <circle r={BALL_R * 0.35} cx={-BALL_R * 0.3} cy={-BALL_R * 0.3} className="plinko__shine" />
-    </g>
+    <>
+      {!reduced &&
+        TRAIL.map((_, i) => (
+          <circle key={i} ref={(el) => (ghosts.current[i] = el)} className={`plinko__ghost plinko__ghost--${i}`} r={BALL_R * (0.85 - i * 0.15)} style={start} />
+        ))}
+      <g ref={ref} className="plinko__ball" style={start}>
+        <circle r={BALL_R} />
+        <circle r={BALL_R * 0.35} cx={-BALL_R * 0.3} cy={-BALL_R * 0.3} className="plinko__shine" />
+      </g>
+    </>
   )
 }
 
@@ -248,7 +262,22 @@ function Plinko({ onExit, juegos }) {
                   <stop offset="55%" stopColor="#f0c75a" />
                   <stop offset="100%" stopColor="#a8761d" />
                 </radialGradient>
+                {Object.entries(TONES).map(([tone, [top, bottom]]) => (
+                  <linearGradient key={tone} id={`plinko-tone-${tone}`} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={top} />
+                    <stop offset="100%" stopColor={bottom} />
+                  </linearGradient>
+                ))}
+                {/* Un solo resplandor para todos los clavos (más barato que uno por clavo). */}
+                <filter id="plinko-glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
+              <g className="plinko__pegs" filter="url(#plinko-glow)">
               {Array.from({ length: ROWS }, (_, row) =>
                 Array.from({ length: row + 3 }, (_, j) => (
                   <circle
@@ -264,13 +293,15 @@ function Plinko({ onExit, juegos }) {
                   />
                 )),
               )}
+              </g>
               {multipliers.map((mult, k) => (
                 <g
                   key={`${k}-${hits[k] ?? 0}`}
                   className={`plinko__slot plinko__slot--${toneOf(mult)} ${hits[k] ? 'is-hit' : ''}`}
                 >
-                  <rect x={slotX(k) - S / 2 + 2} y={SLOT_Y} width={S - 4} height={SLOT_H} rx={6} />
-                  <text x={slotX(k)} y={SLOT_Y + SLOT_H / 2}>
+                  <rect x={slotX(k) - S / 2 + 2} y={SLOT_Y} width={S - 4} height={SLOT_H} rx={8} fill={`url(#plinko-tone-${toneOf(mult)})`} />
+                  <rect className="plinko__slot-shine" x={slotX(k) - S / 2 + 5} y={SLOT_Y + 3} width={S - 10} height={SLOT_H * 0.32} rx={5} />
+                  <text x={slotX(k)} y={SLOT_Y + SLOT_H / 2 + 1}>
                     {mult.toLocaleString('es-ES')}
                   </text>
                 </g>
@@ -283,6 +314,18 @@ function Plinko({ onExit, juegos }) {
         </section>
 
         <aside className="plinko__panel">
+          <div className={`plinko__last ${last ? `plinko__last--${toneOf(last.mult)}` : ''}`} aria-hidden="true">
+            <small>Última bola</small>
+            {last ? (
+              <>
+                <b key={last.id}>{fmt(last.mult)}</b>
+                <span>{last.payout >= last.bet ? `+${eur(last.payout - last.bet)}` : `−${eur(last.bet - last.payout)}`}</span>
+              </>
+            ) : (
+              <b>—</b>
+            )}
+          </div>
+
           <div className="plinko__group">
             <h2>Riesgo</h2>
             <div className="plinko__seg" role="group" aria-label="Riesgo">

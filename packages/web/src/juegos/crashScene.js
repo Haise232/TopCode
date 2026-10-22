@@ -4,10 +4,11 @@
 import { BETS_MS, FLIGHT_MS, MAX_MULT, ROUND_MS, fmtMult, msFor, multiplierAt } from './crash.js'
 
 const C = {
-  baizeTop: [20, 57, 79],
-  baizeLow: [28, 74, 99],
-  spaceTop: [5, 11, 20],
-  spaceLow: [12, 26, 43],
+  // Atardecer violeta en la plataforma; espacio casi negro arriba.
+  baizeTop: [24, 26, 72],
+  baizeLow: [96, 48, 112],
+  spaceTop: [3, 4, 14],
+  spaceLow: [14, 10, 42],
   brass: '#c8a24b',
   brassLight: '#e9cf86',
   ivory: '#f1e9d6',
@@ -15,9 +16,17 @@ const C = {
   flame: '#ffe27a',
   ember: '#ff8a3d',
   red: '#c2332c',
-  hill: '#0c2737',
-  hillFar: '#103247',
+  hill: '#140c2c',
+  hillFar: '#241843',
 }
+// Nubes de la nebulosa: posición (fracción del lienzo), radio (fracción del ancho) y color. Aparecen al subir.
+const NEBULAS = [
+  [0.22, 0.28, 0.55, '122, 92, 255'],
+  [0.78, 0.18, 0.45, '255, 79, 154'],
+  [0.55, 0.62, 0.5, '34, 211, 238'],
+]
+// Color de la curva y del halo según el multiplicador: oro, naranja, rosa y violeta.
+const tierColor = (mult) => (mult < 200 ? '255, 226, 122' : mult < 500 ? '255, 160, 70' : mult < 1000 ? '255, 92, 150' : '190, 120, 255')
 const PAD = { left: 18, right: 54, top: 22, bottom: 30 }
 const TICKS = [100, 150, 200, 300, 500, 1000, 1500, 2000, 2500]
 const LOG_MAX = Math.log(MAX_MULT / 100)
@@ -282,15 +291,32 @@ export function createScene(canvas, { reduced = false } = {}) {
     sky.addColorStop(1, mixRgb(C.baizeLow, C.spaceLow, alt))
     ctx.fillStyle = sky
     ctx.fillRect(-10, -10, w + 20, h + 20)
+    // Resplandor del horizonte (se apaga al subir).
+    if (alt < 0.6) {
+      const glow = ctx.createRadialGradient(w * 0.5, h * 1.05, 0, w * 0.5, h * 1.05, w * 0.75)
+      glow.addColorStop(0, `rgba(255, 140, 90, ${0.45 * (1 - alt / 0.6)})`)
+      glow.addColorStop(1, 'rgba(255, 140, 90, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(0, 0, w, h)
+    }
+    // Nebulosa: nubes de color que bajan despacio según se sube.
+    const nebula = 0.05 + alt * 0.22
+    for (const [nx, ny, nr, rgb] of NEBULAS) {
+      const cy = ((((ny + scroll * 0.08) % 1.4) + 1.4) % 1.4) * h - h * 0.2
+      const r0 = nr * w
+      const g = ctx.createRadialGradient(nx * w, cy, 0, nx * w, cy, r0)
+      g.addColorStop(0, `rgba(${rgb}, ${nebula})`)
+      g.addColorStop(1, `rgba(${rgb}, 0)`)
+      ctx.fillStyle = g
+      ctx.fillRect(nx * w - r0, cy - r0, r0 * 2, r0 * 2)
+    }
 
     // 2. Estrellas: aparecen al subir y se estiran con la velocidad.
     const starAlpha = 0.25 + alt * 0.75
     const time = t
     for (const layer of layers) {
       const off = scroll * layer.speed
-      // Solo la capa cercana se estira, y poco: sensación de velocidad sin parecer lluvia.
-      const streak = reduced || layer.speed < 1 ? 0 : Math.min(9, speed * 30)
-      ctx.strokeStyle = C.ivory
+      // Puntos que titilan (sin estelas: de lado parecían lluvia); la capa cercana lleva un halo.
       ctx.fillStyle = C.ivory
       for (const s of layer.stars) {
         const x = (((s.x - off * 0.6) % 1) + 1) % 1
@@ -298,13 +324,15 @@ export function createScene(canvas, { reduced = false } = {}) {
         const px = x * w
         const py = y * h
         const twinkle = reduced ? 1 : 0.65 + 0.35 * Math.sin(time / 600 + s.tw)
-        ctx.globalAlpha = starAlpha * twinkle * (0.4 + layer.speed * 0.5) * (streak > 1.5 ? 0.6 : 1)
-        if (streak > 1.5) {
-          ctx.lineWidth = layer.size * 0.8
+        ctx.globalAlpha = starAlpha * twinkle * (0.4 + layer.speed * 0.5)
+        if (layer.speed >= 1) {
           ctx.beginPath()
-          ctx.moveTo(px, py)
-          ctx.lineTo(px + streak * 0.6, py - streak)
-          ctx.stroke()
+          ctx.arc(px, py, layer.size * 0.9, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.globalAlpha *= 0.25
+          ctx.beginPath()
+          ctx.arc(px, py, layer.size * 2.6, 0, Math.PI * 2)
+          ctx.fill()
         } else {
           ctx.fillRect(px, py, layer.size, layer.size)
         }
@@ -434,8 +462,9 @@ export function createScene(canvas, { reduced = false } = {}) {
       angle = Math.atan2(tipY - prev[1], tipX - prev[0]) || -Math.PI / 8
       const area = ctx.createLinearGradient(0, PAD.top, 0, h)
       const boomed = state === 'boom'
-      area.addColorStop(0, boomed ? 'rgba(194, 51, 44, 0.28)' : 'rgba(200, 162, 75, 0.3)')
-      area.addColorStop(1, 'rgba(200, 162, 75, 0)')
+      const tone = tierColor(mult)
+      area.addColorStop(0, boomed ? 'rgba(194, 51, 44, 0.3)' : `rgba(${tone}, 0.32)`)
+      area.addColorStop(1, `rgba(${tone}, 0)`)
       ctx.fillStyle = area
       ctx.beginPath()
       ctx.moveTo(pts[0][0], Y(100))
@@ -445,14 +474,14 @@ export function createScene(canvas, { reduced = false } = {}) {
       ctx.fill()
 
       const line = ctx.createLinearGradient(X(0), 0, tipX, 0)
-      line.addColorStop(0, boomed ? 'rgba(194, 51, 44, 0.5)' : 'rgba(200, 162, 75, 0.55)')
-      line.addColorStop(1, boomed ? '#ff8a7d' : C.flame)
+      line.addColorStop(0, boomed ? 'rgba(194, 51, 44, 0.5)' : 'rgba(255, 226, 122, 0.55)')
+      line.addColorStop(1, boomed ? '#ff8a7d' : `rgb(${tone})`)
       ctx.strokeStyle = line
-      ctx.lineWidth = 3.5
+      ctx.lineWidth = 4
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
-      ctx.shadowColor = boomed ? 'rgba(255, 90, 70, 0.6)' : 'rgba(255, 226, 122, 0.55)'
-      ctx.shadowBlur = reduced ? 0 : 14
+      ctx.shadowColor = boomed ? 'rgba(255, 90, 70, 0.6)' : `rgba(${tone}, 0.7)`
+      ctx.shadowBlur = reduced ? 0 : 18
       ctx.beginPath()
       pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)))
       ctx.stroke()
@@ -502,9 +531,21 @@ export function createScene(canvas, { reduced = false } = {}) {
       drawRocket(0, 0, -Math.PI / 2, false, time)
       ctx.restore()
     } else if (state === 'flying' || state === 'landing') {
-      if (!reduced) spawn(tipX - Math.cos(angle) * 14, tipY - Math.sin(angle) * 14, 'exhaust', Math.ceil(2 + alt * 3), angle)
+      if (!reduced) spawn(tipX - Math.cos(angle) * 26, tipY - Math.sin(angle) * 26, 'exhaust', Math.ceil(3 + alt * 4), angle)
       if (!reduced && flown < 1200) spawn(X(0), Y(100), 'smoke', 1)
-      drawRocket(tipX, tipY, angle, true, time)
+      // Halo detrás del cohete, del color del momento.
+      const halo = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 46)
+      halo.addColorStop(0, `rgba(${tierColor(mult)}, 0.45)`)
+      halo.addColorStop(1, `rgba(${tierColor(mult)}, 0)`)
+      ctx.fillStyle = halo
+      ctx.beginPath()
+      ctx.arc(tipX, tipY, 46, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.save()
+      ctx.translate(tipX, tipY)
+      ctx.scale(1.75, 1.75)
+      drawRocket(0, 0, angle, true, time)
+      ctx.restore()
     } else if (state === 'boom') {
       if (lastState !== 'boom' && boomStart !== null && t - boomStart < 300 && !reduced) {
         spawn(tipX, tipY, 'spark', 70)
