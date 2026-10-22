@@ -1,4 +1,4 @@
-// Juegos en solitario (ruleta, cohete, laberinto, Plinko, gancho, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, laberinto, Plinko, sobornos, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
 // el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
@@ -6,12 +6,12 @@ import { createHmac } from 'node:crypto'
 import * as roulette from '../../packages/web/src/juegos/roulette.js'
 import * as dungeon from '../../packages/web/src/juegos/dungeon.js'
 import * as plinko from '../../packages/web/src/juegos/plinko.js'
-import * as claw from '../../packages/web/src/juegos/claw.js'
+import * as bribe from '../../packages/web/src/juegos/bribe.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
 import * as race from '../../packages/web/src/juegos/race.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race', solo_claw: 'claw' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race', solo_bribe: 'bribe' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -139,17 +139,6 @@ export function plinkoDrop(msg, balance, _saved, rand) {
   const payout = plinko.payoutOf(msg.bet, msg.risk, slot)
   const delta = payout - msg.bet
   return { delta, played: true, saved: null, result: { path, slot, payout, balance: balance + delta } }
-}
-
-// Gancho: como Plinko, cada intento se liquida al momento y no guarda nada. El premio sale de randomInt; la pantalla
-// solo anima el gancho hasta él.
-export function clawGrab(msg, balance, _saved, rand) {
-  if (!claw.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
-  if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
-  const prize = claw.drawPrize(rand)
-  const payout = claw.payoutOf(msg.bet, prize)
-  const delta = payout - msg.bet
-  return { delta, played: true, saved: null, result: { prize, payout, balance: balance + delta } }
 }
 
 // --- Cohete en vivo: un multiplicador que sube para todos a la vez; quien retira antes de que explote, cobra. ---
@@ -478,4 +467,50 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, kind, doors, msg.door, room) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, claw: clawGrab }
+// --- Sobornos: como el laberinto, la apuesta queda en juego como maletín y en cada despacho el jugador elige a quién
+// sobornar o blanquea lo que lleva y sale. El servidor baraja las reacciones después de recibir la elegida.
+// saved: { bet, pot, office, week, last } con bet > 0 mientras hay una trama en marcha; last es la última liquidada.
+function bribeView(state, balance, ev = null, reacts = null, pick = null, at = null) {
+  const live = state.bet > 0
+  return { bet: live ? state.bet : 0, pot: live ? state.pot : 0, office: live ? state.office : 0, last: state.last ?? null, balance, ev, reacts, pick, at }
+}
+
+// msg.a: «sync», «start» (bet), «bribe» (pick: 0, 1 o 2) o «cash» (blanquear y salir).
+export function bribePlay(msg, balance, saved, rand, ctx) {
+  let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
+  const live = state.bet > 0
+  const settle = (paid, end) => {
+    state = { ...state, bet: 0, pot: 0, last: { round: ctx.now, stake: state.bet, payout: paid, net: paid - state.bet, office: state.office, end } }
+    return paid
+  }
+  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: bribeView(state, balance) }
+  if (msg.a === 'start') {
+    if (live) return { error: 'BAD_PHASE' }
+    if (!bribe.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
+    if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+    state = { ...state, bet: msg.bet, pot: msg.bet, office: 0, week: ctx.week }
+    return { delta: -msg.bet, played: true, saved: state, result: bribeView(state, balance - msg.bet, 'start') }
+  }
+  if (!live) return { error: 'BAD_PHASE' }
+  if (msg.a === 'cash') {
+    const paid = settle(state.pot, 'cash')
+    return { delta: paid, played: true, saved: state, result: bribeView(state, balance + paid, 'cash') }
+  }
+  if (msg.a !== 'bribe' || !bribe.validPick(msg.pick)) return { error: 'BAD_MESSAGE' }
+  const office = state.office
+  const reacts = bribe.layout(office, rand)
+  const react = reacts[msg.pick]
+  if (bribe.loses(react)) {
+    settle(0, react)
+    return { delta: 0, played: true, saved: state, result: bribeView(state, balance, react, reacts, msg.pick, office) }
+  }
+  const pot = react === 'deal' ? bribe.grow(state.pot, office) : state.pot
+  state = { ...state, pot, office: office + 1 }
+  if (state.office >= bribe.DEPTH) {
+    const paid = settle(pot, 'top')
+    return { delta: paid, played: true, saved: state, result: bribeView(state, balance + paid, react, reacts, msg.pick, office) }
+  }
+  return { delta: 0, played: true, saved: state, result: bribeView(state, balance, react, reacts, msg.pick, office) }
+}
+
+export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, bribe: bribePlay }

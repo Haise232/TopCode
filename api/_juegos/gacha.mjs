@@ -107,8 +107,8 @@ const SOLO_SHAPES = [
     [80, 6],
   ],
 ]
-const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', dungeon: 'el laberinto', plinko: 'el Plinko', frog: 'la rana', race: 'la carrera', claw: 'el gancho' }
-const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', dungeon: 'laberinto', plinko: 'Plinko', frog: 'rana', race: 'carrera', claw: 'gancho' }
+const SOLO_IN = { roulette: 'la ruleta', crash: 'el cohete', dungeon: 'el laberinto', plinko: 'el Plinko', frog: 'la rana', race: 'la carrera', bribe: 'los sobornos' }
+const SOLO_TITLE = { roulette: 'ruleta', crash: 'cohete', dungeon: 'laberinto', plinko: 'Plinko', frog: 'rana', race: 'carrera', bribe: 'sobornos' }
 const SOLO_GAMES = Object.keys(SOLO_IN)
 export const POWER_GAMES = ['poker', 'blackjack', ...SOLO_GAMES]
 // El punto fuerte de cada carta se sortea solo entre los juegos que había al crear el gacha, para que añadir un juego

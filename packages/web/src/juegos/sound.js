@@ -418,42 +418,54 @@ export function playSteps() {
   tone(ac, { freq: 130, to: 85, at: 0.28, dur: 0.08, type: 'triangle', peak: 0.08 })
 }
 
-// ---- Máquina de gancho ----
-// Motor del gancho al subir o bajar: zumbido grave que dura lo que el movimiento (ms).
-export function playMotor(ms = 900) {
+// ---- Sobornos ----
+// Sobre que se desliza por la mesa: ráfaga corta de ruido filtrado.
+export function playRustle() {
   const ac = audio()
   if (!ac) return
-  const dur = ms / 1000
-  tone(ac, { freq: 70, to: 110, dur, type: 'sawtooth', peak: 0.025 })
-  tone(ac, { freq: 140, to: 220, dur, type: 'square', peak: 0.012 })
+  const len = Math.floor(ac.sampleRate * 0.22)
+  const buffer = ac.createBuffer(1, len, ac.sampleRate)
+  const data = buffer.getChannelData(0)
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 1.5
+  const src = ac.createBufferSource()
+  const filter = ac.createBiquadFilter()
+  const gain = ac.createGain()
+  src.buffer = buffer
+  filter.type = 'bandpass'
+  filter.frequency.value = 3200
+  gain.gain.value = 0.12
+  src.connect(filter).connect(gain).connect(master)
+  src.start()
 }
 
-// Las pinzas se cierran: clic metálico y un tope seco.
-export function playGrab() {
+// Sello de «contrato adjudicado»: golpe seco y un tintineo.
+export function playStamp() {
   const ac = audio()
   if (!ac) return
-  tone(ac, { freq: 2200, to: 1100, dur: 0.05, type: 'square', peak: 0.05 })
-  tone(ac, { freq: 220, to: 120, at: 0.05, dur: 0.14, type: 'triangle', peak: 0.12 })
+  tone(ac, { freq: 190, to: 60, dur: 0.16, type: 'triangle', peak: 0.2 })
+  tone(ac, { freq: 1568, at: 0.06, dur: 0.18, type: 'sine', peak: 0.05 })
 }
 
-// Aparece el premio bajo el gancho: un «pop» que sube.
-export function playPop() {
-  const ac = audio()
-  if (ac) tone(ac, { freq: 420, to: 900, dur: 0.12, type: 'sine', peak: 0.09 })
-}
-
-// El premio cae por el conducto: golpe en la bandeja y monedas que tintinean.
-export function playPrizeDrop() {
+// Largas: dos notas que se hunden («mmm... ya le llamaremos»).
+export function playStall() {
   const ac = audio()
   if (!ac) return
-  tone(ac, { freq: 150, to: 60, dur: 0.22, type: 'triangle', peak: 0.16 })
-  for (let i = 0; i < 4; i++) tone(ac, { freq: 1300 + i * 170, at: 0.08 + i * 0.07, dur: 0.1, type: 'square', peak: 0.035 })
+  tone(ac, { freq: 330, to: 300, dur: 0.18, type: 'triangle', peak: 0.09 })
+  tone(ac, { freq: 262, to: 200, at: 0.2, dur: 0.3, type: 'triangle', peak: 0.09 })
 }
 
-// Se escurre de las pinzas: silbido que cae y un golpecito flojo al volver al montón.
-export function playSlip() {
+// Sirena de policía: tres alternancias rápidas.
+export function playSiren() {
   const ac = audio()
   if (!ac) return
-  tone(ac, { freq: 900, to: 180, dur: 0.4, type: 'sine', peak: 0.08 })
-  tone(ac, { freq: 110, to: 70, at: 0.4, dur: 0.12, type: 'triangle', peak: 0.1 })
+  for (let i = 0; i < 4; i++) tone(ac, { freq: i % 2 ? 700 : 960, at: i * 0.17, dur: 0.17, type: 'square', peak: 0.05 })
+}
+
+// Caja registradora al blanquear: tic y «ding» doble.
+export function playRegister() {
+  const ac = audio()
+  if (!ac) return
+  tone(ac, { freq: 2200, dur: 0.03, type: 'square', peak: 0.04 })
+  tone(ac, { freq: 1319, at: 0.07, dur: 0.35, type: 'sine', peak: 0.1 })
+  tone(ac, { freq: 1760, at: 0.15, dur: 0.45, type: 'sine', peak: 0.09 })
 }
