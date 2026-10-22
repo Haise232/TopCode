@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 export const RARITY = { comun: 'Común', rara: 'Rara', epica: 'Épica', mitica: 'Legendaria', unica: 'Mítica' }
 export const RARITIES = ['unica', 'mitica', 'epica', 'rara', 'comun']
 // Juegos con poder, en el orden en que se enseñan.
-export const GAME_NAME = { poker: 'Póker', blackjack: 'Blackjack', roulette: 'Ruleta', crash: 'Cohete', dungeon: 'Laberinto', plinko: 'Plinko', frog: 'Rana', race: 'Carrera', bribe: 'Sobornos' }
+export const GAME_NAME = { poker: 'Póker', blackjack: 'Blackjack', roulette: 'Ruleta', crash: 'Cohete', dungeon: 'Laberinto', plinko: 'Plinko', frog: 'Rana', race: 'Carrera', wheel: 'Rueda' }
 // Probabilidad de una carta concreta: «0,11 %», «2,8 %».
 export const pct = (n) => `${n.toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`
 // Igual que WEIGHTS en api/_juegos/gacha.mjs, para la ayuda.

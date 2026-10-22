@@ -47,7 +47,7 @@ create index if not exists juegos_chat_usuario_idx on public.juegos_chat (usuari
 -- Partida en curso de los juegos en solitario (racha de la ruleta, mano del blackjack).
 create table if not exists public.juegos_solo (
   usuario_id  uuid not null references public.usuarios(id) on delete cascade,
-  juego       text not null check (juego in ('roulette', 'blackjack', 'crash', 'frog', 'race', 'dungeon', 'bribe')),
+  juego       text not null check (juego in ('roulette', 'blackjack', 'crash', 'frog', 'race', 'dungeon', 'bribe', 'wheel')),
   estado      jsonb not null,
   actualizado timestamptz not null default now(),
   primary key (usuario_id, juego)
@@ -130,6 +130,24 @@ create table if not exists public.juegos_avisos_vistos (
   ultimo     bigint not null default 0
 );
 
+-- Duelos 1 contra 1 (igual que supabase/migracion_juegos_duelos_rueda.sql).
+create table if not exists public.juegos_duelos (
+  id      bigserial primary key,
+  reta    uuid not null references public.usuarios(id) on delete cascade,
+  para    uuid references public.usuarios(id) on delete cascade,
+  acepta  uuid references public.usuarios(id) on delete set null,
+  apuesta bigint not null check (apuesta > 0),
+  tipo    text not null check (tipo in ('moneda', 'dados', 'carta')),
+  estado  text not null default 'abierto' check (estado in ('abierto', 'jugado', 'cancelado', 'caducado')),
+  ganador text check (ganador in ('reta', 'acepta')),
+  detalle jsonb,
+  extra   bigint not null default 0,
+  creado  timestamptz not null default now(),
+  jugado  timestamptz
+);
+create index if not exists juegos_duelos_estado_idx on public.juegos_duelos (estado, id desc);
+create index if not exists juegos_duelos_reta_idx on public.juegos_duelos (reta);
+
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;
 alter table public.juegos_mesas   enable row level security;
@@ -143,4 +161,5 @@ alter table public.juegos_gacha_jugadores enable row level security;
 alter table public.juegos_gacha_efectos   enable row level security;
 alter table public.juegos_avisos          enable row level security;
 alter table public.juegos_avisos_vistos   enable row level security;
+alter table public.juegos_duelos          enable row level security;
 `

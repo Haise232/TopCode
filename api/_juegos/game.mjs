@@ -10,8 +10,9 @@ import { storedTimers } from './engine/timers.mjs'
 import { weekOf } from './engine/week.mjs'
 import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
-import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView } from './solo.mjs'
+import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView, wheelDue, wheelView } from './solo.mjs'
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
+import { DUEL_ERRORS, createDuelos } from './duelos.mjs'
 import { abuseExtra, abuseLuck, createBanca } from './banca.mjs'
 import { safeAvatar, shortName } from './engine/names.mjs'
 
@@ -66,6 +67,7 @@ export const ERRORS = {
   AUTH_PENDING: 'Tu cuenta de TopCode aún no está aprobada.',
   AUTH_DOWN: 'No se pudo comprobar tu sesión. Reintentando…',
   ...GACHA_ERRORS,
+  ...DUEL_ERRORS,
 }
 
 export class JuegosError extends Error {
@@ -236,6 +238,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
       await refundSoloBlackjack()
+      await refundRetired('bribe', (estado) => (estado?.bet > 0 ? estado.bet : 0))
     })().catch((error) => {
       schemaReady = null
       throw error
@@ -257,6 +260,19 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     })
   }
 
+  // Un juego en solitario que se retiró (Sobornos, sustituido por la Rueda): a quien tenía una partida a medias se le
+  // devuelve lo apostado y se borra. Tras la primera vez no queda ninguna fila.
+  async function refundRetired(game, stakeOf) {
+    await db.tx(async (q) => {
+      const { rows } = await q(`select usuario_id, estado from public.juegos_solo where juego = $1 for update`, [game])
+      for (const { usuario_id: id, estado } of rows) {
+        const stake = stakeOf(estado)
+        if (stake > 0) await q(`update public.juegos_cuentas set saldo = saldo + $2 where usuario_id = $1`, [id, stake])
+      }
+      if (rows.length) await q(`delete from public.juegos_solo where juego = $1`, [game])
+    })
+  }
+
   // Domingo 23:59: se guarda el podio y todos vuelven a 10.000 €.
   async function rollover(week) {
     if (knownWeek === week.key) return
@@ -274,6 +290,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         await q(`delete from public.juegos_chat where creado < now() - interval '7 days'`)
         await q(`delete from public.juegos_solo`)
         await banca.sweep(q)
+        await duelos.sweep(q)
       })
       await ping('juegos-lobby')
     }
@@ -683,6 +700,24 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     }
   }
 
+  // Mueve saldo de varias cuentas dentro de una transacción ({ id: delta }), con el registro del día (cuenta en el Score).
+  // Con check, no mueve nada si a alguien no le llega para lo que se le quita, y devuelve false.
+  async function move(q, deltas, check = false) {
+    const ids = Object.keys(deltas)
+    const week = weekOf(now())
+    const rows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = any($1::uuid[]) order by usuario_id for update`, [ids])).rows
+    const accounts = new TxAccounts(rows, week.day)
+    if (check && ids.some((id) => !accounts.get(id) || accounts.get(id).balance + deltas[id] < 0)) return false
+    for (const id of ids) {
+      if (!accounts.get(id)) continue
+      accounts.adjust(id, deltas[id])
+      const acc = accounts.get(id)
+      await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [id, acc.balance, pgArray(acc.days), acc.played])
+    }
+    return true
+  }
+  const duelos = createDuelos({ db, ping, now, randomInt, move, abuse: () => banca.abuse() })
+
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.
   async function charge(q, userId, amount) {
@@ -739,6 +774,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     solo_roulette: { game: 'roulette', due: rouletteDue, view: rouletteView },
     solo_crash: { game: 'crash', due: (saved, t) => crashDue(saved, t, secret), view: crashView },
     solo_race: { game: 'race', due: (saved, t) => raceDue(saved, t, secret), view: raceView },
+    solo_wheel: { game: 'wheel', due: wheelDue, view: wheelView },
   }
 
   // Acciones que se aplican a la mesa en la que estás.
@@ -821,7 +857,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       case 'solo_roulette':
       case 'solo_crash':
-      case 'solo_race': {
+      case 'solo_race':
+      case 'solo_wheel': {
         const live = LIVE_SOLO[msg.t]
         let play = msg
         // Espera larga del cohete: se responde justo cuando explota (sin tocar la BD mientras tanto), así cada
@@ -850,7 +887,6 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         return reply
       }
       case 'solo_dungeon':
-      case 'solo_bribe':
       case 'solo_plinko':
       case 'solo_frog': {
         const out = await playSolo(user, msg)
@@ -858,6 +894,13 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         else reply.solo = out.result
         if (out.power) reply.power = out.power
         if (out.abuse) reply.abuse = out.abuse
+        me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
+        return reply
+      }
+      case 'duel': {
+        const out = await duelos.handle(user, msg)
+        if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] ?? 'Error.' }
+        reply.duel = { ...(await duelos.list(user)), hecho: out.id ?? null }
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         return reply
       }

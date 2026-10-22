@@ -1,4 +1,4 @@
-// Juegos en solitario (ruleta, cohete, laberinto, Plinko, sobornos, la rana y la carrera de coches) con el saldo semanal: el servidor sortea
+// Juegos en solitario (ruleta, cohete, laberinto, Plinko, la rana, la carrera de coches y la rueda de la fortuna) con el saldo semanal: el servidor sortea
 // con randomInt y aplica las mismas reglas puras que pinta la pantalla (packages/web/src/juegos/*.js), así el
 // navegador no puede elegir su resultado. Cada función devuelve { error } o el resultado con `delta`, lo que cambia
 // el saldo, y `saved`, lo que hay que guardar para la siguiente jugada (racha y apuesta de la ruleta y del cohete).
@@ -6,12 +6,12 @@ import { createHmac } from 'node:crypto'
 import * as roulette from '../../packages/web/src/juegos/roulette.js'
 import * as dungeon from '../../packages/web/src/juegos/dungeon.js'
 import * as plinko from '../../packages/web/src/juegos/plinko.js'
-import * as bribe from '../../packages/web/src/juegos/bribe.js'
+import * as wheel from '../../packages/web/src/juegos/wheel.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
 import * as race from '../../packages/web/src/juegos/race.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race', solo_bribe: 'bribe' }
+export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race', solo_wheel: 'wheel' }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -490,50 +490,75 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, extra) }
 }
 
-// --- Sobornos: como el laberinto, la apuesta queda en juego como maletín y en cada despacho el jugador elige a quién
-// sobornar o blanquea lo que lleva y sale. El servidor baraja las reacciones después de recibir la elegida.
-// saved: { bet, pot, office, week, last } con bet > 0 mientras hay una trama en marcha; last es la última liquidada.
-function bribeView(state, balance, ev = null, reacts = null, pick = null, at = null) {
-  const live = state.bet > 0
-  return { bet: live ? state.bet : 0, pot: live ? state.pot : 0, office: live ? state.office : 0, last: state.last ?? null, balance, ev, reacts, pick, at }
+// --- Rueda de la Fortuna en vivo: una rueda para todos cada wheel.ROUND_MS, como la ruleta. La casilla de cada ronda sale
+// de HMAC(secreto, ronda) y no se revela hasta que se cierran las apuestas.
+const WHEEL_HISTORY = 20
+const wheelDraws = new Map()
+export function wheelDraw(secret, round) {
+  const hit = wheelDraws.get(round)
+  if (hit !== undefined) return hit
+  const next32 = hmacStream(secret, `rueda:${round}`)
+  const n = wheel.WHEEL.length
+  const limit = 2 ** 32 - (2 ** 32 % n)
+  let value
+  do value = next32()
+  while (value >= limit)
+  const index = value % n
+  if (wheelDraws.size > 5000) wheelDraws.clear()
+  wheelDraws.set(round, index)
+  return index
+}
+const wheelRevealAt = (round) => round * wheel.ROUND_MS + wheel.BETS_MS + GRACE_MS
+// Se paga cuando la rueda ya se ha parado (no antes, para no adelantar el resultado en el saldo).
+export const wheelDue = (saved, t) => Boolean(saved?.bets?.length) && t >= saved.round * wheel.ROUND_MS + wheel.BETS_MS + wheel.SPIN_MS
+
+export function wheelView(saved, balance, { now: t, secret }) {
+  const round = wheel.phaseAt(t).round
+  const revealed = t >= wheelRevealAt(round)
+  const last = revealed ? round : round - 1
+  return {
+    now: t,
+    round,
+    index: revealed ? wheelDraw(secret, round) : null,
+    bets: saved?.round === round ? (saved.bets ?? []) : [],
+    last: saved?.last ?? null,
+    history: Array.from({ length: WHEEL_HISTORY }, (_, i) => wheel.WHEEL[wheelDraw(secret, last - i)]),
+    balance,
+  }
 }
 
-// msg.a: «sync», «start» (bet), «bribe» (pick: 0, 1 o 2) o «cash» (blanquear y salir).
-export function bribePlay(msg, balance, saved, rand, ctx) {
-  let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
-  const live = state.bet > 0
-  const settle = (paid, end) => {
-    state = { ...state, bet: 0, pot: 0, last: { round: ctx.now, stake: state.bet, payout: paid, net: paid - state.bet, office: state.office, end } }
-    return paid
+// msg.a: «sync» o «bet» (tus apuestas de esta ronda, [{ mult, amount }]; una lista vacía las retira).
+export function wheelLive(msg, balance, saved, _rand, ctx) {
+  const t = ctx.now
+  let state = { ...(saved ?? {}) }
+  let delta = 0
+  let changed = false
+  if (wheelDue(state, t)) {
+    if (state.week === ctx.week) {
+      const index = wheelDraw(ctx.secret, state.round)
+      const stake = wheel.totalOf(state.bets)
+      const payout = wheel.payoutOf(state.bets, index)
+      delta += payout
+      state.last = { round: state.round, index, mult: wheel.WHEEL[index], stake, payout, net: payout - stake, bets: state.bets }
+    }
+    state = { ...state, bets: [] }
+    changed = true
   }
-  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: bribeView(state, balance) }
-  if (msg.a === 'start') {
-    if (live) return { error: 'BAD_PHASE' }
-    if (!bribe.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
-    if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
-    state = { ...state, bet: msg.bet, pot: msg.bet, office: 0, week: ctx.week }
-    return { delta: -msg.bet, played: true, saved: state, result: bribeView(state, balance - msg.bet, 'start') }
+  if (msg.a === 'bet') {
+    const { round, offset } = wheel.phaseAt(t)
+    if (msg.round !== round || offset >= wheel.BETS_MS + GRACE_MS) return { error: 'BETS_CLOSED' }
+    const placed = Array.isArray(msg.bets) ? msg.bets : null
+    if (!placed || (placed.length > 0 && !wheel.validBets(placed))) return { error: 'BAD_MESSAGE' }
+    const before = state.round === round ? wheel.totalOf(state.bets ?? []) : 0
+    const stake = wheel.totalOf(placed)
+    if (stake - before > balance + delta) return { error: 'INSUFFICIENT_FUNDS' }
+    delta += before - stake
+    state = { ...state, round, week: ctx.week, bets: placed.map(({ mult, amount }) => ({ mult, amount })) }
+    changed = true
+  } else if (msg.a !== 'sync') {
+    return { error: 'BAD_MESSAGE' }
   }
-  if (!live) return { error: 'BAD_PHASE' }
-  if (msg.a === 'cash') {
-    const paid = settle(state.pot, 'cash')
-    return { delta: paid, played: true, saved: state, result: bribeView(state, balance + paid, 'cash') }
-  }
-  if (msg.a !== 'bribe' || !bribe.validPick(msg.pick)) return { error: 'BAD_MESSAGE' }
-  const office = state.office
-  const reacts = bribe.layout(office, rand)
-  const react = reacts[msg.pick]
-  if (bribe.loses(react)) {
-    settle(0, react)
-    return { delta: 0, played: true, saved: state, result: bribeView(state, balance, react, reacts, msg.pick, office) }
-  }
-  const pot = react === 'deal' ? bribe.grow(state.pot, office) : state.pot
-  state = { ...state, pot, office: office + 1 }
-  if (state.office >= bribe.DEPTH) {
-    const paid = settle(pot, 'top')
-    return { delta: paid, played: true, saved: state, result: bribeView(state, balance + paid, react, reacts, msg.pick, office) }
-  }
-  return { delta: 0, played: true, saved: state, result: bribeView(state, balance, react, reacts, msg.pick, office) }
+  return { delta, played: changed, saved: changed ? state : null, result: wheelView(state, balance + delta, ctx) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, bribe: bribePlay }
+export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, wheel: wheelLive }
