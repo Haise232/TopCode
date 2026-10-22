@@ -110,6 +110,7 @@ const MEMES = [
   ['Manolo el del Bombo', 'La Selección', 'comun', 'Manolo el del Bombo'],
   ['Rodolfo Chikilicuatre', 'Chiki chiki', 'comun', 'Rodolfo Chikilicuatre'],
   ['Ramón García', 'La capa de las campanadas', 'comun', 'Ramón García'],
+  ['Antonio Lobato', 'La voz de la Fórmula 1', 'comun', 'Antonio Lobato', 'https://hips.hearstapps.com/hmg-prod/images/alobatof1-366822811-18370561588044921-7669787835052649178-n-64f9aaa3dc330.jpg?crop=1.00xw:1.00xh;0,0&resize=1120:*'],
 ]
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
