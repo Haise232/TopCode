@@ -113,6 +113,22 @@ create table if not exists public.juegos_gacha_efectos (
   primary key (usuario_id, juego)
 );
 
+-- Banca (igual que supabase/migracion_juegos_banca.sql): Admin Abuse activo y avisos de dinero o mensajes del master.
+alter table public.juegos_meta add column if not exists abuso jsonb;
+create table if not exists public.juegos_avisos (
+  id         bigserial primary key,
+  usuario_id uuid references public.usuarios(id) on delete cascade,
+  tipo       text not null check (tipo in ('dinero', 'mensaje')),
+  importe    bigint,
+  texto      text check (texto is null or char_length(texto) <= 300),
+  creado     timestamptz not null default now()
+);
+create index if not exists juegos_avisos_usuario_idx on public.juegos_avisos (usuario_id, id);
+create table if not exists public.juegos_avisos_vistos (
+  usuario_id uuid primary key references public.usuarios(id) on delete cascade,
+  ultimo     bigint not null default 0
+);
+
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;
 alter table public.juegos_mesas   enable row level security;
@@ -124,4 +140,6 @@ alter table public.juegos_gacha_estado    enable row level security;
 alter table public.juegos_gacha_tiradas   enable row level security;
 alter table public.juegos_gacha_jugadores enable row level security;
 alter table public.juegos_gacha_efectos   enable row level security;
+alter table public.juegos_avisos          enable row level security;
+alter table public.juegos_avisos_vistos   enable row level security;
 `

@@ -1,16 +1,20 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   Home, BookMarked, MessageCircle, FolderOpen, Calendar, Shield,
-  GraduationCap, HelpCircle, BookOpen, Search,
+  GraduationCap, HelpCircle, BookOpen, Search, Landmark,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useUnreadCounts, type UnreadCounts } from '../hooks/useUnreadCounts'
 import AnuncioModal from './AnuncioModal'
 import PrivateMessageToast from './PrivateMessageToast'
 import ActivityToast from './ActivityToast'
+import BancaAvisos from './banca/BancaAvisos'
 import Pattern from './Pattern'
 import { cn } from './ui/cn'
+
+// Panel de la banca: solo lo abre el master, así que se carga al pulsar el botón.
+const BancaPanel = lazy(() => import('./banca/BancaPanel'))
 
 const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
   '/':            () => import('../pages/Home'),
@@ -52,6 +56,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS
   const mobileItems = isAdmin ? [...MOBILE_ITEMS, ADMIN_ITEM] : MOBILE_ITEMS
   const [expanded, setExpanded] = useState(false)
+  const [bancaOpen, setBancaOpen] = useState(false)
+  const isMaster = usuario?.es_superadmin === true
   const location = useLocation()
   const unread = useUnreadCounts()
 
@@ -166,6 +172,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Profile at bottom */}
         <div className="shrink-0 p-2 border-t border-white/10">
+          {isMaster && (
+            <button
+              type="button"
+              onClick={() => setBancaOpen(true)}
+              className="mb-1 flex w-full items-center gap-3 px-2 py-2 rounded-xl text-amber-light transition-all duration-200 hover:bg-amber/10"
+              aria-label="La banca (master)"
+              title="La banca"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-amber-light to-amber-dark text-black shadow-[0_0_14px_rgba(245,158,11,0.35)]">
+                <Landmark size={16} />
+              </span>
+              {expanded && <span className="text-xs font-semibold">La banca</span>}
+            </button>
+          )}
           <NavLink
             to="/profile"
             className={cn(
@@ -251,6 +271,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           )
         })}
       </nav>
+
+      {/* Botón de la banca en el móvil (solo el master) */}
+      {isMaster && (
+        <button
+          type="button"
+          onClick={() => setBancaOpen(true)}
+          className="md:hidden fixed right-3 bottom-[72px] z-50 grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-amber-light to-amber-dark text-black shadow-[0_6px_20px_rgba(245,158,11,0.45)]"
+          aria-label="La banca (master)"
+        >
+          <Landmark size={20} />
+        </button>
+      )}
+      {bancaOpen && (
+        <Suspense fallback={null}>
+          <BancaPanel onClose={() => setBancaOpen(false)} />
+        </Suspense>
+      )}
+
+      {/* Avisos de la banca (dinero, mensajes y Admin Abuse) */}
+      <BancaAvisos />
 
       {/* Modal de anuncios */}
       <AnuncioModal />

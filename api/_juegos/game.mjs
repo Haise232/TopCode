@@ -12,6 +12,8 @@ import { PUBLIC_SEATS, GAMES, nextNumber, pickTable } from './engine/lobby.mjs'
 import { SCHEMA_SQL } from './schema.mjs'
 import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView } from './solo.mjs'
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
+import { abuseExtra, abuseLuck, createBanca } from './banca.mjs'
+import { safeAvatar, shortName } from './engine/names.mjs'
 
 // Alta: 10, figura o as. Para las pistas de los poderes del gacha.
 const SUIT_MARK = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' }
@@ -53,6 +55,7 @@ export const ERRORS = {
   CRASHED: '¡Tarde! El cohete ya explotó.',
   SEAT_TAKEN: 'Ese asiento está ocupado.',
   NOT_HOST: 'Las mesas públicas no tienen anfitrión.',
+  NOT_MASTER: 'Solo el master de TopCode puede usar la banca.',
   ROOM_NOT_FOUND: 'Esa mesa ya no existe.',
   ROOM_FULL: 'Todas las mesas están llenas. Prueba a mirar.',
   RATE_LIMIT: 'Vas demasiado rápido.',
@@ -84,6 +87,38 @@ BlackjackRoom.prototype.onTimer = {
     else this.afterBetChange()
   },
 }
+// Admin Abuse (banca.mjs): al pagar la ronda, la banca pone encima lo que toque. `abuse` lo deja withTable al abrir la mesa.
+BlackjackRoom.prototype.settle = function settle() {
+  Room.prototype.settle.call(this)
+  let changed = false
+  for (const seat of this.seats) {
+    if (!seat?.locked) continue
+    const extra = abuseExtra(this.abuse, 'blackjack', seat.paid - seat.bet)
+    if (!extra) continue
+    this.accounts.adjust(seat.token, extra)
+    seat.paid += extra
+    changed = true
+  }
+  if (changed) this.broadcast()
+}
+
+// Póker con Admin Abuse: tras repartir el bote, la banca multiplica lo ganado (o devuelve lo perdido) a cada uno.
+class PokerTableRoom extends PokerRoom {
+  pay(won, byFold, pots) {
+    super.pay(won, byFold, pots)
+    this.seats.forEach((seat, index) => {
+      if (!seat?.inHand) return
+      const extra = abuseExtra(this.abuse, 'poker', (won.get(index) ?? 0) - seat.total)
+      if (!extra) return
+      this.accounts.adjust(seat.token, extra)
+      if (won.has(index)) {
+        seat.won += extra
+        const winner = this.result.winners.find((w) => w.seat === index)
+        if (winner) winner.amount += extra
+      }
+    })
+  }
+}
 
 // Al empezar ronda el motor libera el asiento de quien lleva un rato desconectado, pero no avisa a su sesión, que se queda
 // creyendo que sigue sentada: al volver no la dejaba sentarse otra vez (el motor contesta BAD_PHASE). Se corrige al abrir.
@@ -92,7 +127,7 @@ function fixSeats(room) {
   for (const m of room.members.values()) if (m.seat !== null && room.seats[m.seat]?.sid !== m.id) m.seat = null
 }
 
-const ROOM_STATIC = new Set(['accounts', 'randomInt', 'onClose', 'now', 'timers', 'timer', 'sweeper', 'members'])
+const ROOM_STATIC = new Set(['accounts', 'randomInt', 'onClose', 'now', 'timers', 'timer', 'sweeper', 'members', 'abuse'])
 
 // --- saldos dentro de una transacción: el motor usa get/adjust como con el archivo de juegos original ---
 
@@ -125,7 +160,7 @@ function serialize(room) {
 }
 
 function restore(row, accounts, now) {
-  const Kind = row.juego === 'poker' ? PokerRoom : BlackjackRoom
+  const Kind = row.juego === 'poker' ? PokerTableRoom : BlackjackRoom
   const room = Object.create(Kind.prototype)
   Object.assign(room, row.estado.room, { accounts, randomInt, now, timers: storedTimers, timer: null, onClose: null })
   room.members = new Map()
@@ -192,6 +227,7 @@ const cleanText = (value) =>
 export function createJuegos({ db, ping = async () => {}, now = Date.now, secret = 'topcode-juegos' }) {
   let schemaReady = null
   let knownWeek = null
+  const banca = createBanca({ db, ping, now, credit })
 
   function ensureSchema() {
     schemaReady ??= (async () => {
@@ -237,6 +273,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         await q(`update public.juegos_cuentas set saldo = $1, dias = $2::bigint[], jugado = false`, [STARTING_BALANCE, pgArray(NO_DAYS)])
         await q(`delete from public.juegos_chat where creado < now() - interval '7 days'`)
         await q(`delete from public.juegos_solo`)
+        await banca.sweep(q)
       })
       await ping('juegos-lobby')
     }
@@ -271,6 +308,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   async function withTable(code, user, fn) {
     const t = now()
     const week = weekOf(t)
+    const abuse = await banca.abuse()
     const outcome = await db.tx(async (q) => {
       const row = (await q(`select * from public.juegos_mesas where codigo = $1 for update`, [code])).rows[0]
       if (!row) throw new JuegosError('ROOM_NOT_FOUND')
@@ -282,6 +320,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       ).rows
       const accounts = new TxAccounts(accRows, week.day)
       const room = restore(row, accounts, () => now())
+      room.abuse = abuse
       const revBefore = room.rev
       let presence = false
 
@@ -534,7 +573,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Inserta una mesa pública vacía. Si otra petición creó ya ese número a la vez, no hace nada (índice único).
   async function createTable(game, number, taken) {
     const code = newCode(taken)
-    const Kind = game === 'poker' ? PokerRoom : BlackjackRoom
+    const Kind = game === 'poker' ? PokerTableRoom : BlackjackRoom
     const label = `Mesa ${number}`
     const room = new Kind({ code, seats: PUBLIC_SEATS[game], accounts: new TxAccounts([], 0), randomInt, now: () => now(), label, persistent: number === 1, timers: storedTimers })
     room.number = number
@@ -573,6 +612,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   // Una jugada en solitario: se bloquea tu cuenta, se sortea en el servidor y se guarda el saldo (cuenta en el Score).
   async function playSolo(user, msg) {
     const game = SOLO_GAMES[msg.t]
+    const abuse = await banca.abuse()
     const t = now()
     const week = weekOf(t)
     const ctx = { now: t, secret, week: week.key, userId: user.id }
@@ -596,6 +636,12 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           out.delta += hit.extra
           out.power = hit
         }
+        // Admin Abuse: la banca multiplica lo ganado o devuelve lo perdido en esta jugada.
+        const extra = abuseExtra(abuse, game, settled.net + (hit?.extra ?? 0))
+        if (extra) {
+          out.delta += extra
+          out.abuse = { modo: abuse.modo, extra }
+        }
       }
       // Toda jugada cuenta para el Score, también la que te deja igual (entras en la clasificación y se anota el día).
       if (out.played || out.delta) accounts.adjust(user.id, out.delta)
@@ -614,9 +660,34 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     })
   }
 
+  // Dinero de la banca a una lista de usuarios ({ id, nombre, avatar_url }), dentro de su transacción. Crea la cuenta de
+  // Juegos si alguien aún no tiene. Cuenta en el Score como cualquier saldo, pero no apunta a nadie como «ha jugado».
+  async function credit(q, list, amount) {
+    const week = weekOf(now())
+    for (const u of list) {
+      await q(`insert into public.juegos_cuentas (usuario_id, nombre, avatar) values ($1, $2, $3) on conflict (usuario_id) do nothing`, [
+        u.id,
+        shortName(u.nombre) || 'Jugador',
+        safeAvatar(u.avatar_url),
+      ])
+    }
+    const ids = list.map((u) => u.id)
+    const rows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = any($1::uuid[]) order by usuario_id for update`, [ids])).rows
+    const accounts = new TxAccounts(rows, week.day)
+    for (const id of ids) {
+      const acc = accounts.get(id)
+      const played = acc.played
+      accounts.adjust(id, amount)
+      acc.played = played
+      await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[] where usuario_id = $1`, [id, acc.balance, pgArray(acc.days)])
+    }
+  }
+
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.
   async function charge(q, userId, amount) {
+    // Admin Abuse «gratis»: el gacha no cobra.
+    if (abuseExtra(await banca.abuse(), 'gacha', -amount) > 0) amount = 0
     const week = weekOf(now())
     const rows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [userId])).rows
     const accounts = new TxAccounts(rows, week.day)
@@ -626,7 +697,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     await q(`update public.juegos_cuentas set saldo = $2, dias = $3::bigint[], jugado = $4 where usuario_id = $1`, [userId, acc.balance, pgArray(acc.days), acc.played])
     return acc.balance
   }
-  const gacha = createGacha({ db, ping, now, charge })
+  const gacha = createGacha({ db, ping, now, charge, luck: async () => abuseLuck(await banca.abuse()) })
 
   // Jugadores con apuesta en una ronda de la ruleta o el cohete en vivo (la ronda se queda anotada aunque ya se haya pagado).
   async function soloPlayers(game, round) {
@@ -695,6 +766,12 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   async function handle(user, msg) {
     if (!msg || typeof msg.t !== 'string') throw new JuegosError('BAD_MESSAGE')
     await warm()
+    // La banca se consulta desde cualquier página de TopCode: no cuenta como «conectado a Juegos».
+    if (msg.t.startsWith('banca')) {
+      const out = await banca.handle(user, msg)
+      if (out.error) throw new JuegosError(out.error)
+      return out
+    }
     const account = await touchAccount(user)
     const me = { id: user.id, name: user.name, avatar: user.avatar, balance: account.saldo, auth: true, privateRooms: false }
     const reply = { me }
@@ -766,6 +843,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         if (out.power) reply.power = out.power
+        if (out.abuse) reply.abuse = out.abuse
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         if (reply.solo) await liveExtras(live.game, msg, reply)
         return reply
@@ -778,6 +856,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
         if (out.power) reply.power = out.power
+        if (out.abuse) reply.abuse = out.abuse
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
         return reply
       }

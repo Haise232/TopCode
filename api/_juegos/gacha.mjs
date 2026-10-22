@@ -240,9 +240,11 @@ function pick(list) {
 }
 
 // Primero la rareza y después una carta libre de esa rareza. taken: cartas que no pueden salir (con dueño, en la mesa o
-// pendientes de que alguien decida si se las queda).
-function draw(premium, taken) {
-  const weights = premium ? WEIGHTS.premium : WEIGHTS.normal
+// pendientes de que alguien decida si se las queda). luck (Admin Abuse x2 o x3) multiplica el peso de todo lo que no
+// es común ni épica de premium, es decir, de lo bueno de cada tipo de tirada.
+function draw(premium, taken, luck = 1) {
+  const base = premium ? WEIGHTS.premium : WEIGHTS.normal
+  const weights = luck === 1 ? base : base.map(([r, w], i) => [r, i === 0 ? w : w * luck])
   let r = randomInt(weights.reduce((sum, [, w]) => sum + w, 0))
   const [rarity] = weights.find(([, w]) => (r -= w) < 0)
   const free = (list) => (taken ? list.filter((c) => !taken.has(c.id)) : list)
@@ -262,7 +264,7 @@ const ms = (value) => (value instanceof Date ? value.getTime() : Number(value))
 
 // db: { query, tx } · ping(topic, event) avisa por Realtime · charge(q, userId, amount): cobra del saldo de la semana
 // (o paga, si amount es negativo) dentro de la transacción y devuelve el saldo nuevo, o null si no llega.
-export function createGacha({ db, ping, now, charge }) {
+export function createGacha({ db, ping, now, charge, luck = async () => 1 }) {
   // Estado del jugador, bloqueado para la transacción.
   async function player(q, userId) {
     await q(`insert into public.juegos_gacha_jugadores (usuario_id) values ($1) on conflict (usuario_id) do nothing`, [userId])
@@ -358,7 +360,7 @@ export function createGacha({ db, ping, now, charge }) {
       const st = await player(q, user.id)
       if (st.pending) return { error: 'GACHA_PENDING' }
       if ((await charge(q, user.id, premium ? PREMIUM_COST : ROLL_COST)) === null) return { error: 'GACHA_FUNDS' }
-      const card = draw(premium, await takenCards(q))
+      const card = draw(premium, await takenCards(q), await luck())
       await q(`update public.juegos_gacha_jugadores set pendiente = $2, pendiente_premium = $3 where usuario_id = $1`, [user.id, card.id, premium])
       return { result: { card: cardView(card.id), premium } }
     })
