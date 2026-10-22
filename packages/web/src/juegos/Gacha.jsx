@@ -79,6 +79,9 @@ const WAVES = { rara: 1, epica: 2, mitica: 3, unica: 5 }
 const OMEN_MS = 3000
 const BLACKOUT_MS = 900
 const EMBERS = 40
+const STARS = { rara: 12, epica: 18 }
+const COINS = 26
+const DUST = 12
 const IMPLODE = 26
 const BOLTS = 7
 const CONFETTI = 46
@@ -95,8 +98,11 @@ function Summon({ summon, busy, onDecide }) {
   const legend = rarity === 'mitica' || rarity === 'unica'
   const sparks = SPARKS[rarity] ?? 0
   const waves = WAVES[rarity] ?? 0
-  const title = rarity === 'unica' ? '¡MÍTICA!' : legend ? '¡LEGENDARIA!' : RARITY[rarity]
+  const title = rarity === 'unica' ? '¡MÍTICA!' : legend ? '¡LEGENDARIA!' : rarity === 'epica' ? '¡ÉPICA!' : RARITY[rarity]
   const mythic = rarity === 'unica'
+  const epic = rarity === 'epica'
+  const stars = STARS[rarity] ?? 0
+  const lettered = legend || epic
   if (stage === 'omen' || stage === 'blackout') return <MythicOmen stage={stage} />
   return (
     <div
@@ -106,6 +112,32 @@ function Summon({ summon, busy, onDecide }) {
       aria-label="Tirada del gacha"
     >
       <span className="gacha-summon__rays" aria-hidden="true" />
+      {/* Foco de luz del color de la rareza bajo la carta. */}
+      {stage !== 'charge' && <span className="gacha-summon__floor" aria-hidden="true" />}
+      {/* Rara: anillos que se expanden mientras se carga. */}
+      {stage === 'build' && rarity === 'rara' && (
+        <span className="gacha-summon__rings" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+      )}
+      {/* Épica: círculo mágico de runas detrás de la carta. */}
+      {(stage === 'build' || stage === 'show') && epic && (
+        <svg className="gacha-summon__runes" viewBox="0 0 200 200" aria-hidden="true">
+          <defs>
+            <path id="gacha-rune-path" d="M100 100 m-78 0 a78 78 0 1 1 156 0 a78 78 0 1 1 -156 0" />
+          </defs>
+          <circle cx="100" cy="100" r="92" />
+          <circle cx="100" cy="100" r="64" className="gacha-summon__runes-inner" />
+          <path d="M100 8 L180 146 L20 146 Z M100 192 L20 54 L180 54 Z" className="gacha-summon__runes-star" />
+          <text>
+            <textPath href="#gacha-rune-path">ΑΒΓΔΕΖ ✦ ΗΘΙΚΛΜ ✦ ΝΞΟΠΡΣ ✦ ΤΥΦΧΨΩ ✦</textPath>
+          </text>
+        </svg>
+      )}
+      {/* Legendaria: columna de luz dorada que cae sobre la carta. */}
+      {stage === 'build' && rarity === 'mitica' && <span className="gacha-summon__pillar" aria-hidden="true" />}
       {legend && stage === 'show' && <span className="gacha-summon__rays gacha-summon__rays--back" aria-hidden="true" />}
       <span className="gacha-summon__flash" aria-hidden="true" />
       {stage === 'build' && (rarity === 'epica' || legend) && (
@@ -154,6 +186,37 @@ function Summon({ summon, busy, onDecide }) {
           ))}
         </span>
       )}
+      {stage === 'show' && rarity === 'comun' && (
+        <span className="gacha-summon__dust" aria-hidden="true">
+          {range(DUST).map((i) => (
+            <i key={i} style={{ '--a': `${(360 / DUST) * i}deg`, '--d': `${70 + ((i * 29) % 60)}px` }} />
+          ))}
+        </span>
+      )}
+      {stage === 'show' && stars > 0 && (
+        <span className="gacha-summon__stars" aria-hidden="true">
+          {range(stars).map((i) => (
+            <i
+              key={i}
+              style={{
+                '--x': `${50 + Math.cos((i / stars) * 6.283) * (24 + (i % 3) * 7)}%`,
+                '--y': `${48 + Math.sin((i / stars) * 6.283) * (30 + (i % 2) * 8)}%`,
+                '--t': `${((i * 0.37) % 1.6).toFixed(2)}s`,
+                '--z': `${12 + (i % 3) * 6}px`,
+              }}
+            >
+              ✦
+            </i>
+          ))}
+        </span>
+      )}
+      {stage === 'show' && rarity === 'mitica' && (
+        <span className="gacha-summon__coins" aria-hidden="true">
+          {range(COINS).map((i) => (
+            <i key={i} style={{ '--x': `${(i * 41) % 100}vw`, '--t': `${((i * 0.27) % 2.6).toFixed(2)}s`, '--s': `${1.8 + ((i * 0.31) % 1.4)}s` }} />
+          ))}
+        </span>
+      )}
       {mythic && stage === 'show' && (
         <span className="gacha-summon__embers" aria-hidden="true">
           {range(EMBERS).map((i) => (
@@ -172,8 +235,8 @@ function Summon({ summon, busy, onDecide }) {
                 ♛
               </span>
             )}
-            <span className={`gacha-summon__title ${legend ? 'gacha-summon__title--legend' : ''}`} aria-label={title}>
-              {legend
+            <span className={`gacha-summon__title ${legend ? 'gacha-summon__title--legend' : epic ? 'gacha-summon__title--legend gacha-summon__title--epic' : ''}`} aria-label={title}>
+              {lettered
                 ? [...title].map((ch, i) => (
                     <span key={i} style={{ '--t': `${0.5 + i * 0.07}s` }} aria-hidden="true">
                       {ch}
@@ -183,6 +246,7 @@ function Summon({ summon, busy, onDecide }) {
             </span>
             <div className="gacha-summon__card">
               {legend && <span className="gacha-summon__aura" aria-hidden="true" />}
+              {rarity === 'mitica' && <span className="gacha-summon__glory" aria-hidden="true" />}
               <GachaCard card={result.card} big />
             </div>
             <p className="gacha-summon__name">{result.card.name}</p>

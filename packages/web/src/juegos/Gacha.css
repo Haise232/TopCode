@@ -1939,6 +1939,289 @@
   color: var(--ivory);
 }
 
+/* ---------- Invocación por rareza: foco, polvo, anillos, runas, columna de luz, monedas y brillo ---------- */
+/* La carta, más grande (sin pasarse del alto de la pantalla). */
+.juegos-root .gacha-summon__card {
+  position: relative;
+  width: min(280px, 64vw, calc((100svh - 300px) / 1.55));
+}
+/* Foco de luz del color de la rareza bajo la carta. */
+.juegos-root .gacha-summon__floor {
+  position: absolute;
+  left: 50%;
+  top: 72%;
+  width: min(560px, 90vw);
+  height: 120px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--glow) 45%, transparent), transparent);
+  filter: blur(6px);
+  animation: gacha-floor 2.4s ease-in-out infinite;
+}
+@keyframes gacha-floor {
+  50% {
+    opacity: 0.6;
+    scale: 1.08 1;
+  }
+}
+/* Brillo que recorre la carta al revelarse (rara y mejores; en bucle a partir de épica). */
+.juegos-root .gacha-summon--rara.is-show .gacha-summon__card::after,
+.juegos-root .gacha-summon--epica.is-show .gacha-summon__card::after,
+.juegos-root .gacha-summon--mitica.is-show .gacha-summon__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 16px;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.6) 47%, color-mix(in srgb, var(--glow) 40%, transparent) 54%, transparent 68%);
+  background-size: 260% 100%;
+  mix-blend-mode: overlay;
+  animation: gacha-mythic-holo 1.4s ease-out 0.7s both;
+}
+.juegos-root .gacha-summon--epica.is-show .gacha-summon__card::after,
+.juegos-root .gacha-summon--mitica.is-show .gacha-summon__card::after {
+  animation: gacha-mythic-holo 2.2s ease-in-out 0.9s infinite;
+}
+/* Común: nubecita de polvo al aparecer. */
+.juegos-root .gacha-summon__dust {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+}
+.juegos-root .gacha-summon__dust i {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px;
+  border-radius: 50%;
+  background: rgba(220, 228, 236, 0.5);
+  filter: blur(2px);
+  animation: gacha-dust 0.9s ease-out 0.15s both;
+}
+@keyframes gacha-dust {
+  from {
+    transform: rotate(var(--a)) translateX(10px) scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: rotate(var(--a)) translateX(var(--d)) scale(1.6);
+    opacity: 0;
+  }
+}
+/* Rara: anillos azules que se expanden durante la carga. */
+.juegos-root .gacha-summon__rings {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.juegos-root .gacha-summon__rings i {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  margin: -60px;
+  border: 3px solid var(--r-rara);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--r-rara);
+  animation: gacha-ring 1.1s ease-out infinite;
+}
+.juegos-root .gacha-summon__rings i:nth-child(2) {
+  animation-delay: 0.36s;
+}
+.juegos-root .gacha-summon__rings i:nth-child(3) {
+  animation-delay: 0.72s;
+}
+@keyframes gacha-ring {
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+/* Rara y épica: destellos que titilan alrededor de la carta. */
+.juegos-root .gacha-summon__stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.juegos-root .gacha-summon__stars i {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  font-size: var(--z);
+  font-style: normal;
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 0 8px var(--glow),
+    0 0 18px var(--glow);
+  animation: gacha-twinkle 1.6s ease-in-out var(--t) infinite;
+}
+@keyframes gacha-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(90deg);
+  }
+}
+/* Épica: círculo mágico de runas que gira detrás de la carta. */
+.juegos-root .gacha-summon__runes {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(620px, 120vw);
+  translate: -50% -50%;
+  overflow: visible;
+  color: var(--r-epica);
+  filter: drop-shadow(0 0 10px var(--r-epica));
+  animation:
+    gacha-runes-in 0.8s ease-out both,
+    gacha-spin 14s linear infinite;
+}
+.juegos-root .gacha-summon__runes circle,
+.juegos-root .gacha-summon__runes-star {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  opacity: 0.8;
+}
+.juegos-root .gacha-summon__runes-inner {
+  stroke-dasharray: 4 6;
+}
+.juegos-root .gacha-summon__runes-star {
+  opacity: 0.45;
+}
+.juegos-root .gacha-summon__runes text {
+  font-size: 11px;
+  letter-spacing: 3px;
+  fill: currentColor;
+}
+.juegos-root .gacha-summon.is-show .gacha-summon__runes {
+  opacity: 0.55;
+}
+@keyframes gacha-runes-in {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+/* Legendaria: columna de luz que cae desde arriba sobre la carta. */
+.juegos-root .gacha-summon__pillar {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 220px;
+  height: 100%;
+  translate: -50% 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 228, 140, 0.55) 35%, #fff8d8 50%, rgba(255, 228, 140, 0.55) 65%, transparent);
+  filter: blur(4px);
+  transform-origin: top;
+  animation: gacha-pillar 3.4s cubic-bezier(0.5, 0, 0.3, 1) both;
+}
+@keyframes gacha-pillar {
+  0% {
+    transform: scaleY(0) scaleX(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: scaleY(1) scaleX(0.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleY(1) scaleX(1.2);
+    opacity: 1;
+  }
+}
+/* Legendaria: halo de gloria girando detrás de la carta y lluvia de monedas. */
+.juegos-root .gacha-summon__glory {
+  position: absolute;
+  z-index: -1;
+  inset: -40%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 220, 120, 0.55) 0 6deg, transparent 6deg 18deg);
+  mask-image: radial-gradient(circle, #000 35%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle, #000 35%, transparent 70%);
+  animation: gacha-spin 9s linear infinite;
+}
+.juegos-root .gacha-summon__coins i {
+  position: absolute;
+  top: -40px;
+  left: var(--x);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c8, #ffc83d 50%, #b97c0e);
+  box-shadow:
+    inset 0 0 0 2px rgba(150, 100, 10, 0.6),
+    0 0 10px rgba(255, 200, 61, 0.6);
+  animation: gacha-coin var(--s) linear var(--t) infinite;
+}
+@keyframes gacha-coin {
+  from {
+    transform: translateY(0) rotateY(0);
+  }
+  to {
+    transform: translateY(110vh) rotateY(1080deg);
+  }
+}
+/* Épica: título letra a letra en violeta. */
+.juegos-root .gacha-summon__title--epic {
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--r-epica) 80%, transparent));
+}
+.juegos-root .gacha-summon__title--epic span {
+  background: linear-gradient(90deg, #8a4fd6, #f1dcff, #b98cff, #f1dcff, #8a4fd6);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* Común y rara: la carta se da la vuelta en 3D al revelarse (épica y legendaria tienen su propia entrada). */
+.juegos-root .gacha-summon--comun.is-show .gacha-summon__card,
+.juegos-root .gacha-summon--rara.is-show .gacha-summon__card {
+  animation: gacha-flip 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.juegos-root .gacha-summon--epica.is-show .gacha-summon__card {
+  animation: gacha-flip-epic 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+@keyframes gacha-flip {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateY(180deg) scale(0.7);
+  }
+}
+@keyframes gacha-flip-epic {
+  0% {
+    opacity: 0;
+    transform: perspective(900px) rotateY(360deg) scale(0.4);
+    filter: brightness(2.5);
+  }
+  70% {
+    transform: perspective(900px) rotateY(-12deg) scale(1.06);
+    filter: brightness(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .gacha-summon__floor,
+  .juegos-root .gacha-summon__card::after,
+  .juegos-root .gacha-summon__dust i,
+  .juegos-root .gacha-summon__rings i,
+  .juegos-root .gacha-summon__stars i,
+  .juegos-root .gacha-summon__runes,
+  .juegos-root .gacha-summon__pillar,
+  .juegos-root .gacha-summon__glory,
+  .juegos-root .gacha-summon__coins i,
+  .juegos-root .gacha-summon.is-show .gacha-summon__card {
+    animation: none;
+  }
+}
+
 /* ---------- Mítica: presagio, apagón y revelación a lo grande ---------- */
 .juegos-root .gacha-omen {
   position: fixed;
