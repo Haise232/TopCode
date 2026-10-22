@@ -313,6 +313,19 @@ function MythicOmen({ stage }) {
   )
 }
 
+// Lo que puede salir en cada tipo de tirada, de lo mejor a lo peor (sin la común, que es lo que sobra).
+function Odds({ kind }) {
+  return (
+    <span className="gacha-odds">
+      {RARITIES.filter((r) => ODDS[kind][r] && r !== 'comun').map((r) => (
+        <span key={r} className={`gacha-odds__item gacha-odds__item--${r}`}>
+          {RARITY[r]} <b>{ODDS[kind][r].toLocaleString('es-ES')} %</b>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 // La carta que sacaste pagando y aún no has decidido si guardar (por ejemplo, si recargaste la página).
 function Pending({ pending, busy, onDecide }) {
   return (
@@ -774,66 +787,61 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
 
       {tab === 'tirar' && (
         <>
-          <section className="gacha-mesa" aria-labelledby="mesa-title">
-            <h2 id="mesa-title" className="hub-title">
-              La mesa{' '}
-              <small>
-                {state?.nextDropAt ? `sale otra carta en ${wait(state.nextDropAt - t)}` : 'llena: hasta 5 cartas'} · gratis y sin
-                límite
-              </small>
-            </h2>
-            {table.length === 0 ? (
-              <p className="gacha-empty">{state ? 'La mesa está vacía: en un rato saldrá una carta.' : 'Cargando…'}</p>
-            ) : (
-              <ul className="gacha-mesa__cards">
-                {table.map((entry) => (
-                  <li key={entry.id}>
-                    <GachaCard card={entry.card} />
-                    <button
-                      type="button"
-                      className="hub-btn hub-btn--primary"
-                      disabled={busy}
-                      onClick={() => act('coger', { id: entry.id })}
-                    >
-                      Coger
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <div className="gacha-play">
-            <section className="gacha-panel" aria-labelledby="roll-title">
+          <div className="gacha-home">
+            {/* Portal de invocación: los dos botones de tirar pagando, con lo que puede salir en cada uno. */}
+            <section className="gacha-portal" aria-labelledby="roll-title">
+              <span className="gacha-portal__ring" aria-hidden="true" />
+              <span className="gacha-portal__fan" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
               <h2 id="roll-title" className="hub-title">
-                Tirar pagando <small>tú decides si te la quedas</small>
+                Invocar <small>tú decides si te la quedas</small>
               </h2>
               {state?.pending && !summon ? (
                 <Pending pending={state.pending} busy={busy} onDecide={decide} />
               ) : (
-                <>
+                <div className="gacha-portal__btns">
                   <button type="button" className="gacha-roll-btn" disabled={busy || !state || balance < rollPrice} onClick={() => roll(false)}>
                     <b>Tirar</b>
                     <small>{eur(rollPrice)} · cualquier rareza</small>
+                    <Odds kind="normal" />
                   </button>
-                  <div className="gacha-actions">
-                    <button
-                      type="button"
-                      className="hub-btn gacha-premium"
-                      disabled={busy || !state || balance < premiumPrice}
-                      title="Siempre épica o legendaria"
-                      onClick={() => roll(true)}
-                    >
-                      ✦ Premium · {eur(premiumPrice)}
-                    </button>
-                  </div>
-                  <div className="gacha-placeholder" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                </>
+                  <button
+                    type="button"
+                    className="gacha-roll-btn gacha-roll-btn--premium"
+                    disabled={busy || !state || balance < premiumPrice}
+                    onClick={() => roll(true)}
+                  >
+                    <b>✦ Premium</b>
+                    <small>{eur(premiumPrice)} · épica o mejor</small>
+                    <Odds kind="premium" />
+                  </button>
+                </div>
               )}
+            </section>
+
+            <section className="gacha-mesa" aria-labelledby="mesa-title">
+              <h2 id="mesa-title" className="hub-title">
+                La mesa <small>gratis y sin límite · {state?.nextDropAt ? `otra carta en ${wait(state.nextDropAt - t)}` : 'llena'}</small>
+              </h2>
+              <ul className="gacha-mesa__cards">
+                {table.map((entry) => (
+                  <li key={entry.id}>
+                    <GachaCard card={entry.card} />
+                    <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => act('coger', { id: entry.id })}>
+                      Coger
+                    </button>
+                  </li>
+                ))}
+                {/* Huecos libres: el primero dice cuándo sale la siguiente. */}
+                {range(Math.max(0, (state?.tableMax ?? 5) - table.length)).map((i) => (
+                  <li key={`hueco-${i}`} className="gacha-mesa__slot" aria-hidden="true">
+                    <span>{i === 0 && state?.nextDropAt ? `Sale en ${wait(state.nextDropAt - t)}` : 'Hueco libre'}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
 
             <section className="gacha-feed" aria-labelledby="feed-title">
