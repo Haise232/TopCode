@@ -420,51 +420,74 @@ export function frogPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'jump', to) }
 }
 
-// --- Laberinto: como la rana, la apuesta queda en juego (ya salió del saldo) como botín y en cada sala el jugador
-// elige una puerta o sale con lo que lleva. El servidor baraja las puertas de la sala con randomInt después de recibir
-// la elegida, así que la pantalla no puede saber qué hay detrás. saved: { bet, pot, room, week, last } con bet > 0
-// mientras hay una partida en marcha; last es la última partida liquidada (para el aviso y el gacha).
-function dungeonView(state, balance, ev = null, doors = null, pick = null, room = null) {
+// --- Laberinto: como la rana, la apuesta queda en juego (ya salió del saldo) como botín. Cada sala la sortea el
+// servidor al entrar (dungeon.layout: qué hay detrás de cada puerta y cómo se barajan) y la pantalla la anima; el
+// jugador elige una posición y aquí se mira qué quedó en ella. Si el cofre es un mímico se decide al abrirlo, así que
+// no se puede saber antes. saved: { bet, pot, room, week, maze, last } con bet > 0 mientras hay una partida en marcha;
+// maze ({ doors, swaps, at }) es la sala que se está jugando (null entre sala y sala) y last, la última partida
+// liquidada (para el aviso y el gacha).
+function dungeonView(state, balance, extra = {}) {
   const live = state.bet > 0
-  return { bet: live ? state.bet : 0, pot: live ? state.pot : 0, room: live ? state.room : 0, last: state.last ?? null, balance, ev, doors, pick, at: room }
+  const maze = live && state.maze ? { doors: state.maze.doors, swaps: state.maze.swaps } : null
+  return { bet: live ? state.bet : 0, pot: live ? state.pot : 0, room: live ? state.room : 0, maze, last: state.last ?? null, balance, ev: null, ...extra }
 }
 
-// msg.a: «sync», «start» (bet), «open» (door: 0, 1 o 2) o «cash» (salir con el botín).
+const newMaze = (room, rand, now) => ({ ...dungeon.layout(room, rand), at: now })
+
+// msg.a: «sync», «start» (bet), «go» (entrar en la sala siguiente), «open» (door: 0, 1, 2 o -1 si se acabó el tiempo)
+// o «cash» (salir con el botín, solo entre sala y sala).
 export function dungeonPlay(msg, balance, saved, rand, ctx) {
   let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
   const live = state.bet > 0
   const settle = (paid, end) => {
-    state = { ...state, bet: 0, pot: 0, last: { round: ctx.now, stake: state.bet, payout: paid, net: paid - state.bet, room: state.room, end } }
+    state = { ...state, bet: 0, pot: 0, maze: null, last: { round: ctx.now, stake: state.bet, payout: paid, net: paid - state.bet, room: state.room, end } }
     return paid
   }
-  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: dungeonView(state, balance) }
+  if (msg.a === 'sync') {
+    // Al recargar a mitad de sala no se vuelven a enseñar las puertas: quedan cerradas y solo falta elegir.
+    const view = dungeonView(state, balance)
+    if (view.maze) view.maze = { doors: null, swaps: [], left: Math.max(0, state.maze.at + dungeon.roomMs(state.room) - ctx.now) }
+    return { delta: 0, played: false, saved: null, result: view }
+  }
   if (msg.a === 'start') {
     if (live) return { error: 'BAD_PHASE' }
     if (!dungeon.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
     if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
-    state = { ...state, bet: msg.bet, pot: msg.bet, room: 0, week: ctx.week }
-    return { delta: -msg.bet, played: true, saved: state, result: dungeonView(state, balance - msg.bet, 'start') }
+    state = { ...state, bet: msg.bet, pot: msg.bet, room: 0, week: ctx.week, maze: newMaze(0, rand, ctx.now) }
+    return { delta: -msg.bet, played: true, saved: state, result: dungeonView(state, balance - msg.bet, { ev: 'start' }) }
   }
   if (!live) return { error: 'BAD_PHASE' }
-  if (msg.a === 'cash') {
-    const paid = settle(state.pot, 'cash')
-    return { delta: paid, played: true, saved: state, result: dungeonView(state, balance + paid, 'cash') }
+  if (msg.a === 'go') {
+    if (state.maze) return { error: 'BAD_PHASE' }
+    state = { ...state, maze: newMaze(state.room, rand, ctx.now) }
+    return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, { ev: 'go' }) }
   }
-  if (msg.a !== 'open' || !dungeon.validDoor(msg.door)) return { error: 'BAD_MESSAGE' }
+  if (msg.a === 'cash') {
+    if (state.maze) return { error: 'BAD_PHASE' }
+    const paid = settle(state.pot, 'cash')
+    return { delta: paid, played: true, saved: state, result: dungeonView(state, balance + paid, { ev: 'cash' }) }
+  }
+  if (msg.a !== 'open' || !dungeon.validDoor(msg.door) || !state.maze) return { error: msg.a === 'open' && !state.maze ? 'BAD_PHASE' : 'BAD_MESSAGE' }
   const room = state.room
-  const doors = dungeon.layout(room, rand)
-  const kind = doors[msg.door]
+  const doors = dungeon.shuffled(state.maze.doors, state.maze.swaps)
+  // Sin elegir a tiempo (o demasiado tarde para ser de verdad), una puerta al azar.
+  const late = ctx.now > state.maze.at + dungeon.roomMs(room) + dungeon.LATE_MS
+  const pick = msg.door < 0 || late ? rand(dungeon.DOORS) : msg.door
+  let kind = doors[pick]
+  if (kind === 'chest' && rand(100) < dungeon.ROOMS[room].mimic) kind = 'mimic'
+  const shown = doors.map((d, i) => (i === pick ? kind : d))
+  const extra = { ev: kind, doors: shown, pick, at: room, timeout: msg.door < 0 || late }
   if (dungeon.loses(kind)) {
     settle(0, kind)
-    return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, kind, doors, msg.door, room) }
+    return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, extra) }
   }
   const pot = kind === 'chest' ? dungeon.grow(state.pot, room) : state.pot
-  state = { ...state, pot, room: room + 1 }
+  state = { ...state, pot, room: room + 1, maze: null }
   if (state.room >= dungeon.DEPTH) {
     const paid = settle(pot, 'treasure')
-    return { delta: paid, played: true, saved: state, result: dungeonView(state, balance + paid, kind, doors, msg.door, room) }
+    return { delta: paid, played: true, saved: state, result: dungeonView(state, balance + paid, extra) }
   }
-  return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, kind, doors, msg.door, room) }
+  return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, extra) }
 }
 
 // --- Sobornos: como el laberinto, la apuesta queda en juego como maletín y en cada despacho el jugador elige a quién

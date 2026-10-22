@@ -12,8 +12,9 @@ const Mirror = ({ children }) => (
   </>
 )
 
-// Hoja de la puerta: tablones, herrajes, cerradura y medallón con el número. n: 1, 2 o 3.
-export function DoorLeaf({ n }) {
+// Hoja de la puerta: tablones, herrajes, cerradura y medallón con el número. n: 1, 2 o 3 (para los degradados);
+// label: lo que pone el medallón (vacío mientras las puertas se barajan, para no delatar cuál es cuál).
+export function DoorLeaf({ n, label = String(n) }) {
   return (
     <svg className="dg__leaf-svg" viewBox="0 0 100 150" aria-hidden="true">
       <defs>
@@ -69,7 +70,7 @@ export function DoorLeaf({ n }) {
       <circle cx="50" cy="37" r="12.5" fill={`url(#dg-brass-${n})`} className="dg__medal" />
       <circle cx="50" cy="37" r="9.6" fill="none" className="dg__medal-in" />
       <text x="50" y="43.2" className="dg__num">
-        {n}
+        {label}
       </text>
       <path d={ARCH} fill={`url(#dg-lit-${n})`} />
       <path d={ARCH} fill="none" className="dg__frame-line" />
@@ -121,7 +122,7 @@ export function Behind({ kind, room }) {
       </defs>
       <path d={ARCH} className="dg__void" />
       <g clipPath="url(#dg-arch)">
-        {kind === 'chest' && <Chest room={room} />}
+        {(kind === 'chest' || kind === 'mimic') && <Chest room={room} mimic={kind === 'mimic'} />}
         {kind === 'empty' && <Corridor />}
         {kind === 'monster' && <Monster room={room} />}
         {kind === 'trap' && <Trap />}
@@ -130,10 +131,11 @@ export function Behind({ kind, room }) {
   )
 }
 
-function Chest({ room }) {
+// mimic: el cofre tiene dientes, ojos y lengua (se come el botín).
+function Chest({ room, mimic }) {
   const rich = room >= 3
   return (
-    <g className="dg__chest">
+    <g className={`dg__chest ${mimic ? 'is-mimic' : ''}`}>
       <defs>
         <radialGradient id="dg-c-bg" cx="0.5" cy="0.62" r="0.7">
           <stop offset="0" stopColor="#ffe9a0" stopOpacity="0.95" />
@@ -241,6 +243,28 @@ function Chest({ room }) {
           style={{ '--i': i }}
         />
       ))}
+      {mimic && (
+        <g className="dg__mimic">
+          <rect width="100" height="150" fill="rgba(120, 0, 10, 0.45)" />
+          {/* Dientes en el borde de la tapa y del cuerpo */}
+          <path
+            d="M24 100 l4 9 l4 -9 l4 9 l4 -9 l4 9 l4 -9 l4 9 l4 -9 l4 9 l4 -9 l4 9 l4 -9 Z"
+            fill="#f4ecd8"
+            stroke="#3a1a10"
+            strokeWidth="0.6"
+          />
+          <path d="M26 98 l4 -8 l4 8 l4 -8 l4 8 l4 -8 l4 8 l4 -8 l4 8 l4 -8 l4 8 l4 -8 l4 8 Z" fill="#f4ecd8" stroke="#3a1a10" strokeWidth="0.6" />
+          {/* Lengua */}
+          <path d="M44 104 Q50 128 58 120 Q62 112 56 104 Z" fill="#c2304a" stroke="#5a0a18" strokeWidth="0.8" />
+          {/* Ojos en la tapa */}
+          {[38, 62].map((x) => (
+            <g key={x}>
+              <ellipse cx={x} cy="74" rx="6" ry="4.6" fill="#ffe14a" stroke="#3a1a10" strokeWidth="0.8" />
+              <ellipse cx={x} cy="74" rx="1.6" ry="4" fill="#120408" />
+            </g>
+          ))}
+        </g>
+      )}
     </g>
   )
 }

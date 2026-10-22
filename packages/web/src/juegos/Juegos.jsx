@@ -71,7 +71,7 @@ const SOLO = [
   {
     id: 'dungeon',
     name: 'Laberinto',
-    blurb: 'Elige puertas, esquiva monstruos y llega al tesoro.',
+    blurb: 'Mira dónde está el cofre, síguelo mientras las puertas se barajan y llega al tesoro.',
     art: <DoorIcon />,
   },
   {
@@ -386,6 +386,33 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
         </div>
       </header>
 
+      <section aria-labelledby="score-title">
+        <h2 id="score-title" className="hub-title">
+          Clasificación <small>se reinicia el domingo a las 23:59</small>
+        </h2>
+        <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
+      </section>
+
+      <section aria-labelledby="solo-title">
+        <h2 id="solo-title" className="hub-title">
+          Para jugar solo <small>con tu saldo de la semana</small>
+        </h2>
+        <ul className="hub-tiles">
+          {SOLO.map(({ id, name, blurb, art, live }) => (
+            <li key={id}>
+              <button type="button" className={`hub-tile hub-tile--${id}`} disabled={!connected} onClick={() => onPick(id)}>
+                <span className="hub-tile__art" aria-hidden="true">
+                  {art}
+                </span>
+                {live && <em className="hub-pill">En vivo</em>}
+                <span className="hub-tile__name">{name}</span>
+                <span className="hub-tile__blurb">{blurb}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <div className="hub-grid">
         <section className="hub-live-sec" aria-labelledby="live-title">
           <h2 id="live-title" className="hub-title">
@@ -396,44 +423,13 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
               <LiveGame key={game} game={game} tables={tablesOf(game)} loaded={Boolean(lobby)} online={online} onJoin={onJoin} />
             ))}
           </div>
+        </section>
+        <section aria-labelledby="gacha-sec-title">
+          <h2 id="gacha-sec-title" className="hub-title">
+            Colección <small>memes de España</small>
+          </h2>
           <GachaShowcase juegos={juegos} online={connected} onOpen={onGacha} />
         </section>
-
-        <div className="hub-side">
-          <section aria-labelledby="score-title">
-            <h2 id="score-title" className="hub-title">
-              Clasificación <small>se reinicia el domingo a las 23:59</small>
-            </h2>
-            <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
-          </section>
-
-          <section aria-labelledby="solo-title">
-            <h2 id="solo-title" className="hub-title">
-              Para jugar solo <small>con tu saldo de la semana</small>
-            </h2>
-            <ul className="hub-solo">
-              {SOLO.map(({ id, name, blurb, art, live }) => (
-                <li key={id}>
-                  <button type="button" className="hub-row" disabled={!connected} onClick={() => onPick(id)}>
-                    <span className="hub-row__art" aria-hidden="true">
-                      {art}
-                    </span>
-                    <span className="hub-row__text">
-                      <span className="hub-row__name">
-                        {name}
-                        {live && <em className="hub-pill">En vivo</em>}
-                      </span>
-                      <span className="hub-row__blurb">{blurb}</span>
-                    </span>
-                    <span className="hub-row__go" aria-hidden="true">
-                      ›
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
       </div>
     </main>
   )
