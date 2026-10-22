@@ -1,15 +1,24 @@
 import { useEffect, useState } from 'react'
 import Avatar from './Avatar.jsx'
 import { delta, eur, until } from './money.js'
-import './Scoreboard.css'
+import './score.css'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const SHORT = ['Inicio', 'L', 'M', 'X', 'J', 'V', 'S', 'D']
 const compact = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 })
 const REFRESH_MS = 30000
+const WEEK_MS = 7 * 24 * 3600 * 1000
 
 // Serie de la semana: el saldo inicial y cómo cerró cada día (null = día que aún no llegó).
 const seriesOf = (player, starting) => [starting, ...player.days]
+
+// Lo que ha ganado o perdido hoy: el saldo de hoy menos el de ayer (o el de salida, el lunes).
+function todayOf(player, day, starting) {
+  const now = player.days[day]
+  if (now === null || now === undefined) return 0
+  const before = day > 0 ? (player.days[day - 1] ?? starting) : starting
+  return now - before
+}
 
 // Ticks redondos para el eje: 3 o 4 valores «bonitos» que cubren el rango.
 function ticks(min, max) {
@@ -23,7 +32,7 @@ function ticks(min, max) {
   return out
 }
 
-function Sparkline({ values }) {
+function Sparkline({ values, up }) {
   const known = values.filter((v) => v !== null)
   const lo = Math.min(...known)
   const hi = Math.max(...known)
@@ -32,14 +41,14 @@ function Sparkline({ values }) {
   const points = values.map((v, i) => (v === null ? null : `${x(i)},${y(v)}`)).filter(Boolean)
   const lastIndex = values.findLastIndex((v) => v !== null)
   return (
-    <svg className="spark" viewBox="0 0 96 28" aria-hidden="true">
+    <svg className={`sb-spark ${up ? 'is-up' : 'is-down'}`} viewBox="0 0 96 28" aria-hidden="true">
       <polyline points={points.join(' ')} />
-      <circle cx={x(lastIndex)} cy={y(values[lastIndex])} r="2.5" />
+      <circle cx={x(lastIndex)} cy={y(values[lastIndex])} r="2.6" />
     </svg>
   )
 }
 
-// Evolución de un jugador en la semana: una sola serie, con la línea de los 10.000 € de salida como referencia.
+// Evolución de un jugador en la semana, con la línea de los 10.000 € de salida como referencia y el área rellena.
 function WeekChart({ player, starting }) {
   const [hover, setHover] = useState(null)
   const values = seriesOf(player, starting)
@@ -55,17 +64,17 @@ function WeekChart({ player, starting }) {
   const bottom = 30
   const x = (i) => left + (i * (W - left - right)) / (values.length - 1)
   const y = (v) => top + (1 - (v - lo) / (hi - lo)) * (H - top - bottom)
-  const line = values
-    .map((v, i) => (v === null ? null : `${x(i)},${y(v)}`))
-    .filter(Boolean)
-    .join(' ')
+  const pts = values.map((v, i) => (v === null ? null : [x(i), y(v)])).filter(Boolean)
+  const line = pts.map(([a, b]) => `${a},${b}`).join(' ')
+  const area = pts.length > 1 ? `M${pts[0][0]},${H - bottom} L${line.replaceAll(' ', ' L')} L${pts.at(-1)[0]},${H - bottom} Z` : ''
   const lastIndex = values.findLastIndex((v) => v !== null)
   const shown = hover ?? lastIndex
   const value = values[shown]
+  const up = values[lastIndex] >= starting
 
   return (
-    <figure className="week-chart">
-      <figcaption className="week-chart__head">
+    <figure className={`sb-chart ${up ? 'is-up' : 'is-down'}`}>
+      <figcaption className="sb-chart__head">
         <span>
           {shown === 0 ? 'Saldo de salida' : DAYS[shown - 1]}
           {hover === null && shown > 0 ? ' (hoy)' : ''}
@@ -77,34 +86,37 @@ function WeekChart({ player, starting }) {
         )}
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Evolución de ${player.name} esta semana`}>
+        <defs>
+          <linearGradient id="sb-area" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="currentColor" stopOpacity="0.35" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+        </defs>
         {scale.map((t) => (
-          <g key={t} className="week-chart__grid">
+          <g key={t} className="sb-chart__grid">
             <line x1={left} x2={W - right} y1={y(t)} y2={y(t)} />
             <text x={left - 8} y={y(t)} dy="0.32em" textAnchor="end">
               {compact.format(t)}
             </text>
           </g>
         ))}
-        <line className="week-chart__base" x1={left} x2={W - right} y1={y(starting)} y2={y(starting)} />
+        <line className="sb-chart__base" x1={left} x2={W - right} y1={y(starting)} y2={y(starting)} />
         {SHORT.map((label, i) => (
-          <text key={label} className="week-chart__day" x={x(i)} y={H - 8} textAnchor="middle">
+          <text key={label} className="sb-chart__day" x={x(i)} y={H - 8} textAnchor="middle">
             {label}
           </text>
         ))}
-        {hover !== null && values[hover] !== null && (
-          <line className="week-chart__cross" x1={x(hover)} x2={x(hover)} y1={top} y2={H - bottom} />
-        )}
-        <polyline className="week-chart__line" points={line} />
+        {hover !== null && values[hover] !== null && <line className="sb-chart__cross" x1={x(hover)} x2={x(hover)} y1={top} y2={H - bottom} />}
+        {area && <path className="sb-chart__area" d={area} fill="url(#sb-area)" />}
+        <polyline className="sb-chart__line" points={line} />
         {values.map((v, i) =>
-          v === null ? null : (
-            <circle key={i} className={`week-chart__dot ${i === shown ? 'is-on' : ''}`} cx={x(i)} cy={y(v)} r={i === shown ? 6 : 4} />
-          ),
+          v === null ? null : <circle key={i} className={`sb-chart__dot ${i === shown ? 'is-on' : ''}`} cx={x(i)} cy={y(v)} r={i === shown ? 6 : 4} />,
         )}
         {/* Zonas de hover más anchas que los puntos. */}
         {values.map((v, i) => (
           <rect
             key={i}
-            className="week-chart__hit"
+            className="sb-chart__hit"
             x={x(i) - (W - left - right) / 14}
             width={(W - left - right) / 7}
             y={0}
@@ -115,6 +127,80 @@ function WeekChart({ player, starting }) {
         ))}
       </svg>
     </figure>
+  )
+}
+
+// Podio de esta semana: 2.º, 1.º y 3.º, con los escalones a distinta altura.
+function Podium({ players, starting, onPick }) {
+  const top = [players[1], players[0], players[2]]
+  return (
+    <ol className="sb-podium" aria-label="Podio de esta semana">
+      {top.map((p, i) => {
+        const place = [2, 1, 3][i]
+        if (!p) {
+          return (
+            <li key={place} className={`sb-podium__step sb-podium__step--${place} is-empty`}>
+              <span className="sb-podium__seat" aria-hidden="true">
+                ?
+              </span>
+              <span className="sb-podium__name">Libre</span>
+              <span className="sb-podium__block">{place}</span>
+            </li>
+          )
+        }
+        return (
+          <li key={place} className={`sb-podium__step sb-podium__step--${place} ${p.me ? 'is-me' : ''}`}>
+            <button type="button" onClick={() => onPick(p.rank)} aria-label={`${place}.º ${p.name}, ${eur(p.balance)}`}>
+              {place === 1 && (
+                <span className="sb-podium__crown" aria-hidden="true">
+                  ♛
+                </span>
+              )}
+              <span className="sb-podium__avatar">
+                <Avatar name={p.name} src={p.avatar} size={place === 1 ? 76 : 58} />
+              </span>
+              <span className="sb-podium__name">
+                {p.name}
+                {p.me && <small> · tú</small>}
+              </span>
+              <b className="sb-podium__money">{eur(p.balance)}</b>
+              <small className={p.balance >= starting ? 'up' : 'down'}>{delta(p.balance - starting)}</small>
+              <span className="sb-podium__block">{place}</span>
+            </button>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+// Tu tarjeta: puesto, saldo, cómo vas hoy y cuánto te falta para el siguiente (o cuánto le sacas al segundo).
+function MyCard({ mine, players, day, starting }) {
+  const today = todayOf(mine, day, starting)
+  const ahead = players[mine.rank - 2]
+  const behind = players[mine.rank]
+  let chase = null
+  if (ahead) chase = `Te faltan ${eur(ahead.balance - mine.balance + 1)} para pasar a ${ahead.name} (${ahead.rank}.º).`
+  else if (behind) chase = `¡Vas primero! Le sacas ${eur(mine.balance - behind.balance)} a ${behind.name}.`
+  else chase = '¡Vas primero!'
+  return (
+    <section className="sb-me" aria-label="Tu semana">
+      <div className="sb-me__rank">
+        <small>Tu puesto</small>
+        <b>{mine.rank}.º</b>
+        <small>de {players.length}</small>
+      </div>
+      <div className="sb-me__body">
+        <p className="sb-me__money">
+          {eur(mine.balance)} <small className={mine.balance >= starting ? 'up' : 'down'}>{delta(mine.balance - starting)}</small>
+        </p>
+        <p className="sb-me__chase">{chase}</p>
+      </div>
+      <div className={`sb-me__today ${today > 0 ? 'is-up' : today < 0 ? 'is-down' : ''}`}>
+        <small>Hoy</small>
+        <b>{delta(today)}</b>
+      </div>
+    </section>
   )
 }
 
@@ -136,106 +222,116 @@ function Scoreboard({ juegos, onExit }) {
 
   const players = scores?.players ?? []
   const starting = scores?.starting ?? 10000
+  const day = scores?.week?.day ?? 0
   const mine = players.find((p) => p.me)
   const focus = players.find((p) => p.rank === selected) ?? mine ?? players[0]
   const last = scores?.lastWeek
-
-  let status = 'Cargando la clasificación…'
-  if (scores) {
-    status = players.length
-      ? `${players.length} ${players.length === 1 ? 'jugador' : 'jugadores'} esta semana. Todos empiezan con ${eur(starting)}.`
-      : `Nadie ha jugado todavía esta semana. Todos empiezan con ${eur(starting)}.`
-    if (!mine && players.length) status += ' Juega una mano o una tirada (mesas o solo) para entrar en el score.'
-  }
+  const leader = players[0]?.balance ?? starting
+  const resetAt = scores?.week?.resetAt
+  const weekLeft = resetAt ? Math.min(1, Math.max(0, (resetAt - Date.now()) / WEEK_MS)) : 0
 
   return (
-    <main className="app score">
-      <header className="top">
-        <h1>Score</h1>
-        <div className="hud">
-          {scores && (
-            <dl className="money">
-              {mine && (
-                <div>
-                  <dt>Tu puesto</dt>
-                  <dd>#{mine.rank}</dd>
-                </div>
-              )}
-              <div>
-                <dt>Reinicio</dt>
-                <dd className="score__reset">{until(scores.week.resetAt)}</dd>
-              </div>
-            </dl>
-          )}
-          <div className="toggles">
-            <button type="button" onClick={onExit}>
-              Juegos
-            </button>
-          </div>
+    <main className="app hub sb">
+      <header className="sb-top">
+        <button type="button" className="hub-btn hub-btn--ghost" onClick={onExit}>
+          ← Juegos
+        </button>
+        <div className="sb-top__title">
+          <h1>Score</h1>
+          <p>
+            {scores
+              ? `${players.length} ${players.length === 1 ? 'jugador' : 'jugadores'} esta semana · todos empiezan con ${eur(starting)}`
+              : 'Cargando la clasificación…'}
+          </p>
         </div>
+        {resetAt && (
+          <div className="sb-reset" style={{ '--left': weekLeft }}>
+            <small>Se reinicia en</small>
+            <b>{until(resetAt)}</b>
+            <i aria-hidden="true" />
+          </div>
+        )}
       </header>
 
-      <p className="status" aria-live="polite">
-        {status}
-      </p>
+      {scores && players.length === 0 && <p className="sb-empty">Nadie ha jugado todavía esta semana. ¡El primero que juegue se pone líder!</p>}
 
-      <div className="score__grid fill">
-        <section className="score__board" aria-label="Clasificación de la semana">
-          <ol className="score__list">
-            {players.map((p) => (
-              <li key={p.rank}>
-                <button
-                  type="button"
-                  className={`score__row ${p.me ? 'score__row--me' : ''} ${focus === p ? 'is-selected' : ''}`}
-                  aria-pressed={focus === p}
-                  onClick={() => setSelected(p.rank)}
-                >
-                  <span className={`score__rank score__rank--${p.rank}`}>{p.rank}</span>
-                  <Avatar name={p.name} src={p.avatar} size={36} />
-                  <span className="score__name">
-                    {p.name}
-                    {p.me && <small> · tú</small>}
-                  </span>
-                  <Sparkline values={seriesOf(p, starting)} />
-                  <span className="score__money">
-                    <b>{eur(p.balance)}</b>
-                    <small className={p.balance >= starting ? 'up' : 'down'}>{delta(p.balance - starting)}</small>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-        </section>
+      {players.length > 0 && <Podium players={players} starting={starting} onPick={setSelected} />}
 
-        <aside className="score__side">
-          {focus && (
-            <section className="score__card">
-              <h2>
-                <Avatar name={focus.name} src={focus.avatar} size={28} />
-                {focus.me ? 'Tu semana' : `La semana de ${focus.name}`}
-              </h2>
-              <WeekChart player={focus} starting={starting} />
-            </section>
-          )}
-          <section className="score__card">
-            <h2>Semana pasada</h2>
-            {last?.podium?.length ? (
-              <ol className="podium">
-                {last.podium.map((p, i) => (
-                  <li key={i} className={`podium__step podium__step--${i + 1}`}>
-                    <Avatar name={p.name} src={p.avatar} size={i === 0 ? 52 : 40} />
-                    <span className="podium__name">{p.name}</span>
-                    <b>{eur(p.balance)}</b>
-                    <span className="podium__place">{i + 1}º</span>
+      {mine ? (
+        <MyCard mine={mine} players={players} day={day} starting={starting} />
+      ) : (
+        scores &&
+        players.length > 0 && <p className="sb-empty">Aún no estás en la clasificación: juega una mano o una tirada (mesas o solo) para entrar.</p>
+      )}
+
+      {players.length > 0 && (
+        <div className="sb-grid">
+          <section className="sb-board" aria-label="Clasificación de la semana">
+            <h2 className="hub-title">Clasificación</h2>
+            <ol className="sb-list">
+              {players.map((p) => {
+                const up = p.balance >= starting
+                const today = todayOf(p, day, starting)
+                return (
+                  <li key={p.rank} style={{ '--i': Math.min(p.rank, 20) }}>
+                    <button
+                      type="button"
+                      className={`sb-row ${p.me ? 'sb-row--me' : ''} ${focus === p ? 'is-selected' : ''}`}
+                      aria-pressed={focus === p}
+                      onClick={() => setSelected(p.rank)}
+                    >
+                      <span className="sb-row__bar" style={{ '--w': Math.max(0.04, p.balance / Math.max(leader, 1)) }} aria-hidden="true" />
+                      <span className={`sb-row__rank sb-row__rank--${p.rank}`}>{p.rank}</span>
+                      <Avatar name={p.name} src={p.avatar} size={38} />
+                      <span className="sb-row__name">
+                        {p.name}
+                        {p.me && <small> · tú</small>}
+                        {today !== 0 && <em className={today > 0 ? 'up' : 'down'}>hoy {delta(today)}</em>}
+                      </span>
+                      <Sparkline values={seriesOf(p, starting)} up={up} />
+                      <span className="sb-row__money">
+                        <b>{eur(p.balance)}</b>
+                        <small className={up ? 'up' : 'down'}>{delta(p.balance - starting)}</small>
+                      </span>
+                    </button>
                   </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="score__empty">Aún no hay podio: el primero se decide este domingo a las 23:59.</p>
-            )}
+                )
+              })}
+            </ol>
           </section>
-        </aside>
-      </div>
+
+          <aside className="sb-side">
+            {focus && (
+              <section className="sb-card">
+                <h2>
+                  <Avatar name={focus.name} src={focus.avatar} size={30} />
+                  {focus.me ? 'Tu semana' : `La semana de ${focus.name}`}
+                </h2>
+                <WeekChart player={focus} starting={starting} />
+              </section>
+            )}
+            <section className="sb-card">
+              <h2>Podio de la semana pasada</h2>
+              {last?.podium?.length ? (
+                <ol className="sb-last">
+                  {last.podium.map((p, i) => (
+                    <li key={i} className={`sb-last__item sb-last__item--${i + 1}`}>
+                      <span className="sb-last__medal" aria-hidden="true">
+                        {['🥇', '🥈', '🥉'][i]}
+                      </span>
+                      <Avatar name={p.name} src={p.avatar} size={34} />
+                      <span className="sb-last__name">{p.name}</span>
+                      <b>{eur(p.balance)}</b>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="sb-empty">Aún no hay podio: el primero se decide este domingo a las 23:59.</p>
+              )}
+            </section>
+          </aside>
+        </div>
+      )}
     </main>
   )
 }
