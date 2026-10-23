@@ -26,7 +26,7 @@ export const roundOf = (t) => Math.floor(t / ROUND_MS)
 const revealAt = (round) => round * ROUND_MS + REVEAL_MS
 
 // Enteros de 32 bits uniformes a partir de HMAC(secreto, etiqueta, bloque): nadie sin el secreto puede adelantarlos.
-function hmacStream(secret, label) {
+export function hmacStream(secret, label) {
   let block = 0
   let bytes = Buffer.alloc(0)
   let pos = 0
@@ -249,7 +249,7 @@ const RACE_HISTORY = 12
 const raceDraws = new Map()
 
 // Entero uniforme de 0 a n-1 a partir de un flujo de enteros de 32 bits (rechazo, sin sesgo).
-const uniform = (next32) => (n) => {
+export const uniform = (next32) => (n) => {
   const limit = 2 ** 32 - (2 ** 32 % n)
   for (;;) {
     const value = next32()

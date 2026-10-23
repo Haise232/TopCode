@@ -13,6 +13,7 @@ import { SCHEMA_SQL } from './schema.mjs'
 import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceView, rouletteDue, rouletteView } from './solo.mjs'
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 import { DUEL_ERRORS, createDuelos } from './duelos.mjs'
+import { BINGO_ERRORS, createBingo } from './bingo.mjs'
 import { abuseExtra, abuseLuck, createBanca } from './banca.mjs'
 import { safeAvatar, shortName } from './engine/names.mjs'
 
@@ -69,6 +70,7 @@ export const ERRORS = {
   AUTH_DOWN: 'No se pudo comprobar tu sesión. Reintentando…',
   ...GACHA_ERRORS,
   ...DUEL_ERRORS,
+  ...BINGO_ERRORS,
 }
 
 export class JuegosError extends Error {
@@ -118,6 +120,8 @@ BlackjackRoom.prototype.settle = function settle() {
     seat.paid += extra
     changed = true
   }
+  // Lo que la mesa pierde contra la banca va a la jaula del bingo (withTable lo apunta al guardar; no se guarda en la mesa).
+  for (const seat of this.seats) if (seat?.locked && seat.bet > seat.paid) this.lost = (this.lost ?? 0) + seat.bet - seat.paid
   if (changed) this.broadcast()
 }
 
@@ -146,7 +150,7 @@ function fixSeats(room) {
   for (const m of room.members.values()) if (m.seat !== null && room.seats[m.seat]?.sid !== m.id) m.seat = null
 }
 
-const ROOM_STATIC = new Set(['accounts', 'randomInt', 'onClose', 'now', 'timers', 'timer', 'sweeper', 'members', 'abuse'])
+const ROOM_STATIC = new Set(['accounts', 'randomInt', 'onClose', 'now', 'timers', 'timer', 'sweeper', 'members', 'abuse', 'lost'])
 
 // --- saldos dentro de una transacción: el motor usa get/adjust como con el archivo de juegos original ---
 
@@ -251,7 +255,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   function ensureSchema() {
     schemaReady ??= (async () => {
       // La tabla más nueva: si falta, se ejecuta el esquema entero (es idempotente).
-      const { rows } = await db.query(`select to_regclass('public.juegos_gacha_mesa') is not null as ok`)
+      const { rows } = await db.query(`select to_regclass('public.juegos_bingo') is not null as ok`)
       if (!rows[0].ok) await db.query(SCHEMA_SQL)
       await db.query(`insert into public.juegos_meta (id, semana) values (1, $1) on conflict (id) do nothing`, [weekOf(now()).key])
       await refundSoloBlackjack()
@@ -309,6 +313,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         await q(`delete from public.juegos_solo`)
         await banca.sweep(q)
         await duelos.sweep(q)
+        await bingo.sweep(q)
       })
       await ping('juegos-lobby')
     }
@@ -393,6 +398,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       room.unstick?.()
       fixSeats(room) // el wake() puede haber empezado una ronda nueva y liberado asientos
       const error = fn(room, session) ?? null
+      if (room.lost > 0) await bingo.feed(q, room.lost)
 
       const changed = room.rev !== revBefore || presence
       let saved = null
@@ -530,16 +536,19 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
 
   async function lobby(user) {
     const t = now()
-    const [tables, online, acc] = await Promise.all([
+    await bingo.settleDue()
+    const [tables, online, acc, jackpot] = await Promise.all([
       db.query(`select codigo, juego, etiqueta, numero, estado from public.juegos_mesas order by juego, numero`),
       db.query(`select count(*)::int as n from public.juegos_cuentas where visto > now() - make_interval(secs => $1::int)`, [ONLINE_MS / 1000]),
       db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id]),
+      bingo.summary(),
     ])
     return {
       tables: tables.rows.map((row) => summary(row, t)),
       online: online.rows[0].n,
       balance: acc.rows[0]?.saldo ?? STARTING_BALANCE,
       resetAt: weekOf(t).resetAt,
+      bingo: jackpot,
     }
   }
 
@@ -678,6 +687,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           out.delta += extra
           out.abuse = { modo: abuse.modo, extra }
         }
+        // Lo que se pierde contra el casino (ya con seguros y Admin Abuse) va a la jaula del bingo.
+        await bingo.feed(q, -(settled.net + (hit?.extra ?? 0) + (extra ?? 0)))
       }
       // Toda jugada cuenta para el Score, también la que te deja igual (entras en la clasificación y se anota el día).
       if (out.played || out.delta) accounts.adjust(user.id, out.delta)
@@ -736,6 +747,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return true
   }
   const duelos = createDuelos({ db, ping, now, randomInt, move, abuse: () => banca.abuse() })
+  const bingo = createBingo({ db, now, secret, move })
 
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.
@@ -919,6 +931,11 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         if (out.power) reply.power = out.power
         if (out.abuse) reply.abuse = out.abuse
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo
+        return reply
+      }
+      case 'bingo': {
+        await bingo.handle(user, msg, reply)
+        if (reply.error) reply.error.message = ERRORS[reply.error.code] ?? 'Error.'
         return reply
       }
       case 'duel': {

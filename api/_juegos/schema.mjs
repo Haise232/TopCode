@@ -47,7 +47,7 @@ create index if not exists juegos_chat_usuario_idx on public.juegos_chat (usuari
 -- Partida en curso de los juegos en solitario (racha de la ruleta, mano del blackjack).
 create table if not exists public.juegos_solo (
   usuario_id  uuid not null references public.usuarios(id) on delete cascade,
-  juego       text not null check (juego in ('roulette', 'blackjack', 'crash', 'frog', 'race', 'dungeon', 'bribe', 'wheel')),
+  juego       text not null check (juego in ('roulette', 'blackjack', 'crash', 'frog', 'race', 'dungeon', 'bribe', 'wheel', 'bingo')),
   estado      jsonb not null,
   actualizado timestamptz not null default now(),
   primary key (usuario_id, juego)
@@ -148,6 +148,14 @@ create table if not exists public.juegos_duelos (
 create index if not exists juegos_duelos_estado_idx on public.juegos_duelos (estado, id desc);
 create index if not exists juegos_duelos_reta_idx on public.juegos_duelos (reta);
 
+-- Bingo (igual que supabase/migracion_juegos_bingo.sql): la jaula (el bote) y las últimas partidas.
+create table if not exists public.juegos_bingo (
+  id        int primary key default 1 check (id = 1),
+  bote      bigint not null default 0 check (bote >= 0),
+  historial jsonb not null default '[]'::jsonb
+);
+insert into public.juegos_bingo (id) values (1) on conflict (id) do nothing;
+
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;
 alter table public.juegos_mesas   enable row level security;
@@ -162,4 +170,5 @@ alter table public.juegos_gacha_efectos   enable row level security;
 alter table public.juegos_avisos          enable row level security;
 alter table public.juegos_avisos_vistos   enable row level security;
 alter table public.juegos_duelos          enable row level security;
+alter table public.juegos_bingo           enable row level security;
 `

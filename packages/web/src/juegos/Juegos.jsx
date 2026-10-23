@@ -14,6 +14,8 @@ import Dungeon from './Dungeon.jsx'
 import Plinko from './Plinko.jsx'
 import Frog from './Frog.jsx'
 import Race from './Race.jsx'
+import Bingo from './Bingo.jsx'
+import BingoCage from './BingoCage.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
 import { DoorIcon } from './DungeonArt.jsx'
@@ -28,6 +30,8 @@ import BancaAvisos from './banca/BancaAvisos'
 import Tutorial, { TUTORIAL_KEY } from './Tutorial.jsx'
 import { useAuth } from '../hooks/useAuth'
 import { delta, eur, until } from './money.js'
+import { useCountUp } from './useCountUp.js'
+import { POT_BALL } from './bingo.js'
 import './Lobby.css'
 import './table/table.css'
 import './responsive.css'
@@ -190,6 +194,41 @@ function standing(scores, me) {
   if (ahead) gap = { text: `A ${eur(ahead.balance - mine.balance)} del puesto ${ahead.rank}`, up: true }
   else if (behind) gap = { text: `Vas primero, ${eur(mine.balance - behind.balance)} por delante`, up: false }
   return { mine, count: list.length, today, gap }
+}
+
+// El Bingo en el menú: la jaula con el bote a la vista de todos y cuánto falta para la siguiente partida.
+function BingoBanner({ info, online, onOpen }) {
+  const pot = info?.pot ?? 0
+  const shown = useCountUp(pot, 1200)
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  const left = info ? Math.max(0, info.next - Date.now()) : null
+  const clock = left === null ? '' : `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`
+  const when = !info ? 'Conectando…' : info.phase === 'buy' && left > 0 ? `Venta de cartones · empieza en ${clock}` : `Partida en juego · la siguiente en ${clock}`
+  return (
+    <button type="button" className="hub-bingo" disabled={!online} onClick={onOpen}>
+      <BingoCage pot={pot} className="hub-bingo__cage" />
+      <span className="hub-bingo__body">
+        <em className="hub-pill">En vivo</em>
+        <span className="hub-bingo__name">Bingo</span>
+        <span className="hub-bingo__pot">
+          <small>Bote en la jaula</small>
+          <b>{eur(shown)}</b>
+        </span>
+        <span className="hub-bingo__when">{when}</span>
+        <span className="hub-bingo__blurb">
+          Todo lo que se pierde en el casino acaba en la jaula. Canta bingo con la bola {POT_BALL} o antes y te la llevas entera.
+          {info?.lastJackpot && ` Último bote: ${info.lastJackpot.bingo.join(', ')} (${eur(info.lastJackpot.jackpot)}).`}
+        </span>
+      </span>
+      <span className="hub-bingo__cta" aria-hidden="true">
+        Jugar
+      </span>
+    </button>
+  )
 }
 
 // Acceso al score: una placa de latón con tu puesto, tu saldo, lo de hoy y lo que falta para subir.
@@ -431,6 +470,10 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCo
         <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
       </section>
 
+      <section aria-label="Bingo">
+        <BingoBanner info={lobby?.bingo} online={connected} onOpen={() => onPick('bingo')} />
+      </section>
+
       <section aria-labelledby="solo-title" data-tour="solo">
         <h2 id="solo-title" className="hub-title">
           Para jugar solo <small>con tu saldo de la semana</small>
@@ -537,7 +580,7 @@ function Notice({ title, children, actions }) {
 
 // Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
 const SCREEN_KEY = 'juegos-pantalla'
-const KEEP = new Set(['roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score'])
+const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score'])
 function savedScreen() {
   try {
     const screen = sessionStorage.getItem(SCREEN_KEY)
@@ -549,7 +592,7 @@ function savedScreen() {
 
 function JuegosScreens() {
   const navigate = useNavigate()
-  // screen: lobby | roulette | crash | dungeon | plinko | frog | race | duel | gacha | join | score
+  // screen: lobby | bingo | roulette | crash | dungeon | plinko | frog | race | duel | gacha | join | score
   const [params, setParams] = useSearchParams()
   // Enlace de invitación (/juegos?juego=poker&mesa=ABCD): entra directamente a esa mesa, o a la mejor si ya no existe.
   const [view, setView] = useState(() => {
@@ -624,6 +667,7 @@ function JuegosScreens() {
   }
 
   const { screen } = view
+  if (screen === 'bingo') return show(<Bingo onExit={exit} juegos={juegos} />)
   if (screen === 'roulette') return show(<Roulette onExit={exit} juegos={juegos} />)
   if (screen === 'crash') return show(<Crash onExit={exit} juegos={juegos} />)
   if (screen === 'dungeon') return show(<Dungeon onExit={exit} juegos={juegos} />)

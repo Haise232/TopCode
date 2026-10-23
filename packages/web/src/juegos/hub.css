@@ -1224,3 +1224,116 @@
   color: #ff6b7d;
   text-shadow: 0 0 14px rgba(255, 79, 91, 0.6);
 }
+
+/* --- Bingo: el cartel con la jaula del bote --- */
+.juegos-root .hub-bingo {
+  position: relative;
+  display: grid;
+  grid-template-columns: clamp(96px, 12vw, 150px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(14px, 2.4vw, 32px);
+  width: 100%;
+  padding: clamp(14px, 2vw, 22px) clamp(16px, 2.6vw, 30px);
+  border-radius: 22px;
+  border: 1px solid rgba(200, 162, 75, 0.55);
+  background:
+    radial-gradient(80% 140% at 10% 50%, rgba(255, 216, 107, 0.22), transparent 60%),
+    linear-gradient(110deg, #3a1b0f 0%, #20140c 45%, #0f2633 100%);
+  color: var(--ivory);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 241, 194, 0.18),
+    0 10px 30px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.juegos-root .hub-bingo:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 241, 194, 0.18),
+    0 14px 36px rgba(0, 0, 0, 0.45),
+    0 0 0 2px rgba(255, 226, 122, 0.35);
+}
+.juegos-root .hub-bingo:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 3px;
+}
+.juegos-root .hub-bingo:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.juegos-root .hub-bingo__cage {
+  width: 100%;
+  max-height: 170px;
+}
+.juegos-root .hub-bingo__body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 4px 14px;
+  min-width: 0;
+}
+.juegos-root .hub-bingo__body .hub-pill {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.juegos-root .hub-bingo__name {
+  font-family: var(--display);
+  font-size: clamp(30px, 3.6vw, 48px);
+  line-height: 1;
+}
+.juegos-root .hub-bingo__pot {
+  display: grid;
+  justify-self: start;
+}
+.juegos-root .hub-bingo__pot small {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.juegos-root .hub-bingo__pot b {
+  font-family: var(--display);
+  font-size: clamp(26px, 3.2vw, 42px);
+  font-weight: 400;
+  line-height: 1.05;
+  color: #ffe9a8;
+  text-shadow: 0 0 22px rgba(255, 210, 90, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+.juegos-root .hub-bingo__when {
+  grid-column: 1 / -1;
+  font-weight: 700;
+  color: #ffd86b;
+  font-variant-numeric: tabular-nums;
+}
+.juegos-root .hub-bingo__blurb {
+  grid-column: 1 / -1;
+  font-size: 14px;
+  color: var(--muted);
+}
+.juegos-root .hub-bingo__cta {
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f6d27a, #c8962f);
+  color: #1b1405;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 4px 14px rgba(200, 150, 47, 0.45);
+}
+@media (max-width: 720px) {
+  .juegos-root .hub-bingo {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+  .juegos-root .hub-bingo__cta {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+  .juegos-root .hub-bingo__blurb {
+    display: none;
+  }
+}
