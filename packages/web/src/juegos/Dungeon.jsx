@@ -416,7 +416,7 @@ function Dungeon({ onExit, juegos }) {
   if (juegos.error) status = juegos.error
   else if (!ready) status = 'Encendiendo las antorchas…'
   else if (reveal && (reveal.moving || !run)) status = reveal.shown ? reveal.text : 'La puerta cruje al abrirse…'
-  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
   else if (phase === 'peek') status = '¡Fíjate bien! ¿Dónde está el cofre?'
   else if (phase === 'close' || phase === 'shuffle' || phase === 'settle')
     status = '¡El laberinto se mueve! No pierdas de vista el cofre.'

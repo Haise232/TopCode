@@ -550,7 +550,7 @@ function Roulette({ onExit, juegos }) {
   if (ready) {
     if (phase === 'betting') {
       call = BETS_MS - offset <= LAST_CALL_MS ? 'Últimas apuestas' : 'Hagan sus apuestas'
-      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
       else if (onTable > 0) detail = sending || dirty ? `Enviando ${eur(onTable)}…` : `Apuesta aceptada: ${eur(onTable)}.`
       else detail = 'Elige una ficha y toca la mesa.'
     } else if (!landed) {

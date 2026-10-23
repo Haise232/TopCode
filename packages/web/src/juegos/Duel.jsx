@@ -70,7 +70,7 @@ function Card({ card, flip }) {
 }
 
 // La animación de un duelo jugado, en pantalla completa: los dos, el sorteo (moneda, dados o cartas) y quién gana.
-function Showdown({ duel, me, onClose }) {
+function Showdown({ duel, me, onClose, onRematch }) {
   const [step, setStep] = useState(0) // 0: sorteo en marcha · 1, 2…: rondas de desempate · final: resultado
   const rounds = duel.detalle?.rounds ?? []
   const total = duel.tipo === 'moneda' ? 1 : rounds.length
@@ -139,9 +139,20 @@ function Showdown({ duel, me, onClose }) {
             {winner?.name} se lleva {eur(duel.apuesta)}
             {duel.extra ? ` (+${eur(duel.extra)} de la banca)` : ''}
           </span>
-          <button type="button" className="hub-btn hub-btn--primary" onClick={onClose} autoFocus>
-            Seguir
-          </button>
+          <div className="duel-show__btns">
+            {(iWon || iLost) && onRematch && (
+              <button
+                type="button"
+                className="duel-rematch"
+                onClick={() => onRematch({ para: duel.reta.id === me ? duel.acepta?.id : duel.reta.id, apuesta: duel.apuesta, tipo: duel.tipo })}
+              >
+                ⚔ Revancha · {eur(duel.apuesta)}
+              </button>
+            )}
+            <button type="button" className="hub-btn hub-btn--primary" onClick={onClose} autoFocus>
+              Seguir
+            </button>
+          </div>
         </div>
       )}
       {iWon && (
@@ -247,6 +258,30 @@ export default function Duel({ onExit, juegos }) {
       </header>
 
       {error && <p className="duel-error">{error}</p>}
+
+      {data?.yo && (
+        <section className="duel-stats" aria-label="Tus duelos de esta semana">
+          <div>
+            <small>Ganados</small>
+            <b className="is-win">{data.yo.ganados}</b>
+          </div>
+          <div>
+            <small>Perdidos</small>
+            <b className="is-lose">{data.yo.perdidos}</b>
+          </div>
+          <div>
+            <small>% de victorias</small>
+            <b>{data.yo.ganados + data.yo.perdidos ? Math.round((100 * data.yo.ganados) / (data.yo.ganados + data.yo.perdidos)) : 0} %</b>
+          </div>
+          <div>
+            <small>Balance en duelos</small>
+            <b className={data.yo.neto > 0 ? 'is-win' : data.yo.neto < 0 ? 'is-lose' : ''}>
+              {data.yo.neto > 0 ? '+' : data.yo.neto < 0 ? '−' : ''}
+              {eur(Math.abs(data.yo.neto))}
+            </b>
+          </div>
+        </section>
+      )}
 
       <div className="duel-grid">
         <section className="duel-new" aria-labelledby="duel-new-title">
@@ -362,7 +397,19 @@ export default function Duel({ onExit, juegos }) {
         </section>
       </div>
 
-      {show && <Showdown key={show.id} duel={show} me={me} onClose={() => setShow(null)} />}
+      {show && (
+        <Showdown
+          key={show.id}
+          duel={show}
+          me={me}
+          onClose={() => setShow(null)}
+          onRematch={(msg) => {
+            setShow(null)
+            playChip()
+            call({ a: 'retar', ...msg })
+          }}
+        />
+      )}
     </main>
   )
 }

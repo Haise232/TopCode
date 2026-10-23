@@ -398,7 +398,7 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
       wait = { title: 'Mesa abierta', text: 'Siéntate en un asiento libre para jugar, o mira cómo va la ronda.', look: true }
     } else if (broke) {
       status = 'Sin saldo'
-      wait = { title: 'Sin saldo por ahora', text: 'Vuelves a tener 10.000 € el domingo a las 23:59.' }
+      wait = { title: 'Sin saldo por ahora', text: 'Vuelves a tener 15.000 € el domingo a las 23:59.' }
     } else if (mine.locked) {
       wait = {
         title: 'Apuesta lista',
@@ -477,7 +477,7 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
                 Para invitar a alguien, pásale el código <b>{state.code}</b> y la dirección <b>{location.origin}</b>.
               </p>
             )}
-            <p>Juegas con tu saldo de la semana (10.000 €, se reinicia el domingo a las 23:59): cuenta en el Score.</p>
+            <p>Juegas con tu saldo de la semana (15.000 €, se reinicia el domingo a las 23:59): cuenta en el Score.</p>
             <p className="hint">
               Teclas: <kbd>1</kbd>–<kbd>4</kbd> fichas · <kbd>B</kbd> borrar · <kbd>Espacio</kbd> apostar · <kbd>P</kbd> pedir ·{' '}
               <kbd>M</kbd> me planto · <kbd>D</kbd> doblar.
@@ -663,7 +663,7 @@ function Table({ room, me, conn, error, send, request, onLeave, chat, bubbles, p
             <p className="bj-bar__note">
               {betting
                 ? broke
-                  ? 'Sin saldo esta semana: el domingo a las 23:59 vuelves a tener 10.000 €.'
+                  ? 'Sin saldo esta semana: el domingo a las 23:59 vuelves a tener 15.000 €.'
                   : `Apuesta lista: ${eur(mine.bet)}. Esperando al resto de la mesa.`
                 : mine.cards.length
                   ? state.phase === 'playing'

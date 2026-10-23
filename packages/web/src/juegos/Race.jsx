@@ -428,7 +428,7 @@ function Race({ onExit, juegos }) {
   if (ready) {
     if (phase === 'betting') {
       call = hot ? '¡Últimos segundos!' : 'Hagan sus apuestas'
-      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
       else if (onTable > 0) detail = sending || dirty ? `Enviando ${summary}…` : `Aceptado: ${summary}.`
       else detail = 'Elige el tipo de apuesta y toca un coche.'
     } else if (phase === 'grid') {

@@ -312,7 +312,7 @@ function Frog({ onExit, juegos }) {
   let status = 'Elige tu apuesta con la barra y deja a la rana en el nenúfar.'
   if (juegos.error) status = juegos.error
   else if (!ready) status = 'Conectando con el estanque…'
-  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
   else if (sunk !== null) status = '¡Splash! La rana cayó al agua. Pierdes la apuesta.'
   else if (asking && run) status = `Saltando a ×${mult + 1}…`
   else if (run)

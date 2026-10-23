@@ -12,7 +12,7 @@ create table if not exists public.juegos_cuentas (
   usuario_id uuid primary key references public.usuarios(id) on delete cascade,
   nombre     text not null default '',
   avatar     text,
-  saldo      bigint not null default 10000,
+  saldo      bigint not null default 15000,
   dias       bigint[] not null default array[null, null, null, null, null, null, null]::bigint[],
   jugado     boolean not null default false,
   mesa       text,

@@ -48,7 +48,7 @@ function Sparkline({ values, up }) {
   )
 }
 
-// Evolución de un jugador en la semana, con la línea de los 10.000 € de salida como referencia y el área rellena.
+// Evolución de un jugador en la semana, con la línea de los 15.000 € de salida como referencia y el área rellena.
 function WeekChart({ player, starting }) {
   const [hover, setHover] = useState(null)
   const values = seriesOf(player, starting)
@@ -221,7 +221,7 @@ function Scoreboard({ juegos, onExit }) {
   }, [conn, me, send])
 
   const players = scores?.players ?? []
-  const starting = scores?.starting ?? 10000
+  const starting = scores?.starting ?? 15000
   const day = scores?.week?.day ?? 0
   const mine = players.find((p) => p.me)
   const focus = players.find((p) => p.rank === selected) ?? mine ?? players[0]

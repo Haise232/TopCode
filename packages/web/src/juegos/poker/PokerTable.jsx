@@ -706,7 +706,7 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
       wait = { title: 'Mesa en espera', text: 'Siéntate en un asiento libre para jugar, o mira cómo empieza.', look: true }
     } else if (broke) {
       status = 'Sin fichas'
-      wait = { title: 'Sin fichas por ahora', text: 'Vuelves a tener 10.000 € el domingo a las 23:59.' }
+      wait = { title: 'Sin fichas por ahora', text: 'Vuelves a tener 15.000 € el domingo a las 23:59.' }
     } else if (ready >= 2) {
       status = 'Preparando la mano…'
       wait = { title: 'Preparando la mano…', text: 'Ya sois suficientes.' }
@@ -916,7 +916,7 @@ function PokerTable({ room, me, conn, error, send, request, onLeave, chat, bubbl
                   : live
                     ? 'Entras en la próxima mano.'
                     : broke
-                      ? 'Sin fichas esta semana: el domingo a las 23:59 vuelves a tener 10.000 €.'
+                      ? 'Sin fichas esta semana: el domingo a las 23:59 vuelves a tener 15.000 €.'
                       : 'Sentado a la mesa.'}
             </p>
             <div className="pbar__buttons">

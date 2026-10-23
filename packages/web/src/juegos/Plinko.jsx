@@ -215,7 +215,7 @@ function Plinko({ onExit, juegos }) {
 
   let status = 'Elige tu apuesta y el riesgo, y suelta la bola.'
   if (juegos.error) status = juegos.error
-  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+  else if (broke) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
   else if (balance < bet && !flying) status = 'No te alcanza para esta apuesta: elige una menor.'
   else if (last) {
     const net = last.payout - last.bet

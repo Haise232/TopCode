@@ -56,16 +56,26 @@ export function createDuelos({ db, ping, now, randomInt, move, abuse }) {
   async function list(user) {
     const expired = await db.tx(expire)
     if (expired) await ping(DUEL_TOPIC)
-    const [open, recent, people] = await Promise.all([
+    const [open, recent, people, stats] = await Promise.all([
       db.query(`${SELECT} where d.estado = 'abierto' and (d.para is null or d.para = $1 or d.reta = $1) order by d.id desc limit 40`, [user.id]),
       db.query(`${SELECT} where d.estado = 'jugado' order by d.jugado desc limit $1`, [RECENT]),
       db.query(`select usuario_id as id, nombre as name, avatar from public.juegos_cuentas where usuario_id <> $1 order by visto desc limit 60`, [user.id]),
+      // Tus duelos de los últimos 7 días: ganados, perdidos y lo que llevas ganado o perdido en ellos.
+      db.query(
+        `select count(*) filter (where gano)::int as ganados, count(*) filter (where not gano)::int as perdidos,
+                coalesce(sum(case when gano then apuesta + extra else -apuesta end), 0)::bigint as neto
+         from (select apuesta, extra, (ganador = 'reta') = (reta = $1) as gano from public.juegos_duelos
+               where estado = 'jugado' and (reta = $1 or acepta = $1) and jugado > now() - interval '7 days') t`,
+        [user.id],
+      ),
     ])
+    const st = stats.rows[0]
     return {
       now: now(),
       abiertos: open.rows.map((r) => view(r, user.id)),
       recientes: recent.rows.map((r) => view(r, user.id)),
       gente: people.rows.map((r) => ({ id: r.id, name: r.name, avatar: r.avatar ?? null })),
+      yo: { ganados: st.ganados, perdidos: st.perdidos, neto: Number(st.neto) },
     }
   }
 

@@ -18,12 +18,14 @@ import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
 import { DoorIcon } from './DungeonArt.jsx'
 import Duel from './Duel.jsx'
+import DuelAlert from './DuelAlert.jsx'
 import Table from './table/Table.jsx'
 import PokerTable from './poker/PokerTable.jsx'
 import { useJuegos } from './useJuegos.js'
 import Scoreboard from './Scoreboard.jsx'
 import Avatar from './Avatar.jsx'
 import BancaAvisos from './banca/BancaAvisos'
+import Tutorial, { TUTORIAL_KEY } from './Tutorial.jsx'
 import { useAuth } from '../hooks/useAuth'
 import { delta, eur, until } from './money.js'
 import './Lobby.css'
@@ -347,11 +349,26 @@ function LiveGame({ game, tables, loaded, online, onJoin }) {
   )
 }
 
-function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
+function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCount = 0 }) {
   const { me, lobby, conn, scores, send } = juegos
   const master = useAuth().usuario?.es_superadmin === true
   const [bank, setBank] = useState(false)
+  const [tour, setTour] = useState(false)
   const connected = conn === 'open' && Boolean(me)
+  // La guía se abre sola la primera vez que entras en la Season 2 (cuando ya está pintado el selector).
+  const hubReady = Boolean(me && lobby)
+  useEffect(() => {
+    if (!hubReady) return
+    let seen = true
+    try {
+      seen = localStorage.getItem(TUTORIAL_KEY) === '1'
+    } catch {
+      // sin almacenamiento: no se abre sola
+    }
+    if (seen) return
+    const timer = setTimeout(() => setTour(true), 600)
+    return () => clearTimeout(timer)
+  }, [hubReady])
   const online = connected && Boolean(lobby)
 
   // El resumen del score se refresca mientras se está en el selector.
@@ -375,6 +392,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
           <BancaPanel onClose={() => setBank(false)} />
         </Suspense>
       )}
+      {tour && <Tutorial onClose={() => setTour(false)} />}
       <header className="hub-top">
         <h1>Juegos</h1>
         <p className={`hub-status hub-status--${status.tone}`} role="status" aria-live="polite">
@@ -383,7 +401,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
         </p>
         <div className="hub-top__who">
           {me && (
-            <div className="hub-me">
+            <div className="hub-me" data-tour="me">
               <Avatar name={me.name} src={me.avatar} size={44} />
               <span className="hub-me__text">
                 <small>{me.name}</small>
@@ -392,36 +410,40 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
             </div>
           )}
           {master && (
-            <button type="button" className="hub-btn hub-bank" onClick={() => setBank(true)} aria-label="La banca (master)" title="La banca">
+            <button type="button" className="hub-btn hub-bank" data-tour="bank" onClick={() => setBank(true)} aria-label="La banca (master)" title="La banca">
               <span aria-hidden="true">€</span>
               <em>Banca</em>
             </button>
           )}
+          <button type="button" className="hub-btn hub-btn--ghost" onClick={() => setTour(true)}>
+            Tutorial
+          </button>
           <button type="button" className="hub-btn hub-btn--ghost" onClick={onHome}>
             TopCode
           </button>
         </div>
       </header>
 
-      <section aria-labelledby="score-title">
+      <section aria-labelledby="score-title" data-tour="score">
         <h2 id="score-title" className="hub-title">
           Clasificación <small>se reinicia el domingo a las 23:59</small>
         </h2>
         <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
       </section>
 
-      <section aria-labelledby="solo-title">
+      <section aria-labelledby="solo-title" data-tour="solo">
         <h2 id="solo-title" className="hub-title">
           Para jugar solo <small>con tu saldo de la semana</small>
         </h2>
         <ul className="hub-tiles">
           {SOLO.map(({ id, name, blurb, art, live }) => (
-            <li key={id}>
+            <li key={id} data-tour={id === 'duel' ? 'duel' : undefined}>
               <button type="button" className={`hub-tile hub-tile--${id}`} disabled={!connected} onClick={() => onPick(id)}>
                 <span className="hub-tile__art" aria-hidden="true">
                   {art}
                 </span>
                 {live && <em className="hub-pill">En vivo</em>}
+                {id === 'duel' && duelCount > 0 && <em className="hub-tile__badge">{duelCount}</em>}
                 <span className="hub-tile__name">{name}</span>
                 <span className="hub-tile__blurb">{blurb}</span>
               </button>
@@ -431,7 +453,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
       </section>
 
       <div className="hub-grid">
-        <section className="hub-live-sec" aria-labelledby="live-title">
+        <section className="hub-live-sec" aria-labelledby="live-title" data-tour="live">
           <h2 id="live-title" className="hub-title">
             Mesas en vivo <small>con la gente de TopCode</small>
           </h2>
@@ -441,7 +463,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome }) {
             ))}
           </div>
         </section>
-        <section aria-labelledby="gacha-sec-title">
+        <section aria-labelledby="gacha-sec-title" data-tour="gacha">
           <h2 id="gacha-sec-title" className="hub-title">
             Colección <small>memes de España</small>
           </h2>
@@ -535,6 +557,15 @@ function JuegosScreens() {
     return { screen: 'join', game, as: 'player', code: params.get('mesa') ?? undefined }
   })
   const juegos = useJuegos()
+  const [duelCount, setDuelCount] = useState(0)
+  const openDuels = () => setView({ screen: 'duel' })
+  // El aviso de duelos va en todas las pantallas (menos en la de duelos, que ya lo enseña todo).
+  const show = (screenEl, onDuel = false) => (
+    <>
+      {screenEl}
+      <DuelAlert request={juegos.request} me={juegos.me?.id} hidden={onDuel} onOpen={openDuels} onCount={setDuelCount} />
+    </>
+  )
   useEffect(() => {
     if (params.has('juego') || params.has('mesa')) setParams({}, { replace: true })
   }, [params, setParams])
@@ -572,7 +603,7 @@ function JuegosScreens() {
   // Dentro de una mesa manda el servidor (también al volver tras recargar la página).
   if (juegos.room) {
     const Kind = juegos.room.state.game === 'poker' ? PokerTable : Table
-    return (
+    return show(
       <Kind
         room={juegos.room}
         me={juegos.me}
@@ -587,30 +618,31 @@ function JuegosScreens() {
         chat={juegos.chat}
         bubbles={juegos.bubbles}
         pending={juegos.pending}
-      />
+      />,
     )
   }
 
   const { screen } = view
-  if (screen === 'roulette') return <Roulette onExit={exit} juegos={juegos} />
-  if (screen === 'crash') return <Crash onExit={exit} juegos={juegos} />
-  if (screen === 'dungeon') return <Dungeon onExit={exit} juegos={juegos} />
-  if (screen === 'plinko') return <Plinko onExit={exit} juegos={juegos} />
-  if (screen === 'frog') return <Frog onExit={exit} juegos={juegos} />
-  if (screen === 'race') return <Race onExit={exit} juegos={juegos} />
-  if (screen === 'duel') return <Duel onExit={exit} juegos={juegos} />
-  if (screen === 'gacha') return <Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />
-  if (screen === 'join') return <Joining juegos={juegos} request={view} onExit={exit} />
-  if (screen === 'score') return <Scoreboard juegos={juegos} onExit={exit} />
-  return (
+  if (screen === 'roulette') return show(<Roulette onExit={exit} juegos={juegos} />)
+  if (screen === 'crash') return show(<Crash onExit={exit} juegos={juegos} />)
+  if (screen === 'dungeon') return show(<Dungeon onExit={exit} juegos={juegos} />)
+  if (screen === 'plinko') return show(<Plinko onExit={exit} juegos={juegos} />)
+  if (screen === 'frog') return show(<Frog onExit={exit} juegos={juegos} />)
+  if (screen === 'race') return show(<Race onExit={exit} juegos={juegos} />)
+  if (screen === 'duel') return show(<Duel onExit={exit} juegos={juegos} />, true)
+  if (screen === 'gacha') return show(<Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />)
+  if (screen === 'join') return show(<Joining juegos={juegos} request={view} onExit={exit} />)
+  if (screen === 'score') return show(<Scoreboard juegos={juegos} onExit={exit} />)
+  return show(
     <GameSelector
+      duelCount={duelCount}
       juegos={juegos}
       onPick={(screen) => setView({ screen })}
       onJoin={(game, as, code) => setView({ screen: 'join', game, as, code })}
       onScore={() => setView({ screen: 'score' })}
       onGacha={(tab) => setView({ screen: 'gacha', tab })}
       onHome={home}
-    />
+    />,
   )
 }
 

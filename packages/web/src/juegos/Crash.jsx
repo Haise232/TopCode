@@ -296,7 +296,7 @@ function Crash({ onExit, juegos }) {
   if (ready) {
     if (phase === 'betting') {
       call = BETS_MS - offset <= LAST_CALL_MS ? 'Últimas apuestas' : 'Apuesta antes del despegue'
-      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 10.000 €.'
+      if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
       else if (stake > 0) {
         const target = auto ? ` · retiro automático a ${fmtMult(auto)}` : ''
         detail = sending || dirty ? `Enviando ${eur(stake)}…` : `Apuesta aceptada: ${eur(stake)}${target}.`

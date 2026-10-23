@@ -21,7 +21,7 @@ const SUIT_MARK = { spades: '♠', hearts: '♥', diamonds: '♦', clubs: '♣' 
 const highLow = (card) => (['10', 'J', 'Q', 'K', 'A'].includes(card.rank) ? 'alta' : 'baja')
 const cardName = (card) => `${card.rank}${SUIT_MARK[card.suit] ?? ''}`
 
-export const STARTING_BALANCE = 10000
+export const STARTING_BALANCE = 15000 // Season 2
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_PUBLIC_PER_GAME = 6
 const AWAY_MS = 45000 // sin noticias del navegador: se le da por desconectado
@@ -61,7 +61,7 @@ export const ERRORS = {
   ROOM_FULL: 'Todas las mesas están llenas. Prueba a mirar.',
   RATE_LIMIT: 'Vas demasiado rápido.',
   BUSY: 'La mesa está muy concurrida, inténtalo de nuevo.',
-  BROKE: 'Te quedaste sin saldo esta semana: el domingo a las 23:59 todos vuelven a empezar con 10.000 €.',
+  BROKE: 'Te quedaste sin saldo esta semana: el domingo a las 23:59 todos vuelven a empezar con 15.000 €.',
   AUTH_REQUIRED: 'Inicia sesión en TopCode.',
   AUTH_INVALID: 'Tu sesión de TopCode caducó. Recarga la página.',
   AUTH_PENDING: 'Tu cuenta de TopCode aún no está aprobada.',
@@ -274,7 +274,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     })
   }
 
-  // Domingo 23:59: se guarda el podio y todos vuelven a 10.000 €.
+  // Domingo 23:59: se guarda el podio y todos vuelven a 15.000 €.
   async function rollover(week) {
     if (knownWeek === week.key) return
     const { rows } = await db.query(`select semana from public.juegos_meta where id = 1`)
