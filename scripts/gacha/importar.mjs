@@ -24,6 +24,7 @@ const MEMES = [
   ['Fernando Alonso', 'El 33', 'mitica', 'Fernando Alonso', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfmbma4YZFUO0MS1y-CtDNSLU0y5DPIN5nYXGKWUTGCToMd9mlVOVu2fA&s=10'],
   ['Torrente', 'El brazo tonto de la ley', 'mitica', 'José Luis Torrente'],
   ['El Fary', 'El Toro Guapo', 'mitica', 'El Fary', 'https://imagenes.elpais.com/resizer/v2/BSF3ZXW5SNMBPO3XYRHGJZP3D4.jpg?auth=edaeeb35fe7fc73e944710890add7aa93520c519b741b3d6763c3575fa5d07e1&width=414'],
+  ['PimPamLacasitos', 'Pim, pam, lacasitos', 'mitica', 'url:https://estaticos-cdn.prensaiberica.es/clip/93e845ba-e01b-490e-9c43-25650fffc9ae_16-9-discover-aspect-ratio_640w_0.jpg', 'https://estaticos-cdn.prensaiberica.es/clip/93e845ba-e01b-490e-9c43-25650fffc9ae_16-9-discover-aspect-ratio_640w_0.jpg'],
   // Épicas
   ['Antonio Recio', 'Mayorista, no limpio pescado', 'epica', 'Jordi Sánchez (actor)'],
   ['El Risitas', 'Las paelleras', 'epica', 'El Risitas'],
@@ -47,6 +48,12 @@ const MEMES = [
   ['Paquita Salas', 'Lo que no puede ser no puede ser', 'epica', 'Brays Efe'],
   ['Aitana', 'Pop', 'epica', 'Aitana (cantante)'],
   ['Kiko Rivera', 'Paquirrín', 'epica', 'Kiko Rivera'],
+  ['Mente Fría', 'Mente fría', 'epica', 'url:https://www.formulatv.com/images/noticias/110100/110140/4_R0qc3xFHkU4aR9msBtiWEezJYLPNgv851.jpg', 'https://www.formulatv.com/images/noticias/110100/110140/4_R0qc3xFHkU4aR9msBtiWEezJYLPNgv851.jpg'],
+  ['Simón', 'El portero de la Selección', 'epica', 'Unai Simón', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnINBfsPdtG-ISft7jEW81uds35hPAWgRC99yo3ZfaoA&s=10'],
+  ['Cubarsí', 'El central del Barça', 'epica', 'Pau Cubarsí', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTcZR13ehi03uUTAfO8er-vlc3YuhMcdZEvmX-S8Hp6RV4uoh4NlwCStho&s=10'],
+  ['Jordi ENP', 'El Niño Polla', 'epica', 'Jordi el Niño Polla', 'https://images.uncyclomedia.co/inciclopedia/es/thumb/8/8f/Jordi-1.jpg/250px-Jordi-1.jpg'],
+  ['Cucurella', 'La melena de la Eurocopa', 'epica', 'Marc Cucurella', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTLH1w2yPHIqXSCAJpKQXMcVyOv2pHtEkdQ2xjZLeH14DNVmqESwIsExRE&s=10'],
+  ['El Paellas', 'El Paellas', 'epica', 'url:https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmV2pM2pgjoeS2LET2FlIYutNFeuU9TYDoyrzHVXfpymv7HJrIViIcdhus&s=10', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmV2pM2pgjoeS2LET2FlIYutNFeuU9TYDoyrzHVXfpymv7HJrIViIcdhus&s=10'],
   // Raras
   ['Mangel', 'El colega de Rubius', 'rara', 'yt:mangelrogel'],
   ['Lolito Fernández', 'Streamer', 'rara', 'yt:LolitoFernandez', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYcoJpeuHrMS-eVm0NM7q1T8ZMT77dT96zCUBUmz8nNLo7pScTlzV9plzB&s=10'],
