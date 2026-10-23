@@ -20,11 +20,14 @@ const SLOT_Y = TOP + (ROWS - 1) * ROW_GAP + S * 0.95
 const SLOT_H = S * 1.15
 const H = SLOT_Y + SLOT_H + 6
 const ROW_MS = 165
+const TURBO_ROW_MS = 60 // modo turbo: la bola tarda menos de la mitad en caer
 const MAX_BALLS = 12
 const HISTORY = 14
 // Modo automático: cuántas bolas soltar seguidas (Infinity = hasta que lo pares) y cada cuánto.
 const AUTO_COUNTS = [10, 25, 50, 100, Infinity]
 const AUTO_GAP_MS = 320
+const TURBO_GAP_MS = 110
+const TURBO_KEY = 'juegos:plinko:turbo'
 const BIG_WIN = 10 // con «Parar en ×10» el automático se para al caer en una casilla de este multiplicador o más
 
 const pegY = (row) => TOP + row * ROW_GAP
@@ -70,7 +73,7 @@ function Ball({ ball, reduced, onPeg, onLand }) {
   const land = useEffectEvent(() => onLand(ball))
   const peg = useEffectEvent((row, j) => onPeg(row, j))
   useEffect(() => {
-    const duration = reduced ? 500 : (ROWS + 1.2) * ROW_MS
+    const duration = reduced ? 500 : (ROWS + 1.2) * (ball.turbo ? TURBO_ROW_MS : ROW_MS)
     const frames = framesOf(ball.path)
     const animation = ref.current.animate(frames, { duration, fill: 'forwards' })
     animation.onfinish = () => land()
@@ -120,6 +123,20 @@ function Plinko({ onExit, juegos }) {
   const [autoCount, setAutoCount] = useState(25) // cuántas bolas tirará el automático
   const [autoLeft, setAutoLeft] = useState(0) // bolas que le quedan al automático en marcha (0 = parado)
   const [stopOnBig, setStopOnBig] = useState(true)
+  const [turbo, setTurbo] = useState(() => {
+    try {
+      return localStorage.getItem(TURBO_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(TURBO_KEY, turbo ? '1' : '0')
+    } catch {
+      // sin almacenamiento el turbo vale solo para esta visita
+    }
+  }, [turbo])
   const nextId = useRef(1)
   const pegs = useRef(new Map())
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
@@ -154,7 +171,7 @@ function Plinko({ onExit, juegos }) {
     }
     const { path, slot, payout } = body.solo
     setBalance(body.solo.balance)
-    setBalls((list) => [...list, { id: nextId.current++, path, slot, payout, bet, risk, mult: MULTIPLIERS[risk][slot] }])
+    setBalls((list) => [...list, { id: nextId.current++, path, slot, payout, bet, risk, turbo, mult: MULTIPLIERS[risk][slot] }])
   }
   const onDrop = useEffectEvent(drop)
 
@@ -192,9 +209,9 @@ function Plinko({ onExit, juegos }) {
     const timer = setTimeout(() => {
       setAutoLeft((n) => (n === Infinity ? n : n - 1))
       onDrop()
-    }, AUTO_GAP_MS)
+    }, turbo ? TURBO_GAP_MS : AUTO_GAP_MS)
     return () => clearTimeout(timer)
-  }, [running, canDrop, autoLeft, balance, bet, balls.length, asking])
+  }, [running, canDrop, autoLeft, balance, bet, balls.length, asking, turbo])
   const toggleAuto = () => setAutoLeft(running ? 0 : autoCount)
 
   // Espacio suelta una bola. Si el foco está en un botón por teclado, se respeta su acción.
@@ -271,6 +288,7 @@ function Plinko({ onExit, juegos }) {
               <p>
                 Puedes tener hasta {MAX_BALLS} bolas en el aire. Pulsa <kbd>Espacio</kbd> para soltar una.
               </p>
+              <p>Con «Turbo» las bolas caen más rápido y el automático las suelta más seguidas. El premio no cambia.</p>
               <p>Juegas con tu saldo de la semana: lo que ganes o pierdas cuenta en el Score.</p>
             </Help>
           </div>
@@ -383,6 +401,10 @@ function Plinko({ onExit, juegos }) {
                 Soltar bola <kbd>Espacio</kbd>
               </button>
             )}
+            <label className="plinko__auto-stop plinko__turbo">
+              <input type="checkbox" checked={turbo} onChange={(e) => setTurbo(e.target.checked)} />
+              Turbo: las bolas caen más rápido
+            </label>
           </div>
 
           <div className={`plinko__group plinko__auto ${running ? 'is-running' : ''}`}>

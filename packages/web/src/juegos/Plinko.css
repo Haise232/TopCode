@@ -448,3 +448,10 @@
     animation: none;
   }
 }
+
+.juegos-root .plinko__turbo {
+  justify-content: center;
+}
+.juegos-root .plinko__turbo input {
+  accent-color: #f0b429;
+}
