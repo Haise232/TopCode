@@ -81,7 +81,23 @@ export class JuegosError extends Error {
 // Blackjack de mesa. El motor (engine/room.mjs, copiado de Rule) bloquea al acabar el tiempo de apuestas la apuesta
 // propuesta de todos los sentados, también de quien está ausente, que así seguía apostando ronda tras ronda sin estar.
 // Aquí solo entra en la ronda quien sigue conectado; el ausente la mira hasta que vuelva o le saquen de la mesa.
-class BlackjackRoom extends Room {}
+class BlackjackRoom extends Room {
+  // El motor lo llama también al levantarse (o echar a alguien) mientras se pagan las manos: ahí borraba el temporizador
+  // de la ronda siguiente y la mesa se quedaba en «settle» para siempre, sin dejar apostar a nadie. Solo cuenta apostando.
+  afterBetChange() {
+    if (this.phase === 'betting') super.afterBetChange()
+  }
+
+  // Mesas que ya se quedaron atascadas así (en una fase de reparto o pago sin temporizador): se empieza ronda nueva.
+  // Las apuestas de una mano a medias se devuelven.
+  unstick() {
+    if (this.phase === 'betting' || this.pending) return false
+    for (const seat of this.seats) if (seat?.locked && this.phase !== 'settle') this.accounts.adjust(seat.token, seat.bet)
+    this.newRound()
+    this.broadcast()
+    return true
+  }
+}
 BlackjackRoom.prototype.onTimer = {
   ...Room.prototype.onTimer,
   bets() {
@@ -374,6 +390,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       const wasIn = room.members.has(user.id)
       room.wake()
+      room.unstick?.()
       fixSeats(room) // el wake() puede haber empezado una ronda nueva y liberado asientos
       const error = fn(room, session) ?? null
 
