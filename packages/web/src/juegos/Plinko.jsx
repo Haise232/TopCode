@@ -122,7 +122,7 @@ function Plinko({ onExit, juegos }) {
   const [burst, setBurst] = useState(null)
   const [autoCount, setAutoCount] = useState(25) // cuántas bolas tirará el automático
   const [autoLeft, setAutoLeft] = useState(0) // bolas que le quedan al automático en marcha (0 = parado)
-  const [stopOnBig, setStopOnBig] = useState(true)
+  const [stopOnBig, setStopOnBig] = useState(false) // por defecto el automático sigue aunque caiga un premio gordo
   const [turbo, setTurbo] = useState(() => {
     try {
       return localStorage.getItem(TURBO_KEY) === '1'
@@ -158,10 +158,11 @@ function Plinko({ onExit, juegos }) {
   // Mientras hay bolas en el aire el riesgo no cambia: el tablero tiene que pintar lo que se apostó.
   const flying = balls.length > 0
 
-  async function drop() {
+  // manual: la bola la suelta el jugador (el automático deja que la celebración de un premio gordo acabe).
+  async function drop(manual = true) {
     if (!canDrop) return
     playChip()
-    setBurst(null)
+    if (manual) setBurst(null)
     setAsking(true)
     const body = await request({ t: 'solo_plinko', bet, risk })
     setAsking(false)
@@ -208,7 +209,7 @@ function Plinko({ onExit, juegos }) {
     if (!canDrop) return
     const timer = setTimeout(() => {
       setAutoLeft((n) => (n === Infinity ? n : n - 1))
-      onDrop()
+      onDrop(false)
     }, turbo ? TURBO_GAP_MS : AUTO_GAP_MS)
     return () => clearTimeout(timer)
   }, [running, canDrop, autoLeft, balance, bet, balls.length, asking, turbo])
@@ -397,7 +398,7 @@ function Plinko({ onExit, juegos }) {
 
           <div className="actions plinko__drop">
             {!broke && (
-              <button type="button" className="primary" disabled={!canDrop || running} onClick={drop}>
+              <button type="button" className="primary" disabled={!canDrop || running} onClick={() => drop()}>
                 Soltar bola <kbd>Espacio</kbd>
               </button>
             )}
