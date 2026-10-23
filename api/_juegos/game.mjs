@@ -660,7 +660,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     const abuse = await banca.abuse()
     const t = now()
     const week = weekOf(t)
-    const ctx = { now: t, secret, week: week.key, userId: user.id }
+    const ctx = { now: t, secret, week: week.key, userId: user.id, luck: abuseLuck(abuse, game) }
     return db.tx(async (q) => {
       ctx.q = q // la carrera mira quién pilota cada coche dentro de la misma transacción
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
@@ -747,7 +747,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return true
   }
   const duelos = createDuelos({ db, ping, now, randomInt, move, abuse: () => banca.abuse() })
-  const bingo = createBingo({ db, now, secret, move })
+  const bingo = createBingo({ db, now, secret, move, abuse: () => banca.abuse() })
 
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.

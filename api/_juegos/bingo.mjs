@@ -1,6 +1,9 @@
 // Bingo en vivo: una partida para todos cada bingo.ROUND_MS (reglas en packages/web/src/juegos/bingo.js).
-// Los cartones de cada uno se guardan en juegos_solo (juego «bingo»): { round, week, cards, prices, paid, last } (prices: lo
-// que costó cada cartón; sin él, son de antes de los precios nuevos). El orden de las
+// Los cartones de cada uno se guardan en juegos_solo (juego «bingo»): { round, week, cards, prices, boosts, paid, last }
+// (prices: lo que costó cada cartón; sin él, son de antes de los precios nuevos. boosts: el Admin Abuse activo al comprar
+// cada cartón, 'x2' | 'x3' | 'gratis' o null; se aplica al pagar ese cartón aunque el evento ya haya acabado. free: los
+// cartones que regaló el Admin Abuse ×2/×3, uno o dos más por cada uno comprado; juegan y cobran con su precio, pero no
+// cuentan en lo apostado ni en el máximo). El orden de las
 // bolas sale de HMAC(secreto, ronda), como la ruleta, y el servidor no lo suelta hasta que se cierra la venta; a partir de
 // ahí ya no se puede hacer nada, así que da igual que la pantalla lo conozca antes de que salgan las bolas.
 // El bote (la jaula) está en juegos_bingo: lo alimentan el 25 % de los cartones y lo que se pierde en el resto del casino
@@ -10,6 +13,7 @@
 //   bingo   cualquiera: a «sync» (ponerse al día) o «buy» (n cartones más de tipo kind para la partida en curso)
 import { randomInt } from 'node:crypto'
 import * as bingo from '../../packages/web/src/juegos/bingo.js'
+import { abuseExtra, abuseLuck, abuseOn } from './banca.mjs'
 import { hmacStream, uniform } from './solo.mjs'
 import { weekOf } from './engine/week.mjs'
 
@@ -53,8 +57,12 @@ export function goldenOf(secret, round) {
 }
 
 const revealAt = (round) => bingo.startOf(round) + REVEAL_MS
+const boostOf = (saved, i) => saved?.boosts?.[i] ?? null
+const freeOf = (saved, i) => Boolean(saved?.free?.[i])
+// Lo que costó de verdad un cartón (0 si fue regalo).
+const stakeOf = (saved, i) => (freeOf(saved, i) ? 0 : bingo.priceOf(saved, i))
 
-export function createBingo({ db, now, secret, move }) {
+export function createBingo({ db, now, secret, move, abuse }) {
   // Partidas ya cerradas (sus cartones no cambian): cartones, reparto y nombres, para no volver a calcularlo en cada vista.
   const rounds = new Map()
   let nextCheck = 0 // antes de esta hora no hay nada que pagar (en esta instancia)
@@ -67,7 +75,14 @@ export function createBingo({ db, now, secret, move }) {
       [String(round)],
     )
     const cards = rows.flatMap((r) =>
-      (r.estado.cards ?? []).map((cells, i) => ({ owner: r.usuario_id, name: r.nombre, cells, price: bingo.priceOf(r.estado, i) })),
+      (r.estado.cards ?? []).map((cells, i) => ({
+        owner: r.usuario_id,
+        name: r.nombre,
+        cells,
+        price: bingo.priceOf(r.estado, i),
+        stake: stakeOf(r.estado, i),
+        boost: boostOf(r.estado, i),
+      })),
     )
     return { rows, cards }
   }
@@ -143,20 +158,23 @@ export function createBingo({ db, now, secret, move }) {
       cards.forEach((c, i) => {
         const p = result.prizes[i]
         if (!p) return
-        const mine = won.get(c.owner) ?? { line: 0, bingo: 0, pot: 0 }
+        const mine = won.get(c.owner) ?? { line: 0, bingo: 0, pot: 0, abuse: 0 }
         mine.line += p.line
         mine.bingo += p.bingo
         mine.pot += p.pot
+        // Admin Abuse del cartón: la banca multiplica lo que gana o le devuelve lo que costó (no sale de la jaula).
+        if (c.boost) mine.abuse += abuseExtra({ modo: c.boost, ambito: 'todo' }, 'bingo', p.line + p.bingo + p.pot - c.stake)
         won.set(c.owner, mine)
       })
       const deltas = {}
-      for (const [owner, p] of won) if (p.line + p.bingo + p.pot > 0) deltas[owner] = p.line + p.bingo + p.pot
+      for (const [owner, p] of won) if (p.line + p.bingo + p.pot + p.abuse > 0) deltas[owner] = p.line + p.bingo + p.pot + p.abuse
       if (Object.keys(deltas).length) await move(q, deltas)
       for (const r of open) {
-        const p = won.get(r.usuario_id) ?? { line: 0, bingo: 0, pot: 0 }
-        const stake = (r.estado.cards ?? []).reduce((sum, _, i) => sum + bingo.priceOf(r.estado, i), 0)
-        const payout = p.line + p.bingo + p.pot
-        const last = { round, cards: r.estado.cards?.length ?? 0, stake, ...p, payout, net: payout - stake, lineBall: result.lineBall, bingoBall: result.bingoBall }
+        const p = won.get(r.usuario_id) ?? { line: 0, bingo: 0, pot: 0, abuse: 0 }
+        const stake = (r.estado.cards ?? []).reduce((sum, _, i) => sum + stakeOf(r.estado, i), 0)
+        const payout = p.line + p.bingo + p.pot // solo premios; lo del Admin Abuse va aparte, en abuse
+        const boost = (r.estado.boosts ?? []).find(Boolean) ?? null
+        const last = { round, cards: r.estado.cards?.length ?? 0, stake, ...p, boost, payout, net: payout + p.abuse - stake, lineBall: result.lineBall, bingoBall: result.bingoBall }
         await q(`update public.juegos_solo set estado = $3, actualizado = now() where usuario_id = $1 and juego = $2`, [
           r.usuario_id,
           'bingo',
@@ -198,6 +216,7 @@ export function createBingo({ db, now, secret, move }) {
     const outcome = t >= revealAt(round) ? await outcomeOf(round) : null
     const mine = saved?.round === round ? (saved.cards ?? []) : []
     const prices = mine.map((_, i) => bingo.priceOf(saved, i))
+    const free = mine.map((_, i) => freeOf(saved, i))
     return {
       now: t,
       round,
@@ -206,6 +225,7 @@ export function createBingo({ db, now, secret, move }) {
       pot,
       cards: mine,
       prices,
+      free,
       players: outcome ? outcome.players : counts.rows[0].players,
       sold: outcome ? outcome.cards : counts.rows[0].cards,
       draw: outcome
@@ -242,21 +262,27 @@ export function createBingo({ db, now, secret, move }) {
     const { round, offset } = bingo.phaseAt(t)
     if (offset >= bingo.BUY_MS + GRACE_MS) return 'BINGO_CLOSED'
     const week = weekOf(t).key
+    const ab = await abuse()
+    const boost = abuseOn(ab, 'bingo') ? ab.modo : null
+    const gifts = n * (abuseLuck(ab, 'bingo') - 1)
     return db.tx(async (q) => {
       const saved = await savedOf(q, user.id, true)
       // Unos cartones de una partida anterior sin pagar no se pisan (settleDue los paga antes de llegar aquí).
       if (saved && saved.paid === false && saved.round !== round) return 'BUSY'
       const have = saved?.round === round ? (saved.cards ?? []) : []
-      if (have.length + n > bingo.MAX_CARDS) return 'BINGO_MAX'
+      const bought = have.filter((_, i) => !freeOf(saved, i)).length
+      if (bought + n > bingo.MAX_CARDS) return 'BINGO_MAX'
       const cost = n * price
       if (!(await move(q, { [user.id]: -cost }, true))) return 'INSUFFICIENT_FUNDS'
-      const cards = [...have, ...Array.from({ length: n }, () => bingo.makeCard(randomInt))]
-      const prices = [...have.map((_, i) => bingo.priceOf(saved, i)), ...Array(n).fill(price)]
+      const cards = [...have, ...Array.from({ length: n + gifts }, () => bingo.makeCard(randomInt))]
+      const prices = [...have.map((_, i) => bingo.priceOf(saved, i)), ...Array(n + gifts).fill(price)]
+      const boosts = [...have.map((_, i) => boostOf(saved, i)), ...Array(n + gifts).fill(boost)]
+      const free = [...have.map((_, i) => freeOf(saved, i)), ...Array(n).fill(false), ...Array(gifts).fill(true)]
       await feed(q, (cost * bingo.POT_PCT) / 100)
       await q(
         `insert into public.juegos_solo (usuario_id, juego, estado) values ($1, 'bingo', $2)
          on conflict (usuario_id, juego) do update set estado = excluded.estado, actualizado = now()`,
-        [user.id, { round, week, cards, prices, paid: false, last: saved?.last ?? null }],
+        [user.id, { round, week, cards, prices, boosts, free, paid: false, last: saved?.last ?? null }],
       )
       return null
     })

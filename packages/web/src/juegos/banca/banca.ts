@@ -74,13 +74,14 @@ export function abusePerks(a: Pick<Abuse, 'modo' | 'ambito'>): string[] {
   if (a.modo === 'gratis') {
     return a.ambito === 'poker'
       ? ['Si pierdes una mano de póker, la banca te devuelve lo apostado', 'Lo que ganes, para ti']
-      : ['Si pierdes en cualquier juego, la banca te lo devuelve', 'Lo que ganes, para ti', 'Tiradas del gacha gratis']
+      : ['Si pierdes en cualquier juego, la banca te lo devuelve', 'Cartones del bingo sin premio: te devuelven lo que costaron', 'Lo que ganes, para ti', 'Tiradas del gacha gratis']
   }
   if (a.ambito === 'poker') return [`Todo lo que ganes en el póker, ${m}`, 'La banca pone la diferencia']
   return [
-    `Premios ${m} en ruleta, cohete, carrera, plinko, rana, laberinto y sobornos`,
+    `Premios ${m} en ruleta, cohete, carrera, plinko, rana, laberinto, sobornos y bingo`,
     `Blackjack y póker: lo que ganes, ${m}`,
-    `Suerte ${m} en las tiradas del gacha`,
+    `Suerte ${m} en el gacha, el plinko, la rana y el laberinto`,
+    `Bingo: ${a.modo === 'x3' ? 'dos cartones' : 'un cartón'} de regalo por cada uno que compres`,
   ]
 }
 
@@ -93,6 +94,6 @@ export function abuseText(a: Pick<Abuse, 'modo' | 'ambito'>): { big: string; sma
   const m = a.modo === 'x3' ? '×3' : '×2'
   return {
     big: `PROBABILIDAD ${m} ${where}`,
-    small: a.ambito === 'poker' ? `Lo que ganes en el póker, ${m}.` : `Lo que ganes, ${m}, y suerte ${m} en el gacha.`,
+    small: a.ambito === 'poker' ? `Lo que ganes en el póker, ${m}.` : `Lo que ganes, ${m}, y suerte ${m} en el gacha, el plinko, la rana, el laberinto y el bingo.`,
   }
 }

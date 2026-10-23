@@ -130,10 +130,15 @@ export function rouletteLive(msg, balance, saved, _rand, ctx) {
   }
 }
 
-export function plinkoDrop(msg, balance, _saved, rand) {
+// Con suerte del Admin Abuse (ctx.luck 2 o 3) se tiran tantas bolas y cae la que más paga.
+export function plinkoDrop(msg, balance, _saved, rand, ctx) {
   if (!plinko.validBet(msg.bet) || !plinko.validRisk(msg.risk)) return { error: 'BAD_MESSAGE' }
   if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
-  const path = plinko.dropPath(rand)
+  let path = plinko.dropPath(rand)
+  for (let i = 1; i < (ctx.luck ?? 1); i++) {
+    const other = plinko.dropPath(rand)
+    if (plinko.payoutOf(msg.bet, msg.risk, plinko.slotOf(other)) > plinko.payoutOf(msg.bet, msg.risk, plinko.slotOf(path))) path = other
+  }
   const slot = plinko.slotOf(path)
   const payout = plinko.payoutOf(msg.bet, msg.risk, slot)
   const delta = payout - msg.bet
@@ -406,7 +411,10 @@ export function frogPlay(msg, balance, saved, rand, ctx) {
   }
   if (msg.a !== 'jump') return { error: 'BAD_MESSAGE' }
   const to = state.mult + 1
-  if (!frog.survives(state.mult, rand)) {
+  // Con suerte del Admin Abuse (ctx.luck 2 o 3), la rana tiene tantos intentos para cada salto.
+  let lands = false
+  for (let i = 0; i < (ctx.luck ?? 1) && !lands; i++) lands = frog.survives(state.mult, rand)
+  if (!lands) {
     settle(0)
     state.last.mult = to // el nenúfar al que no llegó
     return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'fall', to) }
@@ -431,7 +439,11 @@ function dungeonView(state, balance, extra = {}) {
   return { bet: live ? state.bet : 0, pot: live ? state.pot : 0, room: live ? state.room : 0, maze, last: state.last ?? null, balance, ev: null, ...extra }
 }
 
-const newMaze = (room, rand, now) => ({ ...dungeon.layout(room, rand), at: now })
+// Con suerte del Admin Abuse (luck 2 o 3), las puertas se cambian de sitio menos veces y hay menos mímicos.
+const newMaze = (room, rand, now, luck = 1) => {
+  const maze = dungeon.layout(room, rand)
+  return { ...maze, swaps: maze.swaps.slice(0, Math.ceil(maze.swaps.length / luck)), at: now }
+}
 
 // msg.a: «sync», «start» (bet), «go» (entrar en la sala siguiente), «open» (door: 0, 1, 2 o -1 si se acabó el tiempo)
 // o «cash» (salir con el botín, solo entre sala y sala).
@@ -452,13 +464,13 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
     if (live) return { error: 'BAD_PHASE' }
     if (!dungeon.validBet(msg.bet)) return { error: 'BAD_MESSAGE' }
     if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
-    state = { ...state, bet: msg.bet, pot: msg.bet, room: 0, week: ctx.week, maze: newMaze(0, rand, ctx.now) }
+    state = { ...state, bet: msg.bet, pot: msg.bet, room: 0, week: ctx.week, maze: newMaze(0, rand, ctx.now, ctx.luck) }
     return { delta: -msg.bet, played: true, saved: state, result: dungeonView(state, balance - msg.bet, { ev: 'start' }) }
   }
   if (!live) return { error: 'BAD_PHASE' }
   if (msg.a === 'go') {
     if (state.maze) return { error: 'BAD_PHASE' }
-    state = { ...state, maze: newMaze(state.room, rand, ctx.now) }
+    state = { ...state, maze: newMaze(state.room, rand, ctx.now, ctx.luck) }
     return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, { ev: 'go' }) }
   }
   if (msg.a === 'cash') {
@@ -473,7 +485,7 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
   const late = ctx.now > state.maze.at + dungeon.roomMs(room) + dungeon.LATE_MS
   const pick = msg.door < 0 || late ? rand(dungeon.DOORS) : msg.door
   let kind = doors[pick]
-  if (kind === 'chest' && rand(100) < dungeon.ROOMS[room].mimic) kind = 'mimic'
+  if (kind === 'chest' && rand(100 * (ctx.luck ?? 1)) < dungeon.ROOMS[room].mimic) kind = 'mimic'
   const shown = doors.map((d, i) => (i === pick ? kind : d))
   const extra = { ev: kind, doors: shown, pick, at: room, timeout: msg.door < 0 || late }
   if (dungeon.loses(kind)) {

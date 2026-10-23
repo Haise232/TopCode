@@ -10,7 +10,8 @@
 //   banca_abuso   master: { modo: 'x2' | 'x3' | 'gratis' | null, ambito: 'todo' | 'poker', minutos }
 //
 // Admin Abuse (juegos_meta.abuso): x2 y x3 multiplican lo que ganas en una jugada (la banca paga la diferencia) y dan
-// más suerte en las tiradas del gacha; «gratis» devuelve lo que pierdes. Ámbito: todos los juegos o solo el póker.
+// más suerte donde el sorteo es de cada uno (gacha, plinko, rana, laberinto y cartones gratis en el bingo); «gratis»
+// devuelve lo que pierdes. Ámbito: todos los juegos o solo el póker.
 // Lo que da la banca es saldo normal: cuenta en el Score.
 
 export const BANK_TOPIC = 'juegos-banca' // aviso de Realtime: «la banca tiene algo nuevo» (sin datos)
@@ -21,7 +22,7 @@ const MAX_TEXT = 300
 const ABUSE_TTL_MS = 3000 // cada instancia de la función relee el Admin Abuse como mucho cada este rato
 const MASTER_TTL_MS = 60000
 
-// ¿Afecta el Admin Abuse a este juego? (póker, blackjack, roulette, crash, race, plinko, frog, dungeon, duel, gacha)
+// ¿Afecta el Admin Abuse a este juego? (póker, blackjack, roulette, crash, race, plinko, frog, dungeon, duel, gacha, bingo)
 export const abuseOn = (abuse, game) => Boolean(abuse) && (abuse.ambito === 'todo' || game === 'poker')
 
 // Lo que pone la banca encima de una jugada que acaba con `net` (ganancia neta; negativa si pierdes).
@@ -32,8 +33,9 @@ export function abuseExtra(abuse, game, net) {
   return net > 0 ? Math.floor(net * (mult - 1)) : 0
 }
 
-// Suerte del gacha: 1, 2 o 3 (multiplica el peso de las rarezas buenas).
-export const abuseLuck = (abuse) => (abuseOn(abuse, 'gacha') && abuse.modo !== 'gratis' ? (abuse.modo === 'x3' ? 3 : 2) : 1)
+// Suerte: 1, 2 o 3. En el gacha multiplica el peso de las rarezas buenas; en plinko, rana, laberinto y bingo, ver solo.mjs
+// y bingo.mjs.
+export const abuseLuck = (abuse, game = 'gacha') => (abuseOn(abuse, game) && abuse.modo !== 'gratis' ? (abuse.modo === 'x3' ? 3 : 2) : 1)
 
 const cleanText = (text) =>
   typeof text === 'string'

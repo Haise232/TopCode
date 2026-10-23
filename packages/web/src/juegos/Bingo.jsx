@@ -34,7 +34,7 @@ function Ball({ n, size = 'md', fresh = false, golden = false }) {
 }
 
 // Un cartón como los de papel: 3 filas de 9, con los números marcados con rotulador según salen.
-function Card({ cells, drawn, index, latest, won, over, premium, golden }) {
+function Card({ cells, drawn, index, latest, won, over, premium, golden, gift }) {
   const left = missing(cells, drawn)
   const serial = String(cells.reduce((a, n, i) => (a * 31 + n * (i + 7)) % 99991, 7)).padStart(5, '0')
   const rows = Array.from({ length: ROWS }, (_, r) => cells.slice(r * COLS, r * COLS + COLS))
@@ -49,7 +49,10 @@ function Card({ cells, drawn, index, latest, won, over, premium, golden }) {
       style={{ '--card': premium ? '#a8761a' : CARD_TONES[index % CARD_TONES.length] }}
     >
       <figcaption>
-        <span>{premium ? `★ Premium ${index + 1}` : `Cartón ${index + 1}`}</span>
+        <span>
+          {premium ? `★ Premium ${index + 1}` : `Cartón ${index + 1}`}
+          {gift && ' · Regalo'}
+        </span>
         <small>Nº {serial}</small>
         <em>{hint}</em>
       </figcaption>
@@ -167,13 +170,15 @@ function Bingo({ onExit, juegos }) {
   const bingoHit = Boolean(draw?.bingoBall) && count >= draw.bingoBall
   const cards = view?.cards ?? []
   const prices = view?.prices ?? []
+  const free = view?.free ?? []
+  const bought = cards.filter((_, i) => !free[i]).length // los regalos del Admin Abuse no cuentan para el máximo
   // La bola dorada solo se enseña cuando sale (la pantalla ya la conoce, pero así hay sorpresa).
   const golden = draw?.golden && drawn.has(draw.golden) ? draw.golden : null
   const price = KINDS[kind].price
   const pot = live?.pot ?? juegos.lobby?.bingo?.pot ?? 0
   const shownPot = useCountUp(pot, 1200)
   const balance = juegos.me?.balance ?? 0
-  const room = MAX_CARDS - (buyOpen ? cards.length : MAX_CARDS)
+  const room = MAX_CARDS - (buyOpen ? bought : MAX_CARDS)
   const amount = Math.min(want, Math.max(1, room))
 
   // Pide al servidor justo cuando salen las bolas y cuando toca cobrar, sin esperar al siguiente refresco.
@@ -287,8 +292,8 @@ function Bingo({ onExit, juegos }) {
             <div>
               <dt>Tus cartones</dt>
               <dd>
-                {cards.length}
-                <small>de {MAX_CARDS}</small>
+                {bought}
+                <small>de {MAX_CARDS}{cards.length > bought ? ` +${cards.length - bought} de regalo` : ''}</small>
               </dd>
             </div>
           </dl>
@@ -437,6 +442,7 @@ function Bingo({ onExit, juegos }) {
                   over={bingoHit}
                   premium={isPremium(prices[i] ?? 0)}
                   golden={golden}
+                  gift={free[i]}
                 />
               ))}
             </div>
@@ -447,12 +453,12 @@ function Bingo({ onExit, juegos }) {
       {won && (
         <WinBurst
           key={round}
-          amount={mine.payout}
+          amount={mine.payout + (mine.abuse ?? 0)}
           caption={mine.pot > 0 ? (draw?.goldenHit ? '¡Bola dorada! Te llevas el bote' : '¡Te llevas el bote del bingo!') : mine.bingo > 0 ? `Bingo con la bola ${mine.bingoBall}` : 'Has cantado línea'}
           coins={Math.min(70, mine.pot > 0 ? 70 : 30)}
           big={mine.pot > 0}
           who={juegos.me?.name}
-          tags={[mine.line > 0 && `Línea: ${eur(mine.line)}`, mine.bingo > 0 && `Bingo: ${eur(mine.bingo)}`, mine.pot > 0 && `Bote: ${eur(mine.pot)}`].filter(Boolean)}
+          tags={[mine.line > 0 && `Línea: ${eur(mine.line)}`, mine.bingo > 0 && `Bingo: ${eur(mine.bingo)}`, mine.pot > 0 && `Bote: ${eur(mine.pot)}`, mine.abuse > 0 && `Admin Abuse: +${eur(mine.abuse)}`].filter(Boolean)}
         />
       )}
       <WinToast wins={others} />
