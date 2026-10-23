@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BALLS, BALL_MS, BINGO_PCT, BUY_MS, COLS, LINE_PCT, MAX_CARDS, POT_BALL, POT_PCT, PRICE, ROWS, ROUND_MS, colOf, drawStart, marksOf, missing, phaseAt, positions, startOf } from './bingo.js'
+import { BALLS, BALL_MS, BINGO_PCT, BUY_MS, COLS, LINE_PCT, KINDS, MAX_CARDS, POT_BALL, POT_PCT, ROWS, ROUND_MS, colOf, drawStart, isPremium, marksOf, missing, phaseAt, positions, startOf } from './bingo.js'
 import { eur } from './money.js'
 import { isMuted, playCash, playChip, playWin, setMuted } from './sound.js'
 import { useCountUp } from './useCountUp.js'
@@ -25,16 +25,16 @@ const clockOf = (ms) => {
 }
 const namesOf = (list) => [...new Set(list.map((w) => (w.me ? 'tú' : w.name)))]
 
-function Ball({ n, size = 'md', fresh = false }) {
+function Ball({ n, size = 'md', fresh = false, golden = false }) {
   return (
-    <span className={`bball bball--${size} ${fresh ? 'bball--fresh' : ''}`} style={{ '--tone': TONES[colOf(n)] }}>
+    <span className={`bball bball--${size} ${fresh ? 'bball--fresh' : ''} ${golden ? 'bball--golden' : ''}`} style={{ '--tone': TONES[colOf(n)] }}>
       <b>{n}</b>
     </span>
   )
 }
 
 // Un cartón como los de papel: 3 filas de 9, con los números marcados con rotulador según salen.
-function Card({ cells, drawn, index, latest, won, over }) {
+function Card({ cells, drawn, index, latest, won, over, premium, golden }) {
   const left = missing(cells, drawn)
   const serial = String(cells.reduce((a, n, i) => (a * 31 + n * (i + 7)) % 99991, 7)).padStart(5, '0')
   const rows = Array.from({ length: ROWS }, (_, r) => cells.slice(r * COLS, r * COLS + COLS))
@@ -44,9 +44,12 @@ function Card({ cells, drawn, index, latest, won, over }) {
   else if (left.bingo === 1) hint = '¡Te falta 1 para bingo!'
   else if (left.line === 1) hint = '¡Te falta 1 para línea!'
   return (
-    <figure className={`bcard ${won ? 'bcard--won' : ''} ${left.bingo === 1 && !won && !over ? 'bcard--hot' : ''}`} style={{ '--card': CARD_TONES[index % CARD_TONES.length] }}>
+    <figure
+      className={`bcard ${premium ? 'bcard--premium' : ''} ${won ? 'bcard--won' : ''} ${left.bingo === 1 && !won && !over ? 'bcard--hot' : ''}`}
+      style={{ '--card': premium ? '#a8761a' : CARD_TONES[index % CARD_TONES.length] }}
+    >
       <figcaption>
-        <span>Cartón {index + 1}</span>
+        <span>{premium ? `★ Premium ${index + 1}` : `Cartón ${index + 1}`}</span>
         <small>Nº {serial}</small>
         <em>{hint}</em>
       </figcaption>
@@ -59,7 +62,7 @@ function Card({ cells, drawn, index, latest, won, over }) {
                 <span
                   key={c}
                   role="cell"
-                  className={`bcard__cell ${n === 0 ? 'bcard__cell--blank' : ''} ${n && drawn.has(n) ? 'is-hit' : ''} ${n && n === latest ? 'is-latest' : ''}`}
+                  className={`bcard__cell ${n === 0 ? 'bcard__cell--blank' : ''} ${n && drawn.has(n) ? 'is-hit' : ''} ${n && n === latest ? 'is-latest' : ''} ${n && n === golden ? 'is-golden' : ''}`}
                 >
                   {n || ''}
                 </span>
@@ -73,11 +76,15 @@ function Card({ cells, drawn, index, latest, won, over }) {
 }
 
 // El panel de la sala con los 90 números: los que ya han salido, encendidos.
-function Board({ drawn, latest }) {
+function Board({ drawn, latest, golden }) {
   return (
     <div className="bboard" aria-label={`${drawn.size} de ${BALLS} bolas`}>
       {Array.from({ length: BALLS }, (_, i) => i + 1).map((n) => (
-        <span key={n} className={`bboard__n ${drawn.has(n) ? 'is-on' : ''} ${n === latest ? 'is-latest' : ''}`} style={{ '--tone': TONES[colOf(n)] }}>
+        <span
+          key={n}
+          className={`bboard__n ${drawn.has(n) ? 'is-on' : ''} ${n === latest ? 'is-latest' : ''} ${n === golden ? 'is-golden' : ''}`}
+          style={{ '--tone': TONES[colOf(n)] }}
+        >
           {n}
         </span>
       ))}
@@ -104,6 +111,7 @@ function Bingo({ onExit, juegos }) {
   const [sound, setSound] = useState(() => !isMuted())
   const [buying, setBuying] = useState(false)
   const [want, setWant] = useState(1)
+  const [kind, setKind] = useState('simple')
   const [, setTick] = useState(0)
   const skew = useRef(null)
   const clock = useCallback(() => Date.now() + (skew.current ?? 0), [])
@@ -158,6 +166,10 @@ function Bingo({ onExit, juegos }) {
   const lineHit = Boolean(draw?.lineBall) && count >= draw.lineBall
   const bingoHit = Boolean(draw?.bingoBall) && count >= draw.bingoBall
   const cards = view?.cards ?? []
+  const prices = view?.prices ?? []
+  // La bola dorada solo se enseña cuando sale (la pantalla ya la conoce, pero así hay sorpresa).
+  const golden = draw?.golden && drawn.has(draw.golden) ? draw.golden : null
+  const price = KINDS[kind].price
   const pot = live?.pot ?? juegos.lobby?.bingo?.pot ?? 0
   const shownPot = useCountUp(pot, 1200)
   const balance = juegos.me?.balance ?? 0
@@ -192,10 +204,16 @@ function Bingo({ onExit, juegos }) {
   async function buy() {
     if (buying || !buyOpen || amount < 1) return
     setBuying(true)
-    await ask({ a: 'buy', n: amount })
+    await ask({ a: 'buy', n: amount, kind })
     setBuying(false)
     setWant(1)
   }
+
+  // La bola dorada, al salir.
+  const goldenKey = golden !== null ? round : null
+  useEffect(() => {
+    if (goldenKey !== null) playCash(3)
+  }, [goldenKey])
 
   // Lo que han ganado otros: se anuncia al salir su bola.
   const others = useMemo(() => {
@@ -222,7 +240,7 @@ function Bingo({ onExit, juegos }) {
   const cardWon = (i) => {
     const m = marks[i]
     if (!m) return null
-    if (bingoHit && m.bingo === draw.bingoBall) return draw.jackpot ? '¡Bingo y bote!' : '¡Bingo!'
+    if (bingoHit && m.bingo === draw.bingoBall) return draw.jackpot ? (draw.goldenHit ? '¡Bola dorada: bote!' : '¡Bingo y bote!') : '¡Bingo!'
     if (lineHit && m.line === draw.lineBall) return '¡Línea!'
     return null
   }
@@ -242,12 +260,14 @@ function Bingo({ onExit, juegos }) {
     } else if (bingoHit) {
       call = '¡Bingo!'
       const who = namesOf(draw.bingo)
-      detail = `${listOf(who)} con la bola ${draw.bingoBall}${draw.jackpot ? ' ¡y se lleva el bote!' : ''} · Siguiente partida en ${clockOf(startOf(round + 1) - t)}`
+      const how = draw.goldenHit ? ' ¡con la bola dorada! Se lleva el bote' : draw.jackpot ? ' ¡y se lleva el bote!' : ''
+      detail = `${listOf(who)} con la bola ${draw.bingoBall}${how} · Siguiente partida en ${clockOf(startOf(round + 1) - t)}`
     } else {
       call = count ? `Bola ${count}` : 'Sale la primera bola…'
       detail = lineHit
         ? `Línea para ${listOf(namesOf(draw.line))}. Ahora, a por el bingo${count < POT_BALL ? ` (bote hasta la bola ${POT_BALL})` : ''}.`
         : 'Se juega la línea.'
+      if (latest === golden && golden !== null) detail = `¡Bola dorada: el ${golden}! Si cierra un bingo, se lleva el bote.`
     }
     if (juegos.error) detail = juegos.error
   }
@@ -289,7 +309,12 @@ function Bingo({ onExit, juegos }) {
             <Help title="Cómo se juega">
               <p>
                 Bingo de 90 bolas en vivo: una partida para todos cada {ROUND_MS / 60000} minutos. Durante la venta ({BUY_MS / 1000} s) compras
-                hasta {MAX_CARDS} cartones de {eur(PRICE)}; luego sale una bola cada {BALL_MS / 1000} s y tus cartones se marcan solos.
+                hasta {MAX_CARDS} cartones; luego sale una bola cada {BALL_MS / 1000} s y tus cartones se marcan solos.
+              </p>
+              <p>
+                <b>Simple ({eur(KINDS.simple.price)}) y Premium ({eur(KINDS.premium.price)}):</b> el premium cobra los premios enteros. Si en la
+                partida hay algún premium, el simple cobra la quinta parte de lo que gane (lo que vale en proporción) y el resto va a la jaula.
+                Si solo hay simples, cobran entero.
               </p>
               <p>
                 <b>Línea:</b> el primer cartón que completa una fila se lleva el {LINE_PCT}% de lo vendido. <b>Bingo:</b> el primero que completa el
@@ -297,7 +322,8 @@ function Bingo({ onExit, juegos }) {
               </p>
               <p>
                 <b>El bote:</b> el {POT_PCT}% de cada cartón y todo lo que se pierde en el resto del casino (Plinko, Cohete, Rana, Laberinto,
-                Carrera y Blackjack) va a la jaula. Quien cante bingo con la bola {POT_BALL} o antes se la lleva entera.
+                Carrera y Blackjack) va a la jaula. Se la lleva quien cante bingo con la bola {POT_BALL} o antes, o justo con la{' '}
+                <b>bola dorada</b>: una de las 90, distinta en cada partida, que brilla al salir (~1 partida de cada 90).
               </p>
               <p>La jaula se vacía con el reinicio del domingo, como los saldos.</p>
             </Help>
@@ -305,13 +331,13 @@ function Bingo({ onExit, juegos }) {
         </div>
       </header>
 
-      <div className="bingo fill">
+      <div className={`bingo fill ${buyOpen ? 'bingo--buying' : ''}`}>
         <section className="bingo__pot" aria-labelledby="bingo-pot">
           <BingoCage pot={pot} className="bingo__cage" />
           <p className="bingo__potline">
             <small id="bingo-pot">Bote en la jaula</small>
             <strong>{eur(shownPot)}</strong>
-            <span>Para quien cante bingo con la bola {POT_BALL} o antes</span>
+            <span>Para quien cante bingo con la bola {POT_BALL} o antes, o con la bola dorada</span>
           </p>
           {history.length > 0 && (
             <ol className="bingo__history" aria-label="Últimas partidas">
@@ -319,7 +345,7 @@ function Bingo({ onExit, juegos }) {
                 <li key={h.round} className={h.jackpot > 0 ? 'is-jackpot' : ''}>
                   <b>{h.bingo.length ? listOf(h.bingo) : 'Sin cartones'}</b>
                   <span>{h.bingoBall ? `bingo con la ${h.bingoBall}` : '—'}</span>
-                  {h.jackpot > 0 && <em>Bote: {eur(h.jackpot)}</em>}
+                  {h.jackpot > 0 && <em>{h.golden ? 'Bola dorada · ' : ''}Bote: {eur(h.jackpot)}</em>}
                 </li>
               ))}
             </ol>
@@ -329,7 +355,7 @@ function Bingo({ onExit, juegos }) {
         <section className="bingo__hall">
           <div className="bingo__caller">
             <div className={`bingo__ball ${buyOpen ? 'is-waiting' : ''}`}>
-              {latest !== null ? <Ball key={latest} n={latest} size="xl" fresh /> : <span className="bball bball--xl bball--empty">{buyOpen ? clockOf(start - t) : '…'}</span>}
+              {latest !== null ? <Ball key={latest} n={latest} size="xl" fresh golden={latest === golden} /> : <span className="bball bball--xl bball--empty">{buyOpen ? clockOf(start - t) : '…'}</span>}
             </div>
             <div className="bingo__call" aria-live="polite">
               <strong className={bingoHit ? 'is-bingo' : ''}>{call}</strong>
@@ -340,7 +366,7 @@ function Bingo({ onExit, juegos }) {
                   .reverse()
                   .map((n) => (
                     <li key={n}>
-                      <Ball n={n} size="sm" />
+                      <Ball n={n} size="sm" golden={n === golden} />
                     </li>
                   ))}
               </ol>
@@ -348,7 +374,7 @@ function Bingo({ onExit, juegos }) {
           </div>
           <Track count={count} end={bingoHit ? draw.bingoBall : null} />
           <div className="bingo__boardwrap">
-            <Board drawn={drawn} latest={latest} />
+            <Board drawn={drawn} latest={latest} golden={golden} />
           </div>
           <p className="bingo__players">
             {view ? `${plural(view.players ?? 0, 'jugador', 'jugadores')} · ${plural(view.sold ?? 0, 'cartón', 'cartones')} en juego` : 'Sala en vivo'}
@@ -359,6 +385,14 @@ function Bingo({ onExit, juegos }) {
           <div className={`bingo__buy ${buyOpen ? '' : 'is-closed'}`}>
             {buyOpen ? (
               <>
+                <div className="bingo__kinds" role="radiogroup" aria-label="Tipo de cartón">
+                  {Object.entries(KINDS).map(([id, k]) => (
+                    <button key={id} type="button" role="radio" aria-checked={kind === id} className={`bingo__kind bingo__kind--${id}`} onClick={() => setKind(id)}>
+                      <b>{k.name}</b>
+                      <small>{eur(k.price)}</small>
+                    </button>
+                  ))}
+                </div>
                 <div className="bingo__stepper" role="group" aria-label="Cartones a comprar">
                   <button type="button" disabled={amount <= 1} onClick={() => setWant(amount - 1)} aria-label="Uno menos">
                     −
@@ -371,14 +405,14 @@ function Bingo({ onExit, juegos }) {
                 <button
                   type="button"
                   className="primary"
-                  disabled={!ready || buying || room < 1 || balance < amount * PRICE}
+                  disabled={!ready || buying || room < 1 || balance < amount * price}
                   onClick={buy}
                 >
                   {room < 1
                     ? 'Ya tienes los 4 cartones'
-                    : balance < amount * PRICE
+                    : balance < amount * price
                       ? 'Saldo insuficiente'
-                      : `Comprar ${amount === 1 ? '1 cartón' : `${amount} cartones`} · ${eur(amount * PRICE)}`}
+                      : `Comprar ${amount === 1 ? '1' : amount} · ${eur(amount * price)}`}
                 </button>
               </>
             ) : (
@@ -393,7 +427,17 @@ function Bingo({ onExit, juegos }) {
           ) : (
             <div className={`bingo__cards bingo__cards--${cards.length}`}>
               {cards.map((cells, i) => (
-                <Card key={i} cells={cells} drawn={drawn} index={i} latest={latest} won={cardWon(i)} over={bingoHit} />
+                <Card
+                  key={i}
+                  cells={cells}
+                  drawn={drawn}
+                  index={i}
+                  latest={latest}
+                  won={cardWon(i)}
+                  over={bingoHit}
+                  premium={isPremium(prices[i] ?? 0)}
+                  golden={golden}
+                />
               ))}
             </div>
           )}
@@ -404,7 +448,7 @@ function Bingo({ onExit, juegos }) {
         <WinBurst
           key={round}
           amount={mine.payout}
-          caption={mine.pot > 0 ? `¡Te llevas el bote del bingo!` : mine.bingo > 0 ? `Bingo con la bola ${mine.bingoBall}` : 'Has cantado línea'}
+          caption={mine.pot > 0 ? (draw?.goldenHit ? '¡Bola dorada! Te llevas el bote' : '¡Te llevas el bote del bingo!') : mine.bingo > 0 ? `Bingo con la bola ${mine.bingoBall}` : 'Has cantado línea'}
           coins={Math.min(70, mine.pot > 0 ? 70 : 30)}
           big={mine.pot > 0}
           who={juegos.me?.name}

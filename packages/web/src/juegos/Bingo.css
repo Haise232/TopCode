@@ -635,6 +635,105 @@
   font-size: 14px;
 }
 
+/* ---------- Bola dorada ---------- */
+.juegos-root .bball--golden {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.95), transparent 32%),
+    conic-gradient(from 20deg, #fff1b8, #e0a92a, #fff4c9, #b07a12, #ffe27a, #fff1b8);
+  box-shadow:
+    inset -4px -6px 10px rgba(90, 55, 0, 0.45),
+    0 0 0 3px rgba(255, 226, 122, 0.55),
+    0 0 26px rgba(255, 210, 90, 0.85);
+  animation: golden-glow 1.4s ease-in-out infinite alternate;
+}
+.juegos-root .bball--golden.bball--fresh {
+  animation:
+    ball-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.25) both,
+    golden-glow 1.4s ease-in-out 0.55s infinite alternate;
+}
+@keyframes golden-glow {
+  to {
+    box-shadow:
+      inset -4px -6px 10px rgba(90, 55, 0, 0.45),
+      0 0 0 6px rgba(255, 226, 122, 0.35),
+      0 0 44px rgba(255, 210, 90, 1);
+  }
+}
+.juegos-root .bboard__n.is-golden {
+  color: #2b1a00;
+  background: conic-gradient(from 20deg, #fff1b8, #e0a92a, #fff4c9, #b07a12, #ffe27a, #fff1b8);
+  box-shadow: 0 0 0 2px #ffe27a, 0 0 16px rgba(255, 210, 90, 0.9);
+}
+.juegos-root .bcard__cell.is-golden {
+  background: linear-gradient(135deg, #fff4c9, #f2c246);
+  box-shadow: 0 0 0 2px #e0a92a, 0 0 12px rgba(255, 210, 90, 0.8);
+}
+
+/* ---------- Cartón premium: papel dorado ---------- */
+.juegos-root .bcard--premium {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 40%, rgba(255, 255, 255, 0.35) 60%, transparent),
+    #f6e2a6;
+  border-color: #c8962f;
+  box-shadow:
+    0 0 0 2px #fff1c2 inset,
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    0 0 18px rgba(255, 210, 90, 0.35);
+}
+.juegos-root .bcard--premium figcaption span {
+  color: #8a5a08;
+}
+.juegos-root .bcard--premium .bcard__cell:not(.bcard__cell--blank) {
+  background: #fffaf0;
+}
+
+/* ---------- Selector de tipo de cartón ---------- */
+.juegos-root .bingo__buy {
+  flex-wrap: wrap;
+}
+.juegos-root .bingo__kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex: 1 1 100%;
+}
+.juegos-root .bingo__kind {
+  display: grid;
+  justify-items: start;
+  gap: 1px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(241, 233, 214, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--ivory);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.juegos-root .bingo__kind b {
+  font-size: 15px;
+}
+.juegos-root .bingo__kind small {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.juegos-root .bingo__kind[aria-checked='true'] {
+  border-color: #f6d27a;
+  background: rgba(200, 162, 75, 0.22);
+  box-shadow: 0 0 0 1px #f6d27a inset;
+}
+.juegos-root .bingo__kind--premium b::before {
+  content: '★ ';
+  color: #ffe27a;
+}
+.juegos-root .bingo__kind--premium[aria-checked='true'] {
+  background: linear-gradient(135deg, rgba(255, 226, 122, 0.35), rgba(200, 150, 47, 0.25));
+}
+.juegos-root .bingo__kind:focus-visible {
+  outline: 3px solid var(--ivory);
+  outline-offset: 2px;
+}
+
 /* ---------- Pantallas más pequeñas ---------- */
 @media (max-width: 1180px) {
   .juegos-root .bingo {
@@ -701,6 +800,13 @@
   .juegos-root .bingo__pot {
     grid-template-columns: 110px minmax(0, 1fr);
   }
+  /* Durante la venta, lo primero es comprar: tus cartones antes de la sala. */
+  .juegos-root .bingo--buying {
+    grid-template-areas:
+      'pot'
+      'mine'
+      'hall';
+  }
   .juegos-root .bingo__history {
     display: none;
   }
@@ -731,6 +837,7 @@
   .juegos-root .bboard__n.is-latest,
   .juegos-root .bcard__cell.is-hit::after,
   .juegos-root .bingo__call strong.is-bingo,
+  .juegos-root .bball--golden,
   .juegos-root .bingo__ball.is-waiting .bball--empty {
     animation: none;
   }

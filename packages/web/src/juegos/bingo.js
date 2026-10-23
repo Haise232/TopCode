@@ -6,16 +6,26 @@ export const ROUND_MS = 240000
 export const BUY_MS = 45000 // venta de cartones abierta
 export const BALL_MS = 2000 // una bola cada este rato
 export const BALLS = 90
-export const PRICE = 500 // un cartón
-export const MAX_CARDS = 4 // cartones por persona y partida
+export const MAX_CARDS = 4 // cartones por persona y partida (de cualquier tipo)
+
+// Dos tipos de cartón. El premium cobra los premios enteros; si en la partida hay alguno, los demás cobran en proporción a
+// su precio (el simple, la quinta parte) y lo que no cobran se queda en la jaula. Así cada euro rinde lo mismo en los dos.
+export const KINDS = {
+  simple: { name: 'Simple', price: 10000 },
+  premium: { name: 'Premium', price: 50000 },
+}
+export const LEGACY_PRICE = 500 // cartones comprados antes de los precios nuevos (guardados sin precio)
+export const priceOf = (saved, i) => saved?.prices?.[i] ?? LEGACY_PRICE
+export const isPremium = (price) => price >= KINDS.premium.price
 
 // Lo vendido en una partida se reparte así (en %): la línea, el bingo y el resto va al bote (la jaula).
 export const LINE_PCT = 15
 export const BINGO_PCT = 60
 export const POT_PCT = 100 - LINE_PCT - BINGO_PCT
 
-// El bote: se lo lleva entero quien cante bingo con esta bola o antes. Con 8 cartones en juego sale una de cada ~20
-// partidas, así que tiene tiempo de crecer. Lo alimentan el 25 % de los cartones y lo que se pierde en el casino.
+// El bote (la jaula) se lo lleva quien cante bingo con la bola POT_BALL o antes (con 8 cartones, una de cada ~20
+// partidas) o justo con la bola dorada (una por partida: ~1 de cada 90). Lo alimentan el 25 % de los cartones, lo que
+// los simples no cobran y lo que se pierde en el casino.
 export const POT_BALL = 66
 
 export const ROWS = 3
@@ -97,29 +107,36 @@ export function missing(cells, drawn) {
   return { line: Math.min(...rows), bingo: rows.reduce((a, b) => a + b, 0) }
 }
 
-// Reparto de una partida ya sorteada. cards: [{ owner, cells }] · order: las 90 bolas en el orden en que salen.
-// Devuelve las bolas de la línea y el bingo, quién gana (índices de cards) y cuánto se lleva cada cartón ganador.
-// Los empates se reparten a partes iguales; los céntimos que sobran van al bote.
-export function settle(cards, order, pot) {
+// Reparto de una partida ya sorteada. cards: [{ owner, cells, price }] · order: las 90 bolas en el orden en que salen ·
+// golden: la bola dorada. Devuelve las bolas de la línea y el bingo, quién gana (índices de cards) y cuánto se lleva cada
+// cartón ganador. Los empates se reparten a partes iguales y cada ganador cobra su parte por su peso (su precio entre el
+// del cartón más caro de la partida); lo que no se cobra se queda en la jaula.
+export function settle(cards, order, pot, golden = null) {
   const pos = positions(order)
   const marks = cards.map((c) => marksOf(c.cells, pos))
-  const sold = cards.length * PRICE
-  if (!cards.length) return { sold, lineBall: null, bingoBall: null, line: [], bingo: [], jackpot: false, prizes: [], potAfter: pot }
+  const sold = cards.reduce((sum, c) => sum + c.price, 0)
+  const none = { sold, lineBall: null, bingoBall: null, line: [], bingo: [], jackpot: false, early: false, golden: false, prizes: [], potAfter: pot }
+  if (!cards.length) return none
+  const top = Math.max(...cards.map((c) => c.price))
   const lineBall = Math.min(...marks.map((m) => m.line))
   const bingoBall = Math.min(...marks.map((m) => m.bingo))
   const line = marks.flatMap((m, i) => (m.line === lineBall ? [i] : []))
   const bingo = marks.flatMap((m, i) => (m.bingo === bingoBall ? [i] : []))
-  const linePrize = Math.floor((sold * LINE_PCT) / 100)
-  const bingoPrize = Math.floor((sold * BINGO_PCT) / 100)
-  const jackpot = bingoBall <= POT_BALL && pot > 0
+  const early = bingoBall <= POT_BALL
+  const gold = golden !== null && order[bingoBall - 1] === golden
+  const jackpot = (early || gold) && pot > 0
   const prizes = cards.map(() => ({ line: 0, bingo: 0, pot: 0 }))
+  // Reparte total entre los ganadores; devuelve lo que no se cobra.
   const share = (total, winners, key) => {
-    const each = Math.floor(total / winners.length)
-    winners.forEach((i) => (prizes[i][key] += each))
-    return total - each * winners.length
+    let paid = 0
+    for (const i of winners) {
+      const amount = Math.floor((total / winners.length) * (cards[i].price / top))
+      prizes[i][key] += amount
+      paid += amount
+    }
+    return total - paid
   }
-  // Lo que no se puede repartir a partes iguales se queda en la jaula.
-  const left = share(linePrize, line, 'line') + share(bingoPrize, bingo, 'bingo')
+  const left = share(Math.floor((sold * LINE_PCT) / 100), line, 'line') + share(Math.floor((sold * BINGO_PCT) / 100), bingo, 'bingo')
   const potAfter = (jackpot ? share(pot, bingo, 'pot') : pot) + left
-  return { sold, lineBall, bingoBall, line, bingo, jackpot, prizes, potAfter }
+  return { sold, lineBall, bingoBall, line, bingo, jackpot, early, golden: gold, prizes, potAfter }
 }

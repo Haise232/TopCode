@@ -220,7 +220,7 @@ function BingoBanner({ info, online, onOpen }) {
         </span>
         <span className="hub-bingo__when">{when}</span>
         <span className="hub-bingo__blurb">
-          Todo lo que se pierde en el casino acaba en la jaula. Canta bingo con la bola {POT_BALL} o antes y te la llevas entera.
+          Todo lo que se pierde en el casino acaba en la jaula. Canta bingo con la bola {POT_BALL} o antes, o con la bola dorada, y te la llevas entera.
           {info?.lastJackpot && ` Último bote: ${info.lastJackpot.bingo.join(', ')} (${eur(info.lastJackpot.jackpot)}).`}
         </span>
       </span>

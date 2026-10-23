@@ -1,11 +1,13 @@
 // Bingo en vivo: una partida para todos cada bingo.ROUND_MS (reglas en packages/web/src/juegos/bingo.js).
-// Los cartones de cada uno se guardan en juegos_solo (juego «bingo»): { round, week, cards, paid, last }. El orden de las
+// Los cartones de cada uno se guardan en juegos_solo (juego «bingo»): { round, week, cards, prices, paid, last } (prices: lo
+// que costó cada cartón; sin él, son de antes de los precios nuevos). El orden de las
 // bolas sale de HMAC(secreto, ronda), como la ruleta, y el servidor no lo suelta hasta que se cierra la venta; a partir de
 // ahí ya no se puede hacer nada, así que da igual que la pantalla lo conozca antes de que salgan las bolas.
 // El bote (la jaula) está en juegos_bingo: lo alimentan el 25 % de los cartones y lo que se pierde en el resto del casino
-// (feed), y se lo lleva quien cante bingo antes de la bola bingo.POT_BALL.
+// (feed), y se lo lleva quien cante bingo con la bola bingo.POT_BALL o antes, o justo con la bola dorada (otra del mismo
+// sorteo, una por partida).
 // Se paga sin temporizador: la primera petición que llega después de la bola del bingo reparte los premios (settleDue).
-//   bingo   cualquiera: a «sync» (ponerse al día) o «buy» (n cartones más para la partida en curso)
+//   bingo   cualquiera: a «sync» (ponerse al día) o «buy» (n cartones más de tipo kind para la partida en curso)
 import { randomInt } from 'node:crypto'
 import * as bingo from '../../packages/web/src/juegos/bingo.js'
 import { hmacStream, uniform } from './solo.mjs'
@@ -38,6 +40,18 @@ export function orderOf(secret, round) {
   return order
 }
 
+const goldens = new Map()
+
+// La bola dorada de una partida: un número del 1 al 90, de un sorteo aparte (no depende del orden de las bolas).
+export function goldenOf(secret, round) {
+  const hit = goldens.get(round)
+  if (hit) return hit
+  const golden = 1 + uniform(hmacStream(secret, `bingo-oro:${round}`))(bingo.BALLS)
+  if (goldens.size > 2000) goldens.clear()
+  goldens.set(round, golden)
+  return golden
+}
+
 const revealAt = (round) => bingo.startOf(round) + REVEAL_MS
 
 export function createBingo({ db, now, secret, move }) {
@@ -45,14 +59,16 @@ export function createBingo({ db, now, secret, move }) {
   const rounds = new Map()
   let nextCheck = 0 // antes de esta hora no hay nada que pagar (en esta instancia)
 
-  // Todos los cartones de una partida, en un orden fijo: [{ owner, name, cells }].
+  // Todos los cartones de una partida, en un orden fijo: [{ owner, name, cells, price }].
   async function cardsOf(q, round, lock = false) {
     const { rows } = await q(
       `select s.usuario_id, s.estado, c.nombre from public.juegos_solo s join public.juegos_cuentas c on c.usuario_id = s.usuario_id
        where s.juego = 'bingo' and s.estado->>'round' = $1 order by s.usuario_id${lock ? ' for update of s' : ''}`,
       [String(round)],
     )
-    const cards = rows.flatMap((r) => (r.estado.cards ?? []).map((cells) => ({ owner: r.usuario_id, name: r.nombre, cells })))
+    const cards = rows.flatMap((r) =>
+      (r.estado.cards ?? []).map((cells, i) => ({ owner: r.usuario_id, name: r.nombre, cells, price: bingo.priceOf(r.estado, i) })),
+    )
     return { rows, cards }
   }
 
@@ -61,7 +77,9 @@ export function createBingo({ db, now, secret, move }) {
     const hit = rounds.get(round)
     if (hit) return hit
     const { cards } = await cardsOf((sql, params) => db.query(sql, params), round)
-    const result = bingo.settle(cards, orderOf(secret, round), 0)
+    const golden = goldenOf(secret, round)
+    // Con la jaula a 0 el reparto no da bote; aquí solo importa si la partida lo da (early o golden) y quién gana.
+    const result = bingo.settle(cards, orderOf(secret, round), 0, golden)
     const winners = (list, key) =>
       list.map((i) => ({ name: cards[i].name, owner: cards[i].owner, amount: result.prizes[i][key] }))
     const outcome = {
@@ -72,7 +90,9 @@ export function createBingo({ db, now, secret, move }) {
       bingoBall: result.bingoBall,
       line: winners(result.line, 'line'),
       bingo: winners(result.bingo, 'bingo'),
-      jackpot: result.bingoBall !== null && result.bingoBall <= bingo.POT_BALL, // con la jaula vacía no hay bote que dar
+      golden,
+      goldenHit: result.golden,
+      jackpot: result.early || result.golden,
     }
     if (rounds.size > 50) rounds.clear()
     rounds.set(round, outcome)
@@ -118,7 +138,7 @@ export function createBingo({ db, now, secret, move }) {
       if (!open.length) return
       // Cartones de otra semana: el saldo ya se reinició, no se paga nada.
       const stale = open.some((r) => r.estado.week !== week)
-      const result = bingo.settle(stale ? [] : cards, orderOf(secret, round), pot)
+      const result = bingo.settle(stale ? [] : cards, orderOf(secret, round), pot, goldenOf(secret, round))
       const won = new Map()
       cards.forEach((c, i) => {
         const p = result.prizes[i]
@@ -134,7 +154,7 @@ export function createBingo({ db, now, secret, move }) {
       if (Object.keys(deltas).length) await move(q, deltas)
       for (const r of open) {
         const p = won.get(r.usuario_id) ?? { line: 0, bingo: 0, pot: 0 }
-        const stake = (r.estado.cards?.length ?? 0) * bingo.PRICE
+        const stake = (r.estado.cards ?? []).reduce((sum, _, i) => sum + bingo.priceOf(r.estado, i), 0)
         const payout = p.line + p.bingo + p.pot
         const last = { round, cards: r.estado.cards?.length ?? 0, stake, ...p, payout, net: payout - stake, lineBall: result.lineBall, bingoBall: result.bingoBall }
         await q(`update public.juegos_solo set estado = $3, actualizado = now() where usuario_id = $1 and juego = $2`, [
@@ -151,7 +171,8 @@ export function createBingo({ db, now, secret, move }) {
         bingoBall: result.bingoBall,
         line: names(result.line),
         bingo: names(result.bingo),
-        jackpot: result.jackpot ? pot : 0,
+        jackpot: result.prizes.reduce((sum, p) => sum + p.pot, 0), // lo que salió de la jaula
+        golden: result.jackpot && result.golden,
       }
       await q(
         `update public.juegos_bingo set bote = $1, historial = (jsonb_build_array($2::jsonb) || historial) - ${HISTORY} where id = 1`,
@@ -176,6 +197,7 @@ export function createBingo({ db, now, secret, move }) {
     ])
     const outcome = t >= revealAt(round) ? await outcomeOf(round) : null
     const mine = saved?.round === round ? (saved.cards ?? []) : []
+    const prices = mine.map((_, i) => bingo.priceOf(saved, i))
     return {
       now: t,
       round,
@@ -183,6 +205,7 @@ export function createBingo({ db, now, secret, move }) {
       drawn: drawn ?? 0,
       pot,
       cards: mine,
+      prices,
       players: outcome ? outcome.players : counts.rows[0].players,
       sold: outcome ? outcome.cards : counts.rows[0].cards,
       draw: outcome
@@ -193,6 +216,8 @@ export function createBingo({ db, now, secret, move }) {
             line: outcome.line.map(({ name, amount, owner }) => ({ name, amount, me: owner === userId })),
             bingo: outcome.bingo.map(({ name, amount, owner }) => ({ name, amount, me: owner === userId })),
             jackpot: outcome.jackpot,
+            golden: outcome.golden,
+            goldenHit: outcome.goldenHit,
           }
         : null,
       last: saved?.last ?? null,
@@ -209,9 +234,10 @@ export function createBingo({ db, now, secret, move }) {
     return Number((await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [userId])).rows[0]?.saldo ?? 0)
   }
 
-  // Compra de n cartones más para la partida en curso. Devuelve un código de error o null.
-  async function buy(user, n) {
-    if (!Number.isInteger(n) || n < 1 || n > bingo.MAX_CARDS) return 'BAD_MESSAGE'
+  // Compra de n cartones más de un tipo (bingo.KINDS) para la partida en curso. Devuelve un código de error o null.
+  async function buy(user, n, kind) {
+    if (!Number.isInteger(n) || n < 1 || n > bingo.MAX_CARDS || !Object.hasOwn(bingo.KINDS, kind)) return 'BAD_MESSAGE'
+    const price = bingo.KINDS[kind].price
     const t = now()
     const { round, offset } = bingo.phaseAt(t)
     if (offset >= bingo.BUY_MS + GRACE_MS) return 'BINGO_CLOSED'
@@ -222,14 +248,15 @@ export function createBingo({ db, now, secret, move }) {
       if (saved && saved.paid === false && saved.round !== round) return 'BUSY'
       const have = saved?.round === round ? (saved.cards ?? []) : []
       if (have.length + n > bingo.MAX_CARDS) return 'BINGO_MAX'
-      const cost = n * bingo.PRICE
+      const cost = n * price
       if (!(await move(q, { [user.id]: -cost }, true))) return 'INSUFFICIENT_FUNDS'
       const cards = [...have, ...Array.from({ length: n }, () => bingo.makeCard(randomInt))]
+      const prices = [...have.map((_, i) => bingo.priceOf(saved, i)), ...Array(n).fill(price)]
       await feed(q, (cost * bingo.POT_PCT) / 100)
       await q(
         `insert into public.juegos_solo (usuario_id, juego, estado) values ($1, 'bingo', $2)
          on conflict (usuario_id, juego) do update set estado = excluded.estado, actualizado = now()`,
-        [user.id, { round, week, cards, paid: false, last: saved?.last ?? null }],
+        [user.id, { round, week, cards, prices, paid: false, last: saved?.last ?? null }],
       )
       return null
     })
@@ -238,7 +265,7 @@ export function createBingo({ db, now, secret, move }) {
   async function handle(user, msg, reply) {
     await settleDue()
     if (msg.a === 'buy') {
-      const error = await buy(user, msg.n)
+      const error = await buy(user, msg.n, msg.kind ?? 'simple')
       if (error) reply.error = { code: error }
     } else if (msg.a !== 'sync') {
       reply.error = { code: 'BAD_MESSAGE' }
