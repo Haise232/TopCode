@@ -51,8 +51,8 @@ const SOLO = [
   {
     id: 'roulette',
     name: 'Ruleta',
-    blurb: 'Una tirada cada 25 s para todos.',
-    live: true,
+    blurb: 'Fuera de servicio temporalmente.',
+    off: true,
     art: <span className="game__wheel" />,
   },
   {
@@ -436,13 +436,14 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCo
           Para jugar solo <small>con tu saldo de la semana</small>
         </h2>
         <ul className="hub-tiles">
-          {SOLO.map(({ id, name, blurb, art, live }) => (
+          {SOLO.map(({ id, name, blurb, art, live, off }) => (
             <li key={id} data-tour={id === 'duel' ? 'duel' : undefined}>
-              <button type="button" className={`hub-tile hub-tile--${id}`} disabled={!connected} onClick={() => onPick(id)}>
+              <button type="button" className={`hub-tile hub-tile--${id}`} disabled={!connected || off} onClick={() => onPick(id)}>
                 <span className="hub-tile__art" aria-hidden="true">
                   {art}
                 </span>
                 {live && <em className="hub-pill">En vivo</em>}
+                {off && <em className="hub-pill hub-pill--off">Fuera de servicio</em>}
                 {id === 'duel' && duelCount > 0 && <em className="hub-tile__badge">{duelCount}</em>}
                 <span className="hub-tile__name">{name}</span>
                 <span className="hub-tile__blurb">{blurb}</span>

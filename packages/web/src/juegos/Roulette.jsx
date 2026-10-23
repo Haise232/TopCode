@@ -371,6 +371,9 @@ function Countdown({ phase, offset }) {
 
 // La ruleta en vivo: una sola rueda para todos que gira cada 25 s. El servidor sortea la ronda y paga; aquí se
 // apuesta mientras la mesa está abierta y se anima la rueda con el reloj del servidor.
+// Fuera de servicio temporalmente: la mesa no deja apostar (el servidor tampoco) y lo avisa.
+const CLOSED = true
+
 function Roulette({ onExit, juegos }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [view, setView] = useState('table')
@@ -481,7 +484,7 @@ function Roulette({ onExit, juegos }) {
   // Lo que se puede apostar todavía: el saldo del servidor (ya sin lo confirmado) menos lo pendiente de confirmar.
   const available = Math.max(0, balance - unconfirmed(state))
   const onTable = totalOf(placed)
-  const betting = ready && phase === 'betting' && state.round === round
+  const betting = !CLOSED && ready && phase === 'betting' && state.round === round
 
   // Resultado de esta ronda (si ya se conoce) y tu jugada en ella.
   const draw = live?.round === round && live.number !== null ? live : null
@@ -563,6 +566,10 @@ function Roulette({ onExit, juegos }) {
       else detail = 'Prepárate para la siguiente ronda.'
     }
     if (juegos.error) detail = juegos.error
+  }
+  if (CLOSED) {
+    call = 'Fuera de servicio'
+    detail = 'La ruleta está fuera de servicio temporalmente. Las apuestas que ya tenías puestas se pagan igual.'
   }
 
   return (

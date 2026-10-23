@@ -61,6 +61,7 @@ export const ERRORS = {
   ROOM_FULL: 'Todas las mesas están llenas. Prueba a mirar.',
   RATE_LIMIT: 'Vas demasiado rápido.',
   BUSY: 'La mesa está muy concurrida, inténtalo de nuevo.',
+  OUT_OF_SERVICE: 'La ruleta está fuera de servicio temporalmente.',
   BROKE: 'Te quedaste sin saldo esta semana: el domingo a las 23:59 todos vuelven a empezar con 15.000 €.',
   AUTH_REQUIRED: 'Inicia sesión en TopCode.',
   AUTH_INVALID: 'Tu sesión de TopCode caducó. Recarga la página.',
@@ -770,6 +771,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     return rows.map((r) => ({ name: r.name, amount: Number(r.amount), mult: r.mult, me: r.me }))
   }
 
+  // Ruleta fuera de servicio temporalmente: no admite apuestas nuevas, pero «sync» sigue pagando las que ya estaban puestas.
+  const ROULETTE_CLOSED = true
+
   // Ruleta y cohete en vivo: ponerse al día («sync») no bloquea nada si no hay apuesta que pagar; lo demás pasa por playSolo.
   const LIVE_SOLO = {
     solo_roulette: { game: 'roulette', due: rouletteDue, view: rouletteView },
@@ -859,6 +863,10 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       case 'solo_crash':
       case 'solo_race': {
         const live = LIVE_SOLO[msg.t]
+        if (msg.t === 'solo_roulette' && ROULETTE_CLOSED && msg.a !== 'sync') {
+          reply.error = { code: 'OUT_OF_SERVICE', message: ERRORS.OUT_OF_SERVICE }
+          return reply
+        }
         let play = msg
         // Espera larga del cohete: se responde justo cuando explota (sin tocar la BD mientras tanto), así cada
         // navegador hace una petición por vuelo en vez de preguntar cada poco si ya explotó.
