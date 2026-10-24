@@ -8,7 +8,7 @@
   --r-mitica: #f2c14e;
   --r-unica: #ff3b5c;
 }
-/* La mítica (el Xokas) reutiliza los efectos de la legendaria con su color. */
+/* La mítica (Mario) reutiliza los efectos de la legendaria con su color. */
 .juegos-root [class*='--unica'] {
   --r-mitica: var(--r-unica);
 }

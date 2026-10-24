@@ -509,7 +509,7 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCo
         </section>
         <section aria-labelledby="gacha-sec-title" data-tour="gacha">
           <h2 id="gacha-sec-title" className="hub-title">
-            Colección <small>memes de España</small>
+            Colección <small>personajes de videojuegos</small>
           </h2>
           <GachaShowcase juegos={juegos} online={connected} onOpen={onGacha} />
         </section>

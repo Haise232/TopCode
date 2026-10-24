@@ -160,7 +160,7 @@ const STEPS = [
     target: 'gacha',
     art: 'gacha',
     title: 'El gacha',
-    text: 'Colecciona cartas de memes de España: coge gratis las que salen en la mesa o invoca pagando. Cada carta tiene poderes para los juegos. Hay una sola Mítica…',
+    text: 'Colecciona cartas de personajes de videojuegos: coge gratis las que salen en la mesa o invoca pagando. Cada carta tiene poderes para los juegos. Hay una sola Mítica…',
   },
   {
     target: 'bank',

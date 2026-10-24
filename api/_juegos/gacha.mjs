@@ -1,12 +1,12 @@
-// Gacha de Juegos al estilo de Mudae, con memes de España. Cada carta tiene como mucho un dueño.
+// Gacha de Juegos al estilo de Mudae, con personajes de videojuegos. Cada carta tiene como mucho un dueño.
 //   - La mesa: cada TABLE_PERIOD_MS sale sola una carta libre, hasta TABLE_MAX a la vista de todos, y cualquiera puede
 //     cogerla: se la queda el primero, sin límite por persona.
 //   - Tirar pagando: una tirada (ROLL_COST) o una premium (PREMIUM_COST: épica o legendaria) saca una carta libre y su
 //     jugador decide si guardarla o descartarla; hasta decidirlo no puede volver a tirar.
 // Todo se paga y se cobra con el saldo de la semana (cuenta en el Score): las tiradas y vender una carta tuya (SELL_RATE €
 // por punto de valor; la carta queda libre otra vez).
-// Cada carta tiene además un poder para cada juego (powersOf), distinto en cada meme y más fuerte cuanto más rara
-// es (la mítica, el Xokas, lo máximo en todo y sin gastarse), con un juego como punto fuerte: ver cartas en el póker o
+// Cada carta tiene además un poder para cada juego (powersOf), distinto en cada personaje y más fuerte cuanto más rara
+// es (la mítica, Mario, lo máximo en todo y sin gastarse), con un juego como punto fuerte: ver cartas en el póker o
 // el blackjack (lo aplica game.mjs en la mesa, que ve un aviso en el chat) o un seguro o un premio para las próximas
 // jugadas de un juego en solitario (juegos_gacha_efectos, que aplica applyEffect al liquidar cada jugada). Usar un poder
 // gasta la carta: deja de ser tuya y vuelve a poder salir para cualquiera (consumePower).
@@ -29,9 +29,9 @@ export const POWER_COOLDOWN_MS = 24 * HOUR
 // Lo más que puede añadir un premio en una jugada.
 export const BONUS_CAP = 10000
 // Poderes. Cada carta tiene uno por juego, sacado al azar (pero fijo: depende de su id) de las variantes de su nivel,
-// así que dos cartas de la misma rareza casi nunca coinciden. Además cada meme tiene su punto fuerte: un juego en
+// así que dos cartas de la misma rareza casi nunca coinciden. Además cada personaje tiene su punto fuerte: un juego en
 // el que su poder sube un nivel (★). Niveles: 0 común, 1 rara, 2 épica, 3 legendaria, 4 legendaria en su punto fuerte,
-// 5 mítica (la única es el Xokas: lo máximo en todos los juegos, sin punto fuerte, y su poder no gasta la carta).
+// 5 mítica (la única es Mario: lo máximo en todos los juegos, sin punto fuerte, y su poder no gasta la carta).
 const TIER = { comun: 0, rara: 1, epica: 2, mitica: 3, unica: 5 }
 // Póker: a quién mira (target: azar, rico = más fichas, apuesta = más apostado en la mano), cuántos rivales (rivals,
 // o 'all'), si ve sus dos cartas (full) o una, y qué ve de la mesa que falta por salir (board: hint = si la próxima es
