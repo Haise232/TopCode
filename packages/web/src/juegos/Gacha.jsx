@@ -279,6 +279,8 @@ function Summon({ summon, busy, onDecide, onClose }) {
               </>
             )}
           </>
+        ) : stage === 'charge' ? (
+          <Capsule premium={Boolean(summon.premium)} />
         ) : (
           <div className="gacha-summon__card">
             <span className="gacha-summon__back" />
@@ -295,6 +297,27 @@ function Summon({ summon, busy, onDecide, onClose }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// La cápsula de la carga: dos mitades que vibran cada vez más fuerte mientras por la juntura se escapa la luz. La premium
+// es violeta y dorada; la normal, dorada y crema.
+function Capsule({ premium }) {
+  return (
+    <div className={`gacha-capsule ${premium ? 'gacha-capsule--premium' : ''}`} aria-hidden="true">
+      <span className="gacha-capsule__halo" />
+      <span className="gacha-capsule__body">
+        <i className="gacha-capsule__top" />
+        <i className="gacha-capsule__bottom" />
+        <i className="gacha-capsule__seam" />
+        <i className="gacha-capsule__shine" />
+      </span>
+      <span className="gacha-capsule__motes">
+        {range(10).map((i) => (
+          <i key={i} style={{ '--a': `${i * 36}deg`, '--t': `${(i % 5) * 0.12}s` }} />
+        ))}
+      </span>
     </div>
   )
 }
@@ -334,13 +357,50 @@ function MythicOmen({ stage }) {
 // Lo que puede salir en cada tipo de tirada, de lo mejor a lo peor (sin la común, que es lo que sobra).
 function Odds({ kind }) {
   return (
-    <span className="gacha-odds">
+    <span className="gacha-chances">
       {RARITIES.filter((r) => ODDS[kind][r] && r !== 'comun').map((r) => (
-        <span key={r} className={`gacha-odds__item gacha-odds__item--${r}`}>
+        <span key={r} className={`gacha-chances__item gacha-chances__item--${r}`}>
+          <i aria-hidden="true" />
           {RARITY[r]} <b>{ODDS[kind][r].toLocaleString('es-ES')} %</b>
         </span>
       ))}
     </span>
+  )
+}
+
+// Escena decorativa del portal: círculo de runas que gira, orbe central, cápsulas en órbita y chispas que suben.
+function Altar() {
+  return (
+    <div className="gacha-altar" aria-hidden="true">
+      <span className="gacha-altar__beam" />
+      <svg className="gacha-altar__rings" viewBox="0 0 200 200">
+        <defs>
+          <path id="gacha-altar-path" d="M100 100 m-84 0 a84 84 0 1 1 168 0 a84 84 0 1 1 -168 0" />
+        </defs>
+        <g className="gacha-altar__outer">
+          <circle cx="100" cy="100" r="96" />
+          <circle cx="100" cy="100" r="72" className="gacha-altar__dash" />
+          <text>
+            <textPath href="#gacha-altar-path">ΑΒΓΔΕΖ ✦ ΗΘΙΚΛΜ ✦ ΝΞΟΠΡΣ ✦ ΤΥΦΧΨΩ ✦ </textPath>
+          </text>
+        </g>
+        <g className="gacha-altar__inner">
+          <path d="M100 38 L153.7 131 L46.3 131 Z M100 162 L46.3 69 L153.7 69 Z" />
+          <circle cx="100" cy="100" r="46" />
+        </g>
+      </svg>
+      <span className="gacha-altar__orbit">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="gacha-altar__orb" />
+      <span className="gacha-altar__sparks">
+        {range(9).map((i) => (
+          <i key={i} style={{ '--x': `${14 + ((i * 37) % 72)}%`, '--t': `${(i * 0.43) % 3}s`, '--s': `${2.6 + (i % 4) * 0.5}s` }} />
+        ))}
+      </span>
+    </div>
   )
 }
 
@@ -378,13 +438,79 @@ function summary(counts) {
   return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}` : (parts[0] ?? '')
 }
 
-// La biblioteca de alguien: un titular con lo que tiene y sus cartas en estantes por rareza.
-function Library({ data, onSell, busy }) {
+// Gema de una rareza (la forma y el color los pone el CSS).
+function Gem({ rarity }) {
+  return <i className={`gacha-gem gacha-gem--${rarity}`} aria-hidden="true" />
+}
+
+// Cómo se ordena el álbum: por rareza (en estantes) o en una sola rejilla.
+const SORTS = [
+  ['rareza', 'Por rareza'],
+  ['valor', 'Mayor valor'],
+  ['nombre', 'Nombre A-Z'],
+]
+
+// Las fusiones del juego: las dos cartas que se juntan, la mítica que sale y cuánto llevas.
+function Fusions({ catalog, owned, me, name }) {
+  const fusions = catalog.filter((c) => c.fusion)
+  if (fusions.length === 0) return null
+  return (
+    <section className="gacha-fusions" aria-labelledby="fusions-title">
+      <h3 id="fusions-title">
+        Fusiones <small>junta las dos cartas y se convierten en una mítica única</small>
+      </h3>
+      <ul>
+        {fusions.map((f) => {
+          const parts = f.fusion.map((n) => catalog.find((c) => c.name === n)).filter(Boolean)
+          const done = owned.has(f.id)
+          const have = parts.filter((p) => owned.has(p.id)).length
+          return (
+            <li key={f.id} className={done ? 'is-done' : have > 0 ? 'is-half' : ''}>
+              <span className="gacha-fusions__parts">
+                {parts.map((p, i) => (
+                  <span key={p.id} className="gacha-fusions__part-wrap">
+                    {i > 0 && <b className="gacha-fusions__plus">+</b>}
+                    <span className={`gacha-fusions__part ${done || owned.has(p.id) ? 'is-have' : ''}`}>
+                      <GachaCard card={p} mini />
+                      <small>{p.name}</small>
+                    </span>
+                  </span>
+                ))}
+              </span>
+              <b className="gacha-fusions__arrow" aria-hidden="true">
+                →
+              </b>
+              <span className={`gacha-fusions__result ${done ? 'is-have' : ''}`}>
+                <GachaCard card={f} mini />
+                <span>
+                  <b>{f.name}</b>
+                  <small>{done ? (me ? '¡La tienes!' : `La tiene ${name}`) : `${have} de ${parts.length} cartas juntas`}</small>
+                </span>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+// La biblioteca de alguien como un álbum: portada con lo que vale, avance por rareza, fusiones, filtros y las cartas en
+// estantes por rareza (con los huecos de las que faltan si se piden).
+function Library({ data, catalog, onSell, busy }) {
   const [confirm, setConfirm] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [filter, setFilter] = useState('todas')
+  const [sort, setSort] = useState('rareza')
+  const [gaps, setGaps] = useState(false)
   if (!data) return <p className="gacha-empty">Cargando…</p>
   const { user, cards, worth } = data
   const counts = Object.fromEntries(RARITIES.map((r) => [r, cards.filter((c) => c.rarity === r).length]))
+  const owned = new Set(cards.map((c) => c.id))
+  // Con el catálogo cargado sabemos cuántas hay de cada rareza y cuáles faltan (las de fusión salen aparte).
+  const total = catalog && Object.fromEntries(RARITIES.map((r) => [r, catalog.filter((c) => c.rarity === r).length]))
+  const missing = catalog ? catalog.filter((c) => !owned.has(c.id) && !c.fusion) : []
+  const done = catalog ? Math.min(100, Math.round((cards.length / catalog.length) * 100)) : null
   const line = cards.length ? `${user.me ? 'Tengo' : 'Tiene'} ${summary(counts)}.` : ''
 
   async function copy() {
@@ -397,139 +523,311 @@ function Library({ data, onSell, busy }) {
     }
   }
 
+  function sellButton(card) {
+    return (
+      <button
+        type="button"
+        className={`gacha-sell ${confirm === card.id ? 'is-confirm' : ''}`}
+        disabled={busy}
+        onBlur={() => setConfirm(null)}
+        onClick={() => {
+          if (confirm !== card.id) return setConfirm(card.id)
+          setConfirm(null)
+          onSell(card.id)
+        }}
+      >
+        {confirm === card.id ? `¿Vender por ${eur(card.price)}?` : `Vender · ${eur(card.price)}`}
+      </button>
+    )
+  }
+
+  function cell(card) {
+    return (
+      <li key={card.id} className={card.fusion ? 'is-fusion' : undefined}>
+        <GachaCard card={card} />
+        <GachaPowers powers={card.powers} />
+        {user.me && sellButton(card)}
+      </li>
+    )
+  }
+
+  const shown = cards.filter((c) => filter === 'todas' || c.rarity === filter)
+  const flat = sort === 'nombre' ? [...shown].sort((a, b) => a.name.localeCompare(b.name, 'es')) : shown
+  const shelves = RARITIES.filter((r) => (filter === 'todas' || filter === r) && (counts[r] > 0 || (gaps && missing.some((c) => c.rarity === r))))
+
   return (
     <section className="gacha-library" aria-labelledby="lib-title">
       <header className="gacha-lib-head">
-        <Avatar name={user.name} src={user.avatar} size={56} />
+        <span className="gacha-lib-head__who">
+          <Avatar name={user.name} src={user.avatar} size={64} />
+        </span>
         <div className="gacha-lib-head__text">
+          <span className="gacha-lib-head__eyebrow">Álbum de colección</span>
           <h2 id="lib-title">{user.me ? 'Mi biblioteca' : `Biblioteca de ${user.name}`}</h2>
           {line && <p className="gacha-lib-line">{line}</p>}
-          <p className="gacha-lib-meta">
-            {cards.length} {cards.length === 1 ? 'carta' : 'cartas'} · {cards.length === 1 ? 'vale' : 'valen'} {eur(worth)}
-          </p>
         </div>
+        <dl className="gacha-lib-stats">
+          <div>
+            <dt>Cartas</dt>
+            <dd>
+              {cards.length}
+              {catalog && <small> / {catalog.length}</small>}
+            </dd>
+          </div>
+          <div className="is-worth">
+            <dt>{cards.length === 1 ? 'Vale' : 'Valen'}</dt>
+            <dd>{eur(worth)}</dd>
+          </div>
+          {done !== null && (
+            <div>
+              <dt>Completado</dt>
+              <dd>{done} %</dd>
+            </div>
+          )}
+        </dl>
         {user.me && cards.length > 0 && (
           <button type="button" className="hub-btn hub-btn--ghost gacha-lib-copy" onClick={copy}>
-            {copied ? 'Copiado' : 'Copiar resumen'}
+            {copied ? 'Copiado' : 'Compartir resumen'}
           </button>
         )}
       </header>
-      {cards.length === 0 ? (
+
+      {/* Avance por rareza: cuántas tienes frente al total que existe. */}
+      <ul className="gacha-progress" aria-label="Avance por rareza">
+        {RARITIES.map((r) => (
+          <li key={r} className={`gacha-progress__item gacha-progress__item--${r} ${counts[r] > 0 ? '' : 'is-none'}`}>
+            <Gem rarity={r} />
+            <span className="gacha-progress__name">{RARITY[r]}</span>
+            <b>
+              {counts[r]}
+              {total && <small> / {total[r]}</small>}
+            </b>
+            <span className="gacha-progress__bar" role="progressbar" aria-label={RARITY[r]} aria-valuemin={0} aria-valuemax={total?.[r] ?? counts[r]} aria-valuenow={counts[r]}>
+              <i style={{ width: `${total?.[r] ? Math.min(100, (counts[r] / total[r]) * 100) : counts[r] > 0 ? 100 : 0}%` }} />
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {catalog && <Fusions catalog={catalog} owned={owned} me={user.me} name={user.name} />}
+
+      {cards.length === 0 && !gaps ? (
         <p className="gacha-empty">{user.me ? 'Aún no tienes cartas: tira y reclama la que te guste.' : `${user.name} aún no tiene cartas.`}</p>
-      ) : (
-        RARITIES.filter((r) => counts[r] > 0).map((r) => (
+      ) : null}
+
+      <div className="gacha-toolbar">
+        <div className="gacha-chips" role="group" aria-label="Filtrar por rareza">
+          <button type="button" className="gacha-chip" aria-pressed={filter === 'todas'} onClick={() => setFilter('todas')}>
+            Todas <small>{cards.length}</small>
+          </button>
+          {RARITIES.map((r) => (
+            <button key={r} type="button" className={`gacha-chip gacha-chip--${r}`} aria-pressed={filter === r} onClick={() => setFilter(r)} disabled={counts[r] === 0 && !gaps}>
+              <Gem rarity={r} />
+              {RARITY[r]} <small>{counts[r]}</small>
+            </button>
+          ))}
+        </div>
+        <label className="gacha-select">
+          <span>Orden</span>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            {SORTS.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {catalog && (
+          <button type="button" className="gacha-chip gacha-chip--gaps" aria-pressed={gaps} onClick={() => setGaps((v) => !v)}>
+            Huecos <small>{missing.length}</small>
+          </button>
+        )}
+      </div>
+
+      {sort === 'rareza' ? (
+        shelves.map((r) => (
           <section key={r} className={`gacha-shelf gacha-shelf--${r}`} aria-label={SHELF[r]}>
             <h3>
-              {SHELF[r]} <small>{counts[r]}</small>
+              <Gem rarity={r} />
+              {SHELF[r]} <small>{total ? `${counts[r]} de ${total[r]}` : counts[r]}</small>
             </h3>
-            <ul className="gacha-grid">
-              {cards
-                .filter((c) => c.rarity === r)
-                .map((card) => (
-                  <li key={card.id}>
-                    <GachaCard card={card} />
-                    <GachaPowers powers={card.powers} />
-                    {user.me && (
-                      <button
-                        type="button"
-                        className={`gacha-sell ${confirm === card.id ? 'is-confirm' : ''}`}
-                        disabled={busy}
-                        onBlur={() => setConfirm(null)}
-                        onClick={() => {
-                          if (confirm !== card.id) return setConfirm(card.id)
-                          setConfirm(null)
-                          onSell(card.id)
-                        }}
-                      >
-                        {confirm === card.id ? `¿Vender por ${eur(card.price)}?` : `Vender · ${eur(card.price)}`}
-                      </button>
-                    )}
-                  </li>
-                ))}
-            </ul>
+            {counts[r] > 0 && <ul className="gacha-grid">{shown.filter((c) => c.rarity === r).map(cell)}</ul>}
+            {gaps && (
+              <ul className="gacha-grid gacha-grid--gaps" aria-label={`${SHELF[r]} que faltan`}>
+                {missing
+                  .filter((c) => c.rarity === r)
+                  .map((c) => (
+                    <li key={c.id} className="gacha-gap" title={c.owner ? `La tiene ${c.owner.me ? 'otra persona' : c.owner.name}` : 'Libre: puede tocarte'}>
+                      <GachaCard card={c} mini />
+                      <b>{c.name}</b>
+                      <small>{c.owner ? `De ${c.owner.me ? 'ti' : c.owner.name}` : 'Libre'}</small>
+                    </li>
+                  ))}
+              </ul>
+            )}
           </section>
         ))
+      ) : (
+        <ul className="gacha-grid">{flat.map(cell)}</ul>
       )}
     </section>
   )
 }
 
-// Todos los que tienen cartas, de la biblioteca que más vale a la que menos; cada uno abre su biblioteca.
+// Barras pequeñas con las cartas que tiene alguien de cada rareza (de la común a la mítica); max: la barra más alta.
+function MiniBars({ rarities = {}, max }) {
+  return (
+    <span className="gacha-bars" role="img" aria-label={summary(rarities) || 'Sin cartas'}>
+      {[...RARITIES].reverse().map((r) => (
+        <span key={r} className={`gacha-bars__col gacha-bars__col--${r}`} title={`${RARITY[r]}: ${rarities[r] ?? 0}`}>
+          <span className="gacha-bars__track">
+            <i style={{ height: `${rarities[r] ? Math.max(14, (rarities[r] / max) * 100) : 0}%` }} />
+          </span>
+          <b>{rarities[r] ?? 0}</b>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+// Todos los que tienen cartas, de la biblioteca que más vale a la que menos: podio para los tres primeros y una tabla con
+// el resto; cada uno abre su biblioteca.
 function Collectors({ list, onOpen }) {
   if (!list) return <p className="gacha-empty">Cargando…</p>
   if (list.length === 0) return <p className="gacha-empty">Nadie tiene cartas todavía. ¡Sé el primero!</p>
+  const max = Math.max(1, ...list.flatMap((p) => RARITIES.map((r) => p.rarities?.[r] ?? 0)))
+  const label = (p) => (p.rarities ? summary(p.rarities) : `${p.count} ${p.count === 1 ? 'carta' : 'cartas'}`)
   return (
-    <ol className="gacha-rank" aria-label="Bibliotecas de todos">
-      {list.map((p, i) => (
-        <li key={p.id}>
-          <button type="button" className={p.me ? 'is-me' : ''} onClick={() => onOpen(p.id)}>
-            <b className="gacha-rank__pos">{i + 1}</b>
-            <Avatar name={p.name} src={p.avatar} size={40} />
-            <span className="gacha-rank__name">
-              {p.name}
-              <small>{p.rarities ? summary(p.rarities) : `${p.count} ${p.count === 1 ? 'carta' : 'cartas'}`}</small>
-            </span>
-            {p.best && (
-              <span className="gacha-rank__best">
-                <GachaCard card={p.best} mini />
+    <section className="gacha-ranking" aria-label="Bibliotecas de todos">
+      <ol className={`gacha-podium gacha-podium--${Math.min(3, list.length)}`}>
+        {list.slice(0, 3).map((p, i) => (
+          <li key={p.id} className={`gacha-podium__place gacha-podium__place--${i + 1} ${p.me ? 'is-me' : ''}`}>
+            <button type="button" onClick={() => onOpen(p.id)} title={`Ver la biblioteca de ${p.name}`}>
+              {i === 0 && (
+                <span className="gacha-podium__crown" aria-hidden="true">
+                  ♛
+                </span>
+              )}
+              <span className="gacha-podium__avatar">
+                <Avatar name={p.name} src={p.avatar} size={i === 0 ? 76 : 60} />
               </span>
-            )}
-            <span className="gacha-rank__worth">{eur(p.worth)}</span>
-          </button>
-        </li>
-      ))}
-    </ol>
+              <span className="gacha-podium__name">{p.name}</span>
+              <span className="gacha-podium__count">{p.count} {p.count === 1 ? 'carta' : 'cartas'}</span>
+              {p.best && (
+                <span className="gacha-podium__best">
+                  <GachaCard card={p.best} mini />
+                </span>
+              )}
+              <MiniBars rarities={p.rarities} max={max} />
+              <b className="gacha-podium__worth">{eur(p.worth)}</b>
+              <span className="gacha-podium__step" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span className="gacha-sr">{label(p)}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      {list.length > 3 && (
+        <ol className="gacha-rank" aria-label="El resto de bibliotecas" start={4}>
+          {list.slice(3).map((p, i) => (
+            <li key={p.id}>
+              <button type="button" className={p.me ? 'is-me' : ''} onClick={() => onOpen(p.id)}>
+                <b className="gacha-rank__pos">{i + 4}</b>
+                <Avatar name={p.name} src={p.avatar} size={40} />
+                <span className="gacha-rank__name">
+                  {p.name}
+                  <small>{label(p)}</small>
+                </span>
+                <MiniBars rarities={p.rarities} max={max} />
+                {p.best && (
+                  <span className="gacha-rank__best">
+                    <GachaCard card={p.best} mini />
+                  </span>
+                )}
+                <span className="gacha-rank__worth">{eur(p.worth)}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   )
+}
+
+// Cómo se ordena la tabla de cartas (la lista llega ya de mayor a menor valor).
+const CARD_SORTS = {
+  valor: ['Mejores primero', null],
+  dificil: ['Más difíciles de sacar', (a, b) => Number(Boolean(a.fusion)) - Number(Boolean(b.fusion)) || a.normal - b.normal],
+  nombre: ['Nombre A-Z', (a, b) => a.name.localeCompare(b.name, 'es')],
+  libres: ['Libres primero', (a, b) => Number(Boolean(a.owner)) - Number(Boolean(b.owner))],
 }
 
 // Todas las cartas que pueden salir: rareza, probabilidad de que te toque cada una, precio de venta y dueño.
 function CardTable({ list, onOpen }) {
   const [rarity, setRarity] = useState('todas')
   const [owner, setOwner] = useState('todas')
+  const [sort, setSort] = useState('valor')
   const [query, setQuery] = useState('')
   if (!list) return <p className="gacha-empty">Cargando…</p>
   const q = query.trim().toLowerCase()
   const byOwner = { todas: () => true, con: (c) => c.owner, libres: (c) => !c.owner, mias: (c) => c.owner?.me }
-  const shown = list.filter(
+  const sorter = CARD_SORTS[sort][1]
+  const found = list.filter(
     (c) =>
       (rarity === 'todas' || c.rarity === rarity) &&
       byOwner[owner](c) &&
       (!q || `${c.name} ${c.series} ${c.owner?.name ?? ''}`.toLowerCase().includes(q)),
   )
+  const shown = sorter ? [...found].sort(sorter) : found
   const taken = list.filter((c) => c.owner).length
+  const top = Math.max(...list.map((c) => c.normal ?? 0), 1)
   return (
     <section className="gacha-cards" aria-labelledby="cards-title">
       <header className="gacha-cards__head">
         <h2 id="cards-title" className="hub-title">
           Cartas <small>{`${list.length} cartas · ${taken} con dueño · ${list.length - taken} libres`}</small>
         </h2>
-        <div className="gacha-filters">
-          <label className="gacha-select">
-            <span>Buscar</span>
-            <input type="search" value={query} placeholder="Nombre, origen o dueño" onChange={(e) => setQuery(e.target.value)} />
-          </label>
-          <label className="gacha-select">
-            <span>Rareza</span>
-            <select value={rarity} onChange={(e) => setRarity(e.target.value)}>
-              <option value="todas">Todas</option>
-              {RARITIES.map((r) => (
-                <option key={r} value={r}>
-                  {RARITY[r]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="gacha-select">
-            <span>Dueño</span>
-            <select value={owner} onChange={(e) => setOwner(e.target.value)}>
-              <option value="todas">Todas</option>
-              <option value="con">Con dueño</option>
-              <option value="libres">Libres</option>
-              <option value="mias">Mías</option>
-            </select>
-          </label>
-        </div>
+        <label className="gacha-select gacha-select--search">
+          <span>Buscar</span>
+          <input type="search" value={query} placeholder="Nombre, origen o dueño" onChange={(e) => setQuery(e.target.value)} />
+        </label>
       </header>
+      <div className="gacha-toolbar">
+        <div className="gacha-chips" role="group" aria-label="Filtrar por rareza">
+          <button type="button" className="gacha-chip" aria-pressed={rarity === 'todas'} onClick={() => setRarity('todas')}>
+            Todas
+          </button>
+          {RARITIES.map((r) => (
+            <button key={r} type="button" className={`gacha-chip gacha-chip--${r}`} aria-pressed={rarity === r} onClick={() => setRarity(r)}>
+              <Gem rarity={r} />
+              {RARITY[r]}
+            </button>
+          ))}
+        </div>
+        <div className="gacha-chips" role="group" aria-label="Filtrar por dueño">
+          {[
+            ['todas', 'Todas'],
+            ['con', 'Con dueño'],
+            ['libres', 'Libres'],
+            ['mias', 'Mías'],
+          ].map(([id, name]) => (
+            <button key={id} type="button" className="gacha-chip gacha-chip--owner" aria-pressed={owner === id} onClick={() => setOwner(id)}>
+              {name}
+            </button>
+          ))}
+        </div>
+        <label className="gacha-select">
+          <span>Orden</span>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            {Object.entries(CARD_SORTS).map(([id, [name]]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="gacha-table-wrap">
         <table className="gacha-table">
           <thead>
@@ -550,8 +848,8 @@ function CardTable({ list, onOpen }) {
           </thead>
           <tbody>
             {shown.map((c) => (
-              <tr key={c.id} className={c.owner?.me ? 'is-mine' : ''}>
-                <td>
+              <tr key={c.id} className={`gacha-table__row--${c.rarity} ${c.owner?.me ? 'is-mine' : ''}`}>
+                <td className="gacha-table__main">
                   <span className="gacha-table__card">
                     <GachaCard card={c} mini />
                     <span>
@@ -571,13 +869,29 @@ function CardTable({ list, onOpen }) {
                     </span>
                   </span>
                 </td>
-                <td className={`gacha-roll__name--${c.rarity}`}>
-                  <em>{RARITY[c.rarity]}</em>
+                <td data-label="Rareza">
+                  <span className={`gacha-tag gacha-tag--${c.rarity}`}>
+                    <Gem rarity={c.rarity} />
+                    {RARITY[c.rarity]}
+                  </span>
                 </td>
-                <td className="is-num">{c.fusion ? '—' : pct(c.normal)}</td>
-                <td className="is-num">{c.premium ? pct(c.premium) : '—'}</td>
-                <td className="is-num">{eur(c.price)}</td>
-                <td>
+                <td className="is-num" data-label="Prob. tirada">
+                  {c.fusion ? (
+                    '—'
+                  ) : (
+                    <span className="gacha-prob">
+                      <b>{pct(c.normal)}</b>
+                      <i style={{ width: `${Math.max(6, Math.sqrt(c.normal / top) * 100)}%` }} />
+                    </span>
+                  )}
+                </td>
+                <td className="is-num" data-label="Prob. premium">
+                  {c.premium ? pct(c.premium) : '—'}
+                </td>
+                <td className="is-num gacha-table__price" data-label="Venta">
+                  {eur(c.price)}
+                </td>
+                <td className="gacha-table__powers">
                   <GachaPowers powers={c.powers} />
                 </td>
               </tr>
@@ -697,7 +1011,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const started = Date.now()
     if (!reduced) {
-      setSummon({ stage: 'charge' })
+      setSummon({ stage: 'charge', premium })
       playSpin(CHARGE_MS)
     }
     const body = await act('tirar', { pago: true, premium })
@@ -775,6 +1089,11 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     if (initialTab === 'cartas') load('cartas')
   }, [initialTab, load])
 
+  // El álbum necesita el catálogo entero (totales por rareza, huecos y fusiones): se pide una vez al abrirlo.
+  useEffect(() => {
+    if (tab === 'coleccion' && !cards) load('cartas')
+  }, [tab, cards, load])
+
   const prices = state?.prices
   const premiumPrice = prices?.premium ?? 20000
   const rollPrice = prices?.roll ?? 2000
@@ -831,16 +1150,11 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       )}
 
       {tab === 'tirar' && (
-        <>
-          <div className="gacha-home">
-            {/* Portal de invocación: los dos botones de tirar pagando, con lo que puede salir en cada uno. */}
-            <section className="gacha-portal" aria-labelledby="roll-title">
-              <span className="gacha-portal__ring" aria-hidden="true" />
-              <span className="gacha-portal__fan" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
+        <div className="gacha-home">
+          {/* Portal de invocación: la escena, y a su lado los dos botones de tirar pagando con lo que puede salir en cada uno. */}
+          <section className={`gacha-portal ${busy ? 'is-busy' : ''} ${state?.pending && !summon ? 'has-pending' : ''}`} aria-labelledby="roll-title">
+            <Altar />
+            <div className="gacha-portal__body">
               <h2 id="roll-title" className="hub-title">
                 Invocar <small>tú decides si te la quedas</small>
               </h2>
@@ -849,8 +1163,12 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
               ) : (
                 <div className="gacha-portal__btns">
                   <button type="button" className="gacha-roll-btn" disabled={busy || !state || balance < rollPrice} onClick={() => roll(false)}>
-                    <b>Tirar</b>
-                    <small>{eur(rollPrice)} · cualquier rareza</small>
+                    <span className="gacha-roll-btn__pack" aria-hidden="true" />
+                    <span className="gacha-roll-btn__txt">
+                      <b>Tirar</b>
+                      <small>cualquier rareza</small>
+                    </span>
+                    <span className="gacha-roll-btn__price">{eur(rollPrice)}</span>
                     <Odds kind="normal" />
                   </button>
                   <button
@@ -859,65 +1177,70 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                     disabled={busy || !state || balance < premiumPrice}
                     onClick={() => roll(true)}
                   >
-                    <b>✦ Premium</b>
-                    <small>{eur(premiumPrice)} · épica o mejor</small>
+                    <span className="gacha-roll-btn__pack" aria-hidden="true" />
+                    <span className="gacha-roll-btn__txt">
+                      <b>✦ Premium</b>
+                      <small>épica o mejor</small>
+                    </span>
+                    <span className="gacha-roll-btn__price">{eur(premiumPrice)}</span>
                     <Odds kind="premium" />
                   </button>
                 </div>
               )}
-            </section>
+            </div>
+          </section>
 
-            <section className="gacha-mesa" aria-labelledby="mesa-title">
-              <h2 id="mesa-title" className="hub-title">
-                La mesa <small>gratis y sin límite · {state?.nextDropAt ? `otra carta en ${wait(state.nextDropAt - t)}` : 'llena'}</small>
-              </h2>
-              {/* key: con el imán del carrusel (móvil), al llegar una carta el navegador seguía enganchado al hueco que
-                  ocupaba el primer puesto y la lista salía desplazada; con otra lista vuelve al principio. */}
-              <ul className="gacha-mesa__cards" key={table.map((entry) => entry.id).join()}>
-                {table.map((entry) => (
-                  <li key={entry.id}>
-                    <GachaCard card={entry.card} />
-                    <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => take(entry.id)}>
-                      Coger
-                    </button>
-                  </li>
-                ))}
-                {/* Huecos libres: el primero dice cuándo sale la siguiente. */}
-                {range(Math.max(0, (state?.tableMax ?? 5) - table.length)).map((i) => (
-                  <li key={`hueco-${i}`} className="gacha-mesa__slot" aria-hidden="true">
-                    <span>{i === 0 && state?.nextDropAt ? `Sale en ${wait(state.nextDropAt - t)}` : 'Hueco libre'}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {/* La mesa, como un escaparate: cada carta bajo su foco, del color de su rareza. */}
+          <section className="gacha-mesa" aria-labelledby="mesa-title">
+            <h2 id="mesa-title" className="hub-title">
+              La mesa <small>gratis y sin límite · {state?.nextDropAt ? `otra carta en ${wait(state.nextDropAt - t)}` : 'llena'}</small>
+            </h2>
+            {/* key: con el imán del carrusel (móvil), al llegar una carta el navegador seguía enganchado al hueco que
+                ocupaba el primer puesto y la lista salía desplazada; con otra lista vuelve al principio. */}
+            <ul className="gacha-mesa__cards" key={table.map((entry) => entry.id).join()}>
+              {table.map((entry) => (
+                <li key={entry.id} className={`gacha-mesa__item gacha-mesa__item--${entry.card.rarity}`}>
+                  <GachaCard card={entry.card} />
+                  <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => take(entry.id)}>
+                    Coger
+                  </button>
+                </li>
+              ))}
+              {/* Huecos libres: el primero dice cuándo sale la siguiente. */}
+              {range(Math.max(0, (state?.tableMax ?? 5) - table.length)).map((i) => (
+                <li key={`hueco-${i}`} className="gacha-mesa__slot" aria-hidden="true">
+                  <span>{i === 0 && state?.nextDropAt ? `Sale en ${wait(state.nextDropAt - t)}` : 'Hueco libre'}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-            <section className="gacha-feed" aria-labelledby="feed-title">
-              <h2 id="feed-title" className="hub-title">
-                Canal <small>lo último que ha pasado</small>
-              </h2>
-              {feed.length === 0 ? (
-                <p className="gacha-empty">{state ? 'Todavía no ha pasado nada.' : 'Cargando…'}</p>
-              ) : (
-                <>
-                  <ul className="gacha-rolls">
-                    {(feedOpen ? feed : feed.slice(0, FEED_SHOWN)).map((move) => (
-                      <Move key={move.id} move={move} t={t} onOpen={openCollection} />
-                    ))}
-                  </ul>
-                  {feed.length > FEED_SHOWN && (
-                    <button type="button" className="hub-btn gacha-feed__more" onClick={() => setFeedOpen((v) => !v)}>
-                      {feedOpen ? 'Ver menos' : `Ver más (${feed.length - FEED_SHOWN})`}
-                    </button>
-                  )}
-                </>
-              )}
-            </section>
-          </div>
-        </>
+          <section className="gacha-feed" aria-labelledby="feed-title">
+            <h2 id="feed-title" className="hub-title">
+              Canal <small>lo último que ha pasado</small>
+            </h2>
+            {feed.length === 0 ? (
+              <p className="gacha-empty">{state ? 'Todavía no ha pasado nada.' : 'Cargando…'}</p>
+            ) : (
+              <>
+                <ul className="gacha-rolls">
+                  {(feedOpen ? feed : feed.slice(0, FEED_SHOWN)).map((move) => (
+                    <Move key={move.id} move={move} t={t} onOpen={openCollection} />
+                  ))}
+                </ul>
+                {feed.length > FEED_SHOWN && (
+                  <button type="button" className="hub-btn gacha-feed__more" onClick={() => setFeedOpen((v) => !v)}>
+                    {feedOpen ? 'Ver menos' : `Ver más (${feed.length - FEED_SHOWN})`}
+                  </button>
+                )}
+              </>
+            )}
+          </section>
+        </div>
       )}
 
       {tab === 'coleccion' && (
-        <Library data={collection} busy={busy} onSell={(card) => act('vender', { card }).then(() => load('coleccion'))} />
+        <Library data={collection} catalog={cards} busy={busy} onSell={(card) => act('vender', { card }).then(() => load('coleccion'))} />
       )}
       {tab === 'colecciones' && <Collectors list={ranking} onOpen={openCollection} />}
       {tab === 'cartas' && <CardTable list={cards} onOpen={openCollection} />}

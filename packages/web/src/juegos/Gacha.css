@@ -7,25 +7,11 @@
   --r-epica: #b06cff;
   --r-mitica: #f2c14e;
   --r-unica: #ff3b5c;
+  --rainbow: linear-gradient(120deg, #ff5c7a, #ffb347, #f6ff6a, #5dffa0, #4dc3ff, #b07cff, #ff5c7a);
 }
 /* La mítica (Mario) reutiliza los efectos de la legendaria con su color. */
 .juegos-root [class*='--unica'] {
   --r-mitica: var(--r-unica);
-}
-/* Y su borde cambia de color sin parar. */
-.juegos-root .gacha-card--unica {
-  animation: gacha-mythic 2.4s linear infinite;
-}
-@keyframes gacha-mythic {
-  0%,
-  100% {
-    border-color: var(--r-unica);
-    box-shadow: 0 0 22px color-mix(in srgb, var(--r-unica) 60%, transparent);
-  }
-  50% {
-    border-color: #ff9a3c;
-    box-shadow: 0 0 34px color-mix(in srgb, #ff9a3c 70%, transparent);
-  }
 }
 
 .juegos-root .app.gacha-app {
@@ -85,113 +71,76 @@
   margin: 0;
 }
 
-/* --- Tirar (izquierda) y canal (derecha) --- */
-.juegos-root .gacha-play {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: clamp(16px, 2.6vw, 36px);
-  align-items: start;
-}
-.juegos-root .gacha-panel {
-  position: sticky;
-  top: 12px;
-  display: grid;
-  gap: 14px;
-}
-.juegos-root .gacha-roll-btn {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  min-height: 84px;
-  padding: 12px 20px;
-  border: 0;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #e2bd63, var(--brass) 55%, #a7822f);
-  box-shadow:
-    0 6px 0 #7a5e1f,
-    0 14px 30px rgba(0, 0, 0, 0.35);
-  font: inherit;
-  color: #1b1405;
-  cursor: pointer;
-  transition:
-    transform 0.12s,
-    box-shadow 0.12s;
-}
-.juegos-root .gacha-roll-btn b {
-  font-family: var(--display);
-  font-size: 34px;
-  font-weight: 400;
-  line-height: 1;
-}
-.juegos-root .gacha-roll-btn small {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.8;
-}
-.juegos-root .gacha-roll-btn:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow:
-    0 2px 0 #7a5e1f,
-    0 8px 20px rgba(0, 0, 0, 0.35);
-}
-.juegos-root .gacha-roll-btn:disabled {
-  cursor: default;
-  filter: saturate(0.3);
-  opacity: 0.55;
-}
-.juegos-root .gacha-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.juegos-root .gacha-actions .hub-btn {
-  flex: 1 1 140px;
-  min-height: 40px;
-  padding: 0 14px;
-  font-size: 14px;
-}
-.juegos-root .gacha-actions .gacha-premium {
-  flex-basis: 100%;
-  min-height: 46px;
-  border-color: var(--r-mitica);
-  background: linear-gradient(120deg, rgba(242, 193, 78, 0.28), rgba(176, 108, 255, 0.28));
-  font-size: 16px;
-}
 
-/* --- Carta --- */
+/* --- Carta coleccionable: marco por rareza, arte, placa con el nombre y foil holográfico en las épicas y mejores --- */
 .juegos-root .gacha-card {
   --edge: var(--r-comun);
+  --frame: linear-gradient(145deg, #ece6d3, #8f8977 52%, #d6cfba);
+  --pad: 4px;
   position: relative;
   display: grid;
   grid-template-rows: auto 1fr;
   margin: 0;
+  padding: var(--pad);
   overflow: hidden;
-  border: 2px solid color-mix(in srgb, var(--edge) 70%, transparent);
-  border-radius: 12px;
-  background: var(--baize-deep);
+  border-radius: 14px;
+  background: var(--frame);
+  background-size: 220% 220%;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
+  /* Inclinación con el ratón (la pone GachaCard.jsx con --rx y --ry). */
+  transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition:
+    transform 0.16s ease-out,
+    box-shadow 0.25s;
 }
 .juegos-root .gacha-card--rara {
   --edge: var(--r-rara);
+  --frame: linear-gradient(145deg, #c6e3ff, #3b7fd6 50%, #8cc4ff);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.38),
+    0 0 12px color-mix(in srgb, var(--r-rara) 30%, transparent);
 }
 .juegos-root .gacha-card--epica {
   --edge: var(--r-epica);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--r-epica) 35%, transparent);
+  --frame: linear-gradient(145deg, #ecd0ff, #8a3fe0 48%, #c78fff);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    0 0 18px color-mix(in srgb, var(--r-epica) 50%, transparent);
 }
-.juegos-root .gacha-card--mitica,
-.juegos-root .gacha-card--unica {
+.juegos-root .gacha-card--mitica {
   --edge: var(--r-mitica);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--r-mitica) 50%, transparent);
+  --frame: linear-gradient(145deg, #fff5c0, #e0a030 38%, #fff0a0 56%, #b57d22);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    0 0 24px color-mix(in srgb, #f2c14e 60%, transparent);
 }
-/* El brillo de las míticas: el ::after es de la carta (position: relative), nunca de otra cosa. */
+/* Mítica: marco de arcoíris que corre sin parar. */
+.juegos-root .gacha-card--unica {
+  --edge: #ff6b9a;
+  --frame: var(--rainbow);
+  background-size: 300% 300%;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.4),
+    0 0 22px rgba(255, 92, 154, 0.5),
+    0 0 40px rgba(77, 195, 255, 0.3);
+  animation: gacha-rainbow 7s linear infinite;
+}
+@keyframes gacha-rainbow {
+  to {
+    background-position: 300% 0;
+  }
+}
+/* Destello que cruza las legendarias y las míticas (el ::after es de la carta, que es position: relative). */
 .juegos-root .gacha-card--mitica::after,
 .juegos-root .gacha-card--unica::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 3;
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 30%, rgba(255, 245, 200, 0.35) 45%, transparent 60%);
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 245, 200, 0.4) 46%, transparent 60%);
   background-size: 250% 100%;
-  animation: gacha-shine 3.2s ease-in-out infinite;
+  animation: gacha-shine 3.4s ease-in-out infinite;
 }
 @keyframes gacha-shine {
   from {
@@ -202,10 +151,22 @@
   }
 }
 .juegos-root .gacha-card__img {
+  position: relative;
   display: block;
   aspect-ratio: 3 / 4;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px 10px 0 0;
+  background: #0a1b27;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+/* Viñeta que funde el arte con la placa del nombre. */
+.juegos-root .gacha-card__img::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 22%, transparent 68%, rgba(5, 15, 22, 0.7));
 }
 .juegos-root .gacha-card__img img {
   display: block;
@@ -213,6 +174,38 @@
   height: 100%;
   object-fit: cover;
   object-position: center 20%;
+}
+/* Foil holográfico: franjas de arcoíris y un brillo que siguen al ratón (--mx, --my); quieto si no hay ratón. */
+.juegos-root .gacha-card--epica .gacha-card__img::after,
+.juegos-root .gacha-card--mitica .gacha-card__img::after,
+.juegos-root .gacha-card--unica .gacha-card__img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 22%, rgba(255, 255, 255, 0.7) 40%, transparent 54%),
+    repeating-linear-gradient(115deg, #ff5c7a 0 6%, #ffd25e 6% 12%, #5dffa0 12% 18%, #4dc3ff 18% 24%, #b07cff 24% 30%);
+  background-size:
+    320% 100%,
+    260% 260%;
+  background-position:
+    var(--mx, 25%) 0,
+    var(--mx, 35%) var(--my, 35%);
+  background-blend-mode: soft-light, normal;
+  mix-blend-mode: color-dodge;
+  opacity: 0.2;
+  transition: opacity 0.25s;
+}
+.juegos-root .gacha-card--mitica .gacha-card__img::after {
+  opacity: 0.26;
+}
+.juegos-root .gacha-card--unica .gacha-card__img::after {
+  opacity: 0.34;
+}
+.juegos-root .gacha-card--mini .gacha-card__img::after {
+  opacity: 0.16;
 }
 .juegos-root .gacha-card__fallback {
   display: grid;
@@ -225,23 +218,45 @@
 .juegos-root .gacha-card--mini .gacha-card__fallback {
   font-size: 18px;
 }
+/* Sello de rareza: las estrellas, sobre el arte. */
+.juegos-root .gacha-card__seal {
+  position: absolute;
+  z-index: 3;
+  left: 6px;
+  top: 6px;
+  padding: 2px 6px 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--edge) 80%, transparent);
+  border-radius: 999px;
+  background: rgba(6, 18, 27, 0.78);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  color: var(--edge);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--edge) 60%, transparent);
+}
 .juegos-root .gacha-card figcaption {
   display: grid;
+  align-content: start;
   gap: 2px;
   min-width: 0;
-  padding: 8px 10px 10px;
+  padding: 8px 9px 9px;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #11293a, #0a1c29);
 }
 .juegos-root .gacha-card figcaption b {
+  display: -webkit-box;
   overflow: hidden;
+  font-family: var(--display);
   font-size: 15px;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 400;
+  line-height: 1.15;
   color: var(--ivory);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .juegos-root .gacha-card figcaption small {
   overflow: hidden;
-  font-size: 12px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
@@ -249,15 +264,29 @@
 .juegos-root .gacha-card__tags {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 4px 8px;
-  margin-top: 4px;
+  margin-top: 5px;
   font-size: 12px;
-  color: var(--muted);
 }
+/* El sello de rareza de la placa: una pastilla con el marco de la carta. */
 .juegos-root .gacha-card__tags em {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--frame);
+  background-size: 300% 300%;
+  font-size: 10px;
   font-style: normal;
-  font-weight: 700;
-  color: var(--edge);
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #1a1408;
+}
+.juegos-root .gacha-card__price {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #f0cf7a;
 }
 .juegos-root .gacha-card__odds {
   margin-top: 2px;
@@ -265,17 +294,43 @@
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+/* Mini: solo el arte con el marco fino; sin inclinación ni luces fuertes (se usa en listas y sobre las fotos). */
 .juegos-root .gacha-card--mini {
+  --pad: 2px;
   grid-template-rows: auto;
   border-radius: 9px;
+  transform: none;
+  transition: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.juegos-root .gacha-card--mini.gacha-card--epica,
+.juegos-root .gacha-card--mini.gacha-card--mitica,
+.juegos-root .gacha-card--mini.gacha-card--unica {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    0 0 8px color-mix(in srgb, var(--edge) 55%, transparent);
+}
+.juegos-root .gacha-card--mini .gacha-card__img {
+  border-radius: 7px;
 }
 .juegos-root .gacha-card--big {
   width: min(230px, 100%);
 }
 .juegos-root .gacha-card--big figcaption b {
-  font-size: 18px;
-  white-space: normal;
+  font-size: 19px;
+  -webkit-line-clamp: 3;
 }
+@media (hover: hover) {
+  .juegos-root .gacha-card:not(.gacha-card--mini):hover {
+    box-shadow:
+      0 16px 30px rgba(0, 0, 0, 0.5),
+      0 0 26px color-mix(in srgb, var(--edge) 55%, transparent);
+  }
+  .juegos-root .gacha-card:not(.gacha-card--mini):hover .gacha-card__img::after {
+    opacity: 0.6;
+  }
+}
+
 
 /* --- Tu última tirada: entra girando y con un destello del color de su rareza --- */
 .juegos-root .gacha-reveal {
@@ -303,7 +358,7 @@
   --glow: var(--r-mitica);
 }
 .juegos-root .gacha-reveal .gacha-card {
-  animation: gacha-flip 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  animation: gacha-flip 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.15) backwards;
 }
 .juegos-root .gacha-reveal--mitica .gacha-card,
 .juegos-root .gacha-reveal--unica .gacha-card {
@@ -390,33 +445,7 @@
   color: var(--muted);
 }
 
-/* Antes de la primera tirada: tres cartas boca abajo. */
-.juegos-root .gacha-placeholder {
-  display: flex;
-  justify-content: center;
-  padding: 18px 0 6px;
-}
-.juegos-root .gacha-placeholder span {
-  width: 92px;
-  aspect-ratio: 3 / 4;
-  margin: 0 -14px;
-  border: 2px solid rgba(241, 233, 214, 0.25);
-  border-radius: 12px;
-  background:
-    repeating-linear-gradient(45deg, rgba(200, 162, 75, 0.14) 0 6px, transparent 6px 12px),
-    var(--baize-deep);
-}
-.juegos-root .gacha-placeholder span:nth-child(1) {
-  transform: rotate(-12deg) translateY(8px);
-}
-.juegos-root .gacha-placeholder span:nth-child(2) {
-  z-index: 1;
-  border-color: color-mix(in srgb, var(--r-epica) 70%, transparent);
-}
-.juegos-root .gacha-placeholder span:nth-child(3) {
-  border-color: color-mix(in srgb, var(--r-mitica) 70%, transparent);
-  transform: rotate(12deg) translateY(8px);
-}
+
 
 /* --- Canal de tiradas --- */
 .juegos-root .gacha-rolls {
@@ -539,119 +568,128 @@
   transition: transform 1s linear;
 }
 
-/* --- Biblioteca: titular y estantes por rareza --- */
-.juegos-root .gacha-library {
-  display: grid;
-  gap: 20px;
+/* --- Gemas, sellos y chips: el lenguaje de color de las rarezas en toda la pantalla --- */
+.juegos-root .gacha-gem {
+  --gem: var(--r-comun);
+  display: inline-block;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  rotate: 45deg;
+  border-radius: 2px;
+  background: var(--gem);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--gem) 70%, transparent);
 }
-.juegos-root .gacha-lib-head {
+.juegos-root .gacha-gem--rara {
+  --gem: var(--r-rara);
+}
+.juegos-root .gacha-gem--epica {
+  --gem: var(--r-epica);
+}
+.juegos-root .gacha-gem--mitica {
+  --gem: #f2c14e;
+}
+.juegos-root .gacha-gem--unica {
+  background: var(--rainbow);
+  background-size: 300% 300%;
+  box-shadow: 0 0 8px rgba(255, 130, 200, 0.7);
+  animation: gacha-rainbow 5s linear infinite;
+}
+.juegos-root .gacha-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.juegos-root .gacha-chips {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+}
+.juegos-root .gacha-chip {
+  --tone: var(--brass);
+  display: inline-flex;
   align-items: center;
-  gap: 12px 18px;
-  padding: 16px 18px;
-  border: 1px solid rgba(241, 233, 214, 0.14);
-  border-radius: 18px;
-  background:
-    radial-gradient(ellipse at 0% 0%, rgba(242, 193, 78, 0.12), transparent 60%),
-    rgba(12, 39, 55, 0.5);
-}
-.juegos-root .gacha-lib-head__text {
-  display: grid;
-  flex: 1 1 260px;
-  gap: 2px;
-  min-width: 0;
-}
-.juegos-root .gacha-lib-head h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(24px, 3vw, 32px);
-  font-weight: 400;
-  color: var(--ivory);
-}
-.juegos-root .gacha-lib-line {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--ivory);
-}
-.juegos-root .gacha-lib-meta {
-  margin: 0;
-  font-size: 14px;
-  color: var(--muted);
-}
-.juegos-root .gacha-lib-copy {
-  min-height: 38px;
-  font-size: 14px;
-}
-.juegos-root .gacha-shelf {
-  display: grid;
-  gap: 10px;
-}
-.juegos-root .gacha-shelf h3 {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 0;
-  padding-bottom: 6px;
-  border-bottom: 1px solid color-mix(in srgb, var(--shelf, var(--r-comun)) 40%, transparent);
-  font-family: var(--display);
-  font-size: 22px;
-  font-weight: 400;
-  color: var(--shelf, var(--r-comun));
-}
-.juegos-root .gacha-shelf h3 small {
-  font-family: var(--sans);
-  font-size: 14px;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(241, 233, 214, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  font: inherit;
+  font-size: 13px;
   font-weight: 600;
   color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
-.juegos-root .gacha-shelf--mitica,
-.juegos-root .gacha-shelf--unica {
-  --shelf: var(--r-mitica);
+.juegos-root .gacha-chip small {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
 }
-.juegos-root .gacha-shelf--epica {
-  --shelf: var(--r-epica);
+.juegos-root .gacha-chip--rara {
+  --tone: var(--r-rara);
 }
-.juegos-root .gacha-shelf--rara {
-  --shelf: var(--r-rara);
+.juegos-root .gacha-chip--epica {
+  --tone: var(--r-epica);
 }
-.juegos-root .gacha-filters {
+.juegos-root .gacha-chip--mitica {
+  --tone: #f2c14e;
+}
+.juegos-root .gacha-chip--unica {
+  --tone: #ff6b9a;
+}
+.juegos-root .gacha-chip--comun {
+  --tone: var(--r-comun);
+}
+.juegos-root .gacha-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.juegos-root .gacha-chip[aria-pressed='true'] {
+  border-color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 20%, transparent);
+  color: var(--ivory);
+}
+@media (hover: hover) {
+  .juegos-root .gacha-chip:not(:disabled):hover {
+    border-color: color-mix(in srgb, var(--tone) 70%, transparent);
+    color: var(--ivory);
+  }
+}
+.juegos-root .gacha-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 16px;
 }
-.juegos-root .gacha-filters .hub-segs {
-  flex: 0 1 420px;
-}
 .juegos-root .gacha-select {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--muted);
 }
-.juegos-root .gacha-select select {
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid rgba(241, 233, 214, 0.3);
-  border-radius: 10px;
-  background: var(--baize-deep);
+.juegos-root .gacha-select select,
+.juegos-root .gacha-select input {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(241, 233, 214, 0.25);
+  border-radius: 999px;
+  background: rgba(8, 22, 32, 0.8);
   font: inherit;
+  font-weight: 500;
   color: var(--ivory);
 }
-.juegos-root .gacha-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.juegos-root .gacha-grid > li {
-  display: grid;
-  gap: 6px;
+.juegos-root .gacha-select input {
+  width: min(240px, 60vw);
 }
 .juegos-root .gacha-who {
   padding: 0;
@@ -683,35 +721,649 @@
   color: var(--ivory);
 }
 
-/* --- Ranking --- */
+/* --- Mi biblioteca: el álbum --- */
+.juegos-root .gacha-library {
+  display: grid;
+  gap: 18px;
+}
+/* Portada: avatar, título, lo que vale y compartir. */
+.juegos-root .gacha-lib-head {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  padding: clamp(16px, 2vw, 24px) clamp(16px, 2vw, 26px) clamp(16px, 2vw, 24px) clamp(22px, 2.4vw, 32px);
+  overflow: hidden;
+  border: 1px solid rgba(200, 162, 75, 0.4);
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(242, 193, 78, 0.2), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(176, 108, 255, 0.2), transparent 55%),
+    linear-gradient(180deg, rgba(10, 30, 44, 0.92), rgba(6, 16, 26, 0.94));
+  box-shadow: 0 18px 40px rgba(2, 8, 14, 0.4);
+}
+/* Lomo del álbum. */
+.juegos-root .gacha-lib-head::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  background: linear-gradient(180deg, #fff2bd, #e0a030 40%, #8a6420);
+  box-shadow: 2px 0 12px rgba(242, 193, 78, 0.5);
+}
+.juegos-root .gacha-lib-head__who {
+  display: grid;
+  padding: 4px;
+  border-radius: 50%;
+  background: conic-gradient(from 20deg, #fff2bd, #e0a030, #8a6420, #e0a030, #fff2bd);
+  box-shadow: 0 0 22px rgba(242, 193, 78, 0.35);
+}
+.juegos-root .gacha-lib-head__text {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 3px;
+  min-width: 0;
+}
+.juegos-root .gacha-lib-head__eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.juegos-root .gacha-lib-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(28px, 3.4vw, 42px);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--ivory);
+}
+.juegos-root .gacha-lib-line {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+.juegos-root .gacha-lib-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+}
+.juegos-root .gacha-lib-stats > div {
+  min-width: 92px;
+  padding: 8px 14px;
+  border: 1px solid rgba(241, 233, 214, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+.juegos-root .gacha-lib-stats dt {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .gacha-lib-stats dd {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--ivory);
+}
+.juegos-root .gacha-lib-stats dd small {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--muted);
+}
+.juegos-root .gacha-lib-stats .is-worth {
+  border-color: rgba(255, 210, 94, 0.45);
+  background: linear-gradient(160deg, rgba(255, 210, 94, 0.18), rgba(255, 255, 255, 0.03));
+}
+.juegos-root .gacha-lib-stats .is-worth dd {
+  color: #ffd25e;
+}
+.juegos-root .gacha-lib-copy {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+/* Avance por rareza: cuántas tienes frente al total. */
+.juegos-root .gacha-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .gacha-progress__item {
+  --tone: var(--r-comun);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 11px 13px 12px;
+  border: 1px solid color-mix(in srgb, var(--tone) 42%, transparent);
+  border-radius: 16px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tone) 16%, transparent), rgba(8, 22, 32, 0.65));
+}
+.juegos-root .gacha-progress__item--rara {
+  --tone: var(--r-rara);
+}
+.juegos-root .gacha-progress__item--epica {
+  --tone: var(--r-epica);
+}
+.juegos-root .gacha-progress__item--mitica {
+  --tone: #f2c14e;
+}
+.juegos-root .gacha-progress__item--unica {
+  --tone: #ff6b9a;
+}
+.juegos-root .gacha-progress__item.is-none {
+  opacity: 0.7;
+}
+.juegos-root .gacha-progress__name {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tone);
+}
+.juegos-root .gacha-progress__item b {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ivory);
+}
+.juegos-root .gacha-progress__item b small {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--muted);
+}
+.juegos-root .gacha-progress__bar {
+  grid-column: 1 / -1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.juegos-root .gacha-progress__bar i {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: var(--tone);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tone) 70%, transparent);
+  transform-origin: left;
+  animation: gacha-fill 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.juegos-root .gacha-progress__item--unica .gacha-progress__bar i {
+  background: var(--rainbow);
+  background-size: 300% 100%;
+}
+@keyframes gacha-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Fusiones. */
+.juegos-root .gacha-fusions {
+  display: grid;
+  gap: 10px;
+  padding: 14px clamp(12px, 2vw, 18px) 16px;
+  border: 1px dashed rgba(255, 138, 107, 0.5);
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(255, 138, 107, 0.16), transparent 55%),
+    rgba(8, 22, 32, 0.55);
+}
+.juegos-root .gacha-fusions h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 400;
+  color: #ffb199;
+}
+.juegos-root .gacha-fusions h3 small {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .gacha-fusions ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .gacha-fusions li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(241, 233, 214, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.juegos-root .gacha-fusions li.is-half {
+  border-color: rgba(255, 138, 107, 0.55);
+}
+.juegos-root .gacha-fusions li.is-done {
+  border-color: rgba(255, 210, 94, 0.7);
+  background: linear-gradient(120deg, rgba(255, 210, 94, 0.18), rgba(255, 92, 154, 0.1));
+  box-shadow: 0 0 22px rgba(255, 210, 94, 0.2);
+}
+.juegos-root .gacha-fusions__parts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.juegos-root .gacha-fusions__part-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.juegos-root .gacha-fusions__plus {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.juegos-root .gacha-fusions__part {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  width: 64px;
+  filter: grayscale(1) brightness(0.7);
+  opacity: 0.7;
+}
+.juegos-root .gacha-fusions__part.is-have {
+  filter: none;
+  opacity: 1;
+}
+.juegos-root .gacha-fusions__part .gacha-card,
+.juegos-root .gacha-fusions__result .gacha-card {
+  width: 46px;
+}
+.juegos-root .gacha-fusions__part small {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.juegos-root .gacha-fusions__arrow {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 400;
+  color: #ff8a6b;
+}
+.juegos-root .gacha-fusions__result {
+  display: flex;
+  flex: 1 1 140px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  filter: grayscale(1) brightness(0.7);
+  opacity: 0.75;
+}
+.juegos-root .gacha-fusions__result.is-have {
+  filter: none;
+  opacity: 1;
+}
+.juegos-root .gacha-fusions__result .gacha-card {
+  width: 54px;
+}
+.juegos-root .gacha-fusions__result > span {
+  display: grid;
+  min-width: 0;
+}
+.juegos-root .gacha-fusions__result b {
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--ivory);
+}
+.juegos-root .gacha-fusions__result small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.juegos-root .gacha-fusions li.is-done .gacha-fusions__result small {
+  font-weight: 700;
+  color: #ffd25e;
+}
+
+/* Estantes por rareza. */
+.juegos-root .gacha-shelf {
+  --shelf: var(--r-comun);
+  display: grid;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 4px solid transparent;
+  border-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--shelf) 55%, transparent) 20%, color-mix(in srgb, var(--shelf) 55%, transparent) 80%, transparent) 1;
+}
+.juegos-root .gacha-shelf h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--shelf);
+}
+.juegos-root .gacha-shelf h3 small {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.juegos-root .gacha-shelf--mitica,
+.juegos-root .gacha-shelf--unica {
+  --shelf: #f2c14e;
+}
+.juegos-root .gacha-shelf--unica h3 {
+  background: var(--rainbow);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gacha-rainbow 8s linear infinite;
+}
+.juegos-root .gacha-shelf--epica {
+  --shelf: var(--r-epica);
+}
+.juegos-root .gacha-shelf--rara {
+  --shelf: var(--r-rara);
+}
+.juegos-root .gacha-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 16px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .gacha-grid > li {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.juegos-root .gacha-grid > li.is-fusion .gacha-card {
+  outline: 2px dashed #ff8a6b;
+  outline-offset: 3px;
+}
+/* Huecos: las cartas que faltan, en gris. */
+.juegos-root .gacha-grid.gacha-grid--gaps {
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 12px 10px;
+}
+.juegos-root .gacha-gap {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+.juegos-root .gacha-gap .gacha-card {
+  width: 100%;
+  filter: grayscale(1) brightness(0.5);
+  opacity: 0.8;
+}
+.juegos-root .gacha-gap b {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ivory);
+}
+.juegos-root .gacha-gap small {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+/* --- Bibliotecas: podio y tabla --- */
+.juegos-root .gacha-ranking {
+  display: grid;
+  gap: 14px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+.juegos-root .gacha-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: clamp(8px, 2vw, 20px);
+  margin: 0;
+  padding: 18px 0 0;
+  list-style: none;
+}
+.juegos-root .gacha-podium--1 {
+  grid-template-columns: minmax(0, 320px);
+  justify-content: center;
+}
+.juegos-root .gacha-podium--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.juegos-root .gacha-podium__place {
+  --tone: #ffd25e;
+  --step: linear-gradient(180deg, #fff2bd, #e0a030 55%, #9a6d1c);
+  --h: 78px;
+  min-width: 0;
+}
+.juegos-root .gacha-podium__place--1 {
+  order: 2;
+}
+.juegos-root .gacha-podium__place--2 {
+  --tone: #d6e2ee;
+  --step: linear-gradient(180deg, #f4f8fb, #b9c8d6 55%, #7d8d9c);
+  --h: 56px;
+  order: 1;
+}
+.juegos-root .gacha-podium__place--3 {
+  --tone: #e0a06a;
+  --step: linear-gradient(180deg, #ffd9b0, #cd8a50 55%, #8a5326);
+  --h: 40px;
+  order: 3;
+}
+.juegos-root .gacha-podium--2 .gacha-podium__place--1 {
+  order: 2;
+}
+.juegos-root .gacha-podium__place button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 14px 8px 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tone) 50%, transparent);
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--tone) 30%, transparent), transparent 65%),
+    linear-gradient(180deg, rgba(14, 36, 52, 0.9), rgba(7, 18, 28, 0.95));
+  font: inherit;
+  color: var(--ivory);
+  cursor: pointer;
+}
+.juegos-root .gacha-podium__place--1 button {
+  padding-top: 10px;
+  box-shadow: 0 -10px 40px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+.juegos-root .gacha-podium__place.is-me button {
+  outline: 2px solid color-mix(in srgb, var(--tone) 70%, transparent);
+  outline-offset: -2px;
+}
+.juegos-root .gacha-podium__crown {
+  font-size: 30px;
+  line-height: 1;
+  color: #ffd25e;
+  filter: drop-shadow(0 0 10px rgba(255, 210, 94, 0.8));
+  animation: gacha-crown 2.6s ease-in-out infinite;
+}
+@keyframes gacha-crown {
+  50% {
+    translate: 0 -4px;
+    rotate: 4deg;
+  }
+}
+.juegos-root .gacha-podium__avatar {
+  display: grid;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--step);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--tone) 45%, transparent);
+}
+.juegos-root .gacha-podium__name {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--display);
+  font-size: clamp(16px, 1.8vw, 21px);
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.juegos-root .gacha-podium__count {
+  font-size: 12px;
+  color: var(--muted);
+}
+.juegos-root .gacha-podium__best {
+  width: 48px;
+  margin: 2px 0;
+  rotate: 4deg;
+}
+.juegos-root .gacha-podium__place--1 .gacha-podium__best {
+  width: 58px;
+}
+.juegos-root .gacha-podium__worth {
+  font-family: var(--display);
+  font-size: clamp(17px, 2vw, 22px);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--tone);
+}
+.juegos-root .gacha-podium__step {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  justify-self: stretch;
+  height: var(--h);
+  margin: 8px -8px 0;
+  background: var(--step);
+  font-family: var(--display);
+  font-size: 40px;
+  line-height: 1;
+  color: rgba(26, 20, 8, 0.75);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+/* Barras pequeñas con las cartas de cada rareza. */
+.juegos-root .gacha-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.juegos-root .gacha-bars__col {
+  --tone: var(--r-comun);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.juegos-root .gacha-bars__col--rara {
+  --tone: var(--r-rara);
+}
+.juegos-root .gacha-bars__col--epica {
+  --tone: var(--r-epica);
+}
+.juegos-root .gacha-bars__col--mitica {
+  --tone: #f2c14e;
+}
+.juegos-root .gacha-bars__col--unica {
+  --tone: #ff6b9a;
+}
+.juegos-root .gacha-bars__track {
+  display: flex;
+  align-items: flex-end;
+  width: 12px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.09);
+}
+.juegos-root .gacha-bars__track i {
+  display: block;
+  width: 100%;
+  border-radius: 3px;
+  background: var(--tone);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tone) 60%, transparent);
+}
+.juegos-root .gacha-bars__col--unica i {
+  background: var(--rainbow);
+}
+.juegos-root .gacha-bars__col b {
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--muted);
+}
 .juegos-root .gacha-rank {
   display: grid;
   gap: 8px;
-  max-width: 720px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .juegos-root .gacha-rank button {
   display: grid;
-  grid-template-columns: 28px 40px minmax(0, 1fr) 44px auto;
+  grid-template-columns: 30px 40px minmax(0, 1fr) auto 44px minmax(86px, auto);
   gap: 12px;
   align-items: center;
   width: 100%;
-  padding: 8px 14px;
+  padding: 8px 16px 8px 14px;
   border: 1px solid rgba(241, 233, 214, 0.14);
-  border-radius: 14px;
-  background: rgba(12, 39, 55, 0.5);
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(14, 36, 52, 0.7), rgba(8, 22, 32, 0.6));
   font: inherit;
   text-align: left;
   color: var(--ivory);
   cursor: pointer;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
 }
-.juegos-root .gacha-rank li:nth-child(1) button {
-  border-color: color-mix(in srgb, var(--r-mitica) 55%, transparent);
+@media (hover: hover) {
+  .juegos-root .gacha-rank button:hover {
+    border-color: rgba(242, 193, 78, 0.55);
+    transform: translateX(3px);
+  }
 }
 .juegos-root .gacha-rank button.is-me {
-  background: linear-gradient(90deg, rgba(200, 162, 75, 0.18), rgba(12, 39, 55, 0.5));
+  border-color: rgba(200, 162, 75, 0.6);
+  background: linear-gradient(90deg, rgba(200, 162, 75, 0.22), rgba(8, 22, 32, 0.6));
 }
 .juegos-root .gacha-rank__pos {
   font-family: var(--display);
@@ -722,24 +1374,29 @@
 .juegos-root .gacha-rank__name {
   display: grid;
   min-width: 0;
+  font-weight: 600;
 }
 .juegos-root .gacha-rank__name small {
   overflow: hidden;
   font-size: 12px;
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
 }
 .juegos-root .gacha-rank__best .gacha-card {
-  width: 44px;
+  width: 38px;
 }
 .juegos-root .gacha-rank__worth {
+  font-family: var(--display);
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
-  color: var(--brass);
+  color: #ffd25e;
 }
 
-/* --- Tabla de todas las cartas --- */
+/* --- Cartas: la tabla de todas --- */
 .juegos-root .gacha-cards {
   display: grid;
   gap: 12px;
@@ -754,46 +1411,60 @@
 .juegos-root .gacha-cards__head .hub-title {
   margin: 0;
 }
-.juegos-root .gacha-select input {
-  width: min(220px, 50vw);
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid rgba(241, 233, 214, 0.3);
-  border-radius: 10px;
-  background: var(--baize-deep);
-  font: inherit;
-  color: var(--ivory);
-}
 .juegos-root .gacha-table-wrap {
-  max-height: min(70svh, 720px);
+  max-height: min(72svh, 760px);
   overflow: auto;
-  border: 1px solid rgba(241, 233, 214, 0.12);
-  border-radius: 14px;
-  background: rgba(12, 39, 55, 0.45);
+  border: 1px solid rgba(241, 233, 214, 0.14);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(10, 28, 41, 0.75), rgba(6, 16, 26, 0.85));
 }
 .juegos-root .gacha-table {
   width: 100%;
-  min-width: 620px;
+  min-width: 760px;
   border-collapse: collapse;
   font-size: 14px;
 }
 .juegos-root .gacha-table th {
   position: sticky;
   top: 0;
-  z-index: 1;
-  padding: 10px 12px;
-  background: #0f2c3b;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  z-index: 2;
+  padding: 12px;
+  background: #0d2434;
+  box-shadow: 0 1px 0 rgba(241, 233, 214, 0.14);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-align: left;
   text-transform: uppercase;
   color: var(--muted);
 }
 .juegos-root .gacha-table td {
-  padding: 6px 12px;
-  border-top: 1px solid rgba(241, 233, 214, 0.08);
+  padding: 8px 12px;
+  border-top: 1px solid rgba(241, 233, 214, 0.07);
+  vertical-align: middle;
   color: var(--ivory);
+}
+.juegos-root .gacha-table tbody tr {
+  --tone: var(--r-comun);
+  transition: background 0.15s;
+}
+.juegos-root .gacha-table__row--rara {
+  --tone: var(--r-rara);
+}
+.juegos-root .gacha-table__row--epica {
+  --tone: var(--r-epica);
+}
+.juegos-root .gacha-table__row--mitica {
+  --tone: #f2c14e;
+}
+.juegos-root .gacha-table__row--unica {
+  --tone: #ff6b9a;
+}
+.juegos-root .gacha-table tbody tr:hover {
+  background: color-mix(in srgb, var(--tone) 9%, transparent);
+}
+.juegos-root .gacha-table td:first-child {
+  box-shadow: inset 4px 0 0 var(--tone);
 }
 .juegos-root .gacha-table .is-num {
   font-variant-numeric: tabular-nums;
@@ -803,24 +1474,81 @@
 .juegos-root .gacha-table__card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 .juegos-root .gacha-table__card .gacha-card {
-  flex: 0 0 34px;
-  border-width: 1.5px;
-  border-radius: 6px;
+  flex: 0 0 50px;
 }
 .juegos-root .gacha-table__card > span {
   display: grid;
   min-width: 0;
 }
+.juegos-root .gacha-table__card > span > b {
+  font-size: 15px;
+}
 .juegos-root .gacha-table__card small {
   color: var(--muted);
+}
+.juegos-root .gacha-tag {
+  --tone: var(--r-comun);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--tone);
+}
+.juegos-root .gacha-tag--rara {
+  --tone: var(--r-rara);
+}
+.juegos-root .gacha-tag--epica {
+  --tone: var(--r-epica);
+}
+.juegos-root .gacha-tag--mitica {
+  --tone: #f2c14e;
+}
+.juegos-root .gacha-tag--unica {
+  border-color: transparent;
+  background:
+    linear-gradient(#10293a, #10293a) padding-box,
+    var(--rainbow) border-box;
+  color: var(--ivory);
+}
+.juegos-root .gacha-prob {
+  display: grid;
+  gap: 4px;
+  width: 92px;
+  margin-left: auto;
+  justify-items: end;
+}
+.juegos-root .gacha-prob b {
+  font-weight: 600;
+}
+.juegos-root .gacha-prob i {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--tone);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tone) 60%, transparent);
+}
+.juegos-root .gacha-table__price {
+  font-weight: 800;
+  color: #f0cf7a;
+}
+.juegos-root .gacha-table .gacha-pw {
+  min-width: 190px;
 }
 .juegos-root .gacha-free {
   color: #7be0a6;
 }
+
 
 /* --- Ayuda --- */
 .juegos-root .gacha-odds {
@@ -855,6 +1583,8 @@
 .juegos-root .gacha-sell:focus-visible,
 .juegos-root .gacha-who:focus-visible,
 .juegos-root .gacha-rank button:focus-visible,
+.juegos-root .gacha-podium__place button:focus-visible,
+.juegos-root .gacha-chip:focus-visible,
 .juegos-root .gacha-roll-btn:focus-visible,
 .juegos-root .gacha-select select:focus-visible,
 .juegos-root .gacha-select input:focus-visible {
@@ -863,17 +1593,68 @@
 }
 
 @media (max-width: 860px) {
-  .juegos-root .gacha-play {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .juegos-root .gacha-panel {
-    position: static;
-  }
   .juegos-root .gacha-hud {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .juegos-root .gacha-hud > div:last-child {
     grid-column: span 2;
+  }
+}
+@media (max-width: 1000px) {
+  .juegos-root .gacha-rank button {
+    grid-template-columns: 28px 40px minmax(0, 1fr) auto minmax(80px, auto);
+  }
+  .juegos-root .gacha-rank__best {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .juegos-root .gacha-table {
+    min-width: 0;
+  }
+  .juegos-root .gacha-table-wrap {
+    max-height: none;
+  }
+  .juegos-root .gacha-table thead {
+    display: none;
+  }
+  .juegos-root .gacha-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 12px 12px 12px 16px;
+    border-top: 1px solid rgba(241, 233, 214, 0.1);
+    box-shadow: inset 4px 0 0 var(--tone);
+  }
+  .juegos-root .gacha-table td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none !important;
+  }
+  .juegos-root .gacha-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .juegos-root .gacha-table__main,
+  .juegos-root .gacha-table__powers {
+    grid-column: 1 / -1;
+  }
+  .juegos-root .gacha-table .is-num {
+    text-align: left;
+  }
+  .juegos-root .gacha-prob {
+    margin-left: 0;
+    justify-items: start;
+  }
+  .juegos-root .gacha-table .gacha-pw {
+    min-width: 0;
   }
 }
 @media (max-width: 520px) {
@@ -884,32 +1665,54 @@
   }
   .juegos-root .gacha-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+  .juegos-root .gacha-grid.gacha-grid--gaps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .juegos-root .gacha-lib-stats {
+    width: 100%;
+  }
+  .juegos-root .gacha-lib-stats > div {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 10px;
+  }
+  .juegos-root .gacha-lib-stats dd {
+    font-size: 20px;
+  }
+  .juegos-root .gacha-lib-copy {
+    width: 100%;
+  }
+  .juegos-root .gacha-select {
+    flex: 1 1 100%;
+  }
+  .juegos-root .gacha-select select,
+  .juegos-root .gacha-select input {
+    flex: 1;
+    width: 100%;
+  }
+  .juegos-root .gacha-podium__best,
+  .juegos-root .gacha-podium .gacha-bars {
+    display: none;
+  }
+  .juegos-root .gacha-podium__step {
+    font-size: 30px;
   }
   .juegos-root .gacha-rank button {
-    grid-template-columns: 22px 36px minmax(0, 1fr) auto;
+    grid-template-columns: 24px 36px minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    padding: 8px 12px;
   }
-  .juegos-root .gacha-rank__best {
-    display: none;
+  .juegos-root .gacha-rank .gacha-bars {
+    grid-column: 3 / -1;
+    grid-row: 2;
+  }
+  .juegos-root .gacha-rank__worth {
+    font-size: 16px;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .juegos-root .gacha-card--mitica::after,
-  .juegos-root .gacha-card--unica::after,
-  .juegos-root .gacha-reveal .gacha-card,
-  .juegos-root .gacha-reveal__burst,
-  .juegos-root .gacha-reveal__rarity {
-    animation: none;
-  }
-  .juegos-root .gacha-reveal--epica .gacha-reveal__burst,
-  .juegos-root .gacha-reveal--mitica .gacha-reveal__burst,
-  .juegos-root .gacha-reveal--unica .gacha-reveal__burst {
-    opacity: 0.4;
-  }
-  .juegos-root .gacha-timer i {
-    transition: none;
-  }
-}
 
 /* --- Poderes en la mesa de póker --- */
 .juegos-root .pk-peek {
@@ -1708,37 +2511,6 @@
   color: #ff8a6b;
 }
 
-/* --- La mesa: cartas gratis para coger --- */
-.juegos-root .gacha-mesa {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid rgba(123, 224, 166, 0.35);
-  border-radius: 18px;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(30, 138, 90, 0.18), transparent 65%),
-    rgba(12, 39, 55, 0.45);
-}
-.juegos-root .gacha-mesa .hub-title {
-  margin: 0;
-}
-.juegos-root .gacha-mesa__cards {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.juegos-root .gacha-mesa__cards li {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-}
-.juegos-root .gacha-mesa__cards .hub-btn {
-  min-height: 38px;
-  font-size: 15px;
-}
 .juegos-root .gacha-roll__status {
   display: inline-flex;
   flex-wrap: wrap;
@@ -1763,16 +2535,6 @@
   animation: gacha-pop 0.4s 0.9s both;
 }
 
-@media (max-width: 860px) {
-  .juegos-root .gacha-mesa__cards {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@media (max-width: 520px) {
-  .juegos-root .gacha-mesa__cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 
 /* --- Poderes en las mesas: la animación central y la carta junto a la foto --- */
 .juegos-root .tp-cast {
@@ -1944,130 +2706,328 @@
   color: var(--ivory);
 }
 
-/* ---------- Pestaña «Tirar»: portal de invocación arriba, la mesa con sus huecos y el canal al lado ---------- */
+/* ---------- Pestaña «Tirar»: el portal de invocación arriba, la mesa como escaparate y el canal al lado ---------- */
+.juegos-root .gacha-app .hub-title {
+  align-items: center;
+  gap: 2px 12px;
+  font-size: clamp(22px, 2.2vw, 28px);
+}
+.juegos-root .gacha-app .hub-title::before {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  rotate: 45deg;
+  border-radius: 2px;
+  background: linear-gradient(135deg, var(--hub-gold-hi, #fff2bd), var(--hub-gold-lo, #b9801c));
+  box-shadow: 0 0 10px rgba(255, 210, 94, 0.6);
+}
 .juegos-root .gacha-home {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
   grid-template-areas:
     'portal feed'
     'mesa feed';
+  grid-template-rows: auto 1fr;
+  align-content: start;
   align-items: start;
   gap: clamp(16px, 2.4vw, 28px);
 }
 .juegos-root .gacha-portal {
   grid-area: portal;
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(200px, 290px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(8px, 2vw, 28px);
+  min-width: 0;
+  padding: clamp(16px, 2.2vw, 28px);
   overflow: hidden;
-  padding: clamp(18px, 2.4vw, 28px);
-  border: 1px solid rgba(200, 162, 75, 0.35);
-  border-radius: 24px;
+  border: 1px solid rgba(200, 162, 75, 0.4);
+  border-radius: 28px;
   background:
-    radial-gradient(ellipse at 50% 120%, rgba(138, 79, 214, 0.35), transparent 60%),
-    radial-gradient(ellipse at 50% -20%, rgba(242, 193, 78, 0.18), transparent 55%),
-    linear-gradient(180deg, rgba(10, 30, 44, 0.9), rgba(6, 16, 26, 0.9));
-  box-shadow: 0 20px 50px rgba(2, 8, 14, 0.5);
+    radial-gradient(ellipse at 20% 50%, rgba(138, 79, 214, 0.38), transparent 55%),
+    radial-gradient(ellipse at 90% -10%, rgba(242, 193, 78, 0.16), transparent 50%),
+    linear-gradient(180deg, rgba(10, 28, 42, 0.95), rgba(5, 13, 22, 0.96));
+  box-shadow: 0 22px 54px rgba(2, 8, 14, 0.5);
 }
-.juegos-root .gacha-portal > * {
+.juegos-root .gacha-portal.has-pending {
+  grid-template-columns: minmax(0, 1fr);
+}
+.juegos-root .gacha-portal.has-pending .gacha-altar {
+  display: none;
+}
+.juegos-root .gacha-portal__body {
   position: relative;
+  min-width: 0;
 }
-/* Anillo mágico que gira detrás y abanico de cartas boca abajo. */
-.juegos-root .gacha-portal__ring {
+
+/* La escena: círculo de runas, orbe, cápsulas en órbita y chispas. */
+.juegos-root .gacha-altar {
+  position: relative;
+  width: 100%;
+  max-width: 290px;
+  aspect-ratio: 1;
+  justify-self: center;
+  isolation: isolate;
+}
+.juegos-root .gacha-altar__beam {
   position: absolute;
-  right: -90px;
-  top: -90px;
-  width: 320px;
-  height: 320px;
-  border: 2px dashed rgba(242, 193, 78, 0.25);
+  z-index: -1;
+  left: 50%;
+  bottom: 48%;
+  width: 46%;
+  height: 78%;
+  translate: -50% 0;
+  background: linear-gradient(0deg, rgba(255, 226, 140, 0.6), rgba(176, 108, 255, 0.18) 60%, transparent);
+  clip-path: polygon(34% 0, 66% 0, 100% 100%, 0 100%);
+  filter: blur(7px);
+  animation: gacha-altar-beam 3.4s ease-in-out infinite;
+}
+@keyframes gacha-altar-beam {
+  50% {
+    opacity: 0.45;
+    scale: 1.12 1;
+  }
+}
+.juegos-root .gacha-altar__rings {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+}
+.juegos-root .gacha-altar__outer,
+.juegos-root .gacha-altar__inner {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.juegos-root .gacha-altar__outer {
+  animation: gacha-spin 46s linear infinite;
+}
+.juegos-root .gacha-altar__inner {
+  animation: gacha-spin 28s linear infinite reverse;
+}
+.juegos-root .gacha-altar__rings circle {
+  stroke: rgba(242, 193, 78, 0.5);
+  stroke-width: 1.2;
+}
+.juegos-root .gacha-altar__rings .gacha-altar__dash {
+  stroke: rgba(176, 108, 255, 0.6);
+  stroke-dasharray: 2 7;
+  stroke-width: 2;
+}
+.juegos-root .gacha-altar__rings text {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 3px;
+  fill: rgba(242, 193, 78, 0.75);
+}
+.juegos-root .gacha-altar__inner path {
+  stroke: rgba(196, 140, 255, 0.75);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+.juegos-root .gacha-altar__inner circle {
+  stroke: rgba(196, 140, 255, 0.5);
+}
+.juegos-root .gacha-altar__orb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 27%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
   border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #ffe08a 28%, #b06cff 68%, #3f1a8a);
   box-shadow:
-    inset 0 0 0 18px rgba(138, 79, 214, 0.08),
-    0 0 60px rgba(138, 79, 214, 0.15);
-  animation: gacha-spin 30s linear infinite;
+    0 0 36px rgba(255, 226, 138, 0.75),
+    0 0 90px rgba(176, 108, 255, 0.6);
+  animation: gacha-orb 3s ease-in-out infinite;
+  transition: filter 0.4s;
 }
-.juegos-root .gacha-portal__fan {
+@keyframes gacha-orb {
+  50% {
+    scale: 1.14;
+    filter: brightness(1.2);
+  }
+}
+.juegos-root .gacha-altar__orbit {
   position: absolute;
-  right: 26px;
-  top: 18px;
-  width: 120px;
-  height: 90px;
-  opacity: 0.55;
+  inset: 4%;
+  animation: gacha-spin 10s linear infinite;
 }
-.juegos-root .gacha-portal__fan i {
+.juegos-root .gacha-altar__orbit i {
   position: absolute;
-  left: 40px;
-  top: 0;
-  width: 46px;
-  height: 68px;
-  border: 2px solid rgba(242, 193, 78, 0.6);
-  border-radius: 8px;
-  background: repeating-linear-gradient(45deg, rgba(200, 162, 75, 0.25) 0 6px, transparent 6px 12px), var(--baize-deep);
-  transform-origin: 50% 120%;
+  width: 11%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffd25e 0 50%, #fff4cf 50% 100%);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(26, 20, 8, 0.55),
+    0 0 12px rgba(255, 210, 94, 0.7);
 }
-.juegos-root .gacha-portal__fan i:nth-child(1) {
-  rotate: -18deg;
+.juegos-root .gacha-altar__orbit i:nth-child(1) {
+  left: 44.5%;
+  top: -5%;
 }
-.juegos-root .gacha-portal__fan i:nth-child(3) {
-  rotate: 18deg;
+.juegos-root .gacha-altar__orbit i:nth-child(2) {
+  right: -1%;
+  bottom: 22%;
+  background: linear-gradient(180deg, #b07cff 0 50%, #fff4cf 50% 100%);
 }
+.juegos-root .gacha-altar__orbit i:nth-child(3) {
+  left: -1%;
+  bottom: 22%;
+  background: linear-gradient(180deg, #5fa8ff 0 50%, #fff4cf 50% 100%);
+}
+.juegos-root .gacha-altar__sparks i {
+  position: absolute;
+  bottom: 18%;
+  left: var(--x);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffe9a0;
+  box-shadow: 0 0 8px #ffd25e;
+  opacity: 0;
+  animation: gacha-rise var(--s) var(--t) ease-out infinite;
+}
+@keyframes gacha-rise {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -120px;
+  }
+}
+/* El portal reacciona al pulsar o pasar el ratón por un botón: el orbe se enciende (violeta si es premium). */
+.juegos-root .gacha-portal:has(.gacha-roll-btn:hover:not(:disabled)) .gacha-altar__orb,
+.juegos-root .gacha-portal:has(.gacha-roll-btn:focus-visible) .gacha-altar__orb {
+  scale: 1.3;
+  filter: brightness(1.3);
+}
+.juegos-root .gacha-portal:has(.gacha-roll-btn--premium:hover:not(:disabled)) .gacha-altar__orb {
+  filter: hue-rotate(40deg) brightness(1.25);
+}
+.juegos-root .gacha-portal.is-busy .gacha-altar {
+  animation: gacha-shake 0.1s linear infinite;
+}
+
+/* Los dos botones, como entradas: la cápsula, el nombre, el precio y lo que puede salir. */
 .juegos-root .gacha-portal__btns {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  margin-top: 14px;
 }
-.juegos-root .gacha-portal .gacha-roll-btn {
+.juegos-root .gacha-roll-btn {
+  position: relative;
   display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 4px;
-  min-height: 150px;
-  padding: 16px 12px;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+  min-width: 0;
+  padding: 14px 16px 12px;
+  overflow: hidden;
   border: 0;
-  border-radius: 20px;
-  color: #1b1405;
+  border-radius: 22px;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.5), transparent 60%),
-    linear-gradient(180deg, #ffe08a, #e8a33a);
+    radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.6), transparent 55%),
+    linear-gradient(180deg, #ffe590, #e8a33a);
   box-shadow:
     0 6px 0 #8a6b25,
-    0 14px 30px rgba(242, 193, 78, 0.25);
+    0 16px 30px rgba(242, 193, 78, 0.22);
+  font: inherit;
+  text-align: left;
+  color: #1b1405;
+  cursor: pointer;
   transition:
     transform 0.12s,
     box-shadow 0.12s,
     filter 0.12s;
 }
-.juegos-root .gacha-portal .gacha-roll-btn:hover:not(:disabled) {
+.juegos-root .gacha-roll-btn:hover:not(:disabled) {
   filter: brightness(1.06);
   transform: translateY(-2px);
 }
-.juegos-root .gacha-portal .gacha-roll-btn:active:not(:disabled) {
+.juegos-root .gacha-roll-btn:active:not(:disabled) {
   transform: translateY(4px);
   box-shadow: 0 2px 0 #8a6b25;
 }
-.juegos-root .gacha-portal .gacha-roll-btn > b {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(30px, 3.4vw, 42px);
-  line-height: 1;
+.juegos-root .gacha-roll-btn:disabled {
+  filter: grayscale(0.75) brightness(0.65);
+  box-shadow: none;
+  cursor: not-allowed;
 }
-.juegos-root .gacha-portal .gacha-roll-btn small {
-  font-size: 14px;
-  font-weight: 700;
-  opacity: 0.85;
-}
-/* Premium: violeta con brillo que pasa. */
-.juegos-root .gacha-portal .gacha-roll-btn--premium {
+/* La cápsula del botón: mitad oscura, mitad crema, con su brillo. */
+.juegos-root .gacha-roll-btn__pack {
   position: relative;
-  overflow: hidden;
+  width: 58px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #8a4b0e 0 50%, #fff4cf 50% 100%);
+  box-shadow:
+    inset 0 0 0 3px rgba(26, 20, 8, 0.8),
+    0 6px 12px rgba(0, 0, 0, 0.3);
+  rotate: -18deg;
+  transition: rotate 0.25s;
+}
+.juegos-root .gacha-roll-btn__pack::before {
+  content: '';
+  position: absolute;
+  left: 17%;
+  top: 14%;
+  width: 26%;
+  height: 14%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  rotate: -30deg;
+}
+.juegos-root .gacha-roll-btn:hover:not(:disabled) .gacha-roll-btn__pack {
+  rotate: 12deg;
+}
+.juegos-root .gacha-roll-btn__txt {
+  display: grid;
+  min-width: 0;
+}
+.juegos-root .gacha-roll-btn__txt b {
+  font-family: var(--display);
+  font-size: clamp(24px, 2.1vw, 36px);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+.juegos-root .gacha-roll-btn__txt small {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+.juegos-root .gacha-roll-btn__price {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #1b1405;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #ffe08a;
+}
+/* Premium: violeta con un brillo que pasa. */
+.juegos-root .gacha-roll-btn--premium {
   color: #fff;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.35), transparent 60%),
-    linear-gradient(160deg, #b98cff, #6a2fc2 60%, #3d1580);
+    radial-gradient(ellipse at 0% 0%, rgba(255, 255, 255, 0.4), transparent 55%),
+    linear-gradient(160deg, #b98cff, #6a2fc2 58%, #3d1580);
   box-shadow:
     0 6px 0 #2a0f5c,
-    0 14px 30px rgba(138, 79, 214, 0.4);
+    0 16px 32px rgba(138, 79, 214, 0.42);
 }
-.juegos-root .gacha-portal .gacha-roll-btn--premium::after {
+.juegos-root .gacha-roll-btn--premium::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -2076,63 +3036,176 @@
   animation: gacha-mythic-holo 3s ease-in-out infinite;
   pointer-events: none;
 }
-.juegos-root .gacha-portal .gacha-roll-btn--premium:active:not(:disabled) {
+.juegos-root .gacha-roll-btn--premium:active:not(:disabled) {
   box-shadow: 0 2px 0 #2a0f5c;
 }
-.juegos-root .gacha-portal .gacha-roll-btn:disabled {
-  filter: grayscale(0.7) brightness(0.7);
-  box-shadow: none;
-  cursor: not-allowed;
+.juegos-root .gacha-roll-btn--premium .gacha-roll-btn__pack {
+  background: linear-gradient(180deg, #7a3fe0 0 50%, #ffd25e 50% 100%);
 }
-/* Probabilidades dentro de cada botón. */
-.juegos-root .gacha-odds {
+.juegos-root .gacha-roll-btn--premium .gacha-roll-btn__price {
+  background: rgba(10, 4, 30, 0.8);
+  color: #ffd25e;
+}
+/* Lo que puede salir. */
+.juegos-root .gacha-chances {
   display: flex;
+  grid-column: 1 / -1;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 5px;
 }
-.juegos-root .gacha-odds__item {
-  padding: 2px 8px;
+.juegos-root .gacha-chances__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 7px;
   border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
   font-size: 11px;
   font-weight: 700;
-  background: rgba(0, 0, 0, 0.22);
 }
-.juegos-root .gacha-portal .gacha-odds__item b {
-  font-family: var(--sans);
-  font-size: 11px;
+.juegos-root .gacha-chances__item i {
+  width: 8px;
+  height: 8px;
+  rotate: 45deg;
+  border-radius: 2px;
+  background: var(--r-rara);
+  box-shadow: 0 0 6px currentColor;
+}
+.juegos-root .gacha-chances__item--epica i {
+  background: var(--r-epica);
+}
+.juegos-root .gacha-chances__item--mitica i {
+  background: #f2c14e;
+}
+.juegos-root .gacha-chances__item--unica i {
+  background: var(--rainbow);
+}
+.juegos-root .gacha-chances__item b {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
-.juegos-root .gacha-roll-btn--premium .gacha-odds__item {
-  background: rgba(0, 0, 0, 0.28);
-}
 
-/* La mesa: los cinco huecos en fila; los vacíos con la cuenta atrás de la siguiente carta. */
-.juegos-root .gacha-home .gacha-mesa {
+/* La mesa, como un escaparate: un foco del color de la rareza sobre cada carta. */
+.juegos-root .gacha-mesa {
   grid-area: mesa;
+  position: relative;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: clamp(16px, 2vw, 24px) clamp(14px, 2vw, 22px);
+  overflow: hidden;
+  border: 1px solid rgba(200, 162, 75, 0.38);
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 226, 140, 0.16), transparent 55%),
+    linear-gradient(180deg, rgba(9, 26, 38, 0.94), rgba(4, 12, 20, 0.97));
+  box-shadow: 0 22px 54px rgba(2, 8, 14, 0.45);
 }
-.juegos-root .gacha-home .gacha-mesa__cards {
+/* Barra de luz del techo del escaparate. */
+.juegos-root .gacha-mesa::before {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, transparent, #ffe08a, transparent);
+  box-shadow: 0 0 26px 5px rgba(255, 210, 94, 0.45);
+}
+.juegos-root .gacha-mesa .hub-title {
+  margin: 0;
+}
+.juegos-root .gacha-mesa__cards {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.juegos-root .gacha-home .gacha-mesa__cards li {
+.juegos-root .gacha-mesa__item,
+.juegos-root .gacha-mesa__slot {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  align-content: start;
   min-width: 0;
 }
-.juegos-root .gacha-home .gacha-mesa__cards li.gacha-mesa__slot {
-  display: grid;
+.juegos-root .gacha-mesa__item {
+  --spot: var(--r-comun);
+  grid-template-rows: 1fr auto;
+  padding-top: 6px;
+}
+.juegos-root .gacha-mesa__item .gacha-card {
+  height: 100%;
+}
+.juegos-root .gacha-mesa__item--rara {
+  --spot: var(--r-rara);
+}
+.juegos-root .gacha-mesa__item--epica {
+  --spot: var(--r-epica);
+}
+.juegos-root .gacha-mesa__item--mitica {
+  --spot: #ffd25e;
+}
+.juegos-root .gacha-mesa__item--unica {
+  --spot: #ff6bb0;
+}
+/* El foco: un cono de luz que cae sobre la carta. */
+.juegos-root .gacha-mesa__item::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -22px;
+  width: 150%;
+  height: 78%;
+  translate: -50% 0;
+  background: radial-gradient(ellipse 48% 100% at 50% 0%, color-mix(in srgb, var(--spot) 38%, transparent), transparent 80%);
+  pointer-events: none;
+}
+.juegos-root .gacha-mesa__item > * {
+  position: relative;
+}
+.juegos-root .gacha-mesa__item .gacha-card {
+  animation: gacha-bob 5.5s ease-in-out infinite;
+}
+.juegos-root .gacha-mesa__item:nth-child(2n) .gacha-card {
+  animation-delay: -1.8s;
+}
+.juegos-root .gacha-mesa__item:nth-child(3n) .gacha-card {
+  animation-delay: -3.4s;
+}
+@keyframes gacha-bob {
+  50% {
+    translate: 0 -5px;
+  }
+}
+.juegos-root .gacha-mesa__item .hub-btn {
+  min-height: 38px;
+  font-size: 15px;
+}
+/* Huecos libres: el primero dice cuándo sale la siguiente. */
+.juegos-root .gacha-mesa__slot {
   place-items: center;
   align-self: start;
   aspect-ratio: 3 / 4.6;
   border: 2px dashed rgba(241, 233, 214, 0.18);
-  border-radius: 12px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.02);
   text-align: center;
 }
-.juegos-root .gacha-home .gacha-mesa__cards li.gacha-mesa__slot span {
-  align-self: center;
+.juegos-root .gacha-mesa__slot {
+  align-content: center;
+  gap: 4px;
+}
+.juegos-root .gacha-mesa__slot::before {
+  content: '✦';
+  font-size: 22px;
+  color: rgba(241, 233, 214, 0.18);
+}
+.juegos-root .gacha-mesa__slot span {
+  align-self: start;
   padding: 0 8px;
   font-size: 12px;
   font-weight: 600;
@@ -2143,6 +3216,7 @@
 }
 .juegos-root .gacha-home .gacha-feed {
   grid-area: feed;
+  min-width: 0;
 }
 
 @media (max-width: 1000px) {
@@ -2155,28 +3229,183 @@
   }
 }
 @media (max-width: 640px) {
-  .juegos-root .gacha-portal__btns {
+  .juegos-root .gacha-portal {
     grid-template-columns: minmax(0, 1fr);
+    border-radius: 24px;
   }
-  .juegos-root .gacha-portal .gacha-roll-btn {
-    min-height: 116px;
+  .juegos-root .gacha-altar {
+    max-width: 200px;
   }
-  .juegos-root .gacha-home .gacha-mesa__cards {
-    grid-template-columns: repeat(5, 58vw);
+  .juegos-root .gacha-roll-btn {
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    padding: 12px 12px 10px;
+  }
+  .juegos-root .gacha-roll-btn__pack {
+    width: 48px;
+  }
+  .juegos-root .gacha-mesa {
+    border-radius: 24px;
+  }
+  .juegos-root .gacha-mesa__cards {
+    grid-template-columns: repeat(5, 52vw);
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    padding-bottom: 6px;
+    padding-bottom: 8px;
   }
-  .juegos-root .gacha-home .gacha-mesa__cards li {
+  .juegos-root .gacha-mesa__cards > li {
     scroll-snap-align: start;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .juegos-root .gacha-portal__ring,
-  .juegos-root .gacha-portal .gacha-roll-btn--premium::after {
-    animation: none;
+
+/* ---------- Cápsula de la carga (a pantalla completa, antes de la carta) ---------- */
+.juegos-root .gacha-capsule {
+  --c1: #e8a33a;
+  --c2: #fff4cf;
+  --lite: #ffe9a0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(210px, 54vw);
+  aspect-ratio: 1;
+  animation: gacha-float 1.3s ease-in-out infinite;
+}
+.juegos-root .gacha-capsule--premium {
+  --c1: #7a3fe0;
+  --c2: #ffd25e;
+  --lite: #d8b4ff;
+}
+.juegos-root .gacha-capsule__halo {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--lite) 75%, transparent), transparent);
+  opacity: 0.25;
+  animation: gacha-halo 1.3s ease-in forwards;
+}
+@keyframes gacha-halo {
+  to {
+    opacity: 1;
+    scale: 1.45;
   }
 }
+.juegos-root .gacha-capsule__body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 40px color-mix(in srgb, var(--lite) 55%, transparent);
+  animation: gacha-capsule-shake 1.3s linear forwards;
+}
+@keyframes gacha-capsule-shake {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  10% {
+    rotate: -3deg;
+  }
+  20% {
+    rotate: 3deg;
+  }
+  30% {
+    rotate: -4deg;
+  }
+  40% {
+    rotate: 4deg;
+  }
+  50% {
+    rotate: -6deg;
+  }
+  60% {
+    rotate: 6deg;
+  }
+  70% {
+    rotate: -8deg;
+  }
+  80% {
+    rotate: 8deg;
+  }
+  90% {
+    rotate: -10deg;
+  }
+}
+.juegos-root .gacha-capsule__body i {
+  position: absolute;
+}
+.juegos-root .gacha-capsule__top,
+.juegos-root .gacha-capsule__bottom {
+  inset: 0;
+}
+.juegos-root .gacha-capsule__top {
+  clip-path: inset(0 0 50% 0);
+  background: linear-gradient(160deg, var(--c1), color-mix(in srgb, var(--c1) 50%, #000));
+}
+.juegos-root .gacha-capsule__bottom {
+  clip-path: inset(50% 0 0 0);
+  background: linear-gradient(200deg, #fff, var(--c2));
+}
+/* La juntura: por ahí se escapa la luz, cada vez más. */
+.juegos-root .gacha-capsule__seam {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 8px;
+  translate: 0 -50%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), #fff 40%, #fff 60%, rgba(0, 0, 0, 0.4));
+  box-shadow: 0 0 18px 4px var(--lite);
+  animation: gacha-seam 1.3s ease-in forwards;
+}
+@keyframes gacha-seam {
+  from {
+    height: 4px;
+    opacity: 0.6;
+  }
+  to {
+    height: 22px;
+    opacity: 1;
+    box-shadow: 0 0 60px 26px var(--lite);
+  }
+}
+.juegos-root .gacha-capsule__shine {
+  left: 16%;
+  top: 11%;
+  width: 24%;
+  height: 11%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  filter: blur(2px);
+  rotate: -32deg;
+}
+.juegos-root .gacha-capsule__motes {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.juegos-root .gacha-capsule__motes i {
+  --d: 150px;
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  border-radius: 50%;
+  background: var(--lite);
+  box-shadow: 0 0 10px var(--lite);
+  opacity: 0;
+  animation: gacha-implode 0.8s var(--t) ease-in infinite;
+}
+
+/* ---------- Mítica: rayos de arcoíris al revelarla ---------- */
+.juegos-root .gacha-summon--unica.is-show .gacha-summon__rays:not(.gacha-summon__rays--back) {
+  background: repeating-conic-gradient(
+    rgba(255, 92, 122, 0.55) 0 12deg,
+    rgba(255, 210, 94, 0.55) 12deg 24deg,
+    rgba(93, 255, 160, 0.5) 24deg 36deg,
+    rgba(77, 195, 255, 0.55) 36deg 48deg,
+    rgba(176, 124, 255, 0.55) 48deg 60deg
+  );
+}
+
 
 /* ---------- Invocación por rareza: foco, polvo, anillos, runas, columna de luz, monedas y brillo ---------- */
 /* La carta, más grande (sin pasarse del alto de la pantalla). */
@@ -2730,5 +3959,48 @@
   .juegos-root .gacha-summon__one,
   .juegos-root .gacha-summon__embers i {
     animation: none;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .gacha-card,
+  .juegos-root .gacha-card--mitica::after,
+  .juegos-root .gacha-card--unica::after,
+  .juegos-root .gacha-gem--unica,
+  .juegos-root .gacha-shelf--unica h3,
+  .juegos-root .gacha-reveal .gacha-card,
+  .juegos-root .gacha-reveal__burst,
+  .juegos-root .gacha-reveal__rarity,
+  .juegos-root .gacha-progress__bar i,
+  .juegos-root .gacha-podium__crown,
+  .juegos-root .gacha-altar *,
+  .juegos-root .gacha-portal.is-busy .gacha-altar,
+  .juegos-root .gacha-roll-btn--premium::after,
+  .juegos-root .gacha-mesa__item .gacha-card,
+  .juegos-root .gacha-capsule,
+  .juegos-root .gacha-capsule * {
+    animation: none;
+  }
+  /* Sin inclinación ni deslizamientos. */
+  .juegos-root .gacha-card:not(.gacha-card--unica) {
+    transform: none;
+  }
+  .juegos-root .gacha-card,
+  .juegos-root .gacha-rank button,
+  .juegos-root .gacha-roll-btn,
+  .juegos-root .gacha-roll-btn__pack {
+    transition: none;
+  }
+  .juegos-root .gacha-card--unica {
+    transform: none;
+  }
+  .juegos-root .gacha-reveal--epica .gacha-reveal__burst,
+  .juegos-root .gacha-reveal--mitica .gacha-reveal__burst,
+  .juegos-root .gacha-reveal--unica .gacha-reveal__burst {
+    opacity: 0.4;
+  }
+  .juegos-root .gacha-altar__sparks {
+    display: none;
   }
 }
