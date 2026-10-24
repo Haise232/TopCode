@@ -22,7 +22,7 @@ import Bingo from './Bingo.jsx'
 import BingoCage from './BingoCage.jsx'
 import Gacha from './Gacha.jsx'
 import GachaShowcase from './GachaShowcase.jsx'
-import { DoorIcon } from './DungeonArt.jsx'
+import { AuctionScene, BridgeScene, CrashScene, DuelScene, DungeonScene, FrogScene, HeistScene, PlinkoScene, RaceScene, RouletteScene, TowerScene } from './HubArt.jsx'
 import Duel from './Duel.jsx'
 import DuelAlert from './DuelAlert.jsx'
 import Table from './table/Table.jsx'
@@ -49,149 +49,104 @@ const LIVE = {
   poker: { name: 'Póker' },
 }
 
+// Cada juego lleva su mini escena (HubArt.jsx), un color (--tint, en r, g, b) para el brillo de su tarjeta y una frase corta.
 const SOLO = [
   {
     id: 'duel',
     name: 'Duelos',
+    kind: '1 contra 1',
     blurb: 'Reta a alguien 1 contra 1: el que gana se lo lleva todo.',
-    art: <span className="game__duel" aria-hidden="true">⚔</span>,
+    tint: '255, 79, 91',
+    art: <DuelScene />,
   },
   {
     id: 'roulette',
     name: 'Ruleta',
+    kind: 'Cada 25 s',
     blurb: 'Una tirada para todos cada 25 s. Apuesta y mira caer la bola.',
     live: true,
-    art: <span className="game__wheel" />,
+    tint: '226, 70, 60',
+    art: <RouletteScene />,
   },
   {
     id: 'crash',
     name: 'Cohete',
+    kind: 'Cada 30 s',
     blurb: 'Sube para todos cada 30 s. Retira a tiempo.',
     live: true,
-    art: <span className="game__rocket" />,
+    tint: '95, 170, 255',
+    art: <CrashScene />,
   },
   {
     id: 'race',
     name: 'Carrera',
+    kind: 'Cada 55 s',
     blurb: 'Una carrera cada 55 s. Apuesta a un coche y cobra si acaba en el podio.',
     live: true,
-    art: (
-      <svg className="game__race" viewBox="0 0 40 40">
-        <rect x="0" y="27" width="40" height="13" className="game__race-road" />
-        <path d="M0 33.5 H40" className="game__race-line" />
-        <path d="M5 26 L7 20 Q8 18.5 10 18.5 H15 L19 13.5 Q20 12.5 22 12.5 H27 Q28.5 12.5 29.5 14 L31.5 18.5 Q35 19 35.5 22 V26 Z" className="game__race-body" />
-        <path d="M17 18 L20.5 14.5 H26 L28.5 18 Z" className="game__race-glass" />
-        <circle cx="12" cy="26.5" r="4.2" className="game__race-wheel" />
-        <circle cx="29" cy="26.5" r="4.2" className="game__race-wheel" />
-        <circle cx="12" cy="26.5" r="1.5" className="game__race-hub" />
-        <circle cx="29" cy="26.5" r="1.5" className="game__race-hub" />
-      </svg>
-    ),
+    tint: '255, 138, 60',
+    art: <RaceScene />,
   },
   {
     id: 'dungeon',
     name: 'Laberinto',
+    kind: 'Memoria',
     blurb: 'Mira dónde está el cofre, síguelo mientras las puertas se barajan y llega al tesoro.',
-    art: <DoorIcon />,
+    tint: '242, 201, 76',
+    art: <DungeonScene />,
   },
   {
     id: 'plinko',
     name: 'Plinko',
+    kind: 'Suerte',
     blurb: 'Suelta bolas y que caigan en las orillas.',
-    art: (
-      <svg className="game__plinko" viewBox="0 0 40 40">
-        {[
-          [20, 9],
-          [14, 17],
-          [26, 17],
-          [8, 25],
-          [20, 25],
-          [32, 25],
-        ].map(([cx, cy]) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.2" className="game__plinko-peg" />
-        ))}
-        <circle cx="17" cy="4" r="3.6" className="game__plinko-ball" />
-        <rect x="3" y="31" width="9" height="6" rx="1.5" className="game__plinko-hot" />
-        <rect x="15.5" y="31" width="9" height="6" rx="1.5" className="game__plinko-cold" />
-        <rect x="28" y="31" width="9" height="6" rx="1.5" className="game__plinko-hot" />
-      </svg>
-    ),
+    tint: '176, 108, 255',
+    art: <PlinkoScene />,
   },
   {
     id: 'frog',
     name: 'Rana',
+    kind: 'Riesgo',
     blurb: 'Salta de nenúfar en nenúfar y cobra cuando quieras.',
-    art: (
-      <svg className="game__frog" viewBox="0 0 40 40">
-        <ellipse cx="20" cy="29" rx="16" ry="7" className="game__frog-pad" />
-        <ellipse cx="20" cy="19" rx="9" ry="7" className="game__frog-body" />
-        <circle cx="15" cy="12" r="3.6" className="game__frog-eye" />
-        <circle cx="25" cy="12" r="3.6" className="game__frog-eye" />
-        <circle cx="15" cy="12" r="1.5" className="game__frog-pupil" />
-        <circle cx="25" cy="12" r="1.5" className="game__frog-pupil" />
-      </svg>
-    ),
+    tint: '124, 207, 74',
+    art: <FrogScene />,
   },
 ]
 
-// Lo nuevo de la Season 3, en su propia sección arriba del todo.
+// Lo nuevo de la Season 3, en el escaparate de arriba del todo.
 const SEASON3 = [
-  {
-    id: 'bridge',
-    name: 'El Puente de Cristal',
-    blurb: 'Todos cruzan a la vez: izquierda o derecha. Un cristal aguanta, el otro no. Los que llegan más lejos se llevan el bote.',
-    live: true,
-    art: (
-      <svg className="game__s3" viewBox="0 0 40 40">
-        {[0, 1, 2, 3].map((c) => (
-          <g key={c}>
-            <rect x={5 + c * 8} y="9" width="6" height="9" rx="1" className={c === 2 ? 'game__s3-bad' : 'game__s3-tile'} />
-            <rect x={5 + c * 8} y="22" width="6" height="9" rx="1" className={c === 1 ? 'game__s3-bad' : 'game__s3-tile'} />
-          </g>
-        ))}
-        <circle cx="16" cy="13" r="2.4" className="game__s3-hot" />
-      </svg>
-    ),
-  },
   {
     id: 'tower',
     name: 'La Torre',
+    kind: 'Escalada',
     blurb: 'Sube piso a piso sin pisar una baldosa rota. Récord del día para el mejor golpe.',
-    art: (
-      <svg className="game__s3" viewBox="0 0 40 40">
-        {[0, 1, 2, 3].map((r) => [0, 1, 2].map((c) => <rect key={`${r}-${c}`} x={6 + c * 10} y={30 - r * 8} width="8" height="6" rx="1.5" className={r === 3 && c === 1 ? 'game__s3-hot' : r === 2 && c === 0 ? 'game__s3-bad' : 'game__s3-tile'} />))}
-      </svg>
-    ),
+    tint: '110, 123, 240',
+    art: <TowerScene />,
   },
   {
     id: 'heist',
     name: 'El Atraco',
+    kind: 'En banda',
     blurb: 'Monta tu banda con tus cartas del gacha y baja a la cámara acorazada. Huye antes de que os pillen.',
-    art: (
-      <svg className="game__s3" viewBox="0 0 40 40">
-        <circle cx="20" cy="20" r="14" className="game__s3-tile" />
-        <circle cx="20" cy="20" r="9" className="game__s3-ink" />
-        <circle cx="20" cy="20" r="3" className="game__s3-hot" />
-        {[0, 60, 120, 180, 240, 300].map((a) => (
-          <rect key={a} x="19" y="8" width="2" height="5" className="game__s3-hot" transform={`rotate(${a} 20 20)`} />
-        ))}
-      </svg>
-    ),
+    tint: '255, 210, 94',
+    art: <HeistScene />,
   },
   {
     id: 'auction',
     name: 'Subasta a ciegas',
+    kind: 'Cada minuto',
     blurb: 'Una caja misteriosa cada minuto. Puja en secreto: puede ser un diamante… o una piedra.',
     live: true,
-    art: (
-      <svg className="game__s3" viewBox="0 0 40 40">
-        <rect x="8" y="17" width="24" height="16" rx="2.5" className="game__s3-hot" />
-        <rect x="6" y="11" width="28" height="7" rx="2" className="game__s3-tile" />
-        <text x="20" y="30" textAnchor="middle" fontSize="11" fontWeight="900" className="game__s3-ink-text">
-          ?
-        </text>
-      </svg>
-    ),
+    tint: '177, 132, 255',
+    art: <AuctionScene />,
+  },
+  {
+    id: 'bridge',
+    name: 'El Puente de Cristal',
+    kind: 'Todos a la vez',
+    blurb: 'Todos cruzan a la vez: izquierda o derecha. Un cristal aguanta, el otro no. Los que llegan más lejos se llevan el bote.',
+    live: true,
+    tint: '111, 180, 240',
+    art: <BridgeScene />,
   },
 ]
 
@@ -261,7 +216,7 @@ function standing(scores, me) {
   return { mine, count: list.length, today, gap }
 }
 
-// El Bingo en el menú: la jaula con el bote a la vista de todos y cuánto falta para la siguiente partida.
+// El Bingo en el menú: la jaula con el bote a la vista de todos, si el bote está abierto y cuánto falta para la siguiente partida.
 function BingoBanner({ info, online, onOpen }) {
   const pot = info?.pot ?? 0
   const shown = useCountUp(pot, 1200)
@@ -273,11 +228,17 @@ function BingoBanner({ info, online, onOpen }) {
   const left = info ? Math.max(0, info.next - Date.now()) : null
   const clock = left === null ? '' : `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`
   const when = !info ? 'Conectando…' : info.phase === 'buy' && left > 0 ? `Venta de cartones · empieza en ${clock}` : `Partida en juego · la siguiente en ${clock}`
+  const open = Boolean(info?.bote?.abierto)
   return (
-    <button type="button" className="hub-bingo" disabled={!online} onClick={onOpen}>
-      <BingoCage pot={pot} className="hub-bingo__cage" />
+    <button type="button" className={`hub-bingo ${open ? 'is-open' : ''}`} disabled={!online} onClick={onOpen}>
+      <span className="hub-bingo__stage" aria-hidden="true">
+        <BingoCage pot={pot} className="hub-bingo__cage" />
+      </span>
       <span className="hub-bingo__body">
-        <em className="hub-pill">En vivo</em>
+        <span className="hub-bingo__tags">
+          <em className="hub-pill">En vivo</em>
+          {info?.bote && <em className={`hub-bote ${open ? 'hub-bote--open' : ''}`}>{open ? 'Bote abierto' : 'Bote cerrado'}</em>}
+        </span>
         <span className="hub-bingo__name">Bingo</span>
         <span className="hub-bingo__pot">
           <small>Bote en la jaula</small>
@@ -290,21 +251,21 @@ function BingoBanner({ info, online, onOpen }) {
         </span>
       </span>
       <span className="hub-bingo__cta" aria-hidden="true">
-        Jugar
+        Jugar <i>→</i>
       </span>
     </button>
   )
 }
 
-// Acceso al score: una placa de latón con tu puesto, tu saldo, lo de hoy y lo que falta para subir.
+// Acceso al score: tu puesto en grande, tu saldo, lo de hoy, lo que falta para subir y los tres primeros.
 function ScoreCard({ scores, me, resetAt, online, onOpen }) {
   const { mine, count, today, gap } = standing(scores, me)
   const top = scores?.players.slice(0, 3) ?? []
   const stale = !online && Boolean(scores)
   const usable = Boolean(scores) || online
   return (
-    <button type="button" className={`hub-plaque ${stale ? 'hub-plaque--stale' : ''}`} disabled={!usable} onClick={onOpen}>
-      <span className="hub-plaque__rank" aria-hidden={!mine}>
+    <button type="button" className={`hub-score ${stale ? 'hub-score--stale' : ''}`} disabled={!usable} onClick={onOpen}>
+      <span className="hub-score__rank" aria-hidden={!mine}>
         {mine ? (
           <>
             <b>{mine.rank}</b>
@@ -316,22 +277,22 @@ function ScoreCard({ scores, me, resetAt, online, onOpen }) {
           <i className="hub-skel hub-skel--rank" />
         )}
       </span>
-      <span className="hub-plaque__body">
+      <span className="hub-score__body">
         {mine ? (
           <>
-            <span className="hub-plaque__line">
-              <span className="hub-plaque__label">Puesto {mine.rank} · tu saldo</span>
-              <span className="hub-plaque__money">{eur(mine.balance)}</span>
+            <span className="hub-score__line">
+              <span className="hub-score__label">Puesto {mine.rank} · tu saldo</span>
+              <span className="hub-score__money">{eur(mine.balance)}</span>
             </span>
-            <span className="hub-plaque__facts">
-              <span className={`hub-plaque__delta ${today > 0 ? 'is-up' : today < 0 ? 'is-down' : ''}`}>{delta(today)} hoy</span>
+            <span className="hub-score__facts">
+              <span className={`hub-score__delta ${today > 0 ? 'is-up' : today < 0 ? 'is-down' : ''}`}>{delta(today)} hoy</span>
               {gap && <span>{gap.text}</span>}
             </span>
           </>
         ) : scores ? (
-          <span className="hub-plaque__line">
-            <span className="hub-plaque__label">Clasificación semanal</span>
-            <span className="hub-plaque__hint">Juega una mano o una tirada para entrar.</span>
+          <span className="hub-score__line">
+            <span className="hub-score__label">Clasificación semanal</span>
+            <span className="hub-score__hint">Juega una mano o una tirada para entrar.</span>
           </span>
         ) : (
           <>
@@ -339,22 +300,20 @@ function ScoreCard({ scores, me, resetAt, online, onOpen }) {
             <i className="hub-skel hub-skel--short" />
           </>
         )}
-        <span className="hub-plaque__foot">
-          {top.length > 0 && (
-            <span className="hub-plaque__top" aria-label={`Líderes: ${top.map((p) => p.name).join(', ')}`}>
-              {top.map((p) => (
-                <span key={p.rank} title={`${p.rank}. ${p.name}`}>
-                  <Avatar name={p.name} src={p.avatar} size={24} />
-                </span>
-              ))}
-            </span>
-          )}
-          <span className="hub-plaque__meta">
-            {stale ? 'Último dato guardado' : resetAt ? `Reinicio en ${until(resetAt)}` : 'Ver clasificación'}
+      </span>
+      <span className="hub-score__foot">
+        {top.length > 0 && (
+          <span className="hub-score__top" aria-label={`Líderes: ${top.map((p) => p.name).join(', ')}`}>
+            {top.map((p) => (
+              <span key={p.rank} title={`${p.rank}. ${p.name}`}>
+                <Avatar name={p.name} src={p.avatar} size={28} />
+              </span>
+            ))}
           </span>
-          <span className="hub-plaque__go" aria-hidden="true">
-            Ver →
-          </span>
+        )}
+        <span className="hub-score__meta">{stale ? 'Último dato guardado' : resetAt ? `Reinicio en ${until(resetAt)}` : 'Ver clasificación'}</span>
+        <span className="hub-score__go" aria-hidden="true">
+          Ver →
         </span>
       </span>
     </button>
@@ -416,7 +375,7 @@ function LiveGame({ game, tables, loaded, online, onJoin }) {
   const code = picked && featured?.code === picked ? picked : undefined
   const meta = [players ? `${players} jugando` : 'Nadie jugando', watching ? `${watching} mirando` : null].filter(Boolean).join(' · ')
   return (
-    <article className={`hub-live ${players > 0 ? 'is-busy' : ''} ${online ? '' : 'is-stale'}`}>
+    <article className={`hub-live hub-live--${game} ${players > 0 ? 'is-busy' : ''} ${online ? '' : 'is-stale'}`}>
       <div className="hub-live__head">
         <h3>{name}</h3>
         <span className={`hub-chip hub-chip--${online ? state.tone : 'free'}`}>
@@ -453,12 +412,39 @@ function LiveGame({ game, tables, loaded, online, onJoin }) {
   )
 }
 
-function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCount = 0 }) {
+// Tarjeta de un juego: la escena, la píldora (en vivo / nuevo), el nombre y una frase. big: las de la Season 3 del escaparate.
+function GameCard({ game, big = false, connected, badge = 0, onPick }) {
+  const { id, name, kind, blurb, art, live, tint } = game
+  return (
+    <button type="button" className={`hub-card hub-card--${id} ${big ? 'hub-card--big' : ''}`} style={{ '--tint': tint }} disabled={!connected} onClick={() => onPick(id)}>
+      <span className="hub-card__art" aria-hidden="true">
+        {art}
+      </span>
+      <span className="hub-card__tags">
+        {live && <em className="hub-pill">En vivo</em>}
+        {big && !live && <em className="hub-pill hub-pill--new">Nuevo</em>}
+      </span>
+      {badge > 0 && <em className="hub-card__badge" title={badge === 1 ? '1 reto pendiente' : `${badge} retos pendientes`}>{badge}</em>}
+      <span className="hub-card__body">
+        <span className="hub-card__kind">{kind}</span>
+        <span className="hub-card__name">{name}</span>
+        <span className="hub-card__blurb">{blurb}</span>
+        <span className="hub-card__cta" aria-hidden="true">
+          Jugar <i>→</i>
+        </span>
+      </span>
+    </button>
+  )
+}
+
+export function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCount = 0 }) {
   const { me, lobby, conn, scores, send } = juegos
   const master = useAuth().usuario?.es_superadmin === true
   const [bank, setBank] = useState(false)
   const [tour, setTour] = useState(false)
   const connected = conn === 'open' && Boolean(me)
+  const balance = useCountUp(me?.balance ?? 0, 900)
+  const { mine, count } = standing(scores, me)
   // La guía se abre sola la primera vez que entras en la Season 2 (cuando ya está pintado el selector).
   const hubReady = Boolean(me && lobby)
   useEffect(() => {
@@ -497,85 +483,84 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCo
         </Suspense>
       )}
       {tour && <Tutorial onClose={() => setTour(false)} />}
+      {/* Marquesina: las bombillas del borde las pinta el CSS. */}
       <header className="hub-top">
-        <h1>Juegos</h1>
-        <p className={`hub-status hub-status--${status.tone}`} role="status" aria-live="polite">
-          <i aria-hidden="true" />
-          {status.text}
-        </p>
+        <div className="hub-top__brand">
+          <small className="hub-top__eyebrow">Casino TopCode</small>
+          <h1>Juegos</h1>
+          <p className={`hub-status hub-status--${status.tone}`} role="status" aria-live="polite">
+            <i aria-hidden="true" />
+            {status.text}
+          </p>
+        </div>
         <div className="hub-top__who">
           {me && (
             <div className="hub-me" data-tour="me">
-              <Avatar name={me.name} src={me.avatar} size={44} />
+              <Avatar name={me.name} src={me.avatar} size={52} />
               <span className="hub-me__text">
                 <small>{me.name}</small>
-                <b>{eur(me.balance)}</b>
+                <b>{eur(balance)}</b>
+                {mine && (
+                  <em className="hub-me__rank">
+                    Puesto {mine.rank} de {count}
+                  </em>
+                )}
               </span>
             </div>
           )}
-          {master && (
-            <button type="button" className="hub-btn hub-bank" data-tour="bank" onClick={() => setBank(true)} aria-label="La banca (master)" title="La banca">
-              <span aria-hidden="true">€</span>
-              <em>Banca</em>
+          <div className="hub-top__btns">
+            {master && (
+              <button type="button" className="hub-btn hub-bank" data-tour="bank" onClick={() => setBank(true)} aria-label="La banca (master)" title="La banca">
+                <span aria-hidden="true">€</span>
+                <em>Banca</em>
+              </button>
+            )}
+            <button type="button" className="hub-btn hub-btn--ghost" onClick={() => setTour(true)}>
+              Tutorial
             </button>
-          )}
-          <button type="button" className="hub-btn hub-btn--ghost" onClick={() => setTour(true)}>
-            Tutorial
-          </button>
-          <button type="button" className="hub-btn hub-btn--ghost" onClick={onHome}>
-            TopCode
-          </button>
+            <button type="button" className="hub-btn hub-btn--ghost" onClick={onHome}>
+              TopCode
+            </button>
+          </div>
         </div>
       </header>
-
-      <section aria-labelledby="score-title" data-tour="score">
-        <h2 id="score-title" className="hub-title">
-          Clasificación <small>se reinicia el domingo a las 23:59</small>
-        </h2>
-        <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
-      </section>
-
-      <section aria-label="Bingo">
-        <BingoBanner info={lobby?.bingo} online={connected} onOpen={() => onPick('bingo')} />
-      </section>
 
       <section aria-labelledby="s3-title">
         <h2 id="s3-title" className="hub-title">
           Nuevo en la Season 3 <small>juegos recién salidos</small>
         </h2>
-        <ul className="hub-tiles">
-          {SEASON3.map(({ id, name, blurb, art, live }) => (
-            <li key={id}>
-              <button type="button" className={`hub-tile hub-tile--${id} hub-tile--new`} disabled={!connected} onClick={() => onPick(id)}>
-                <span className="hub-tile__art" aria-hidden="true">
-                  {art}
-                </span>
-                {live ? <em className="hub-pill">En vivo</em> : <em className="hub-pill hub-pill--new">Nuevo</em>}
-                <span className="hub-tile__name">{name}</span>
-                <span className="hub-tile__blurb">{blurb}</span>
-              </button>
+        <ul className="hub-showcase">
+          {SEASON3.map((game, i) => (
+            <li key={game.id} style={{ '--i': i }}>
+              <GameCard game={game} big connected={connected} onPick={onPick} />
             </li>
           ))}
         </ul>
       </section>
 
+      <div className="hub-feature">
+        <section aria-labelledby="bingo-title">
+          <h2 id="bingo-title" className="hub-title">
+            Bingo <small>el bote de todo el casino</small>
+          </h2>
+          <BingoBanner info={lobby?.bingo} online={connected} onOpen={() => onPick('bingo')} />
+        </section>
+        <section aria-labelledby="score-title" data-tour="score">
+          <h2 id="score-title" className="hub-title">
+            Clasificación <small>se reinicia el domingo a las 23:59</small>
+          </h2>
+          <ScoreCard scores={scores} me={me} resetAt={lobby?.resetAt} online={online} onOpen={onScore} />
+        </section>
+      </div>
+
       <section aria-labelledby="solo-title" data-tour="solo">
         <h2 id="solo-title" className="hub-title">
           Para jugar solo <small>con tu saldo de la semana</small>
         </h2>
-        <ul className="hub-tiles">
-          {SOLO.map(({ id, name, blurb, art, live, off }) => (
-            <li key={id} data-tour={id === 'duel' ? 'duel' : undefined}>
-              <button type="button" className={`hub-tile hub-tile--${id}`} disabled={!connected || off} onClick={() => onPick(id)}>
-                <span className="hub-tile__art" aria-hidden="true">
-                  {art}
-                </span>
-                {live && <em className="hub-pill">En vivo</em>}
-                {off && <em className="hub-pill hub-pill--off">Fuera de servicio</em>}
-                {id === 'duel' && duelCount > 0 && <em className="hub-tile__badge">{duelCount}</em>}
-                <span className="hub-tile__name">{name}</span>
-                <span className="hub-tile__blurb">{blurb}</span>
-              </button>
+        <ul className="hub-games">
+          {SOLO.map((game, i) => (
+            <li key={game.id} style={{ '--i': i }} data-tour={game.id === 'duel' ? 'duel' : undefined}>
+              <GameCard game={game} connected={connected} badge={game.id === 'duel' ? duelCount : 0} onPick={onPick} />
             </li>
           ))}
         </ul>

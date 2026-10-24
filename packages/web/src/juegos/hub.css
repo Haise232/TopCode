@@ -1,6 +1,7 @@
-/* Escrito a mano (no generado): el selector de juegos. Se carga después de responsive.css y pisa lo de Lobby.css.
-   Estilo limpio: superficies planas con un borde fino, letra sin remates y el latón solo para lo importante. Las
-   clases .hub-btn, .hub-seg y .hub-title también las usa el gacha; lo que es solo del selector va bajo .app.hub. */
+/* Escrito a mano (no generado): el selector de juegos, con aire de casino. Se carga después de responsive.css y pisa lo
+   de Lobby.css. Marquesina arriba, escaparate de la Season 3, tarjetas con su mini escena (las ilustraciones son SVG de
+   HubArt.jsx y sus animaciones, las clases hs-*, están al final) y mesas en vivo. Las clases .hub-btn, .hub-seg(s) y
+   .hub-title también las usan el gacha, los duelos y la clasificación; lo que es solo del selector va bajo .app.hub. */
 
 .juegos-root {
   --hub-surface: rgba(255, 255, 255, 0.035);
@@ -10,78 +11,219 @@
   --hub-radius: 18px;
   --hub-up: #5fd38d;
   --hub-down: #ff8a7a;
+  /* Oro de casino: de la luz al fondo. */
+  --hub-gold-hi: #fff2bd;
+  --hub-gold: #ffd25e;
+  --hub-gold-lo: #b9801c;
+  --hub-panel: linear-gradient(160deg, rgba(24, 44, 70, 0.92), rgba(10, 22, 38, 0.94));
+}
+
+/* Ángulo de las bombillas que corren por el borde (se anima con @property; sin soporte, se quedan quietas). */
+@property --hub-a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
 }
 
 .juegos-root .app.hub {
+  position: relative;
+  isolation: isolate;
   height: auto;
   min-height: 100svh;
-  gap: clamp(22px, 3.4vh, 36px);
+  gap: clamp(26px, 4vh, 44px);
   overflow: visible;
-  padding-block: clamp(16px, 3vh, 36px) clamp(28px, 5vh, 56px);
+  padding-block: clamp(16px, 3vh, 36px) clamp(32px, 6vh, 64px);
+}
+/* Focos de ambiente detrás de todo: oro a la izquierda y violeta a la derecha. */
+.juegos-root .app.hub::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(520px 320px at 12% 6%, rgba(255, 210, 94, 0.1), transparent 70%),
+    radial-gradient(640px 420px at 92% 34%, rgba(150, 110, 255, 0.1), transparent 70%),
+    radial-gradient(560px 380px at 8% 72%, rgba(40, 190, 140, 0.08), transparent 70%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
 
-/* --- Cabecera: título, estado corto y tú --- */
+/* --- Marquesina: título grande, tu saldo y las bombillas que recorren el borde --- */
 .juegos-root .hub-top {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 18px 32px;
+  padding: clamp(30px, 3.6vw, 42px) clamp(30px, 3.6vw, 48px);
+  margin: 0;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #33200c, #170d05);
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 94, 0.45),
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    0 0 80px -20px rgba(255, 190, 70, 0.35);
+}
+.juegos-root .hub-top::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: 28px;
+  background: conic-gradient(from var(--hub-a), #fff8d8, #ffd25e 10%, #7a5614 24%, #ffd25e 46%, #fff8d8 58%, #7a5614 78%, #ffd25e 92%, #fff8d8);
+  -webkit-mask-image: radial-gradient(circle, #000 3.2px, transparent 3.9px);
+  mask-image: radial-gradient(circle, #000 3.2px, transparent 3.9px);
+  -webkit-mask-size: 18px 18px;
+  mask-size: 18px 18px;
+  -webkit-mask-repeat: space;
+  mask-repeat: space;
+  filter: drop-shadow(0 0 5px rgba(255, 196, 80, 0.6));
+  animation: hub-chase 7s linear infinite;
+}
+.juegos-root .hub-top::after {
+  content: '';
+  position: absolute;
+  inset: 15px;
+  z-index: -1;
+  border-radius: 16px;
+  background:
+    radial-gradient(60% 140% at 14% 0%, rgba(255, 210, 94, 0.2), transparent 70%),
+    radial-gradient(50% 120% at 100% 100%, rgba(120, 90, 255, 0.16), transparent 70%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 14px),
+    linear-gradient(160deg, #1d2d4c, #0d1a2e);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 210, 94, 0.3),
+    inset 0 0 50px rgba(0, 0, 0, 0.45);
+}
+@keyframes hub-chase {
+  to {
+    --hub-a: 360deg;
+  }
+}
+.juegos-root .hub-top__brand {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  min-width: 0;
+}
+.juegos-root .hub-top__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--hub-gold);
+}
+.juegos-root .hub-top__eyebrow::before,
+.juegos-root .hub-top__eyebrow::after {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hub-gold));
+}
+.juegos-root .hub-top__eyebrow::after {
+  transform: scaleX(-1);
 }
 .juegos-root .hub-top h1 {
   margin: 0;
-  font-family: var(--sans);
-  font-size: clamp(32px, 4vw, 46px);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1;
-  color: var(--ivory);
+  padding-bottom: 0.06em;
+  font-family: var(--display);
+  font-size: clamp(54px, 7.4vw, 96px);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  background: linear-gradient(180deg, var(--hub-gold-hi) 8%, var(--hub-gold) 48%, var(--hub-gold-lo) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(70, 36, 0, 0.55)) drop-shadow(0 0 24px rgba(255, 200, 80, 0.35));
 }
 .juegos-root .hub-top__who {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 14px 18px;
+  min-width: 0;
 }
-.juegos-root .hub-me {
+.juegos-root .hub-top__btns {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 4px 16px 4px 4px;
-  border: 1px solid var(--hub-line);
+}
+/* Tu ficha: foto con aro dorado, saldo en grande y tu puesto. */
+.juegos-root .hub-me {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 8px clamp(18px, 2vw, 26px) 8px 8px;
+  border: 1px solid rgba(255, 210, 94, 0.45);
   border-radius: 999px;
-  background: var(--hub-surface);
+  background: linear-gradient(180deg, rgba(255, 210, 94, 0.14), rgba(0, 0, 0, 0.3));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.35);
+}
+.juegos-root .hub-me > :first-child {
+  flex: none;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2px var(--hub-gold),
+    0 0 18px rgba(255, 210, 94, 0.45);
 }
 .juegos-root .hub-me__text {
   display: grid;
-  line-height: 1.15;
+  gap: 1px;
+  line-height: 1.1;
   min-width: 0;
 }
 .juegos-root .hub-me__text small {
-  max-width: 18ch;
+  max-width: 20ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--muted);
 }
 .juegos-root .hub-me__text b {
-  font-size: 17px;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 400;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
-  color: var(--brass);
+  background: linear-gradient(180deg, var(--hub-gold-hi), var(--hub-gold) 60%, #e0a52b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.juegos-root .hub-me__rank {
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ivory);
+  opacity: 0.8;
 }
 
 .juegos-root .hub-status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
-  margin: 0;
+  min-height: 28px;
+  margin: 4px 0 0;
   padding: 0 12px;
   border: 1px solid var(--hub-line);
   border-radius: 999px;
-  background: var(--hub-surface);
+  background: rgba(0, 0, 0, 0.3);
   font-size: 13px;
   font-weight: 600;
   color: var(--ivory);
@@ -133,12 +275,15 @@
   transition:
     background 0.15s,
     border-color 0.15s,
-    translate 0.15s;
+    translate 0.15s,
+    box-shadow 0.15s;
 }
 .juegos-root .hub-btn--primary {
-  border-color: var(--brass);
-  background: var(--brass);
+  border-color: #f0c45a;
+  background: linear-gradient(180deg, #ffe08a, #e0a21b);
   color: #1b1405;
+  font-weight: 700;
+  box-shadow: 0 6px 16px -4px rgba(224, 162, 27, 0.5);
 }
 .juegos-root .hub-btn--ghost {
   border-color: var(--hub-line);
@@ -171,8 +316,9 @@
 }
 .juegos-root .hub-btn:focus-visible,
 .juegos-root .hub-seg:focus-visible,
-.juegos-root .hub-tile:focus-visible,
-.juegos-root .hub-plaque:focus-visible {
+.juegos-root .hub-card:focus-visible,
+.juegos-root .hub-score:focus-visible,
+.juegos-root .hub-bingo:focus-visible {
   outline: 3px solid var(--ivory);
   outline-offset: 3px;
 }
@@ -195,28 +341,47 @@
   font-size: 14px;
   color: var(--muted);
 }
+/* En el selector: título display con un rombo dorado, la aclaración en pequeño y un filete que se pierde hacia la derecha. */
 .juegos-root .app.hub .hub-title {
-  margin-bottom: 14px;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px 14px;
+  margin-bottom: clamp(14px, 1.8vw, 20px);
+  font-size: clamp(24px, 2.4vw, 32px);
+  letter-spacing: 0.01em;
+  color: var(--ivory);
+}
+.juegos-root .app.hub .hub-title::before {
+  content: '';
+  flex: none;
+  width: 11px;
+  height: 11px;
+  rotate: 45deg;
+  border-radius: 2px;
+  background: linear-gradient(135deg, var(--hub-gold-hi), var(--hub-gold-lo));
+  box-shadow: 0 0 12px rgba(255, 210, 94, 0.6);
 }
 .juegos-root .app.hub .hub-title small {
+  order: 2;
+  min-width: 0;
   font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  color: rgba(157, 182, 196, 0.7);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(157, 182, 196, 0.85);
+}
+.juegos-root .app.hub .hub-title::after {
+  content: '';
+  order: 3;
+  flex: 1 1 24px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 210, 94, 0.45), transparent);
 }
 
 /* --- Rejilla de abajo: mesas en vivo y colección --- */
 .juegos-root .hub-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: clamp(20px, 2.6vw, 36px);
+  gap: clamp(22px, 2.8vw, 40px);
   align-items: start;
 }
 .juegos-root .hub-cards {
@@ -225,190 +390,314 @@
   gap: clamp(12px, 1.4vw, 18px);
 }
 
-/* --- Juegos en solitario: fichas --- */
-.juegos-root .hub-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
-  gap: clamp(10px, 1.2vw, 16px);
+/* --- Escaparate de la Season 3 y juegos en solitario: tarjetas con su escena --- */
+.juegos-root .hub-showcase,
+.juegos-root .hub-games {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.juegos-root .hub-tiles > li {
+.juegos-root .hub-showcase > li,
+.juegos-root .hub-games > li {
   display: grid;
+  min-width: 0;
+  animation: hub-rise 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 60ms);
 }
-/* En tableta, cuatro por fila (4 + 3); en pantallas anchas, los siete en una. */
-@media (min-width: 641px) and (max-width: 1239px) {
-  .juegos-root .hub-tiles {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-/* En pantallas anchas, los siete en una fila. */
-@media (min-width: 1240px) {
-  .juegos-root .hub-tiles {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-  }
-  .juegos-root .hub-tile {
-    padding: 14px;
-  }
-  .juegos-root .hub-tile .hub-pill {
-    top: 14px;
-    right: 12px;
-    padding: 3px 7px;
-    font-size: 0;
-    gap: 0;
+@keyframes hub-rise {
+  from {
+    opacity: 0;
+    translate: 0 22px;
+    scale: 0.97;
   }
 }
-.juegos-root .hub-tile {
+.juegos-root .hub-showcase {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 22px);
+}
+/* Siete juegos: cuatro arriba y tres abajo, que llenan el ancho. */
+.juegos-root .hub-games {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(12px, 1.4vw, 20px);
+}
+.juegos-root .hub-games > li {
+  grid-column: span 3;
+}
+.juegos-root .hub-games > li:nth-child(n + 5) {
+  grid-column: span 4;
+}
+
+.juegos-root .hub-card {
   --tint: 200, 162, 75;
   position: relative;
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  align-content: start;
-  justify-items: start;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  min-height: 168px;
-  padding: 16px;
+  height: 100%;
   overflow: hidden;
-  border: 1px solid var(--hub-line);
-  border-radius: var(--hub-radius);
+  border: 1px solid rgba(var(--tint), 0.38);
+  border-radius: 20px;
   background:
-    radial-gradient(120% 90% at 0% 0%, rgba(var(--tint), 0.16), transparent 60%),
-    var(--hub-surface);
+    radial-gradient(120% 70% at 50% 100%, rgba(var(--tint), 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(20, 38, 60, 0.96), rgba(9, 19, 33, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 26px rgba(0, 0, 0, 0.32);
   text-align: left;
   font: inherit;
   color: var(--ivory);
+  cursor: pointer;
   transition:
-    translate 0.18s,
-    border-color 0.18s,
-    box-shadow 0.18s,
-    background-color 0.18s;
+    translate 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.25s,
+    box-shadow 0.28s;
 }
-.juegos-root .hub-tile--roulette {
-  --tint: 226, 70, 60;
-}
-.juegos-root .hub-tile--crash {
-  --tint: 95, 170, 255;
-}
-.juegos-root .hub-tile--race {
-  --tint: 255, 138, 60;
-}
-.juegos-root .hub-tile--dungeon {
-  --tint: 242, 201, 76;
-}
-.juegos-root .hub-tile--plinko {
-  --tint: 176, 108, 255;
-}
-.juegos-root .hub-tile--frog {
-  --tint: 124, 207, 74;
-}
-.juegos-root .hub-tile--duel {
-  --tint: 255, 79, 91;
-}
-.juegos-root .hub-tile:disabled {
+.juegos-root .hub-card:disabled {
   opacity: 0.5;
+  filter: saturate(0.5);
+  cursor: default;
 }
-.juegos-root .hub-tile__art {
+.juegos-root .hub-card__art {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--art, linear-gradient(#1c3b4d, #0e2230));
+}
+.juegos-root .hub-card--big .hub-card__art {
+  aspect-ratio: 3 / 2;
+}
+/* Degradado inferior que funde la escena con el texto, y un destello que la cruza al pasar el ratón. */
+.juegos-root .hub-card__art::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 38%;
+  background: linear-gradient(transparent, rgba(9, 19, 33, 0.85));
+  pointer-events: none;
+}
+.juegos-root .hub-card__art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.3) 50%, transparent 62%);
+  translate: -130% 0;
+  pointer-events: none;
+}
+.juegos-root .hub-card__tags {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+.juegos-root .hub-card__badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  margin-bottom: 8px;
-  overflow: hidden;
-  border-radius: 14px;
-  background: rgba(var(--tint), 0.14);
-  box-shadow: inset 0 0 0 1px rgba(var(--tint), 0.35);
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff6a76, #d0213a);
+  box-shadow:
+    0 0 0 2px rgba(10, 20, 34, 0.9),
+    0 0 16px rgba(255, 79, 91, 0.7);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 800;
+  color: #fff;
+  animation: hub-badge 1.8s ease-in-out infinite;
 }
-.juegos-root .hub-tile__art > * {
-  box-shadow: none !important;
+@keyframes hub-badge {
+  50% {
+    scale: 1.14;
+  }
 }
-.juegos-root .hub-tile__art > svg {
-  width: 100% !important;
-  height: 100% !important;
-  padding: 6px !important;
-  border-radius: 0 !important;
-  background: transparent !important;
+.juegos-root .hub-card__body {
+  position: relative;
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 3px;
+  padding: 4px clamp(14px, 1.4vw, 18px) clamp(14px, 1.4vw, 18px);
 }
-.juegos-root .hub-tile__name {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
+.juegos-root .hub-card__kind {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(var(--tint));
+  filter: brightness(1.25);
 }
-.juegos-root .hub-tile__blurb {
+.juegos-root .hub-card__name {
+  font-family: var(--display);
+  font-size: clamp(21px, 1.7vw, 25px);
+  font-weight: 400;
+  line-height: 1.12;
+  color: var(--ivory);
+}
+.juegos-root .hub-card--big .hub-card__name {
+  font-size: clamp(23px, 2vw, 28px);
+}
+.juegos-root .hub-card__blurb {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: 13.5px;
-  line-height: 1.4;
+  line-height: 1.42;
   color: var(--muted);
 }
-.juegos-root .hub-tile .hub-pill {
-  position: absolute;
-  top: 16px;
-  right: 16px;
+.juegos-root .hub-card__cta {
+  display: inline-flex;
+  align-items: center;
+  align-self: end;
+  justify-self: start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 15px;
+  border: 1px solid rgba(var(--tint), 0.55);
+  border-radius: 999px;
+  background: rgba(var(--tint), 0.16);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ivory);
+  transition:
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
 }
+.juegos-root .hub-card__cta i,
+.juegos-root .hub-bingo__cta i {
+  font-style: normal;
+  transition: translate 0.2s;
+}
+.juegos-root .hub-card__body {
+  grid-template-rows: auto auto 1fr auto;
+}
+
+/* Fondo de la escena de cada juego. */
+.juegos-root .hub-card--tower {
+  --art: linear-gradient(180deg, #0a0e38, #232a78 62%, #5b3a92);
+}
+.juegos-root .hub-card--heist {
+  --art: radial-gradient(70% 90% at 50% 45%, #333a50, #0c0e16);
+}
+.juegos-root .hub-card--auction {
+  --art: radial-gradient(80% 90% at 50% 0%, #5a2f9a, #170a33);
+}
+.juegos-root .hub-card--bridge {
+  --art: linear-gradient(180deg, #19154c, #3a2a8c 58%, #6c50c4);
+}
+.juegos-root .hub-card--duel {
+  --art: radial-gradient(70% 90% at 50% 55%, #8a1a2e, #2a0a14);
+}
+.juegos-root .hub-card--roulette {
+  --art: radial-gradient(80% 100% at 50% 50%, #17644a, #082a20);
+}
+.juegos-root .hub-card--crash {
+  --art: linear-gradient(180deg, #08142e, #153a6c);
+}
+.juegos-root .hub-card--race {
+  --art: linear-gradient(180deg, #3a62a6, #f0a368 42%);
+}
+.juegos-root .hub-card--dungeon {
+  --art: linear-gradient(180deg, #4a4252, #2c2631);
+}
+.juegos-root .hub-card--plinko {
+  --art: radial-gradient(80% 100% at 50% 20%, #4a2a86, #150b30);
+}
+.juegos-root .hub-card--frog {
+  --art: linear-gradient(180deg, #11788a, #0a4658);
+}
+.juegos-root .hub-card--big {
+  border-color: rgba(var(--tint), 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 14px 34px rgba(0, 0, 0, 0.4),
+    0 0 40px -18px rgba(var(--tint), 0.7);
+}
+
+/* --- Píldoras --- */
 .juegos-root .hub-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(226, 70, 60, 0.16);
+  background: rgba(20, 8, 10, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 110, 94, 0.45);
   font-family: var(--sans);
   font-size: 11px;
   font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #ff9a8a;
+  color: #ffb4a6;
+  backdrop-filter: blur(4px);
 }
 .juegos-root .hub-pill::before {
   content: '';
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #ff5a4a;
   animation: hub-pulse-red 1.6s ease-out infinite;
 }
-.juegos-root .hub-pill--off {
-  background: rgba(150, 150, 150, 0.16);
-  color: #c8c8c8;
+.juegos-root .hub-pill--new {
+  background: rgba(34, 24, 4, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 63, 0.55);
+  color: #ffe27a;
 }
-.juegos-root .hub-pill--off::before {
-  background: #9a9a9a;
+.juegos-root .hub-pill--new::before {
+  background: #ffd23f;
   animation: none;
 }
 @keyframes hub-pulse-red {
   from {
-    box-shadow: 0 0 0 0 rgba(255, 90, 74, 0.6);
+    box-shadow: 0 0 0 0 rgba(255, 90, 74, 0.7);
   }
   to {
-    box-shadow: 0 0 0 6px rgba(255, 90, 74, 0);
+    box-shadow: 0 0 0 7px rgba(255, 90, 74, 0);
   }
 }
 
-/* --- Tarjeta de juego en vivo --- */
+/* --- Tarjeta de juego en vivo (mesas) --- */
 .juegos-root .hub-live {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
   padding: clamp(14px, 1.6vw, 20px);
-  border: 1px solid var(--hub-line);
-  border-radius: var(--hub-radius);
-  background: var(--hub-surface);
+  border: 1px solid var(--hub-line-hi);
+  border-radius: 20px;
+  background: var(--hub-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 26px rgba(0, 0, 0, 0.3);
   transition:
     border-color 0.2s,
-    translate 0.2s;
+    box-shadow 0.25s;
 }
 .juegos-root .hub-live.is-busy {
-  border-color: rgba(200, 162, 75, 0.45);
+  border-color: rgba(255, 210, 94, 0.55);
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(200, 162, 75, 0.1), transparent 70%),
-    var(--hub-surface);
+    radial-gradient(ellipse at 50% 0%, rgba(255, 210, 94, 0.14), transparent 70%),
+    var(--hub-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 26px rgba(0, 0, 0, 0.3),
+    0 0 36px -14px rgba(255, 210, 94, 0.6);
 }
 .juegos-root .hub-live__head {
   display: flex;
@@ -418,11 +707,26 @@
   gap: 8px 12px;
 }
 .juegos-root .hub-live__head h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 400;
   line-height: 1.1;
+}
+.juegos-root .hub-live__head h3::before {
+  font-family: var(--sans);
+  font-size: 22px;
+  color: var(--hub-gold);
+}
+.juegos-root .hub-live--blackjack .hub-live__head h3::before {
+  content: '♠';
+}
+.juegos-root .hub-live--poker .hub-live__head h3::before {
+  content: '♦';
+  color: #ff6a5c;
 }
 .juegos-root .hub-live__meta {
   display: flex;
@@ -494,7 +798,7 @@
   background: var(--brass);
 }
 
-/* --- Mini mesa --- */
+/* --- Mini mesa: tapete verde con borde de madera --- */
 .juegos-root .hub-table {
   position: relative;
   aspect-ratio: 2.1;
@@ -507,10 +811,15 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 35%, #1d5873, #14394f 62%, #0c2737);
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.12), transparent 60%),
+    radial-gradient(ellipse at 50% 40%, #1f8660, #115338 66%, #0a3524);
   box-shadow:
-    inset 0 0 0 2px rgba(241, 233, 214, 0.12),
-    0 12px 24px rgba(4, 16, 24, 0.4);
+    inset 0 0 0 2px rgba(241, 233, 214, 0.14),
+    inset 0 -10px 26px rgba(0, 0, 0, 0.35),
+    0 0 0 5px #6b3a20,
+    0 0 0 7px #a8743e,
+    0 14px 26px rgba(0, 0, 0, 0.5);
 }
 .juegos-root .hub-table--blackjack .hub-table__felt {
   inset: 8% 8% 12%;
@@ -520,8 +829,9 @@
   max-width: 60%;
   text-align: center;
   font-size: clamp(11px, 3.4cqw, 14px);
+  font-weight: 600;
   line-height: 1.25;
-  color: rgba(241, 233, 214, 0.75);
+  color: rgba(241, 233, 214, 0.78);
 }
 .juegos-root .hub-table__dealer {
   position: absolute;
@@ -530,7 +840,7 @@
   translate: -50% 0;
   padding: 2px 10px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.4);
   font-size: 11px;
   font-style: normal;
   font-weight: 600;
@@ -550,12 +860,13 @@
 }
 .juegos-root .hub-seat--on {
   box-shadow:
-    0 0 0 2px var(--brass),
+    0 0 0 2px var(--hub-gold),
+    0 0 14px rgba(255, 210, 94, 0.55),
     0 4px 10px rgba(4, 16, 24, 0.55);
 }
 .juegos-root .hub-seat--free {
   border: 2px dashed rgba(241, 233, 214, 0.5);
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.22);
 }
 .juegos-root .hub-seat--away {
   border: 2px solid rgba(241, 233, 214, 0.25);
@@ -633,322 +944,384 @@
   color: var(--ivory);
 }
 
-/* --- Tu puesto: una barra plana con el número grande --- */
-.juegos-root .hub-plaque {
+/* --- Fila del Bingo y la clasificación --- */
+.juegos-root .hub-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: clamp(22px, 2.8vw, 40px);
+  align-items: stretch;
+}
+.juegos-root .hub-feature > section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.juegos-root .hub-feature > section > button {
+  flex: 1 1 auto;
+}
+
+/* Bingo: cartel dorado con la jaula del bote y su propia tira de bombillas. */
+.juegos-root .hub-bingo {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: clamp(104px, 12vw, 164px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(14px, 2.4vw, 32px);
+  width: 100%;
+  padding: clamp(24px, 2.4vw, 32px) clamp(24px, 2.8vw, 38px);
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #3a1d0e, #1a0f08);
+  color: var(--ivory);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 94, 0.45),
+    0 16px 40px rgba(0, 0, 0, 0.4);
+  transition:
+    translate 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.28s;
+}
+.juegos-root .hub-bingo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  border-radius: 24px;
+  background: conic-gradient(from var(--hub-a), #fff8d8, #ffd25e 10%, #7a5614 24%, #ffd25e 46%, #fff8d8 58%, #7a5614 78%, #ffd25e 92%, #fff8d8);
+  -webkit-mask-image: radial-gradient(circle, #000 2.6px, transparent 3.2px);
+  mask-image: radial-gradient(circle, #000 2.6px, transparent 3.2px);
+  -webkit-mask-size: 15px 15px;
+  mask-size: 15px 15px;
+  -webkit-mask-repeat: space;
+  mask-repeat: space;
+  filter: drop-shadow(0 0 4px rgba(255, 196, 80, 0.55));
+  animation: hub-chase 9s linear infinite reverse;
+}
+.juegos-root .hub-bingo::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  z-index: -1;
+  border-radius: 14px;
+  background:
+    radial-gradient(70% 120% at 12% 50%, rgba(255, 216, 107, 0.26), transparent 65%),
+    radial-gradient(60% 100% at 100% 0%, rgba(194, 51, 44, 0.2), transparent 70%),
+    linear-gradient(115deg, #3d1b0d 0%, #1e120a 50%, #0f2230 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 94, 0.25);
+}
+.juegos-root .hub-bingo:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.juegos-root .hub-bingo__stage {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+}
+.juegos-root .hub-bingo__cage {
+  width: 100%;
+  max-height: 200px;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 22px rgba(255, 200, 70, 0.3));
+}
+.juegos-root .hub-bingo__body {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+}
+.juegos-root .hub-bingo__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.juegos-root .hub-bote {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(241, 233, 214, 0.28);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .hub-bote--open {
+  background: rgba(30, 138, 90, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(95, 211, 141, 0.6);
+  color: #9af0bd;
+}
+.juegos-root .hub-bingo__name {
+  font-family: var(--display);
+  font-size: clamp(32px, 3.6vw, 50px);
+  line-height: 1;
+}
+.juegos-root .hub-bingo__pot {
+  display: grid;
+}
+.juegos-root .hub-bingo__pot small {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.juegos-root .hub-bingo__pot b {
+  font-family: var(--display);
+  font-size: clamp(34px, 4.2vw, 58px);
+  font-weight: 400;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, var(--hub-gold-hi), var(--hub-gold) 60%, #e0a52b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 0 20px rgba(255, 210, 90, 0.4));
+}
+.juegos-root .hub-bingo__when {
+  font-weight: 700;
+  color: #ffd86b;
+  font-variant-numeric: tabular-nums;
+}
+.juegos-root .hub-bingo__blurb {
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.juegos-root .hub-bingo__cta {
+  grid-column: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  padding: 11px 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe08a, #d89a22);
+  color: #1b1405;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 6px 18px rgba(200, 150, 47, 0.45);
+}
+
+/* Clasificación: el marcador del casino, con tu puesto en grande. */
+.juegos-root .hub-score {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
   align-items: center;
-  gap: clamp(14px, 2vw, 28px);
+  gap: 14px clamp(16px, 2vw, 26px);
   width: 100%;
-  padding: 14px clamp(16px, 2vw, 24px);
-  border: 1px solid rgba(200, 162, 75, 0.3);
-  border-radius: var(--hub-radius);
+  padding: clamp(20px, 2.2vw, 28px);
+  border: 1px solid rgba(255, 210, 94, 0.4);
+  border-radius: 24px;
   background:
-    linear-gradient(90deg, rgba(200, 162, 75, 0.14), transparent 45%),
-    var(--hub-surface);
+    radial-gradient(90% 80% at 0% 0%, rgba(255, 210, 94, 0.2), transparent 65%),
+    var(--hub-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 40px rgba(0, 0, 0, 0.35);
   text-align: left;
   font: inherit;
   color: var(--ivory);
+  cursor: pointer;
   transition:
-    translate 0.15s,
-    border-color 0.15s;
+    translate 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.25s,
+    box-shadow 0.28s;
 }
-.juegos-root .hub-plaque:disabled {
+.juegos-root .hub-score:disabled {
   opacity: 0.6;
+  cursor: default;
 }
-.juegos-root .hub-plaque--stale {
+.juegos-root .hub-score--stale {
   filter: saturate(0.6);
 }
-.juegos-root .hub-plaque__rank {
+.juegos-root .hub-score__rank {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  align-items: center;
   line-height: 1;
 }
-.juegos-root .hub-plaque__rank b {
-  font-size: clamp(40px, 4.4vw, 54px);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--brass);
+.juegos-root .hub-score__rank b {
+  font-family: var(--display);
+  font-size: clamp(64px, 6.4vw, 92px);
+  font-weight: 400;
+  line-height: 0.95;
+  background: linear-gradient(180deg, var(--hub-gold-hi), var(--hub-gold) 55%, var(--hub-gold-lo));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(70, 36, 0, 0.5)) drop-shadow(0 0 18px rgba(255, 200, 80, 0.3));
 }
-.juegos-root .hub-plaque__rank b::before {
+.juegos-root .hub-score__rank b::before {
   content: '#';
   margin-right: 2px;
-  font-size: 0.5em;
-  vertical-align: 0.6em;
-  opacity: 0.7;
+  font-size: 0.42em;
+  vertical-align: 0.9em;
+  opacity: 0.75;
 }
-.juegos-root .hub-plaque__rank small {
-  font-size: 13px;
-  font-weight: 600;
+.juegos-root .hub-score__rank small {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
-.juegos-root .hub-plaque__body {
+.juegos-root .hub-score__body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px 24px;
+  gap: 8px;
   min-width: 0;
 }
-.juegos-root .hub-plaque__line {
+.juegos-root .hub-score__line {
   display: grid;
   gap: 2px;
 }
-.juegos-root .hub-plaque__label {
-  font-size: 13px;
-  font-weight: 600;
+.juegos-root .hub-score__label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
 }
-.juegos-root .hub-plaque__money {
-  font-size: clamp(22px, 2.4vw, 28px);
+.juegos-root .hub-score__money {
+  font-size: clamp(24px, 2.4vw, 30px);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
-.juegos-root .hub-plaque__hint {
+.juegos-root .hub-score__hint {
   font-size: 14px;
   color: var(--muted);
 }
-.juegos-root .hub-plaque__facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  grid-column: 1;
+.juegos-root .hub-score__facts {
+  display: grid;
+  gap: 2px;
   font-size: 13.5px;
   color: var(--muted);
 }
-.juegos-root .hub-plaque__delta {
+.juegos-root .hub-score__delta {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ivory);
 }
-.juegos-root .hub-plaque__delta.is-up {
+.juegos-root .hub-score__delta.is-up {
   color: var(--hub-up);
 }
-.juegos-root .hub-plaque__delta.is-down {
+.juegos-root .hub-score__delta.is-down {
   color: var(--hub-down);
 }
-.juegos-root .hub-plaque__foot {
+.juegos-root .hub-score__foot {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hub-line);
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
 }
-.juegos-root .hub-plaque__top {
+.juegos-root .hub-score__top {
   display: inline-flex;
 }
-.juegos-root .hub-plaque__top > span {
+.juegos-root .hub-score__top > span {
   display: inline-grid;
-  margin-left: -6px;
+  margin-left: -7px;
   border: 2px solid #10283a;
   border-radius: 50%;
 }
-.juegos-root .hub-plaque__top > span:first-child {
+.juegos-root .hub-score__top > span:first-child {
   margin-left: 0;
+  box-shadow: 0 0 0 2px var(--hub-gold);
 }
-.juegos-root .hub-plaque__meta {
-  white-space: nowrap;
+.juegos-root .hub-score__meta {
+  flex: 1 1 auto;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
 }
-.juegos-root .hub-plaque__go {
-  margin-left: 4px;
+.juegos-root .hub-score__go {
+  margin-left: auto;
   white-space: nowrap;
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
   background: var(--hub-surface-hi);
+  box-shadow: inset 0 0 0 1px var(--hub-line-hi);
   color: var(--ivory);
-}
-
-/* Dibujos de las fichas, a escala de icono. */
-.juegos-root .hub-tile__art .game__wheel {
-  height: 46px;
-  border-width: 5px;
-  outline-width: 1px;
-  box-shadow: none;
-}
-.juegos-root .hub-tile__art .game__rocket {
-  height: 46px;
-  box-shadow: inset 0 0 0 2px var(--brass);
-  border-radius: 10px;
-}
-.juegos-root .hub-tile__art .game__rocket::after {
-  top: 4px;
-  right: 6px;
-  font-size: 18px;
-  line-height: 1;
-}
-.juegos-root .hub-tile__art .game__door {
-  width: 46px;
-  height: 46px;
-  padding: 3px;
-  border-radius: 10px;
-  background: #2a272d;
-  box-shadow: inset 0 0 0 2px var(--brass);
-}
-.juegos-root .game__door-gap {
-  fill: #f2c94c;
-}
-.juegos-root .game__door-leaf {
-  fill: #7a4a24;
-  stroke: #3b2008;
-  stroke-width: 1;
-}
-.juegos-root .game__door-knob {
-  fill: #c8a24b;
-}
-.juegos-root .game__door-gold {
-  fill: #fff1b0;
-}
-.juegos-root .hub-tile__art .game__bribe {
-  width: 46px;
-  height: 46px;
-  padding: 3px;
-  border-radius: 10px;
-  background: #1f3a2c;
-  box-shadow: inset 0 0 0 2px var(--brass);
-}
-.juegos-root .game__bribe-bill {
-  fill: #5aa468;
-  stroke: #1f4a2a;
-  stroke-width: 1;
-}
-.juegos-root .game__bribe-coin {
-  fill: none;
-  stroke: #d6f0d8;
-  stroke-width: 1;
-}
-.juegos-root .game__bribe-case {
-  fill: #8a5028;
-  stroke: #2a150a;
-  stroke-width: 1.2;
-}
-.juegos-root .game__bribe-handle {
-  fill: none;
-  stroke: #c8a24b;
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-.juegos-root .game__bribe-latch {
-  fill: #d9ae48;
-  stroke: #5a3d0a;
-  stroke-width: 0.8;
-}
-.juegos-root .game__bribe-env {
-  fill: #f3e6c4;
-  stroke: #7a5a22;
-  stroke-width: 1;
-}
-.juegos-root .game__bribe-flap {
-  fill: none;
-  stroke: #7a5a22;
-  stroke-width: 1;
-  stroke-linejoin: round;
-}
-.juegos-root .hub-tile__art .game__plinko {
-  width: 46px;
-  height: 46px;
-  padding: 3px;
-  border-radius: 10px;
-  background: var(--baize);
-  box-shadow: inset 0 0 0 2px var(--brass);
-}
-.juegos-root .game__plinko-peg {
-  fill: #e9e1cf;
-}
-.juegos-root .game__plinko-ball {
-  fill: #f0c75a;
-}
-.juegos-root .game__plinko-hot {
-  fill: #e2463c;
-}
-.juegos-root .game__plinko-cold {
-  fill: #5f87a0;
-}
-.juegos-root .hub-tile__art .game__frog {
-  width: 46px;
-  height: 46px;
-  padding: 3px;
-  border-radius: 10px;
-  background: #14586a;
-  box-shadow: inset 0 0 0 2px var(--brass);
-}
-.juegos-root .game__frog-pad {
-  fill: #3f9a52;
-}
-.juegos-root .game__frog-body {
-  fill: #7ccf4a;
-}
-.juegos-root .game__frog-eye {
-  fill: #fff;
-}
-.juegos-root .game__frog-pupil {
-  fill: #16161b;
-}
-.juegos-root .hub-tile__art .game__race {
-  width: 46px;
-  height: 46px;
-  padding: 3px;
-  border-radius: 10px;
-  background: #1c3b4d;
-  box-shadow: inset 0 0 0 2px var(--brass);
-}
-.juegos-root .game__race-road {
-  fill: #3a444c;
-}
-.juegos-root .game__race-line {
-  fill: none;
-  stroke: #f1e9d6;
-  stroke-width: 1.2;
-  stroke-dasharray: 4 3;
-}
-.juegos-root .game__race-body {
-  fill: #e2463c;
-}
-.juegos-root .game__race-glass {
-  fill: #d4e6ff;
-}
-.juegos-root .game__race-wheel {
-  fill: #16161b;
-}
-.juegos-root .game__race-hub {
-  fill: #c8a24b;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 /* Hover solo con puntero: al tocar no se queda a medias. */
 @media (hover: hover) {
   .juegos-root .hub-live:hover,
   .juegos-root .hub-live:focus-within {
-    border-color: var(--hub-line-hi);
-  }
-  .juegos-root .hub-live.is-busy:hover,
-  .juegos-root .hub-live.is-busy:focus-within {
-    border-color: rgba(200, 162, 75, 0.7);
+    border-color: rgba(255, 210, 94, 0.5);
   }
   .juegos-root .hub-btn:not(:disabled):hover {
     background: rgba(255, 255, 255, 0.08);
   }
   .juegos-root .hub-btn--primary:not(:disabled):hover {
-    background: #dcb964;
+    background: linear-gradient(180deg, #fff0b0, #f0b52c);
   }
   .juegos-root .hub-seg:hover {
     background: rgba(241, 233, 214, 0.08);
   }
-  .juegos-root .hub-tile:not(:disabled):hover {
-    translate: 0 -3px;
-    border-color: rgba(var(--tint), 0.55);
-    background-color: var(--hub-surface-hi);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(var(--tint), 0.15);
+  /* Tarjetas: se elevan, brillan con su color y el destello cruza la escena. */
+  .juegos-root .hub-card:not(:disabled):hover {
+    translate: 0 -7px;
+    border-color: rgba(var(--tint), 0.9);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 26px 46px rgba(0, 0, 0, 0.5),
+      0 0 46px -6px rgba(var(--tint), 0.65);
   }
-  .juegos-root .hub-plaque:not(:disabled):hover {
-    border-color: rgba(200, 162, 75, 0.6);
+  .juegos-root .hub-card:not(:disabled):hover .hub-card__art::before {
+    translate: 130% 0;
+    transition: translate 0.9s ease;
   }
-  .juegos-root .hub-plaque:not(:disabled):hover .hub-plaque__go {
-    background: var(--brass);
+  .juegos-root .hub-card:not(:disabled):hover .hub-card__cta {
+    background: linear-gradient(180deg, #ffe08a, #e0a21b);
+    border-color: transparent;
+    color: #1b1405;
+    box-shadow: 0 6px 18px -4px rgba(224, 162, 27, 0.6);
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hub-card__cta i,
+  .juegos-root .hub-bingo:not(:disabled):hover .hub-bingo__cta i {
+    translate: 4px 0;
+  }
+  .juegos-root .hub-bingo:not(:disabled):hover,
+  .juegos-root .hub-score:not(:disabled):hover {
+    translate: 0 -4px;
+  }
+  .juegos-root .hub-bingo:not(:disabled):hover {
+    box-shadow:
+      0 0 0 1px rgba(255, 226, 122, 0.8),
+      0 24px 50px rgba(0, 0, 0, 0.5),
+      0 0 50px -8px rgba(255, 200, 70, 0.55);
+  }
+  .juegos-root .hub-score:not(:disabled):hover {
+    border-color: rgba(255, 210, 94, 0.8);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 24px 50px rgba(0, 0, 0, 0.45),
+      0 0 40px -10px rgba(255, 210, 94, 0.5);
+  }
+  .juegos-root .hub-score:not(:disabled):hover .hub-score__go {
+    background: var(--hub-gold);
     color: #1b1405;
   }
 }
@@ -983,8 +1356,8 @@
   border-radius: 12px;
 }
 .juegos-root .hub-skel--rank {
-  width: 56px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
 }
 
 @keyframes hub-shimmer {
@@ -1001,14 +1374,21 @@
   display: grid;
   gap: 14px;
   padding: clamp(14px, 1.8vw, 22px);
-  border: 1px solid var(--hub-line);
-  border-radius: var(--hub-radius);
+  border: 1px solid rgba(176, 108, 255, 0.4);
+  border-radius: 20px;
   background:
-    radial-gradient(ellipse at 100% 0%, rgba(176, 108, 255, 0.12), transparent 60%),
-    var(--hub-surface);
+    radial-gradient(ellipse at 100% 0%, rgba(176, 108, 255, 0.22), transparent 62%),
+    var(--hub-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 26px rgba(0, 0, 0, 0.3);
 }
 .juegos-root .hub-gacha.is-hot {
-  border-color: rgba(123, 224, 166, 0.45);
+  border-color: rgba(123, 224, 166, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 26px rgba(0, 0, 0, 0.3),
+    0 0 36px -14px rgba(123, 224, 166, 0.6);
 }
 .juegos-root .hub-gacha__head {
   display: flex;
@@ -1019,9 +1399,9 @@
 }
 .juegos-root .hub-gacha__head h3 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 400;
   line-height: 1.1;
 }
 .juegos-root .hub-gacha__line {
@@ -1108,10 +1488,27 @@
   flex-grow: 1.6;
 }
 
-/* --- Tableta: una columna --- */
-@media (max-width: 1000px) {
-  .juegos-root .hub-grid {
+/* --- Pantallas medias y tableta --- */
+@media (max-width: 1100px) {
+  .juegos-root .hub-grid,
+  .juegos-root .hub-feature {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .juegos-root .hub-showcase {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .juegos-root .hub-games {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .juegos-root .hub-games > li,
+  .juegos-root .hub-games > li:nth-child(n + 5) {
+    grid-column: auto;
+  }
+  .juegos-root .hub-games > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .juegos-root .hub-games > li:last-child:nth-child(odd) .hub-card__art {
+    aspect-ratio: 16 / 6;
   }
 }
 
@@ -1119,62 +1516,107 @@
 @media (max-width: 640px) {
   .juegos-root .app.hub {
     padding-inline: 14px;
+    gap: 26px;
   }
-  /* Cabecera: título y conectados en una fila; tú y el botón de TopCode, debajo y a lo ancho. */
+  /* Marquesina: título y conectados arriba; tu ficha y los botones, debajo y a lo ancho. */
   .juegos-root .hub-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 28px 24px 26px;
+    border-radius: 22px;
+  }
+  .juegos-root .hub-top::before {
+    border-radius: 22px;
+    -webkit-mask-size: 14px 14px;
+    mask-size: 14px 14px;
+    -webkit-mask-image: radial-gradient(circle, #000 2.4px, transparent 3px);
+    mask-image: radial-gradient(circle, #000 2.4px, transparent 3px);
+  }
+  .juegos-root .hub-top::after {
+    inset: 12px;
+    border-radius: 12px;
+  }
+  .juegos-root .hub-top h1 {
+    font-size: 58px;
   }
   .juegos-root .hub-top__who {
-    grid-column: 1 / -1;
-    justify-content: space-between;
-    gap: 8px;
-    margin-left: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
   }
-  /* En 360 px no caben tú, Tutorial y TopCode con el relleno de escritorio: tu nombre cede y los botones se estrechan. */
   .juegos-root .hub-me {
-    flex: 1 1 auto;
-    min-width: 0;
+    justify-content: flex-start;
   }
-  .juegos-root .hub-top__who .hub-btn:not(.hub-bank) {
-    flex: 0 0 auto;
-    padding: 0 14px;
+  .juegos-root .hub-top__btns {
+    gap: 8px;
   }
-  .juegos-root .hub-me__text small {
-    max-width: 14ch;
+  .juegos-root .hub-top__btns .hub-btn:not(.hub-bank) {
+    flex: 1 1 0;
+    padding: 0 12px;
   }
   .juegos-root .hub-bank {
-    padding: 0 11px;
+    flex: none;
+    padding: 0 14px;
   }
-  .juegos-root .hub-bank em {
+  .juegos-root .app.hub .hub-title {
+    flex-wrap: wrap;
+  }
+  .juegos-root .app.hub .hub-title::after {
     display: none;
   }
-  .juegos-root .hub-tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+  .juegos-root .app.hub .hub-title small {
+    flex-basis: 100%;
+    order: 3;
+    margin-left: 25px;
   }
-  .juegos-root .hub-tile {
-    min-height: 0;
-    padding: 14px;
+  /* Escaparate: carrusel horizontal que se ajusta tarjeta a tarjeta y asoma la siguiente. */
+  .juegos-root .hub-showcase {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: min(80%, 320px);
+    gap: 14px;
+    margin-inline: -14px;
+    padding: 8px 14px 14px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 14px;
+    scrollbar-width: none;
   }
-  .juegos-root .hub-tile__art {
-    width: 44px;
-    height: 44px;
-    margin-bottom: 4px;
+  .juegos-root .hub-showcase::-webkit-scrollbar {
+    display: none;
   }
-  .juegos-root .hub-tile .hub-pill {
-    top: 14px;
-    right: 12px;
-    padding: 3px 7px;
-    font-size: 0;
-    gap: 0;
+  .juegos-root .hub-showcase > li {
+    scroll-snap-align: start;
   }
-  .juegos-root .hub-tile__name {
-    font-size: 16px;
+  .juegos-root .hub-games {
+    gap: 12px;
   }
-  .juegos-root .hub-tile__blurb {
+  .juegos-root .hub-games .hub-card__body {
+    padding: 2px 12px 12px;
+  }
+  .juegos-root .hub-games .hub-card__name {
+    font-size: 19px;
+  }
+  .juegos-root .hub-games .hub-card__blurb {
+    -webkit-line-clamp: 3;
     font-size: 12.5px;
+  }
+  .juegos-root .hub-games .hub-card__cta {
+    display: none;
+  }
+  .juegos-root .hub-games .hub-card__tags {
+    top: 8px;
+    left: 8px;
+  }
+  .juegos-root .hub-games .hub-pill {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+  .juegos-root .hub-games .hub-card__badge {
+    top: 7px;
+    right: 7px;
   }
   .juegos-root .hub-gacha__strip {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1188,198 +1630,460 @@
   .juegos-root .hub-cards {
     grid-template-columns: minmax(0, 1fr);
   }
-  .juegos-root .hub-plaque__body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .juegos-root .hub-plaque__foot {
-    grid-column: 1;
-    grid-row: auto;
-    padding-top: 8px;
-    border-top: 1px solid var(--hub-line);
-  }
-  /* Toda la barra es el botón: en móvil sobra el «Ver». */
-  .juegos-root .hub-plaque__go {
-    display: none;
-  }
-  /* La última ficha, si queda sola, ocupa la fila entera. */
-  .juegos-root .hub-tiles > li:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .juegos-root .hub-live,
-  .juegos-root .hub-btn,
-  .juegos-root .hub-tile,
-  .juegos-root .hub-plaque,
-  .juegos-root .hub-seg {
-    transition: none;
-  }
-  .juegos-root .hub-status--on i,
-  .juegos-root .hub-chip--on i,
-  .juegos-root .hub-pill::before,
-  .juegos-root .hub-skel {
-    animation: none;
-  }
-}
-
-/* Icono de los Duelos en el selector. */
-.juegos-root .game__duel {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  font-size: 34px;
-  line-height: 1;
-  color: #ff6b7d;
-  text-shadow: 0 0 14px rgba(255, 79, 91, 0.6);
-}
-
-/* --- Bingo: el cartel con la jaula del bote --- */
-.juegos-root .hub-bingo {
-  position: relative;
-  display: grid;
-  grid-template-columns: clamp(96px, 12vw, 150px) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: clamp(14px, 2.4vw, 32px);
-  width: 100%;
-  padding: clamp(14px, 2vw, 22px) clamp(16px, 2.6vw, 30px);
-  border-radius: 22px;
-  border: 1px solid rgba(200, 162, 75, 0.55);
-  background:
-    radial-gradient(80% 140% at 10% 50%, rgba(255, 216, 107, 0.22), transparent 60%),
-    linear-gradient(110deg, #3a1b0f 0%, #20140c 45%, #0f2633 100%);
-  color: var(--ivory);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 241, 194, 0.18),
-    0 10px 30px rgba(0, 0, 0, 0.35);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
-}
-.juegos-root .hub-bingo:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 241, 194, 0.18),
-    0 14px 36px rgba(0, 0, 0, 0.45),
-    0 0 0 2px rgba(255, 226, 122, 0.35);
-}
-.juegos-root .hub-bingo:focus-visible {
-  outline: 3px solid var(--ivory);
-  outline-offset: 3px;
-}
-.juegos-root .hub-bingo:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-.juegos-root .hub-bingo__cage {
-  width: 100%;
-  max-height: 170px;
-}
-.juegos-root .hub-bingo__body {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: baseline;
-  gap: 4px 14px;
-  min-width: 0;
-}
-.juegos-root .hub-bingo__body .hub-pill {
-  grid-column: 1 / -1;
-  justify-self: start;
-}
-.juegos-root .hub-bingo__name {
-  font-family: var(--display);
-  font-size: clamp(30px, 3.6vw, 48px);
-  line-height: 1;
-}
-.juegos-root .hub-bingo__pot {
-  display: grid;
-  justify-self: start;
-}
-.juegos-root .hub-bingo__pot small {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--brass);
-}
-.juegos-root .hub-bingo__pot b {
-  font-family: var(--display);
-  font-size: clamp(26px, 3.2vw, 42px);
-  font-weight: 400;
-  line-height: 1.05;
-  color: #ffe9a8;
-  text-shadow: 0 0 22px rgba(255, 210, 90, 0.45);
-  font-variant-numeric: tabular-nums;
-}
-.juegos-root .hub-bingo__when {
-  grid-column: 1 / -1;
-  font-weight: 700;
-  color: #ffd86b;
-  font-variant-numeric: tabular-nums;
-}
-.juegos-root .hub-bingo__blurb {
-  grid-column: 1 / -1;
-  font-size: 14px;
-  color: var(--muted);
-}
-.juegos-root .hub-bingo__cta {
-  padding: 12px 26px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #f6d27a, #c8962f);
-  color: #1b1405;
-  font-weight: 800;
-  font-size: 16px;
-  box-shadow: 0 4px 14px rgba(200, 150, 47, 0.45);
-}
-@media (max-width: 720px) {
   .juegos-root .hub-bingo {
-    grid-template-columns: 88px minmax(0, 1fr);
+    grid-template-columns: 92px minmax(0, 1fr);
+    padding: 26px 24px;
   }
-  .juegos-root .hub-bingo__cta {
-    grid-column: 1 / -1;
-    text-align: center;
+  .juegos-root .hub-bingo::before {
+    -webkit-mask-size: 13px 13px;
+    mask-size: 13px 13px;
   }
   .juegos-root .hub-bingo__blurb {
     display: none;
   }
+  .juegos-root .hub-bingo__cta {
+    grid-column: 1 / -1;
+    justify-content: center;
+    justify-self: stretch;
+  }
+  .juegos-root .hub-score__go {
+    display: none;
+  }
 }
 
-/* Season 3: juegos nuevos. */
-.juegos-root .hub-pill--new {
-  background: rgba(255, 210, 63, 0.18);
-  color: #ffe27a;
+/* --- Escenas (HubArt.jsx): reposo animado y reacción al pasar el ratón --- */
+.juegos-root .hub-scene {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-.juegos-root .hub-pill--new::before {
-  background: #ffd23f;
-  animation: none;
+@keyframes hs-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
 }
-.juegos-root .hub-tile--new {
-  box-shadow: inset 0 0 0 1px rgba(255, 210, 63, 0.35);
+@keyframes hs-bob {
+  50% {
+    transform: translateY(-2.5px);
+  }
 }
-.juegos-root .hub-tile__art .game__s3 {
-  width: 46px;
-  height: 46px;
-  padding: 3px;
-  border-radius: 10px;
-  background: #1b2340;
-  box-shadow: inset 0 0 0 2px var(--brass);
+@keyframes hs-flicker {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.22);
+  }
 }
-.juegos-root .game__s3-tile {
-  fill: #6f84b3;
+.juegos-root .hs-stars circle {
+  fill: #fff;
+  animation: hs-twinkle 2.8s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
 }
-.juegos-root .game__s3-hot {
-  fill: #ffd23f;
+.juegos-root .hs-twinkle {
+  animation: hs-twinkle 2.4s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
 }
-.juegos-root .game__s3-bad {
-  fill: #c2332c;
+.juegos-root .hs-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hs-halo 3.4s ease-in-out infinite;
 }
-.juegos-root .game__s3-ink {
-  fill: #f1e9d6;
+@keyframes hs-halo {
+  50% {
+    opacity: 0.5;
+    transform: scale(1.18);
+  }
 }
-.juegos-root .game__s3-ink-text {
-  fill: #2a1a00;
+
+/* La Torre */
+.juegos-root .hs-tw-hero {
+  transition: translate 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+  animation: hs-bob 2s ease-in-out infinite;
+}
+.juegos-root .hs-tw-prize rect {
+  animation: hs-glow 2s ease-in-out infinite;
+}
+@keyframes hs-glow {
+  50% {
+    filter: drop-shadow(0 0 6px #ffd25e) brightness(1.2);
+  }
+}
+.juegos-root .hs-tw-bad {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.juegos-root .hs-tw-mult {
+  font: 800 9px var(--sans);
+  fill: #ffe9a0;
+  opacity: 0.85;
+}
+
+/* El Atraco */
+.juegos-root .hs-lasers line {
+  stroke: #ff3b4a;
+  stroke-width: 1.4;
+  opacity: 0.45;
+  filter: drop-shadow(0 0 3px #ff3b4a);
+  animation: hs-laser 2.6s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes hs-laser {
+  50% {
+    opacity: 0.95;
+  }
+}
+.juegos-root .hs-hs-wheel {
+  transition: transform 0.9s cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+.juegos-root .hs-hs-leak {
+  animation: hs-halo 3s ease-in-out infinite;
+}
+
+/* Subasta a ciegas */
+.juegos-root .hs-au-box {
+  animation: hs-bob 3s ease-in-out infinite;
+}
+.juegos-root .hs-au-lid {
+  transform-box: fill-box;
+  transform-origin: 15% 100%;
+  transition: transform 0.45s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.juegos-root .hs-au-q {
+  font: 400 34px var(--display);
+  fill: #ffe9a0;
+}
+.juegos-root .hs-au-beam {
+  animation: hs-glow-op 4s ease-in-out infinite;
+}
+.juegos-root .hs-au-glow {
+  opacity: 0.4;
+  transition: opacity 0.4s;
+}
+@keyframes hs-glow-op {
+  50% {
+    opacity: 0.6;
+  }
+}
+.juegos-root .hs-au-spark {
+  fill: #fff4c0;
+  animation: hs-twinkle 2.2s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.juegos-root .hs-au-coin {
+  opacity: 0;
+}
+.juegos-root .hs-au-eur {
+  font: 800 9px var(--sans);
+  fill: #6b4400;
+}
+@keyframes hs-coin {
+  0% {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -34px;
+  }
+}
+
+/* El Puente de Cristal */
+.juegos-root .hs-br-mist {
+  animation: hs-glow-op 5s ease-in-out infinite;
+}
+.juegos-root .hs-br-bad {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.juegos-root .hs-br-hero {
+  transition: translate 0.5s cubic-bezier(0.3, 1.5, 0.5, 1);
+  animation: hs-bob 2.2s ease-in-out infinite;
+}
+@keyframes hs-fall {
+  0%,
+  30% {
+    opacity: 1;
+    transform: none;
+  }
+  45% {
+    transform: translateX(1px) rotate(1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(20px) rotate(10deg);
+  }
+}
+
+/* Duelos */
+.juegos-root .hs-sword {
+  transition: rotate 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.juegos-root .hs-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hs-halo 1.6s ease-in-out infinite;
+}
+.juegos-root .hs-spark--in {
+  animation-delay: 0.3s;
+}
+
+/* Ruleta */
+.juegos-root .hs-wheel {
+  animation: hs-spin 16s linear infinite;
+}
+.juegos-root .hs-ball {
+  animation: hs-spin 2.6s linear infinite reverse;
+}
+@keyframes hs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.juegos-root .hs-chip {
+  transition: translate 0.3s;
+}
+
+/* Cohete */
+.juegos-root .hs-rocket {
+  transition: translate 0.5s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.juegos-root .hs-flame {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: hs-flicker 0.28s ease-in-out infinite;
+}
+.juegos-root .hs-cr-mult {
+  font: 400 19px var(--display);
+  fill: #cfe8ff;
+  filter: drop-shadow(0 0 6px rgba(95, 170, 255, 0.8));
+}
+
+/* Carrera */
+.juegos-root .hs-car {
+  transition: translate 0.5s cubic-bezier(0.3, 1.2, 0.5, 1);
+}
+.juegos-root .hs-kerb {
+  animation: hs-scroll 0.9s linear infinite;
+}
+@keyframes hs-scroll {
+  to {
+    translate: -20px 0;
+  }
+}
+.juegos-root .hs-dash {
+  animation: hs-dash 0.6s linear infinite;
+}
+@keyframes hs-dash {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+.juegos-root .hs-speed line {
+  stroke: #fff;
+  stroke-opacity: 0.45;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  animation: hs-speed 0.7s linear infinite;
+}
+.juegos-root .hs-speed line:nth-child(2n) {
+  animation-delay: -0.35s;
+}
+@keyframes hs-speed {
+  from {
+    translate: 30px 0;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    translate: -30px 0;
+    opacity: 0;
+  }
+}
+
+/* Laberinto */
+.juegos-root .hs-door {
+  transition: translate 0.55s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.juegos-root .hs-flame2 {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: hs-flicker 0.5s ease-in-out infinite;
+}
+
+/* Plinko */
+.juegos-root .hs-pball {
+  animation: hs-bob 1.6s ease-in-out infinite;
+}
+@keyframes hs-drop {
+  0% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  14% {
+    translate: -8px 14px;
+  }
+  30% {
+    translate: 0 26px;
+  }
+  46% {
+    translate: 8px 38px;
+  }
+  62% {
+    translate: 16px 50px;
+  }
+  78% {
+    translate: 8px 62px;
+  }
+  92% {
+    translate: 16px 74px;
+    opacity: 1;
+  }
+  100% {
+    translate: 16px 78px;
+    opacity: 0;
+  }
+}
+
+/* Rana */
+.juegos-root .hs-frog {
+  animation: hs-bob 2.4s ease-in-out infinite;
+}
+.juegos-root .hs-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hs-ripple 3s ease-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes hs-ripple {
+  from {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+@keyframes hs-hop {
+  0%,
+  8% {
+    translate: 0 0;
+  }
+  28% {
+    translate: 28px -26px;
+  }
+  46%,
+  62% {
+    translate: 56px -16px;
+  }
+  82% {
+    translate: 28px -26px;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+@media (hover: hover) {
+  .juegos-root .hub-card:not(:disabled):hover .hs-tw-hero {
+    translate: 0 -22px;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-tw-bad {
+    animation: hs-shake 0.5s linear infinite;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-hs-wheel {
+    transform: rotate(150deg);
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-lasers line {
+    opacity: 1;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-au-lid {
+    transform: translateY(-17px) rotate(-9deg);
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-au-glow {
+    opacity: 1;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-au-coin {
+    animation: hs-coin 1.5s ease-out infinite;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-au-coin--B {
+    animation-delay: 0.6s;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-br-hero {
+    translate: 11px -21px;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-br-bad {
+    animation: hs-fall 1.8s ease-in infinite;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-br-bad--2 {
+    animation-delay: 0.5s;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-br-bad--3 {
+    animation-delay: 1s;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-sword--l {
+    rotate: 7deg;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-sword--r {
+    rotate: -7deg;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-chip {
+    translate: 0 -3px;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-rocket {
+    translate: 9px -10px;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-car--a {
+    translate: 14px 0;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-car--b {
+    translate: 8px 0;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-door--l {
+    translate: 92px 0;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-door--r {
+    translate: -92px 0;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-pball {
+    animation: hs-drop 2.2s ease-in infinite;
+  }
+  .juegos-root .hub-card:not(:disabled):hover .hs-frog {
+    animation: hs-hop 2.6s ease-in-out infinite;
+  }
+}
+@keyframes hs-shake {
+  25% {
+    transform: translateX(-1.2px) rotate(-3deg);
+  }
+  75% {
+    transform: translateX(1.2px) rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .app.hub *,
+  .juegos-root .app.hub *::before,
+  .juegos-root .app.hub *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .juegos-root .hub-showcase > li,
+  .juegos-root .hub-games > li {
+    opacity: 1;
+  }
+  .juegos-root .hs-au-coin {
+    opacity: 0;
+  }
 }
