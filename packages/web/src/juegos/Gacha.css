@@ -1702,6 +1702,11 @@
 .juegos-root .gacha-owner.gacha-free {
   color: #7be0a6;
 }
+/* Fusión: la carta que solo sale juntando dos y las dos que la forman. */
+.juegos-root .gacha-owner.gacha-fuse,
+.juegos-root .gacha-card__fuse {
+  color: #ff8a6b;
+}
 
 /* --- La mesa: cartas gratis para coger --- */
 .juegos-root .gacha-mesa {

@@ -8,7 +8,7 @@ import { playBoom, playCard, playGrowl, playHeartbeat, playOvation, playSiren, p
 import { ODDS, RARITIES, RARITY, pct, useGacha, useServerNow, wait } from './gacha.js'
 import './Gacha.css'
 
-// Gacha de personajes de videojuegos al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el
+// Gacha de personajes y mods de juegos al estilo de Mudae (las reglas están en api/_juegos/gacha.mjs): tiradas que ve todo el
 // mundo, el primero que reclama se queda la carta, vender cartas por saldo de la semana y ver la colección de cualquiera.
 
 // Probabilidad de una carta concreta: «0,48 %», «0,0029 %».
@@ -45,6 +45,13 @@ function Move({ move, t, onOpen }) {
   }
   if (move.type === 'tirada') text = <>{who} la sacó</>
   if (move.type === 'usada') text = <>{who} {move.by?.me ? 'gastaste' : 'gastó'} su poder: vuelve a estar libre</>
+  if (move.type === 'fusion') {
+    text = (
+      <>
+        {who} {move.by?.me ? 'juntaste' : 'juntó'} {move.card.fusion?.join(' y ') ?? 'las dos cartas'} y {move.by?.me ? 'las fusionaste' : 'las fusionó'}
+      </>
+    )
+  }
   return (
     <li className={`gacha-roll gacha-move--${move.type} ${move.by?.me ? 'is-mine' : ''}`}>
       <GachaCard card={move.card} mini />
@@ -92,13 +99,14 @@ const range = (n) => Array.from({ length: n }, (_, i) => i)
 // todos los colores hasta el dorado, les caen rayos y se agrietan. Luego estalla con ondas expansivas (burst) y se da
 // la vuelta (show); la legendaria, con explosión dorada, temblor, «¡LEGENDARIA!» letra a letra y lluvia de confeti. La
 // mítica hace lo mismo que la legendaria, más larga y en rojo, con «¡MÍTICA!».
-function Summon({ summon, busy, onDecide }) {
+function Summon({ summon, busy, onDecide, onClose }) {
   const { stage, result } = summon
   const rarity = result?.card.rarity ?? 'comun'
+  const fused = Boolean(result?.fused)
   const legend = rarity === 'mitica' || rarity === 'unica'
   const sparks = SPARKS[rarity] ?? 0
   const waves = WAVES[rarity] ?? 0
-  const title = rarity === 'unica' ? '¡MÍTICA!' : legend ? '¡LEGENDARIA!' : rarity === 'epica' ? '¡ÉPICA!' : RARITY[rarity]
+  const title = fused ? '¡FUSIÓN!' : rarity === 'unica' ? '¡MÍTICA!' : legend ? '¡LEGENDARIA!' : rarity === 'epica' ? '¡ÉPICA!' : RARITY[rarity]
   const mythic = rarity === 'unica'
   const epic = rarity === 'epica'
   const stars = STARS[rarity] ?? 0
@@ -250,16 +258,26 @@ function Summon({ summon, busy, onDecide }) {
               <GachaCard card={result.card} big />
             </div>
             <p className="gacha-summon__name">{result.card.name}</p>
-            {mythic && <p className="gacha-summon__one">1 de 1 · única en TopCode</p>}
-            <div className="gacha-decide">
-              <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => onDecide(true)} autoFocus>
-                Guardar en mi biblioteca
-              </button>
-              <button type="button" className="hub-btn" disabled={busy} onClick={() => onDecide(false)}>
-                Descartar
-              </button>
-            </div>
-            <small className="gacha-decide__note">Si la descartas, queda libre para que le toque a otro. Se vende por {eur(result.card.price)}.</small>
+            {mythic && <p className="gacha-summon__one">{fused ? `${result.card.fusion.join(' + ')} · ` : ''}1 de 1 · única en TopCode</p>}
+            {fused ? (
+              <div className="gacha-decide">
+                <button type="button" className="hub-btn hub-btn--primary" onClick={onClose} autoFocus>
+                  ¡A mi biblioteca!
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="gacha-decide">
+                  <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => onDecide(true)} autoFocus>
+                    Guardar en mi biblioteca
+                  </button>
+                  <button type="button" className="hub-btn" disabled={busy} onClick={() => onDecide(false)}>
+                    Descartar
+                  </button>
+                </div>
+                <small className="gacha-decide__note">Si la descartas, queda libre para que le toque a otro. Se vende por {eur(result.card.price)}.</small>
+              </>
+            )}
           </>
         ) : (
           <div className="gacha-summon__card">
@@ -483,7 +501,7 @@ function CardTable({ list, onOpen }) {
     <section className="gacha-cards" aria-labelledby="cards-title">
       <header className="gacha-cards__head">
         <h2 id="cards-title" className="hub-title">
-          Cartas <small>{`${list.length} personajes · ${taken} con dueño · ${list.length - taken} libres`}</small>
+          Cartas <small>{`${list.length} cartas · ${taken} con dueño · ${list.length - taken} libres`}</small>
         </h2>
         <div className="gacha-filters">
           <label className="gacha-select">
@@ -544,16 +562,19 @@ function CardTable({ list, onOpen }) {
                           <Avatar name={c.owner.name} src={c.owner.avatar} size={18} />
                           {c.owner.me ? <b>Es tuya</b> : <>Es de <Who person={c.owner} onOpen={onOpen} /></>}
                         </span>
+                      ) : c.fusion ? (
+                        <span className="gacha-owner gacha-free">Solo por fusión: junta {c.fusion.join(' y ')}</span>
                       ) : (
                         <span className="gacha-owner gacha-free">Libre: puede tocarle a cualquiera</span>
                       )}
+                      {c.fusesWith && <span className="gacha-owner gacha-fuse">Fusión: júntala con {c.fusesWith.with}</span>}
                     </span>
                   </span>
                 </td>
                 <td className={`gacha-roll__name--${c.rarity}`}>
                   <em>{RARITY[c.rarity]}</em>
                 </td>
-                <td className="is-num">{pct(c.normal)}</td>
+                <td className="is-num">{c.fusion ? '—' : pct(c.normal)}</td>
                 <td className="is-num">{c.premium ? pct(c.premium) : '—'}</td>
                 <td className="is-num">{eur(c.price)}</td>
                 <td>
@@ -583,14 +604,19 @@ function Rules({ prices }) {
         <b>guardas</b> o la <b>descartas</b>; hasta decidirlo no puedes volver a tirar.
       </p>
       <p>
-        <b>Cada personaje tiene sus propios poderes</b>, uno para cada juego (míralos en «✦ Poderes en 6 juegos» de la
+        <b>Cada carta tiene sus propios poderes</b>, uno para cada juego (míralos en «✦ Poderes en 6 juegos» de la
         carta): dos cartas de la misma rareza casi nunca tienen los mismos. Cuanto más rara, más fuerte, y cada uno tiene{' '}
         <b>★ su punto fuerte</b>: un juego en el que su poder es de la rareza siguiente. Se usan con el botón «✦ Poderes» de
         cada juego y <b>son de un solo uso</b>: al usar el poder de una carta, la gastas, sale de tu biblioteca y vuelve a
-        quedar libre para que le toque a otro. Salvo la <b>mítica</b>, Mario (un 0,1 % por tirada y un 0,5 % en las
-        premium): tiene lo máximo en todos los juegos (Omnisciencia en el póker, el crupier comprado en el blackjack y un
-        seguro total o un premio triple durante diez jugadas en los demás) y <b>no se gasta</b>: cada poder se recarga en
-        un día.
+        quedar libre para que le toque a otro. Salvo las <b>míticas</b>: Thomas, devorador de mundos (un 0,1 % por tirada y un 0,5 % en
+        las premium) y la de fusión. Tienen lo máximo en todos los juegos (Omnisciencia en el póker, el crupier comprado en
+        el blackjack y un seguro total o un premio triple durante diez jugadas en los demás) y <b>no se gastan</b>: cada
+        poder se recarga en un día.
+      </p>
+      <p>
+        <b>Fusión:</b> si juntas a <b>Vergil</b> (legendaria) y la <b>Silla de plástico</b> (común) en tu biblioteca, al
+        momento se convierten en la mítica <b>Vergil en la silla de plástico</b>. Las dos vuelven a quedar libres. No sale
+        nunca en la mesa ni en las tiradas: solo hay una y solo se consigue así.
       </p>
       <ul className="gacha-powers">
         <li>
@@ -635,8 +661,9 @@ function Rules({ prices }) {
         </tbody>
       </table>
       <p className="gacha-note">
-        Las cartas son personajes de videojuegos: de Mario y Pikachu a los de Street Fighter o Resident Evil. La rareza
-        sale de lo famoso que es cada personaje. Tu biblioteca no se reinicia el domingo; tu saldo, sí.
+        Las cartas son personajes de juegos para adultos (Devil May Cry, Monster Hunter, The Witcher, Resident Evil…) y,
+        en lo más alto, mods famosos y graciosos como Thomas en Skyrim o Shrek en Elden Ring. La rareza sale de lo
+        famoso que es cada uno. Tu biblioteca no se reinicia el domingo; tu saldo, sí.
       </p>
     </Help>
   )
@@ -677,6 +704,12 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
     if (!result) return setSummon(null)
     if (reduced) return setSummon({ stage: 'show', result })
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, CHARGE_MS - (Date.now() - started))))
+    await reveal(result)
+  }
+
+  // Presagio, carga, estallido y la carta: lo que dura y lo que suena depende de la rareza.
+  async function reveal(result) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return setSummon({ stage: 'show', result })
     const rarity = result.card.rarity
     if (rarity === 'unica') {
       setSummon({ stage: 'omen', result })
@@ -706,8 +739,19 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
   }
 
   async function decide(keep) {
-    await act('decidir', { keep })
+    const body = await act('decidir', { keep })
     setSummon(null)
+    await revealFusion(body)
+  }
+
+  async function take(id) {
+    await revealFusion(await act('coger', { id }))
+  }
+
+  // Si con la carta que acabas de conseguir juntas una fusión, el servidor ya te la ha dado: se enseña como una mítica.
+  async function revealFusion(body) {
+    const fused = body?.gacha?.result?.fused
+    if (fused) await reveal({ card: fused, fused: true })
   }
 
   function openCollection(user) {
@@ -832,7 +876,7 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
                 {table.map((entry) => (
                   <li key={entry.id}>
                     <GachaCard card={entry.card} />
-                    <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => act('coger', { id: entry.id })}>
+                    <button type="button" className="hub-btn hub-btn--primary" disabled={busy} onClick={() => take(entry.id)}>
                       Coger
                     </button>
                   </li>
@@ -877,9 +921,9 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
       {tab === 'colecciones' && <Collectors list={ranking} onOpen={openCollection} />}
       {tab === 'cartas' && <CardTable list={cards} onOpen={openCollection} />}
 
-      {summon && <Summon summon={summon} busy={busy} onDecide={decide} />}
+      {summon && <Summon summon={summon} busy={busy} onDecide={decide} onClose={() => setSummon(null)} />}
 
-      <footer className="gacha-foot">Imágenes enlazadas desde Wikipedia y Wikimedia Commons; los personajes son de sus compañías. Solo para TopCode, sin fines comerciales.</footer>
+      <footer className="gacha-foot">Imágenes enlazadas desde Wikipedia, Wikimedia Commons y las noticias de cada mod; los personajes son de sus compañías y los mods, de sus autores. Solo para TopCode, sin fines comerciales.</footer>
     </main>
   )
 }

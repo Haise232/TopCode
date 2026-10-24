@@ -203,8 +203,13 @@ export const GACHA_ERRORS = {
 }
 
 const cards = new Map(catalogo.cartas.map((c) => [c.id, c]))
+// Cartas de fusión (fusion: los ids de las dos que la forman): no salen en la mesa ni en las tiradas; quien junta las dos
+// se la lleva al momento (fuse).
+const FUSIONS = catalogo.cartas.filter((c) => c.fusion)
+const drawable = catalogo.cartas.filter((c) => !c.fusion)
+const partOf = new Map(FUSIONS.flatMap((f) => f.fusion.map((id) => [id, f])))
 const byRarity = new Map()
-for (const c of catalogo.cartas) {
+for (const c of drawable) {
   if (!byRarity.has(c.rarity)) byRarity.set(c.rarity, [])
   byRarity.get(c.rarity).push(c)
 }
@@ -231,8 +236,11 @@ export function cardView(id) {
     price: c.value * SELL_RATE,
     rank: c.rank,
     powers: powersOf.get(c.id),
-    // Probabilidad (en %) de que te toque esta carta en una tirada normal y en una premium.
-    odds: { normal: chance('normal', c.rarity), premium: chance('premium', c.rarity) },
+    // Probabilidad (en %) de que te toque esta carta en una tirada normal y en una premium (0 en las de fusión).
+    odds: c.fusion ? { normal: 0, premium: 0 } : { normal: chance('normal', c.rarity), premium: chance('premium', c.rarity) },
+    // De fusión: las dos que la forman. Parte de una fusión: con cuál se junta y qué sale.
+    fusion: c.fusion ? c.fusion.map((id) => cards.get(id).name) : null,
+    fusesWith: partOf.has(c.id) ? { with: cards.get(partOf.get(c.id).fusion.find((id) => id !== c.id)).name, into: partOf.get(c.id).name } : null,
   }
 }
 
@@ -253,7 +261,7 @@ function draw(premium, taken, luck = 1) {
   // Si en esa rareza ya no queda nada libre, cualquier carta libre que no sea común (o cualquiera); la única solo sale
   // cuando toca su rareza. Si no queda ninguna libre, null: nunca se da una carta que ya tiene dueño (antes salía
   // «repetida», se cobraba y luego no se podía guardar).
-  const rest = catalogo.cartas.filter((c) => c.rarity !== 'unica')
+  const rest = drawable.filter((c) => c.rarity !== 'unica')
   if (pool.length === 0) pool = free(rest.filter((c) => c.rarity !== 'comun'))
   if (pool.length === 0) pool = free(rest)
   return pool.length ? pick(pool) : null
@@ -288,6 +296,20 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
       [type, userId, cardId, premium, t],
     )
     if (Number(rows[0].id) % 50 === 0) await q(`delete from public.juegos_gacha_tiradas where creada < now() - make_interval(days => $1)`, [KEEP_DAYS])
+  }
+
+  // Si con la carta que acaba de conseguir ya tiene las dos de una fusión (y la fusión no tiene dueño), las pierde
+  // (vuelven a quedar libres) y se lleva la de fusión. Devuelve esa carta o null.
+  async function fuse(q, userId, cardId, t) {
+    const f = partOf.get(cardId)
+    if (!f) return null
+    const { rows } = await q(`select carta from public.juegos_gacha_cartas where usuario_id = $1 and carta = any($2) for update`, [userId, f.fusion])
+    if (rows.length < f.fusion.length) return null
+    const got = await q(`insert into public.juegos_gacha_cartas (carta, usuario_id) values ($1, $2) on conflict (carta) do nothing returning carta`, [f.id, userId])
+    if (got.rows.length === 0) return null
+    await q(`delete from public.juegos_gacha_cartas where usuario_id = $1 and carta = any($2)`, [userId, f.fusion])
+    await log(q, 'fusion', userId, f.id, false, t)
+    return cardView(f.id)
   }
 
   // Repone la mesa: una carta por cada periodo que pasó desde la última vez, sin pasar de TABLE_MAX. La primera vez sale
@@ -365,7 +387,7 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
       // forzada: carta que el master dejó preparada para la próxima tirada de pago de esta persona (una sola vez, y
       // solo si sigue libre).
       const taken = await takenCards(q)
-      const forced = st.forced && cards.has(st.forced) && !taken.has(st.forced) ? cards.get(st.forced) : null
+      const forced = st.forced && cards.has(st.forced) && !cards.get(st.forced).fusion && !taken.has(st.forced) ? cards.get(st.forced) : null
       const card = forced ?? draw(premium, taken, luck())
       if (st.forced) await q(`update public.juegos_gacha_jugadores set forzada = null where usuario_id = $1`, [user.id])
       if (!card) return { error: 'GACHA_EMPTY' }
@@ -385,7 +407,7 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
       const got = await q(`insert into public.juegos_gacha_cartas (carta, usuario_id) values ($1, $2) on conflict (carta) do nothing returning carta`, [st.pending, user.id])
       if (got.rows.length === 0) return { error: 'GACHA_OWNED' }
       await log(q, 'guardada', user.id, st.pending, st.pendingPremium, t)
-      return { result: { kept: true, card: cardView(st.pending) } }
+      return { result: { kept: true, card: cardView(st.pending), fused: await fuse(q, user.id, st.pending, t) } }
     })
     if (out.result?.kept) await ping('juegos-gacha', 'tirada')
     return out
@@ -401,7 +423,7 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
       if (got.rows.length === 0) return { error: 'GACHA_OWNED' }
       await q(`delete from public.juegos_gacha_mesa where id = $1`, [msg.id])
       await log(q, 'cogida', user.id, row.carta, false, t)
-      return { result: { card: cardView(row.carta) } }
+      return { result: { card: cardView(row.carta), fused: await fuse(q, user.id, row.carta, t) } }
     })
     if (!out.error) await ping('juegos-gacha', 'tirada')
     return out
@@ -466,14 +488,14 @@ export function createGacha({ db, ping, now, charge, luck = () => 1 }) {
       .sort((a, b) => b.worth - a.worth)
   }
 
-  // Todas las cartas que pueden salir, con su probabilidad en cada tipo de tirada y quién la tiene.
+  // Todas las cartas (también las de fusión, con probabilidad 0), con su probabilidad en cada tipo de tirada y quién la tiene.
   async function cardList(user) {
     const { rows } = await db.query(
       `select c.carta, c.usuario_id, a.nombre, a.avatar from public.juegos_gacha_cartas c left join public.juegos_cuentas a on a.usuario_id = c.usuario_id`,
     )
     const owners = new Map(rows.map((r) => [r.carta, { id: r.usuario_id, name: r.nombre ?? '¿?', avatar: r.avatar ?? null, me: r.usuario_id === user.id }]))
     return catalogo.cartas
-      .map((c) => ({ ...cardView(c.id), normal: chance('normal', c.rarity), premium: chance('premium', c.rarity), owner: owners.get(c.id) ?? null }))
+      .map((c) => ({ ...cardView(c.id), ...(c.fusion ? { normal: 0, premium: 0 } : { normal: chance('normal', c.rarity), premium: chance('premium', c.rarity) }), owner: owners.get(c.id) ?? null }))
       .sort((a, b) => b.value - a.value || a.rank - b.rank)
   }
 

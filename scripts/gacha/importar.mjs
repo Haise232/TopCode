@@ -1,111 +1,128 @@
-// Genera el catálogo del gacha (api/_juegos/gacha-catalogo.json): personajes de videojuegos. La lista y la rareza de
-// cada uno están a mano en PERSONAJES. La foto es la imagen principal de su artículo en la Wikipedia inglesa (el arte
-// oficial, que allí es imagen no libre) salvo que se fije a mano.
-// Se ejecuta a mano cuando se quiera renovar el catálogo (si una imagen cambia de nombre en la Wikipedia, su enlace se
-// rompe y la carta enseña sus iniciales hasta volver a ejecutarlo):
+// Genera el catálogo del gacha (api/_juegos/gacha-catalogo.json): personajes de juegos para adultos y, en las cartas
+// más altas, mods famosos y graciosos. La lista y la rareza de cada una están a mano en PERSONAJES. La foto de un
+// personaje es la imagen principal de su artículo en la Wikipedia inglesa (el arte oficial, que allí es imagen no libre)
+// salvo que se fije a mano; la de un mod, una captura fijada a mano de la noticia o la página que lo cuenta.
+// Se ejecuta a mano cuando se quiera renovar el catálogo (si una imagen cambia de sitio, su enlace se rompe y la carta
+// enseña sus iniciales hasta volver a ejecutarlo):
 //   node scripts/gacha/importar.mjs
 // Las imágenes no se descargan: se enlazan (la página del gacha cita la fuente).
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de clase sin fines comerciales)'
+const EN = 'https://upload.wikimedia.org/wikipedia/en'
 
-// [id, nombre en la carta, serie, rareza, artículo de la Wikipedia inglesa, imagen fijada (opcional)]. El orden dentro
-// de cada rareza es el de fama: el primero vale más.
-// El id es el de la carta de memes que había antes en ese puesto: los poderes salen del id (gacha.mjs, powersFor) y las
+// [id, nombre en la carta, serie, rareza, fuente, imagen fijada (opcional)]. La fuente es el artículo de la Wikipedia
+// inglesa o, si empieza por https://, la página del mod (entonces la imagen va fijada). El orden dentro de cada rareza
+// es el de fama: el primero vale más.
+// El id es el de la carta que había antes en ese puesto: los poderes salen del id (gacha.mjs, powersFor) y las
 // bibliotecas de los jugadores lo guardan, así que al cambiar de temática cada carta conserva dueño, rareza, valor y
 // poderes y solo cambian el nombre y la foto. Una carta nueva puede llevar cualquier id que no exista.
 const PERSONAJES = [
-  ['meme:el-xokas', 'Mario', 'Super Mario', 'unica', 'Mario'], // antes El Xokas
-  ['meme:ibai-llanos', 'Link', 'The Legend of Zelda', 'mitica', 'Link (The Legend of Zelda)'], // antes Ibai Llanos
-  ['meme:zona-gemelos', 'Pikachu', 'Pokémon', 'mitica', 'Pikachu'], // antes Zona Gemelos
-  ['meme:el-dandy-de-barcelona', 'Sonic', 'Sonic the Hedgehog', 'mitica', 'Sonic the Hedgehog (character)'], // antes El Dandy de Barcelona
-  ['meme:fernando-alonso', 'Master Chief', 'Halo', 'mitica', 'Master Chief (Halo)'], // antes Fernando Alonso
-  ['meme:torrente', 'Kratos', 'God of War', 'mitica', 'Kratos (God of War)'], // antes Torrente
-  ['meme:el-fary', 'Lara Croft', 'Tomb Raider', 'mitica', 'Lara Croft'], // antes El Fary
-  ['meme:pimpamlacasitos', 'Pac-Man', 'Pac-Man', 'mitica', 'Pac-Man (character)'], // antes PimPamLacasitos
-  ['meme:antonio-recio', 'Samus Aran', 'Metroid', 'epica', 'Samus Aran'], // antes Antonio Recio
-  ['meme:el-risitas', 'Donkey Kong', 'Donkey Kong', 'epica', 'Donkey Kong (character)'], // antes El Risitas
-  ['meme:julio-iglesias', 'Kirby', 'Kirby', 'epica', 'Kirby (character)'], // antes Julio Iglesias
-  ['meme:illojuan', 'Steve', 'Minecraft', 'epica', 'Steve (Minecraft)'], // antes IlloJuan
-  ['meme:auronplay', 'Cloud Strife', 'Final Fantasy VII', 'epica', 'Cloud Strife'], // antes AuronPlay
-  ['meme:el-rubius', 'Solid Snake', 'Metal Gear', 'epica', 'Solid Snake'], // antes El Rubius
-  ['meme:david-broncano', 'Geralt de Rivia', 'The Witcher', 'epica', 'Geralt of Rivia'], // antes David Broncano
-  ['meme:josep-pedrerol', 'Ezio Auditore', 'Assassin\'s Creed', 'epica', 'Ezio Auditore da Firenze'], // antes Josep Pedrerol
-  ['meme:thegrefg', 'Crash Bandicoot', 'Crash Bandicoot', 'epica', 'Crash Bandicoot (character)'], // antes TheGrefg
-  ['meme:jordi-wild', 'Bowser', 'Super Mario', 'epica', 'Bowser (character)'], // antes Jordi Wild
-  ['meme:amador-rivas', 'Princesa Zelda', 'The Legend of Zelda', 'epica', 'Princess Zelda'], // antes Amador Rivas
-  ['meme:chiquito-de-la-calzada', 'Princesa Peach', 'Super Mario', 'epica', 'Princess Peach'], // antes Chiquito de la Calzada
-  ['meme:ecce-homo-de-borja', 'Charizard', 'Pokémon', 'epica', 'Charizard'], // antes Ecce Homo de Borja
-  ['meme:paquita-salas', 'Yoshi', 'Super Mario', 'epica', 'Yoshi'], // antes Paquita Salas
-  ['meme:aitana', 'Mega Man', 'Mega Man', 'epica', 'Mega Man (character)'], // antes Aitana
-  ['meme:kiko-rivera', 'Sephiroth', 'Final Fantasy VII', 'epica', 'Sephiroth (Final Fantasy)'], // antes Kiko Rivera
-  ['meme:mente-fria', 'Arthur Morgan', 'Red Dead Redemption 2', 'epica', 'Arthur Morgan', 'https://upload.wikimedia.org/wikipedia/en/a/ac/Arthur_Morgan_-_Red_Dead_Redemption_2.png'], // antes Mente Fría
-  ['meme:simon', 'Joel', 'The Last of Us', 'epica', 'Joel Miller (The Last of Us)'], // antes Simón
-  ['meme:cubarsi', 'Ellie', 'The Last of Us', 'epica', 'Ellie (The Last of Us)'], // antes Cubarsí
-  ['meme:jordi-enp', 'Doomguy', 'Doom', 'epica', 'Doomguy'], // antes Jordi ENP
-  ['meme:cucurella', 'Ryu', 'Street Fighter', 'epica', 'Ryu (Street Fighter)'], // antes Cucurella
-  ['meme:el-paellas', 'CJ', 'GTA: San Andreas', 'epica', 'Carl Johnson (Grand Theft Auto)'], // antes El Paellas
-  ['meme:mangel', 'Spyro', 'Spyro', 'rara', 'Spyro (character)'], // antes Mangel
-  ['meme:lolito-fernandez', 'Nathan Drake', 'Uncharted', 'rara', 'Nathan Drake'], // antes Lolito Fernández
-  ['meme:alexby11', 'Ganondorf', 'The Legend of Zelda', 'rara', 'Ganon'], // antes Alexby11
-  ['meme:djmariio', 'GLaDOS', 'Portal', 'rara', 'GLaDOS'], // antes DjMaRiiO
-  ['meme:cristinini', 'Scorpion', 'Mortal Kombat', 'rara', 'Scorpion (Mortal Kombat)'], // antes Cristinini
-  ['meme:knekro', 'Sub-Zero', 'Mortal Kombat', 'rara', 'Sub-Zero (Mortal Kombat)'], // antes Knekro
-  ['meme:perxitaa', 'Chun-Li', 'Street Fighter', 'rara', 'Chun-Li', 'https://upload.wikimedia.org/wikipedia/en/5/53/Chun-Li.png'], // antes Perxitaa
-  ['meme:dalas-review', 'Leon S. Kennedy', 'Resident Evil', 'rara', 'Leon S. Kennedy', 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Resident_Evil_4_Remake_-_Leon_S._Kennedy.jpg/500px-Resident_Evil_4_Remake_-_Leon_S._Kennedy.jpg'], // antes Dalas Review
-  ['meme:wismichu', 'Jill Valentine', 'Resident Evil', 'rara', 'Jill Valentine', 'https://upload.wikimedia.org/wikipedia/en/3/34/JillValentineRemake.png'], // antes Wismichu
-  ['meme:mikecrack', 'Dante', 'Devil May Cry', 'rara', 'Dante (Devil May Cry)'], // antes Mikecrack
-  ['meme:willyrex', 'Bayonetta', 'Bayonetta', 'rara', 'Bayonetta (character)'], // antes Willyrex
-  ['meme:vegetta777', 'Marcus Fenix', 'Gears of War', 'rara', 'Marcus Fenix'], // antes Vegetta777
-  ['meme:gerard-pique', 'Gordon Freeman', 'Half-Life', 'rara', 'Gordon Freeman'], // antes Gerard Piqué
-  ['meme:luis-rubiales', 'Agente 47', 'Hitman', 'rara', 'Agent 47'], // antes Luis Rubiales
-  ['meme:omar-montes', 'Aloy', 'Horizon', 'rara', 'Aloy', 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Aloy_from_The_Frozen_Wilds_trailer.jpg/500px-Aloy_from_The_Frozen_Wilds_trailer.jpg'], // antes Omar Montes
-  ['meme:quevedo', 'Trevor Philips', 'GTA V', 'rara', 'Trevor Philips'], // antes Quevedo
-  ['meme:frank-cuesta', 'Hollow Knight', 'Hollow Knight', 'rara', 'The Knight (Hollow Knight)'], // antes Frank Cuesta
-  ['meme:isabel-pantoja', 'Sans', 'Undertale', 'rara', 'Sans (Undertale)'], // antes Isabel Pantoja
-  ['meme:leticia-sabater', 'Mewtwo', 'Pokémon', 'rara', 'Mewtwo'], // antes Leticia Sabater
-  ['meme:jordi-hurtado', 'Shadow', 'Sonic the Hedgehog', 'rara', 'Shadow the Hedgehog'], // antes Jordi Hurtado
-  ['meme:iker-jimenez', 'Tails', 'Sonic the Hedgehog', 'rara', 'Tails (Sonic the Hedgehog)', 'https://upload.wikimedia.org/wikipedia/en/1/1a/Miles_%22Tails%22_Prower_Sonic_and_All-Stars_Racing_Transformed.png'], // antes Iker Jiménez
-  ['meme:alberto-chicote', 'Fox McCloud', 'Star Fox', 'rara', 'Fox McCloud'], // antes Alberto Chicote
-  ['meme:mauricio-colmenero', 'Wario', 'Super Mario', 'rara', 'Wario'], // antes Mauricio Colmenero
-  ['meme:ignatius-farray', 'Rayman', 'Rayman', 'rara', 'Rayman (character)'], // antes Ignatius Farray
-  ['meme:juan-cuesta', 'Ratchet y Clank', 'Ratchet & Clank', 'rara', 'Ratchet (Ratchet & Clank)'], // antes Juan Cuesta
-  ['meme:plex', 'Knuckles', 'Sonic the Hedgehog', 'comun', 'Knuckles the Echidna'], // antes Plex
-  ['meme:carreraaa', 'Dr. Eggman', 'Sonic the Hedgehog', 'comun', 'Doctor Eggman'], // antes Carreraaa
-  ['meme:gerard-romero', 'Toad', 'Super Mario', 'comun', 'Toad (Nintendo)'], // antes Gerard Romero
-  ['meme:nil-ojeda', 'Diddy Kong', 'Donkey Kong', 'comun', 'Diddy Kong'], // antes Nil Ojeda
-  ['meme:zorman', 'Jigglypuff', 'Pokémon', 'comun', 'Jigglypuff'], // antes Zorman
-  ['meme:byviruzz', 'Canela', 'Animal Crossing', 'comun', 'Isabelle (Animal Crossing)'], // antes ByViruZz
-  ['meme:outconsumer', 'Tom Nook', 'Animal Crossing', 'comun', 'Tom Nook'], // antes Outconsumer
-  ['meme:spursito', 'Eevee', 'Pokémon', 'comun', 'Eevee'], // antes Spursito
-  ['meme:kidd-keo', 'Gengar', 'Pokémon', 'comun', 'Gengar'], // antes Kidd Keo
-  ['meme:c-tangana', 'Isaac Clarke', 'Dead Space', 'comun', 'Isaac Clarke'], // antes C. Tangana
-  ['meme:chanel', 'Ness', 'EarthBound', 'comun', 'Ness (EarthBound)'], // antes Chanel
-  ['meme:bad-gyal', 'Sora', 'Kingdom Hearts', 'comun', 'Sora (Kingdom Hearts)'], // antes Bad Gyal
-  ['meme:grison', 'Tifa Lockhart', 'Final Fantasy VII', 'comun', 'Tifa Lockhart'], // antes Grison
-  ['meme:jorge-ponce', 'Aerith', 'Final Fantasy VII', 'comun', 'Aerith Gainsborough'], // antes Jorge Ponce
-  ['meme:pablo-motos', 'Lightning', 'Final Fantasy XIII', 'comun', 'Lightning (Final Fantasy)'], // antes Pablo Motos
-  ['meme:tamara-falco', 'Noctis', 'Final Fantasy XV', 'comun', 'Noctis Lucis Caelum'], // antes Tamara Falcó
-  ['meme:tomas-roncero', 'Claptrap', 'Borderlands', 'comun', 'Claptrap'], // antes Tomás Roncero
-  ['meme:joaquin-sanchez', 'Max Payne', 'Max Payne', 'comun', 'Max Payne (character)'], // antes Joaquín Sánchez
-  ['meme:sergio-ramos', 'Lucario', 'Pokémon', 'comun', 'Lucario'], // antes Sergio Ramos
-  ['meme:roberto-brasero', 'Kazuya Mishima', 'Tekken', 'comun', 'Kazuya Mishima'], // antes Roberto Brasero
-  ['meme:matias-prats', 'Ken Masters', 'Street Fighter', 'comun', 'Ken Masters'], // antes Matías Prats
-  ['meme:joaquin-reyes', 'Guile', 'Street Fighter', 'comun', 'Guile (Street Fighter)', 'https://upload.wikimedia.org/wikipedia/en/b/bc/Guile_%28SSFII%29.png'], // antes Joaquín Reyes
-  ['meme:ernesto-sevilla', 'M. Bison', 'Street Fighter', 'comun', 'M. Bison'], // antes Ernesto Sevilla
-  ['meme:carlos-areces', 'Liu Kang', 'Mortal Kombat', 'comun', 'Liu Kang'], // antes Carlos Areces
-  ['meme:raul-cimas', 'Raiden', 'Mortal Kombat', 'comun', 'Raiden (Mortal Kombat)'], // antes Raúl Cimas
-  ['meme:miguel-noguera', 'Sly Cooper', 'Sly Cooper', 'comun', 'Sly Cooper (character)', 'https://upload.wikimedia.org/wikipedia/en/6/67/Sly_Cooper_Thieves_in_Time.png'], // antes Miguel Noguera
-  ['meme:berto-romero', 'Comandante Shepard', 'Mass Effect', 'comun', 'Commander Shepard'], // antes Berto Romero
-  ['meme:karlos-arguinano', 'Banjo y Kazooie', 'Banjo-Kazooie', 'comun', 'Banjo and Kazooie'], // antes Karlos Arguiñano
-  ['meme:ana-obregon', 'Sackboy', 'LittleBigPlanet', 'comun', 'Sackboy'], // antes Ana Obregón
-  ['meme:emilio-delgado', 'Pyramid Head', 'Silent Hill', 'comun', 'Pyramid Head'], // antes Emilio Delgado
-  ['meme:coque', 'Némesis', 'Resident Evil', 'comun', 'Nemesis (Resident Evil)'], // antes Coque
-  ['meme:machupichu', 'Albert Wesker', 'Resident Evil', 'comun', 'Albert Wesker', 'https://upload.wikimedia.org/wikipedia/en/5/51/Albert_Wesker.png'], // antes Machupichu
-  ['meme:manolo-el-del-bombo', 'Niko Bellic', 'GTA IV', 'comun', 'Niko Bellic'], // antes Manolo el del Bombo
-  ['meme:rodolfo-chikilicuatre', 'Creeper', 'Minecraft', 'comun', 'Creeper (Minecraft)'], // antes Rodolfo Chikilicuatre
-  ['meme:ramon-garcia', 'Cuphead', 'Cuphead', 'comun', 'Cuphead'], // antes Ramón García
-  ['meme:antonio-lobato', 'Shovel Knight', 'Shovel Knight', 'comun', 'Shovel Knight'], // antes Antonio Lobato
+  ['meme:el-xokas', 'Thomas, devorador de mundos', 'Mod de Skyrim', 'unica', 'https://www.pcgamesn.com/elderscrolls/what-does-it-take-kill-monster-meet-thomas-tank-scourge-skyrim', 'https://www.pcgamesn.com/wp-content/sites/pcgamesn/legacy/skyrim_thomas_the_tank.jpg'],
+  ['meme:ibai-llanos', 'Vergil', 'Devil May Cry', 'mitica', 'Vergil (Devil May Cry)'],
+  ['meme:zona-gemelos', 'Thomas en vez de Mr. X', 'Mod de Resident Evil 2', 'mitica', 'https://www.pcgamer.com/re2-mod-turns-mr-x-into-thomas-the-tank-engine/', 'https://cdn.mos.cms.futurecdn.net/n6DW33AMzVgYp6jrCRq567-1232-80.jpg'],
+  ['meme:el-dandy-de-barcelona', 'Shrek y Asno', 'Mod de Elden Ring', 'mitica', 'https://www.creativebloq.com/news/elden-ring-mods', 'https://cdn.mos.cms.futurecdn.net/DgDC66z4vyvH629Ng3fNv-1920-80.png'],
+  ['meme:fernando-alonso', 'Machoclaw', 'Mod de Fallout 4', 'mitica', 'https://gameinformer.com/b/news/archive/2016/01/04/mod-gives-deathclaws-the-voice-and-likeness-of-39-macho-man-39-randy-savage-in-fallout-4', 'https://gameinformer.com/sites/default/files/styles/og_image/public/legacy-images/Mod%20Gives%20Fallout%204%20Deathclaws%20The%20Voice%20And%20Likeness%20Of%20%27Macho%20Man%27%20Randy%20Savage/MachoManClaw610.jpg.webp'],
+  ['meme:torrente', 'Thomas, devorador de dragones', 'Mod de Monster Hunter: World', 'mitica', 'https://www.nexusmods.com/monsterhunterworld/mods/582', 'https://cdn.shazoo.ru/c1200x630/307297_l2nhRwKxZF_582_1544419253_1541302691.jpeg'],
+  ['meme:el-fary', 'El sombrero de Lady Dimitrescu', 'Mod de Resident Evil Village', 'mitica', 'https://www.pcgamer.com/resident-evil-village-mod-makes-lady-ds-big-honkin-hat-keep-getting-bigger', 'https://cdn.mos.cms.futurecdn.net/TgyuF7wRTScHiHpFvU5arQ-1545-80.jpg'],
+  ['meme:pimpamlacasitos', 'Thomas, el Centinela', 'Mod de Elden Ring', 'mitica', 'https://www.pcgamer.com/thomas-the-tank-engine-is-in-elden-ring-now/', 'https://cdn.mos.cms.futurecdn.net/6VaR8xWijjRLLtUtQgPGhN-1920-80.jpeg'],
+  ['meme:antonio-recio', 'Nicolas Cage en Sekiro', 'Mod de Sekiro', 'epica', 'https://www.pcgamer.com/sekiro-mod-adds-nic-cage-death-screen', 'https://cdn.mos.cms.futurecdn.net/TvxqNX4AibzWiURzwEbxnC-1920-80.jpeg'],
+  ['meme:el-risitas', 'Elden Ring arruinado por mods', 'Mod de Elden Ring', 'epica', 'https://www.ggrecon.com/articles/elden-ring-has-been-ruined-by-modding/', 'https://www.ggrecon.com/media/stpfrsub/elden-ring-mods.jpg'],
+  ['meme:julio-iglesias', 'Dante', 'Devil May Cry', 'epica', 'Dante (Devil May Cry)'],
+  ['meme:illojuan', 'Kratos', 'God of War', 'epica', 'Kratos (God of War)'],
+  ['meme:auronplay', 'Geralt de Rivia', 'The Witcher', 'epica', 'Geralt of Rivia'],
+  ['meme:el-rubius', 'Cazador legendario', 'Monster Hunter: World', 'epica', 'Monster Hunter: World'],
+  ['meme:david-broncano', 'Arthur Morgan', 'Red Dead Redemption 2', 'epica', 'Arthur Morgan', 'https://upload.wikimedia.org/wikipedia/en/a/ac/Arthur_Morgan_-_Red_Dead_Redemption_2.png'],
+  ['meme:josep-pedrerol', 'Master Chief', 'Halo', 'epica', 'Master Chief (Halo)'],
+  ['meme:thegrefg', 'Solid Snake', 'Metal Gear', 'epica', 'Solid Snake'],
+  ['meme:jordi-wild', 'Lara Croft', 'Tomb Raider', 'epica', 'Lara Croft'],
+  ['meme:amador-rivas', 'Doom Slayer', 'Doom', 'epica', 'Doomguy'],
+  ['meme:chiquito-de-la-calzada', 'Ezio Auditore', 'Assassin\'s Creed', 'epica', 'Ezio Auditore da Firenze'],
+  ['meme:ecce-homo-de-borja', 'Joel', 'The Last of Us', 'epica', 'Joel Miller (The Last of Us)'],
+  ['meme:paquita-salas', 'Ellie', 'The Last of Us', 'epica', 'Ellie (The Last of Us)'],
+  ['meme:aitana', 'Leon S. Kennedy', 'Resident Evil', 'epica', 'Leon S. Kennedy', 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Resident_Evil_4_Remake_-_Leon_S._Kennedy.jpg/500px-Resident_Evil_4_Remake_-_Leon_S._Kennedy.jpg'],
+  ['meme:kiko-rivera', 'Nero', 'Devil May Cry', 'epica', 'Nero (Devil May Cry)'],
+  ['meme:mente-fria', 'Bayonetta', 'Bayonetta', 'epica', 'Bayonetta (character)'],
+  ['meme:simon', 'Marcus Fenix', 'Gears of War', 'epica', 'Marcus Fenix'],
+  ['meme:cubarsi', 'Agente 47', 'Hitman', 'epica', 'Agent 47'],
+  ['meme:jordi-enp', 'Comandante Shepard', 'Mass Effect', 'epica', 'Commander Shepard'],
+  ['meme:cucurella', 'Malenia', 'Elden Ring', 'epica', 'Malenia, Blade of Miquella'],
+  ['meme:el-paellas', 'Trevor Philips', 'GTA V', 'epica', 'Trevor Philips'],
+  ['meme:mangel', 'Isaac Clarke', 'Dead Space', 'rara', 'Isaac Clarke'],
+  ['meme:lolito-fernandez', 'Solaire de Astora', 'Dark Souls', 'rara', 'Solaire of Astora'],
+  ['meme:alexby11', 'Jill Valentine', 'Resident Evil', 'rara', 'Jill Valentine', 'https://upload.wikimedia.org/wikipedia/en/3/34/JillValentineRemake.png'],
+  ['meme:djmariio', 'Albert Wesker', 'Resident Evil', 'rara', 'Albert Wesker', 'https://upload.wikimedia.org/wikipedia/en/5/51/Albert_Wesker.png'],
+  ['meme:cristinini', 'Raiden', 'Metal Gear', 'rara', 'Raiden (Metal Gear)'],
+  ['meme:knekro', 'Gordon Freeman', 'Half-Life', 'rara', 'Gordon Freeman'],
+  ['meme:perxitaa', 'Scorpion', 'Mortal Kombat', 'rara', 'Scorpion (Mortal Kombat)'],
+  ['meme:dalas-review', 'Sub-Zero', 'Mortal Kombat', 'rara', 'Sub-Zero (Mortal Kombat)'],
+  ['meme:wismichu', 'CJ', 'GTA: San Andreas', 'rara', 'Carl Johnson (Grand Theft Auto)'],
+  ['meme:mikecrack', 'Niko Bellic', 'GTA IV', 'rara', 'Niko Bellic'],
+  ['meme:willyrex', 'Max Payne', 'Max Payne', 'rara', 'Max Payne (character)'],
+  ['meme:vegetta777', 'John Marston', 'Red Dead Redemption', 'rara', 'John Marston'],
+  ['meme:gerard-pique', 'Ada Wong', 'Resident Evil', 'rara', 'Ada Wong'],
+  ['meme:luis-rubiales', 'Chris Redfield', 'Resident Evil', 'rara', 'Chris Redfield'],
+  ['meme:omar-montes', 'Lady Dimitrescu', 'Resident Evil Village', 'rara', 'Lady Dimitrescu'],
+  ['meme:quevedo', 'Pyramid Head', 'Silent Hill', 'rara', 'Pyramid Head'],
+  ['meme:frank-cuesta', 'Némesis', 'Resident Evil', 'rara', 'Nemesis (Resident Evil)'],
+  ['meme:isabel-pantoja', 'Liu Kang', 'Mortal Kombat', 'rara', 'Liu Kang'],
+  ['meme:leticia-sabater', 'Vaas Montenegro', 'Far Cry 3', 'rara', 'Vaas Montenegro'],
+  ['meme:jordi-hurtado', 'B.J. Blazkowicz', 'Wolfenstein', 'rara', 'B. J. Blazkowicz'],
+  ['meme:iker-jimenez', 'Abby', 'The Last of Us Parte II', 'rara', 'Abby (The Last of Us)'],
+  ['meme:alberto-chicote', 'Revolver Ocelot', 'Metal Gear', 'rara', 'Revolver Ocelot'],
+  ['meme:mauricio-colmenero', 'Ranni la Bruja', 'Elden Ring', 'rara', 'Ranni the Witch'],
+  ['meme:ignatius-farray', 'Radahn', 'Elden Ring', 'rara', 'Starscourge Radahn'],
+  ['meme:juan-cuesta', 'Kazuma Kiryu', 'Yakuza', 'rara', 'Kazuma Kiryu'],
+  ['meme:plex', 'Silla de plástico', 'Devil May Cry 5', 'comun', 'Monobloc (chair)'],
+  ['meme:carreraaa', 'Mr. X', 'Resident Evil 2', 'comun', 'Mr. X (Resident Evil)'],
+  ['meme:gerard-romero', 'Raiden', 'Mortal Kombat', 'comun', 'Raiden (Mortal Kombat)'],
+  ['meme:nil-ojeda', 'Big Daddy', 'BioShock', 'comun', 'Big Daddy (BioShock)'],
+  ['meme:zorman', 'Psycho Mantis', 'Metal Gear Solid', 'comun', 'Psycho Mantis'],
+  ['meme:byviruzz', 'Edward Kenway', 'Assassin\'s Creed IV', 'comun', 'Edward Kenway'],
+  ['meme:outconsumer', 'Bayek', 'Assassin\'s Creed Origins', 'comun', 'Bayek of Siwa'],
+  ['meme:spursito', 'Alucard', 'Castlevania', 'comun', 'Alucard (Castlevania)'],
+  ['meme:kidd-keo', 'Ryu Hayabusa', 'Ninja Gaiden', 'comun', 'Ryu Hayabusa'],
+  ['meme:c-tangana', 'Kain', 'Legacy of Kain', 'comun', 'Kain (Legacy of Kain)'],
+  ['meme:chanel', 'Rathalos', 'Monster Hunter', 'comun', 'Rathalos'],
+  ['meme:bad-gyal', 'Felyne', 'Monster Hunter', 'comun', 'Felyne'],
+  ['meme:grison', 'Andrew Ryan', 'BioShock', 'comun', 'Andrew Ryan (BioShock)'],
+  ['meme:jorge-ponce', 'Vault Boy', 'Fallout', 'comun', 'Vault Boy'],
+  ['meme:pablo-motos', 'Claptrap', 'Borderlands', 'comun', 'Claptrap'],
+  ['meme:tamara-falco', 'Rebecca Chambers', 'Resident Evil', 'comun', 'Rebecca Chambers'],
+  ['meme:tomas-roncero', 'Barry Burton', 'Resident Evil', 'comun', 'Barry Burton'],
+  ['meme:joaquin-sanchez', 'Mileena', 'Mortal Kombat', 'comun', 'Mileena'],
+  ['meme:sergio-ramos', 'Kitana', 'Mortal Kombat', 'comun', 'Kitana'],
+  ['meme:roberto-brasero', 'Johnny Cage', 'Mortal Kombat', 'comun', 'Johnny Cage'],
+  ['meme:matias-prats', 'Sonya Blade', 'Mortal Kombat', 'comun', 'Sonya Blade'],
+  ['meme:joaquin-reyes', 'Shao Kahn', 'Mortal Kombat', 'comun', 'Shao Kahn'],
+  ['meme:ernesto-sevilla', 'Kano', 'Mortal Kombat', 'comun', 'Kano (Mortal Kombat)'],
+  ['meme:carlos-areces', 'Corvo Attano', 'Dishonored', 'comun', 'Corvo Attano'],
+  ['meme:raul-cimas', 'Aiden Pearce', 'Watch Dogs', 'comun', 'Aiden Pearce'],
+  ['meme:miguel-noguera', 'Alan Wake', 'Alan Wake', 'comun', 'Alan Wake (character)'],
+  ['meme:berto-romero', 'Simon Belmont', 'Castlevania', 'comun', 'Simon Belmont'],
+  ['meme:karlos-arguinano', 'Spawn', 'Mortal Kombat 11', 'comun', 'Spawn (character)'],
+  ['meme:ana-obregon', 'Jason Voorhees', 'Friday the 13th', 'comun', 'Jason Voorhees'],
+  ['meme:emilio-delgado', 'Joker', 'Persona 5', 'comun', 'Joker (Persona)'],
+  ['meme:coque', 'Sephiroth', 'Final Fantasy VII', 'comun', 'Sephiroth (Final Fantasy)'],
+  ['meme:machupichu', 'Cortana', 'Halo', 'comun', 'Cortana (Halo)'],
+  ['meme:manolo-el-del-bombo', 'El Inquisidor', 'Halo', 'comun', 'Arbiter (Halo)'],
+  ['meme:rodolfo-chikilicuatre', 'Garrus', 'Mass Effect', 'comun', 'Garrus'],
+  ['meme:ramon-garcia', 'Liara', 'Mass Effect', 'comun', 'Liara T\'Soni'],
+  ['meme:antonio-lobato', 'Necromorfo', 'Dead Space', 'comun', 'Necromorphs'],
+]
+
+// Cartas de fusión: no salen en la mesa ni en las tiradas. Quien junta las dos cartas de «de» las pierde (vuelven a
+// quedar libres) y se lleva esta. [id, nombre, serie, [ids de las dos cartas], página, imagen, valor].
+const FUSIONES = [
+  [
+    'fusion:vergil-silla',
+    'Vergil en la silla de plástico',
+    'Mod de Devil May Cry 5',
+    ['meme:ibai-llanos', 'meme:plex'],
+    'https://knowyourmeme.com/memes/vergils-chair',
+    'https://i.kym-cdn.com/entries/icons/original/000/042/547/vergil_chair.jpg',
+    3000,
+  ],
 ]
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -163,12 +180,17 @@ async function pages(titles) {
 }
 
 async function personajes() {
-  const en = await pages(PERSONAJES.map(([, , , , title]) => title))
+  const isPage = (source) => source.startsWith('https://')
+  const en = await pages(PERSONAJES.filter(([, , , , source]) => !isPage(source)).map(([, , , , source]) => source))
   const out = []
-  for (const [id, name, series, rarity, title, fixed] of PERSONAJES) {
-    const page = en.get(title)
+  for (const [id, name, series, rarity, source, fixed] of PERSONAJES) {
+    if (isPage(source)) {
+      out.push({ id, name, series, rarity, img: fixed, pop: 0, src: source })
+      continue
+    }
+    const page = en.get(source)
     if (!page) {
-      console.log(`sin artículo: ${title}`)
+      console.log(`sin artículo: ${source}`)
       continue
     }
     const img = fixed ?? page.img
@@ -199,7 +221,13 @@ function rank(cat, list) {
   return out
 }
 
-const catalogo = rank('videojuego', await cached('personajes', personajes))
+const cartas = rank('videojuego', await cached('personajes', personajes))
+const ids = new Set(cartas.map((c) => c.id))
+const fusiones = FUSIONES.map(([id, name, series, from, src, img, value], i) => {
+  for (const part of from) if (!ids.has(part)) throw new Error(`fusión ${id}: no existe ${part}`)
+  return { id, name, series, rarity: 'unica', img, pop: 0, src, cat: 'fusion', rank: cartas.length + i + 1, value, fusion: from }
+})
+const catalogo = [...cartas, ...fusiones]
 const resumen = {}
 for (const c of catalogo) resumen[c.rarity] = (resumen[c.rarity] ?? 0) + 1
 console.log(resumen)

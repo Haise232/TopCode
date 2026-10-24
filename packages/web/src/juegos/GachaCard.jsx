@@ -30,7 +30,12 @@ function GachaCard({ card, big = false, mini = false }) {
             <em>{RARITY[card.rarity]}</em>
             <span title="Precio de venta">{eur(card.price)}</span>
           </span>
-          {card.odds && <span className="gacha-card__odds">{pct(card.odds.normal)} por tirada</span>}
+          {card.fusion ? (
+            <span className="gacha-card__odds gacha-card__fuse">Solo por fusión: {card.fusion.join(' + ')}</span>
+          ) : (
+            card.odds && <span className="gacha-card__odds">{pct(card.odds.normal)} por tirada</span>
+          )}
+          {card.fusesWith && <span className="gacha-card__odds gacha-card__fuse">Júntala con {card.fusesWith.with}: fusión mítica</span>}
         </figcaption>
       )}
     </figure>
