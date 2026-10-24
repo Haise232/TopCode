@@ -155,7 +155,11 @@
 .juegos-root .hub-top__btns {
   display: flex;
   align-items: center;
+  /* Con la Banca (solo el master) y WhatsApp son cuatro botones: si no caben, pasan a otra fila en vez de salirse. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
+  min-width: 0;
 }
 /* Tu ficha: foto con aro dorado, saldo en grande y tu puesto. */
 .juegos-root .hub-me {
@@ -1548,16 +1552,19 @@
   .juegos-root .hub-me {
     justify-content: flex-start;
   }
+  /* Botones en dos columnas: con la Banca quedan 2×2; sin ella, WhatsApp va a lo ancho y los otros dos debajo. */
   .juegos-root .hub-top__btns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
-  .juegos-root .hub-top__btns .hub-btn:not(.hub-bank) {
-    flex: 1 1 0;
+  .juegos-root .hub-top__btns .hub-btn {
+    justify-content: center;
+    min-width: 0;
     padding: 0 12px;
   }
-  .juegos-root .hub-bank {
-    flex: none;
-    padding: 0 14px;
+  .juegos-root .hub-top__btns:not(:has(.hub-bank)) .hub-wa {
+    grid-column: 1 / -1;
   }
   .juegos-root .app.hub .hub-title {
     flex-wrap: wrap;
