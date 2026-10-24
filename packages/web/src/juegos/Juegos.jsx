@@ -17,6 +17,7 @@ import Race from './Race.jsx'
 import Tower from './Tower.jsx'
 import Heist from './Heist.jsx'
 import Auction from './Auction.jsx'
+import Bridge from './Bridge.jsx'
 import Bingo from './Bingo.jsx'
 import BingoCage from './BingoCage.jsx'
 import Gacha from './Gacha.jsx'
@@ -135,6 +136,23 @@ const SOLO = [
 
 // Lo nuevo de la Season 3, en su propia sección arriba del todo.
 const SEASON3 = [
+  {
+    id: 'bridge',
+    name: 'El Puente de Cristal',
+    blurb: 'Todos cruzan a la vez: izquierda o derecha. Un cristal aguanta, el otro no. Los que llegan más lejos se llevan el bote.',
+    live: true,
+    art: (
+      <svg className="game__s3" viewBox="0 0 40 40">
+        {[0, 1, 2, 3].map((c) => (
+          <g key={c}>
+            <rect x={5 + c * 8} y="9" width="6" height="9" rx="1" className={c === 2 ? 'game__s3-bad' : 'game__s3-tile'} />
+            <rect x={5 + c * 8} y="22" width="6" height="9" rx="1" className={c === 1 ? 'game__s3-bad' : 'game__s3-tile'} />
+          </g>
+        ))}
+        <circle cx="16" cy="13" r="2.4" className="game__s3-hot" />
+      </svg>
+    ),
+  },
   {
     id: 'tower',
     name: 'La Torre',
@@ -647,7 +665,7 @@ function Notice({ title, children, actions }) {
 
 // Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
 const SCREEN_KEY = 'juegos-pantalla'
-const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower', 'heist', 'auction'])
+const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower', 'heist', 'auction', 'bridge'])
 function savedScreen() {
   try {
     const screen = sessionStorage.getItem(SCREEN_KEY)
@@ -744,6 +762,7 @@ function JuegosScreens() {
   if (screen === 'tower') return show(<Tower onExit={exit} juegos={juegos} />)
   if (screen === 'heist') return show(<Heist onExit={exit} juegos={juegos} />)
   if (screen === 'auction') return show(<Auction onExit={exit} juegos={juegos} />)
+  if (screen === 'bridge') return show(<Bridge onExit={exit} juegos={juegos} />)
   if (screen === 'duel') return show(<Duel onExit={exit} juegos={juegos} />, true)
   if (screen === 'gacha') return show(<Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />)
   if (screen === 'join') return show(<Joining juegos={juegos} request={view} onExit={exit} />)

@@ -505,9 +505,6 @@
   }
 }
 @media (max-width: 860px) {
-  .juegos-root .heist__shaft {
-    max-height: 62vh;
-  }
   .juegos-root .heist__member small {
     display: none;
   }
@@ -666,18 +663,233 @@
   }
 }
 
+/* ---------- El Puente de Cristal ---------- */
+.juegos-root .bridge__deck {
+  display: grid;
+  grid-template-columns: 64px repeat(var(--steps), minmax(0, 1fr)) 64px;
+  gap: 6px;
+  align-items: stretch;
+  min-height: 210px;
+  padding: 14px 10px 26px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, transparent 0 46%, rgba(0, 0, 0, 0.5) 46% 54%, transparent 54%),
+    radial-gradient(ellipse at 50% 120%, rgba(255, 46, 77, 0.25), transparent 60%),
+    linear-gradient(180deg, #0f1730, #05070f);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+.juegos-root .bridge__end {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  background: rgba(200, 162, 75, 0.15);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.juegos-root .bridge__end--goal {
+  background: rgba(79, 191, 134, 0.18);
+  color: #7fe0a8;
+}
+.juegos-root .bridge__col {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+}
+.juegos-root .bridge__num {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.juegos-root .bridge__col.is-current .bridge__num {
+  color: var(--bolt);
+  font-weight: 800;
+}
+.juegos-root .bridge__glass {
+  display: grid;
+  place-items: center;
+  min-height: 70px;
+  border: 1px solid rgba(180, 220, 255, 0.45);
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(180, 220, 255, 0.28), rgba(180, 220, 255, 0.08) 60%, rgba(255, 255, 255, 0.25));
+  box-shadow: inset 0 0 12px rgba(180, 220, 255, 0.25);
+  transition: opacity 0.3s;
+}
+.juegos-root .bridge__col.is-current .bridge__glass {
+  border-color: var(--bolt);
+  animation: tower-breathe 1.2s ease-in-out infinite;
+}
+.juegos-root .bridge__glass.is-mine {
+  outline: 3px solid var(--bolt);
+}
+.juegos-root .bridge__glass.is-safe {
+  border-color: #7fe0a8;
+  background: linear-gradient(135deg, rgba(127, 224, 168, 0.35), rgba(127, 224, 168, 0.1));
+}
+.juegos-root .bridge__glass.is-broken {
+  border-style: dashed;
+  border-color: rgba(255, 46, 77, 0.6);
+  background:
+    linear-gradient(60deg, transparent 47%, rgba(255, 255, 255, 0.5) 48% 50%, transparent 51%),
+    linear-gradient(-30deg, transparent 47%, rgba(255, 255, 255, 0.4) 48% 49%, transparent 50%),
+    rgba(255, 46, 77, 0.08);
+  animation: bridge-shatter 0.5s ease-out;
+}
+.juegos-root .bridge__who {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+.juegos-root .bridge__who small {
+  font-size: 11px;
+  color: var(--ivory);
+}
+.juegos-root .bridge__pawn {
+  display: inline-grid;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+  animation: bridge-hop 0.4s ease-out;
+}
+.juegos-root .bridge__pawn.is-me {
+  box-shadow: 0 0 0 2px var(--bolt), 0 0 10px var(--bolt);
+}
+.juegos-root .bridge__pawn.is-fallen {
+  opacity: 0.45;
+  filter: grayscale(1);
+  translate: 0 14px;
+}
+.juegos-root .bridge__choose {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.juegos-root .bridge__side {
+  min-height: 60px;
+  border: 2px solid rgba(180, 220, 255, 0.5);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(180, 220, 255, 0.25), rgba(60, 90, 140, 0.4));
+  color: var(--ivory);
+  font: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.juegos-root .bridge__side.is-on {
+  border-color: var(--bolt);
+  box-shadow: 0 0 18px rgba(255, 226, 122, 0.55);
+  color: var(--bolt);
+}
+.juegos-root .bridge__side:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.juegos-root .bridge__timer {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, #0c1a25 76%, transparent 78% 100%),
+    conic-gradient(var(--bolt) calc(var(--left) * 360deg), rgba(241, 233, 214, 0.15) 0);
+  font-size: 20px;
+  font-weight: 800;
+}
+.juegos-root .bridge__players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .bridge__players li {
+  display: grid;
+  grid-template-columns: 26px auto;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-items: center;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+}
+.juegos-root .bridge__players li > :first-child {
+  grid-row: span 2;
+}
+.juegos-root .bridge__players small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.juegos-root .bridge__players li.is-fallen {
+  opacity: 0.5;
+}
+.juegos-root .bridge__players li.is-me {
+  outline: 1px solid var(--brass);
+}
+.juegos-root .s3__hint.is-win {
+  color: #7fe0a8;
+}
+@keyframes bridge-shatter {
+  from {
+    scale: 1.15;
+    filter: brightness(2);
+  }
+}
+@keyframes bridge-hop {
+  from {
+    translate: 0 -10px;
+  }
+}
 @media (max-width: 860px) {
+  .juegos-root .bridge__deck {
+    grid-template-columns: 40px repeat(var(--steps), minmax(0, 1fr)) 40px;
+    gap: 3px;
+    padding: 10px 6px 24px;
+  }
+  .juegos-root .bridge__glass {
+    min-height: 56px;
+  }
+  .juegos-root .bridge__end {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 860px) {
+  /* Escena y panel uno debajo del otro, cada uno con su altura entera (la página hace scroll). */
   .juegos-root .s3 {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
+  }
+  .juegos-root .s3 > * {
+    flex: none;
   }
   .juegos-root .s3__panel {
     max-height: none;
     overflow: visible;
   }
-  .juegos-root .tower__floors {
-    max-height: 62vh;
+  /* En el móvil la torre y la cámara van enteras (la página hace scroll): si no, el piso en juego queda fuera. */
+  .juegos-root .tower__floors,
+  .juegos-root .heist__shaft {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+  }
+  .juegos-root .tower__floor,
+  .juegos-root .heist__floor {
+    flex: none;
+    min-height: 40px;
   }
   .juegos-root .tower__floor {
     grid-template-columns: 52px minmax(0, 1fr) 70px;
@@ -694,7 +906,10 @@
   .juegos-root .heist.is-caught .heist__shaft,
   .juegos-root .heist-app[data-alarm='2'] .heist__alarm b,
   .juegos-root .auction__crate,
-  .juegos-root .auction__box.is-open .auction__body {
+  .juegos-root .auction__box.is-open .auction__body,
+  .juegos-root .bridge__col.is-current .bridge__glass,
+  .juegos-root .bridge__glass.is-broken,
+  .juegos-root .bridge__pawn {
     animation: none;
   }
 }

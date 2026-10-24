@@ -182,9 +182,10 @@ function Tower({ onExit, juegos }) {
   else if (last) status = `Caíste en el piso ${last.floor}. Perdiste ${eur(last.stake)}.`
   else if (balance < MIN_BET) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a empezar.'
 
-  // Pisos de arriba abajo: el de arriba del todo es el último.
+  // Pisos de arriba abajo: el de arriba del todo es el último. Sin torre en marcha se ve la última subida (si es de esta
+  // dificultad), con la baldosa rota donde caíste.
   const floors = Array.from({ length: cfg.floors }, (_, i) => cfg.floors - i)
-  const path = run?.path ?? []
+  const path = run?.path ?? (last?.mode === mode ? (last.path ?? []) : [])
 
   return (
     <main className="app s3-app tower-app">

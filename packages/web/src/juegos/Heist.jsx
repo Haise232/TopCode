@@ -208,7 +208,9 @@ function Heist({ onExit, juegos }) {
   else if (balance < MIN_BET) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a empezar.'
 
   const levels = Array.from({ length: MAX_FLOORS }, (_, i) => i + 1)
-  const path = run?.path ?? []
+  // Sin atraco en marcha se ve el último: por dónde bajasteis y dónde os pillaron.
+  const path = run?.path ?? last?.path ?? []
+  const trail = run ? routes : path.filter((p) => p.ok).map((p) => p.route)
 
   return (
     <main className="app s3-app heist-app" data-alarm={alarm >= 75 ? 2 : alarm >= 40 ? 1 : 0}>
@@ -297,7 +299,7 @@ function Heist({ onExit, juegos }) {
           <ol className="heist__shaft">
             {levels.map((n) => {
               const locked = n > floors
-              const done = n <= depth
+              const done = n <= trail.length
               const current = run && n === depth + 1 && !locked
               const tried = path[n - 1]
               return (
@@ -322,7 +324,7 @@ function Heist({ onExit, juegos }) {
                       {locked
                         ? '🔒 Necesitas más banda'
                         : done
-                          ? `${ROUTES[routes[n - 1]].icon} ${ROUTES[routes[n - 1]].name} · ${fmtMult(multOf(routes.slice(0, n)))}`
+                          ? `${ROUTES[trail[n - 1]].icon} ${ROUTES[trail[n - 1]].name} · ${fmtMult(multOf(trail.slice(0, n)))}`
                           : tried && !tried.ok
                             ? `🚨 Pillados (${ROUTES[tried.route].name})`
                             : n === floors
