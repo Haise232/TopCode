@@ -11,21 +11,22 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 const UA = 'TopCode-gacha/1.0 (https://github.com/Haise232/TopCode; proyecto de clase sin fines comerciales)'
 const EN = 'https://upload.wikimedia.org/wikipedia/en'
 
-// [id, nombre en la carta, serie, rareza, fuente, imagen fijada (opcional)]. La fuente es el artículo de la Wikipedia
-// inglesa o, si empieza por https://, la página del mod (entonces la imagen va fijada). El orden dentro de cada rareza
-// es el de fama: el primero vale más.
+// [id, nombre en la carta, serie, rareza, fuente, imagen fijada (opcional), encuadre (opcional)]. La fuente es el
+// artículo de la Wikipedia inglesa o, si empieza por https://, la página del mod (entonces la imagen va fijada). El
+// encuadre es la posición horizontal de la imagen en la carta («80%»: lo de la derecha) cuando lo importante no está en
+// el centro. El orden dentro de cada rareza es el de fama: el primero vale más.
 // El id es el de la carta que había antes en ese puesto: los poderes salen del id (gacha.mjs, powersFor) y las
 // bibliotecas de los jugadores lo guardan, así que al cambiar de temática cada carta conserva dueño, rareza, valor y
 // poderes y solo cambian el nombre y la foto. Una carta nueva puede llevar cualquier id que no exista.
 const PERSONAJES = [
-  ['meme:el-xokas', 'Thomas, devorador de mundos', 'Mod de Skyrim', 'unica', 'https://www.pcgamesn.com/elderscrolls/what-does-it-take-kill-monster-meet-thomas-tank-scourge-skyrim', 'https://www.pcgamesn.com/wp-content/sites/pcgamesn/legacy/skyrim_thomas_the_tank.jpg'],
+  ['meme:el-xokas', 'Macho Man dragón', 'Mod de Skyrim', 'unica', 'https://www.gamesradar.com/randy-dragon', 'https://www.neozone.org/blog/wp-content/uploads/2012/01/macho-man-skyrim.jpg'],
   ['meme:ibai-llanos', 'Vergil', 'Devil May Cry', 'mitica', 'Vergil (Devil May Cry)'],
-  ['meme:zona-gemelos', 'Thomas en vez de Mr. X', 'Mod de Resident Evil 2', 'mitica', 'https://www.pcgamer.com/re2-mod-turns-mr-x-into-thomas-the-tank-engine/', 'https://cdn.mos.cms.futurecdn.net/n6DW33AMzVgYp6jrCRq567-1232-80.jpg'],
+  ['meme:zona-gemelos', "Mr. X Gon' Give It To Ya", 'Mod de Resident Evil 2', 'mitica', 'https://www.pcgamesn.com/resident-evil-2/resident-evil-2-mr-x-gon-give-it-to-ya-mod', 'https://www.pcgamesn.com/wp-content/sites/pcgamesn/2019/01/resident-evil-2-mr-x.jpg'],
   ['meme:el-dandy-de-barcelona', 'Shrek y Asno', 'Mod de Elden Ring', 'mitica', 'https://www.creativebloq.com/news/elden-ring-mods', 'https://cdn.mos.cms.futurecdn.net/DgDC66z4vyvH629Ng3fNv-1920-80.png'],
   ['meme:fernando-alonso', 'Machoclaw', 'Mod de Fallout 4', 'mitica', 'https://gameinformer.com/b/news/archive/2016/01/04/mod-gives-deathclaws-the-voice-and-likeness-of-39-macho-man-39-randy-savage-in-fallout-4', 'https://gameinformer.com/sites/default/files/styles/og_image/public/legacy-images/Mod%20Gives%20Fallout%204%20Deathclaws%20The%20Voice%20And%20Likeness%20Of%20%27Macho%20Man%27%20Randy%20Savage/MachoManClaw610.jpg.webp'],
-  ['meme:torrente', 'Thomas, devorador de dragones', 'Mod de Monster Hunter: World', 'mitica', 'https://www.nexusmods.com/monsterhunterworld/mods/582', 'https://cdn.shazoo.ru/c1200x630/307297_l2nhRwKxZF_582_1544419253_1541302691.jpeg'],
+  ['meme:torrente', 'One Punch Man cazador', 'Mod de Monster Hunter: World', 'mitica', 'https://www.pcgamer.com/uk/you-can-be-iron-man-or-one-punch-man-in-monster-hunter-world-now', 'https://cdn.mos.cms.futurecdn.net/GhJU4PADd9XjaGYrQgzKqA-1506-80.jpg', '80%'],
   ['meme:el-fary', 'El sombrero de Lady Dimitrescu', 'Mod de Resident Evil Village', 'mitica', 'https://www.pcgamer.com/resident-evil-village-mod-makes-lady-ds-big-honkin-hat-keep-getting-bigger', 'https://cdn.mos.cms.futurecdn.net/TgyuF7wRTScHiHpFvU5arQ-1545-80.jpg'],
-  ['meme:pimpamlacasitos', 'Thomas, el Centinela', 'Mod de Elden Ring', 'mitica', 'https://www.pcgamer.com/thomas-the-tank-engine-is-in-elden-ring-now/', 'https://cdn.mos.cms.futurecdn.net/6VaR8xWijjRLLtUtQgPGhN-1920-80.jpeg'],
+  ['meme:pimpamlacasitos', 'Patches y Miyazaki, jefes finales', 'Mod de Elden Ring', 'mitica', 'https://automaton-media.com/en/news/elden-ring-mod-replaces-shadow-of-the-erdtrees-final-bosses-with-patches-and-hidetaka-miyazaki/', 'https://automaton-media.com/en/wp-content/uploads/2024/07/20240716-33984-headerJPG.jpg', '65%'],
   ['meme:antonio-recio', 'Nicolas Cage en Sekiro', 'Mod de Sekiro', 'epica', 'https://www.pcgamer.com/sekiro-mod-adds-nic-cage-death-screen', 'https://cdn.mos.cms.futurecdn.net/TvxqNX4AibzWiURzwEbxnC-1920-80.jpeg'],
   ['meme:el-risitas', 'Elden Ring arruinado por mods', 'Mod de Elden Ring', 'epica', 'https://www.ggrecon.com/articles/elden-ring-has-been-ruined-by-modding/', 'https://www.ggrecon.com/media/stpfrsub/elden-ring-mods.jpg'],
   ['meme:julio-iglesias', 'Dante', 'Devil May Cry', 'epica', 'Dante (Devil May Cry)'],
@@ -108,11 +109,11 @@ const PERSONAJES = [
   ['meme:manolo-el-del-bombo', 'El Inquisidor', 'Halo', 'comun', 'Arbiter (Halo)'],
   ['meme:rodolfo-chikilicuatre', 'Garrus', 'Mass Effect', 'comun', 'Garrus'],
   ['meme:ramon-garcia', 'Liara', 'Mass Effect', 'comun', 'Liara T\'Soni'],
-  ['meme:antonio-lobato', 'Necromorfo', 'Dead Space', 'comun', 'Necromorphs'],
+  ['meme:antonio-lobato', 'Crema solar', 'Resident Evil Village', 'comun', 'Sunscreen', 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Sunbum_sunscreen_spf_30.jpg/500px-Sunbum_sunscreen_spf_30.jpg'],
 ]
 
 // Cartas de fusión: no salen en la mesa ni en las tiradas. Quien junta las dos cartas de «de» las pierde (vuelven a
-// quedar libres) y se lleva esta. [id, nombre, serie, [ids de las dos cartas], página, imagen, valor].
+// quedar libres) y se lleva esta. [id, nombre, serie, [ids de las dos cartas], página, imagen, valor, encuadre].
 const FUSIONES = [
   [
     'fusion:vergil-silla',
@@ -122,6 +123,16 @@ const FUSIONES = [
     'https://knowyourmeme.com/memes/vergils-chair',
     'https://i.kym-cdn.com/entries/icons/original/000/042/547/vergil_chair.jpg',
     3000,
+  ],
+  [
+    'fusion:dimitrescu-crema',
+    'Lady Dimitrescu en bikini',
+    'Mod de Resident Evil Village',
+    ['meme:omar-montes', 'meme:antonio-lobato'],
+    'https://www.youtube.com/watch?v=4m6aQNsOuvs',
+    'https://i.ytimg.com/vi/4m6aQNsOuvs/maxresdefault.jpg',
+    3000,
+    '20%',
   ],
 ]
 
@@ -183,9 +194,9 @@ async function personajes() {
   const isPage = (source) => source.startsWith('https://')
   const en = await pages(PERSONAJES.filter(([, , , , source]) => !isPage(source)).map(([, , , , source]) => source))
   const out = []
-  for (const [id, name, series, rarity, source, fixed] of PERSONAJES) {
+  for (const [id, name, series, rarity, source, fixed, pos] of PERSONAJES) {
     if (isPage(source)) {
-      out.push({ id, name, series, rarity, img: fixed, pop: 0, src: source })
+      out.push({ id, name, series, rarity, img: fixed, pop: 0, src: source, ...(pos && { pos }) })
       continue
     }
     const page = en.get(source)
@@ -223,9 +234,9 @@ function rank(cat, list) {
 
 const cartas = rank('videojuego', await cached('personajes', personajes))
 const ids = new Set(cartas.map((c) => c.id))
-const fusiones = FUSIONES.map(([id, name, series, from, src, img, value], i) => {
+const fusiones = FUSIONES.map(([id, name, series, from, src, img, value, pos], i) => {
   for (const part of from) if (!ids.has(part)) throw new Error(`fusión ${id}: no existe ${part}`)
-  return { id, name, series, rarity: 'unica', img, pop: 0, src, cat: 'fusion', rank: cartas.length + i + 1, value, fusion: from }
+  return { id, name, series, rarity: 'unica', img, pop: 0, src, cat: 'fusion', rank: cartas.length + i + 1, value, fusion: from, ...(pos && { pos }) }
 })
 const catalogo = [...cartas, ...fusiones]
 const resumen = {}

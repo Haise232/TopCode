@@ -231,6 +231,7 @@ export function cardView(id) {
     name: c.name,
     series: c.series,
     img: c.img,
+    pos: c.pos ?? null,
     rarity: c.rarity,
     value: c.value,
     price: c.value * SELL_RATE,

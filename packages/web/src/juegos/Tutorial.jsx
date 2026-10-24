@@ -160,7 +160,7 @@ const STEPS = [
     target: 'gacha',
     art: 'gacha',
     title: 'El gacha',
-    text: 'Colecciona cartas de personajes de juegos y mods míticos: coge gratis las que salen en la mesa o invoca pagando. Cada carta tiene poderes para los juegos. Y si juntas a Vergil con la Silla de plástico…',
+    text: 'Colecciona cartas de personajes de juegos y mods míticos: coge gratis las que salen en la mesa o invoca pagando. Cada carta tiene poderes para los juegos. Y si juntas a Vergil con la Silla de plástico, o a Lady Dimitrescu con la Crema solar…',
   },
   {
     target: 'bank',

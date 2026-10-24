@@ -608,15 +608,16 @@ function Rules({ prices }) {
         carta): dos cartas de la misma rareza casi nunca tienen los mismos. Cuanto más rara, más fuerte, y cada uno tiene{' '}
         <b>★ su punto fuerte</b>: un juego en el que su poder es de la rareza siguiente. Se usan con el botón «✦ Poderes» de
         cada juego y <b>son de un solo uso</b>: al usar el poder de una carta, la gastas, sale de tu biblioteca y vuelve a
-        quedar libre para que le toque a otro. Salvo las <b>míticas</b>: Thomas, devorador de mundos (un 0,1 % por tirada y un 0,5 % en
-        las premium) y la de fusión. Tienen lo máximo en todos los juegos (Omnisciencia en el póker, el crupier comprado en
+        quedar libre para que le toque a otro. Salvo las <b>míticas</b>: Macho Man dragón (un 0,1 % por tirada y un 0,5 % en las premium)
+        y las de fusión. Tienen lo máximo en todos los juegos (Omnisciencia en el póker, el crupier comprado en
         el blackjack y un seguro total o un premio triple durante diez jugadas en los demás) y <b>no se gastan</b>: cada
         poder se recarga en un día.
       </p>
       <p>
-        <b>Fusión:</b> si juntas a <b>Vergil</b> (legendaria) y la <b>Silla de plástico</b> (común) en tu biblioteca, al
-        momento se convierten en la mítica <b>Vergil en la silla de plástico</b>. Las dos vuelven a quedar libres. No sale
-        nunca en la mesa ni en las tiradas: solo hay una y solo se consigue así.
+        <b>Fusiones:</b> si juntas en tu biblioteca a <b>Vergil</b> (legendaria) y la <b>Silla de plástico</b> (común), al
+        momento se convierten en la mítica <b>Vergil en la silla de plástico</b>; y a <b>Lady Dimitrescu</b> (rara) con la{' '}
+        <b>Crema solar</b> (común), en la mítica <b>Lady Dimitrescu en bikini</b>. Las dos cartas vuelven a quedar libres.
+        Las de fusión no salen nunca en la mesa ni en las tiradas: hay una de cada y solo se consiguen así.
       </p>
       <ul className="gacha-powers">
         <li>
@@ -662,7 +663,7 @@ function Rules({ prices }) {
       </table>
       <p className="gacha-note">
         Las cartas son personajes de juegos para adultos (Devil May Cry, Monster Hunter, The Witcher, Resident Evil…) y,
-        en lo más alto, mods famosos y graciosos como Thomas en Skyrim o Shrek en Elden Ring. La rareza sale de lo
+        en lo más alto, mods famosos y graciosos como Macho Man en Skyrim o Shrek en Elden Ring. La rareza sale de lo
         famoso que es cada uno. Tu biblioteca no se reinicia el domingo; tu saldo, sí.
       </p>
     </Help>

@@ -19,7 +19,16 @@ function GachaCard({ card, big = false, mini = false }) {
             {initials}
           </span>
         ) : (
-          <img src={card.img} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+          <img
+            src={card.img}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            // pos: encuadre horizontal cuando lo importante de la imagen no está en el centro.
+            style={card.pos ? { objectPosition: `${card.pos} 20%` } : undefined}
+            onError={() => setBroken(true)}
+          />
         )}
       </span>
       {!mini && (
