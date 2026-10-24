@@ -171,7 +171,7 @@ const STEPS = [
   {
     art: 'season',
     title: '¡Bienvenidos a la Season 3!',
-    text: `¡Ya estamos en la Season 3! Como siempre, cada domingo a las 23:59 todos volvéis a empezar con ${eur(START)}. Hay cuatro juegos nuevos (La Torre, El Atraco, la Subasta a ciegas y el Puente de Cristal), la Ruleta vuelve a estar abierta y el bote del Bingo lo abre la banca. Te lo enseñamos en un minuto.`,
+    text: `¡Ya estamos en la Season 3! Como siempre, cada domingo a las 23:59 todos volvéis a empezar con ${eur(START)}. Hay cuatro juegos nuevos (La Torre, El Atraco, La Subasta y el Puente de Cristal), la Ruleta vuelve a estar abierta y el bote del Bingo lo abre la banca. Te lo enseñamos en un minuto.`,
     hero: true,
   },
   {
@@ -190,7 +190,7 @@ const STEPS = [
     target: 'season3',
     art: 'news',
     title: 'Nuevo en la Season 3',
-    text: 'Aquí están los cuatro juegos recién salidos: dos para jugar solo (La Torre y El Atraco) y dos en vivo con todos (la Subasta a ciegas y el Puente de Cristal).',
+    text: 'Aquí están los cuatro juegos recién salidos: dos para jugar solo (La Torre y El Atraco) y dos en vivo con todos (La Subasta y el Puente de Cristal).',
   },
   {
     target: 'season3',
@@ -202,7 +202,7 @@ const STEPS = [
     target: 'season3',
     art: 'live3',
     title: 'Subasta y Puente, en vivo',
-    text: 'Subasta: cada minuto sale una caja, todos pujan en secreto y el que más puja se la lleva (a los demás se les devuelve); dentro, de una piedra a un diamante ×8. Puente: cada 75 s todos cruzan 8 paneles a la vez, izquierda o derecha; quien llega más lejos se reparte el bote.',
+    text: 'Subasta: sale una caja misteriosa (de madera a cósmica), todos ven quién va primero y para superarle hay que pujar más; si alguien puja al final, hay prórroga. El que más puja se la lleva (a los demás se les devuelve); dentro, de una piedra al jackpot ×20. Puente: cada 75 s todos cruzan 8 paneles a la vez, izquierda o derecha; quien llega más lejos se reparte el bote.',
   },
   {
     target: 'solo',

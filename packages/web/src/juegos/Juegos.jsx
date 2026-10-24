@@ -132,9 +132,9 @@ const SEASON3 = [
   },
   {
     id: 'auction',
-    name: 'Subasta a ciegas',
+    name: 'La Subasta',
     kind: 'Cada minuto',
-    blurb: 'Una caja misteriosa cada minuto. Puja en secreto: puede ser un diamante… o una piedra.',
+    blurb: 'Siete cajas misteriosas, pujas a la vista y prórroga en los últimos segundos. Puede ser el jackpot… o una piedra.',
     live: true,
     tint: '177, 132, 255',
     art: <AuctionScene />,
