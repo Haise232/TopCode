@@ -14,6 +14,7 @@ import { SOLO_GAMES, SOLO_PLAY, crashDue, crashView, crashWaitMs, raceDue, raceV
 import { GACHA_ERRORS, applyEffect, cardView, createGacha } from './gacha.mjs'
 import { DUEL_ERRORS, createDuelos } from './duelos.mjs'
 import { BINGO_ERRORS, createBingo } from './bingo.mjs'
+import { AUCTION_ERRORS, createAuction } from './subasta.mjs'
 import { abuseExtra, abuseLuck, createBanca } from './banca.mjs'
 import { safeAvatar, shortName } from './engine/names.mjs'
 
@@ -71,6 +72,7 @@ export const ERRORS = {
   ...GACHA_ERRORS,
   ...DUEL_ERRORS,
   ...BINGO_ERRORS,
+  ...AUCTION_ERRORS,
 }
 
 export class JuegosError extends Error {
@@ -315,6 +317,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
         await banca.sweep(q)
         await duelos.sweep(q)
         await bingo.sweep(q)
+        await auction.sweep(q)
       })
       await ping('juegos-lobby')
     }
@@ -749,6 +752,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   }
   const duelos = createDuelos({ db, ping, now, randomInt, move, abuse: () => banca.abuse() })
   const bingo = createBingo({ db, now, secret, move, abuse: () => banca.abuse() })
+  const auction = createAuction({ db, now, secret, move, feed: (q, amount) => bingo.feed(q, amount) })
 
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.
@@ -946,6 +950,11 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       case 'bingo': {
         await bingo.handle(user, msg, reply)
+        if (reply.error) reply.error.message = ERRORS[reply.error.code] ?? 'Error.'
+        return reply
+      }
+      case 'auction': {
+        await auction.handle(user, msg, reply)
         if (reply.error) reply.error.message = ERRORS[reply.error.code] ?? 'Error.'
         return reply
       }

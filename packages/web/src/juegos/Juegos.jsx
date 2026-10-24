@@ -16,6 +16,7 @@ import Frog from './Frog.jsx'
 import Race from './Race.jsx'
 import Tower from './Tower.jsx'
 import Heist from './Heist.jsx'
+import Auction from './Auction.jsx'
 import Bingo from './Bingo.jsx'
 import BingoCage from './BingoCage.jsx'
 import Gacha from './Gacha.jsx'
@@ -156,6 +157,21 @@ const SEASON3 = [
         {[0, 60, 120, 180, 240, 300].map((a) => (
           <rect key={a} x="19" y="8" width="2" height="5" className="game__s3-hot" transform={`rotate(${a} 20 20)`} />
         ))}
+      </svg>
+    ),
+  },
+  {
+    id: 'auction',
+    name: 'Subasta a ciegas',
+    blurb: 'Una caja misteriosa cada minuto. Puja en secreto: puede ser un diamante… o una piedra.',
+    live: true,
+    art: (
+      <svg className="game__s3" viewBox="0 0 40 40">
+        <rect x="8" y="17" width="24" height="16" rx="2.5" className="game__s3-hot" />
+        <rect x="6" y="11" width="28" height="7" rx="2" className="game__s3-tile" />
+        <text x="20" y="30" textAnchor="middle" fontSize="11" fontWeight="900" className="game__s3-ink-text">
+          ?
+        </text>
       </svg>
     ),
   },
@@ -631,7 +647,7 @@ function Notice({ title, children, actions }) {
 
 // Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
 const SCREEN_KEY = 'juegos-pantalla'
-const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower', 'heist'])
+const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower', 'heist', 'auction'])
 function savedScreen() {
   try {
     const screen = sessionStorage.getItem(SCREEN_KEY)
@@ -727,6 +743,7 @@ function JuegosScreens() {
   if (screen === 'race') return show(<Race onExit={exit} juegos={juegos} />)
   if (screen === 'tower') return show(<Tower onExit={exit} juegos={juegos} />)
   if (screen === 'heist') return show(<Heist onExit={exit} juegos={juegos} />)
+  if (screen === 'auction') return show(<Auction onExit={exit} juegos={juegos} />)
   if (screen === 'duel') return show(<Duel onExit={exit} juegos={juegos} />, true)
   if (screen === 'gacha') return show(<Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />)
   if (screen === 'join') return show(<Joining juegos={juegos} request={view} onExit={exit} />)

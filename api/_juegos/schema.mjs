@@ -156,6 +156,15 @@ create table if not exists public.juegos_bingo (
   control   jsonb not null default '[]'::jsonb
 );
 insert into public.juegos_bingo (id) values (1) on conflict (id) do nothing;
+-- Últimas rondas de la Subasta y del Puente (supabase/migracion_juegos_season3.sql): quién ganó y qué pasó.
+create table if not exists public.juegos_rondas (
+  juego  text not null check (juego in ('auction', 'bridge')),
+  ronda  bigint not null,
+  datos  jsonb not null,
+  creado timestamptz not null default now(),
+  primary key (juego, ronda)
+);
+
 -- Cuándo deja la banca llevarse el bote (supabase/migracion_juegos_bote.sql).
 alter table public.juegos_bingo add column if not exists control jsonb not null default '[]'::jsonb;
 
@@ -174,4 +183,5 @@ alter table public.juegos_avisos          enable row level security;
 alter table public.juegos_avisos_vistos   enable row level security;
 alter table public.juegos_duelos          enable row level security;
 alter table public.juegos_bingo           enable row level security;
+alter table public.juegos_rondas          enable row level security;
 `
