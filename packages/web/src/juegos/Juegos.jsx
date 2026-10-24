@@ -445,7 +445,7 @@ export function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome,
   const connected = conn === 'open' && Boolean(me)
   const balance = useCountUp(me?.balance ?? 0, 900)
   const { mine, count } = standing(scores, me)
-  // La guía se abre sola la primera vez que entras en la Season 2 (cuando ya está pintado el selector).
+  // La guía se abre sola la primera vez que entras en la Season 3 (cuando ya está pintado el selector).
   const hubReady = Boolean(me && lobby)
   useEffect(() => {
     if (!hubReady) return
@@ -525,7 +525,7 @@ export function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome,
         </div>
       </header>
 
-      <section aria-labelledby="s3-title">
+      <section aria-labelledby="s3-title" data-tour="season3">
         <h2 id="s3-title" className="hub-title">
           Nuevo en la Season 3 <small>juegos recién salidos</small>
         </h2>

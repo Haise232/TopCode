@@ -6,11 +6,11 @@ import './tutorial.css'
 // Guía de Juegos: la primera vez que entras en la temporada se abre sola (y luego con el botón «Tutorial»). Cada paso
 // ilumina una zona del selector (data-tour="…") y la explica con un dibujo. Si la zona no existe (p. ej. la banca, que
 // solo ve el master), el paso se salta.
-export const TUTORIAL_KEY = 'juegos-tutorial-season2'
+export const TUTORIAL_KEY = 'juegos-tutorial-season3'
 export const START = 15000
 
 const Art = {
-  // Bienvenida: trofeo con «2» y estrellas.
+  // Bienvenida: trofeo con «3» y estrellas.
   season: (
     <svg viewBox="0 0 120 120" aria-hidden="true">
       <defs>
@@ -23,7 +23,7 @@ const Art = {
       <path d="M36 28H22c0 14 8 22 18 22M84 28h14c0 14-8 22-18 22" fill="none" stroke="#e0a21b" strokeWidth="6" />
       <rect x="52" y="70" width="16" height="16" fill="#e0a21b" />
       <rect x="38" y="86" width="44" height="12" rx="4" fill="url(#tut-gold)" />
-      <text x="60" y="56" textAnchor="middle" fontSize="28" fontWeight="900" fill="#7a4a06">2</text>
+      <text x="60" y="56" textAnchor="middle" fontSize="28" fontWeight="900" fill="#7a4a06">3</text>
       {[
         [14, 18],
         [104, 14],
@@ -31,6 +31,54 @@ const Art = {
         [16, 76],
       ].map(([x, y], i) => (
         <path key={i} className="tut-twinkle" style={{ animationDelay: `${i * 0.3}s` }} d={`M${x} ${y - 7}L${x + 2} ${y - 2}L${x + 7} ${y}L${x + 2} ${y + 2}L${x} ${y + 7}L${x - 2} ${y + 2}L${x - 7} ${y}L${x - 2} ${y - 2}Z`} fill="#fff6d6" />
+      ))}
+    </svg>
+  ),
+  // Novedades: etiqueta «NUEVO» con cuatro destellos.
+  news: (
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <g className="tut-bob">
+        <rect x="14" y="40" width="92" height="38" rx="8" fill="#8f6bff" stroke="#fff" strokeWidth="3" />
+        <text x="60" y="66" textAnchor="middle" fontSize="22" fontWeight="900" fill="#fff">NUEVO</text>
+      </g>
+      {[
+        [20, 22],
+        [100, 24],
+        [96, 100],
+        [24, 98],
+      ].map(([x, y], i) => (
+        <path key={i} className="tut-twinkle" style={{ animationDelay: `${i * 0.3}s` }} d={`M${x} ${y - 8}L${x + 2} ${y - 2}L${x + 8} ${y}L${x + 2} ${y + 2}L${x} ${y + 8}L${x - 2} ${y + 2}L${x - 8} ${y}L${x - 2} ${y - 2}Z`} fill="#ffe08a" />
+      ))}
+    </svg>
+  ),
+  // Torre y Atraco: baldosas de cristal que suben y la puerta de una cámara acorazada.
+  solo3: (
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      {[0, 1, 2].map((r) => (
+        <g key={r} className="tut-stack" style={{ animationDelay: `${r * 0.15}s` }}>
+          <rect x="8" y={78 - r * 26} width="26" height="20" rx="4" fill="#8fd3ff" stroke="#fff" strokeWidth="2" opacity="0.9" />
+          <rect x="38" y={78 - r * 26} width="26" height="20" rx="4" fill={r === 1 ? '#3a2f4a' : '#8fd3ff'} stroke="#fff" strokeWidth="2" opacity="0.9" />
+        </g>
+      ))}
+      <path d="M45 66l6 6-6 6" fill="none" stroke="#ff6b7d" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="92" cy="60" r="24" fill="#c9d3db" stroke="#7b8794" strokeWidth="4" />
+      <circle className="tut-spin" cx="92" cy="60" r="12" fill="none" stroke="#f2c14e" strokeWidth="5" strokeDasharray="6 5" />
+      <circle cx="92" cy="60" r="4" fill="#f2c14e" />
+    </svg>
+  ),
+  // Subasta y Puente: caja con diamante y dos carriles de paneles.
+  live3: (
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <rect x="10" y="62" width="44" height="34" rx="5" fill="#c9893f" stroke="#7a4a06" strokeWidth="3" />
+      <path d="M10 76h44" stroke="#7a4a06" strokeWidth="3" />
+      <path className="tut-bob" d="M32 30l12 8-12 18-12-18z" fill="#7fe0ff" stroke="#fff" strokeWidth="2" />
+      <rect x="70" y="20" width="18" height="18" rx="3" fill="#8fd3ff" stroke="#fff" strokeWidth="2" />
+      <rect x="92" y="20" width="18" height="18" rx="3" fill="#8fd3ff" stroke="#fff" strokeWidth="2" opacity="0.4" />
+      {[0, 1, 2].map((r) => (
+        <g key={r} className="tut-stack" style={{ animationDelay: `${r * 0.15}s` }}>
+          <rect x="70" y={46 + r * 22} width="18" height="16" rx="3" fill="#8fd3ff" stroke="#fff" strokeWidth="2" />
+          <rect x="92" y={46 + r * 22} width="18" height="16" rx="3" fill="#8fd3ff" stroke="#fff" strokeWidth="2" opacity="0.6" />
+        </g>
       ))}
     </svg>
   ),
@@ -122,8 +170,8 @@ const Art = {
 const STEPS = [
   {
     art: 'season',
-    title: '¡Bienvenidos a la Season 2!',
-    text: `Empieza una temporada nueva: todos volvéis a la casilla de salida con ${eur(START)}. Te enseñamos todo lo que hay en Juegos en un minuto.`,
+    title: '¡Bienvenidos a la Season 3!',
+    text: `¡Ya estamos en la Season 3! Como siempre, cada domingo a las 23:59 todos volvéis a empezar con ${eur(START)}. Hay cuatro juegos nuevos (La Torre, El Atraco, la Subasta a ciegas y el Puente de Cristal), la Ruleta vuelve a estar abierta y el bote del Bingo lo abre la banca. Te lo enseñamos en un minuto.`,
     hero: true,
   },
   {
@@ -139,10 +187,28 @@ const STEPS = [
     text: 'Quien más dinero tenga el domingo gana la semana. Toca aquí para ver el podio, tu puesto, cuánto te falta para subir y la gráfica de cada uno.',
   },
   {
+    target: 'season3',
+    art: 'news',
+    title: 'Nuevo en la Season 3',
+    text: 'Aquí están los cuatro juegos recién salidos: dos para jugar solo (La Torre y El Atraco) y dos en vivo con todos (la Subasta a ciegas y el Puente de Cristal).',
+  },
+  {
+    target: 'season3',
+    art: 'solo3',
+    title: 'La Torre y El Atraco',
+    text: 'La Torre: elige dificultad, sube piso a piso por cristales buenos y cobra cuando quieras. El Atraco: baja a la cámara acorazada eligiendo ruta; tus cartas del gacha abren plantas más profundas (botín hasta ×250). Cada uno tiene su récord del día.',
+  },
+  {
+    target: 'season3',
+    art: 'live3',
+    title: 'Subasta y Puente, en vivo',
+    text: 'Subasta: cada minuto sale una caja, todos pujan en secreto y el que más puja se la lleva (a los demás se les devuelve); dentro, de una piedra a un diamante ×8. Puente: cada 75 s todos cruzan 8 paneles a la vez, izquierda o derecha; quien llega más lejos se reparte el bote.',
+  },
+  {
     target: 'solo',
     art: 'games',
     title: 'Juegos para jugar solo',
-    text: 'Ruleta, Cohete y Carrera son en vivo (la misma ronda para todos); Laberinto, Plinko y Rana, a tu ritmo. Cada uno tiene su botón de Ayuda arriba a la derecha.',
+    text: 'Ruleta (que vuelve a estar abierta), Cohete y Carrera son en vivo (la misma ronda para todos); Laberinto, Plinko y Rana, a tu ritmo. Cada uno tiene su botón de Ayuda arriba a la derecha.',
   },
   {
     target: 'duel',
@@ -154,7 +220,7 @@ const STEPS = [
     target: 'live',
     art: 'tables',
     title: 'Mesas en vivo',
-    text: 'Blackjack y póker con la gente de TopCode. Siéntate a jugar o entra a mirar, chatea en la mesa e invita a tus amigos con un enlace.',
+    text: 'Blackjack y póker con la gente de TopCode. Siéntate a jugar o entra a mirar, chatea en la mesa e invita a tus amigos con un enlace. Y ojo al Bingo: el bote lo abre la banca a ratos y se avisa a todos a pantalla completa.',
   },
   {
     target: 'gacha',
@@ -171,7 +237,7 @@ const STEPS = [
   {
     art: 'go',
     title: '¡A jugar!',
-    text: 'Puedes volver a ver esta guía cuando quieras con el botón «Tutorial» de arriba. ¡Suerte en la Season 2!',
+    text: 'Puedes volver a ver esta guía cuando quieras con el botón «Tutorial» de arriba. ¡Suerte en la Season 3!',
     hero: true,
   },
 ]
