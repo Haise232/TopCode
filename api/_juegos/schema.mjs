@@ -152,9 +152,12 @@ create index if not exists juegos_duelos_reta_idx on public.juegos_duelos (reta)
 create table if not exists public.juegos_bingo (
   id        int primary key default 1 check (id = 1),
   bote      bigint not null default 0 check (bote >= 0),
-  historial jsonb not null default '[]'::jsonb
+  historial jsonb not null default '[]'::jsonb,
+  control   jsonb not null default '[]'::jsonb
 );
 insert into public.juegos_bingo (id) values (1) on conflict (id) do nothing;
+-- Cuándo deja la banca llevarse el bote (supabase/migracion_juegos_bote.sql).
+alter table public.juegos_bingo add column if not exists control jsonb not null default '[]'::jsonb;
 
 alter table public.juegos_meta    enable row level security;
 alter table public.juegos_cuentas enable row level security;

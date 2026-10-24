@@ -316,3 +316,43 @@
     transition: none;
   }
 }
+
+/* Pagos de la mesa y tu última jugada, siempre a la vista. */
+.juegos-root .roulette-live .pays,
+.juegos-root .roulette-live .track__hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.juegos-root .roulette-live .track__hint {
+  margin: 0 0 6px;
+}
+.juegos-root .roulette-live .last-play {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 14px;
+}
+.juegos-root .roulette-live .last-play .tile {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+.juegos-root .roulette-live .last-play--win {
+  border-color: var(--brass);
+  color: var(--brass);
+}
+.juegos-root .roulette-live .last-play--lose {
+  color: var(--muted);
+}

@@ -35,6 +35,16 @@ export interface Movimiento {
   para: string | null // null: para todos
 }
 
+// El bote del bingo: si ahora se lo puede llevar alguien (lo decide la banca) y hasta cuándo.
+export interface Bote {
+  abierto: boolean
+  hasta: number | null // null: sin límite (o cerrado)
+  una: boolean // se cierra en cuanto alguien se lo lleve
+  pot: number
+  botes: { round: number; bingo: string[]; jackpot: number; golden: boolean }[]
+  ahora: number
+}
+
 export interface BancaReply {
   banca?: {
     avisos?: Aviso[]
@@ -45,11 +55,13 @@ export interface BancaReply {
     historial?: Movimiento[]
     hecho?: 'dinero' | 'mensaje'
     personas?: number
+    bote?: Bote
   }
 }
 
 export const BANK_TOPIC = 'juegos-banca'
 export const ABUSE_MINUTES = [5, 10, 30, 60] as const
+export const POT_MINUTES = [30, 60, 120, 240, null] as const // como bingo.POT_OPEN_MINUTES
 
 // Una llamada a la banca. Lanza un Error con el mensaje del servidor si algo falla.
 export async function bancaCall(msg: Record<string, unknown>): Promise<BancaReply> {

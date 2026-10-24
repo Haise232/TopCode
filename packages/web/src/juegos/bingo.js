@@ -28,6 +28,14 @@ export const POT_PCT = 100 - LINE_PCT - BINGO_PCT
 // los simples no cobran y lo que se pierde en el casino.
 export const POT_BALL = 66
 
+// La banca decide cuándo se puede llevar el bote: control es la lista de aperturas [{ desde, hasta, una }] (ms; hasta
+// null = sin límite; una: se cierra en cuanto alguien se lo lleve), de la más nueva a la más vieja. Una partida puede dar
+// bote si se cerró su venta con el bote abierto; abrir o cerrar después no cambia una partida que ya se está jugando.
+export const POT_OPEN_MINUTES = [30, 60, 120, 240, null]
+export const MAX_OPENINGS = 20
+export const openingAt = (control, t) =>
+  (Array.isArray(control) ? control : []).find((o) => o.desde <= t && (o.hasta === null || t < o.hasta)) ?? null
+
 export const ROWS = 3
 export const COLS = 9
 

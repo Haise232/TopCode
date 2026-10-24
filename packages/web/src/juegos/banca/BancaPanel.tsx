@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Coins, MessageSquare, Zap, X, Search, Users, Check, Clock } from 'lucide-react'
+import { Coins, MessageSquare, Zap, X, Search, Users, Check, Clock, Trophy } from 'lucide-react'
 import {
   ABUSE_MINUTES,
+  POT_MINUTES,
   abusePerks,
   abuseText,
   bancaCall,
   eur,
   type Abuse,
   type AbuseMode,
+  type Bote,
   type AbuseScope,
   type Jugador,
   type Movimiento,
 } from './banca'
 import './banca-panel.css'
 
-type Tab = 'dinero' | 'mensaje' | 'abuso'
+type Tab = 'dinero' | 'mensaje' | 'abuso' | 'bote'
 const ALL = 'todos'
 const CHIPS = [100, 1000, 10000, 50000]
 const MAX = 1_000_000
@@ -36,6 +38,11 @@ const ago = (at: number) => {
   if (min < 60) return `hace ${min} min`
   const h = Math.round(min / 60)
   return h < 24 ? `hace ${h} h` : `hace ${Math.round(h / 24)} d`
+}
+const potMinutes = (m: number | null) => (m === null ? 'Sin límite' : m < 60 ? `${m} min` : `${m / 60} h`)
+const hours = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000))
+  return s >= 3600 ? `${Math.floor(s / 3600)} h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')} min` : clock(ms)
 }
 const initial = (name: string) => (name.trim()[0] ?? '?').toUpperCase()
 
@@ -64,6 +71,9 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<AbuseMode>('x2')
   const [scope, setScope] = useState<AbuseScope>('todo')
   const [minutes, setMinutes] = useState<number>(10)
+  const [bote, setBote] = useState<Bote | null>(null)
+  const [potFor, setPotFor] = useState<number | null>(60)
+  const [potOnce, setPotOnce] = useState(true)
   const [busy, setBusy] = useState(false)
   const [armed, setArmed] = useState(false) // dar a todos pide pulsar dos veces
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
@@ -80,7 +90,21 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
     bancaCall({ t: 'banca' })
       .then(({ banca }) => setAbuse(banca?.abuso ?? null))
       .catch(() => {})
+    bancaCall({ t: 'banca_bote' })
+      .then(({ banca }) => setBote(banca?.bote ?? null))
+      .catch(() => {})
   }, [loadPeople])
+
+  // Mientras se mira la pestaña del bote, se relee cada poco: puede cerrarse solo al salir un bote.
+  useEffect(() => {
+    if (tab !== 'bote') return
+    const timer = setInterval(() => {
+      bancaCall({ t: 'banca_bote' })
+        .then(({ banca }) => setBote(banca?.bote ?? null))
+        .catch(() => {})
+    }, 15000)
+    return () => clearInterval(timer)
+  }, [tab])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -102,6 +126,7 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
   const targetName = target ? target.name : 'todos'
   const count = target ? 1 : people.length
   const active = abuse && abuse.hasta > Date.now() ? abuse : null
+  const potOpen = bote?.abierto && (bote.hasta === null || bote.hasta > Date.now()) ? bote : null
   const inCirculation = people.reduce((sum, p) => sum + (p.balance ?? 0), 0)
 
   const run = async (msg: Record<string, unknown>, done: string) => {
@@ -110,6 +135,7 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
     try {
       const { banca } = await bancaCall(msg)
       if (msg.t === 'banca_abuso') setAbuse(banca?.abuso ?? null)
+      if (msg.t === 'banca_bote') setBote(banca?.bote ?? null)
       if (msg.t === 'banca_mensaje') setText('')
       if (msg.t === 'banca_dar') setGift('')
       setNote({ ok: true, text: done })
@@ -132,6 +158,9 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
   const send = () => run({ t: 'banca_mensaje', para: to, texto: text.trim() }, `Mensaje enviado a ${targetName}.`)
   const startAbuse = () => run({ t: 'banca_abuso', modo: mode, ambito: scope, minutos: minutes }, '¡Admin Abuse activado! Todos lo están viendo.')
   const stopAbuse = () => run({ t: 'banca_abuso', modo: null }, 'Admin Abuse desactivado.')
+  const openPot = () =>
+    run({ t: 'banca_bote', minutos: potFor, una: potOnce }, 'Bote abierto: vale desde la próxima partida del bingo que cierre la venta.')
+  const closePot = () => run({ t: 'banca_bote', cerrar: true }, 'Bote cerrado: nadie se lo lleva hasta que lo vuelvas a abrir.')
   const setClamped = (n: number) => setAmount(Math.max(1, Math.min(MAX, Math.floor(n) || 1)))
 
   return createPortal(
@@ -164,6 +193,10 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
             <small>Admin Abuse</small>
             <b>{active ? `${active.modo === 'gratis' ? 'Gratis' : active.modo === 'x3' ? '×3' : '×2'} · ${clock(active.hasta - Date.now())}` : 'Apagado'}</b>
           </div>
+          <div className={potOpen ? 'is-hot' : ''}>
+            <small>Bote del bingo</small>
+            <b>{potOpen ? `Abierto${potOpen.hasta ? ` · ${hours(potOpen.hasta - Date.now())}` : ''}` : 'Cerrado'}</b>
+          </div>
         </div>
 
         <nav className="bp__tabs" role="tablist">
@@ -172,6 +205,7 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
               ['dinero', 'Dar dinero', Coins],
               ['mensaje', 'Mensaje', MessageSquare],
               ['abuso', 'Admin Abuse', Zap],
+              ['bote', 'Bote', Trophy],
             ] as const
           ).map(([id, label, Icon]) => (
             <button
@@ -192,7 +226,7 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
         </nav>
 
         <div className="bp__body">
-          {tab !== 'abuso' && (
+          {tab !== 'abuso' && tab !== 'bote' && (
             <section className="bp__who" aria-label="Para quién">
               <button type="button" className={`bp-all ${to === ALL ? 'is-on' : ''}`} onClick={() => setTo(ALL)}>
                 <span className="bp-all__icon">
@@ -344,6 +378,64 @@ export default function BancaPanel({ onClose }: { onClose: () => void }) {
                 <button type="button" className={`bp-go bp-go--abuse bp-go--${mode}`} disabled={busy} onClick={startAbuse}>
                   <Zap size={18} /> {active ? 'CAMBIAR ADMIN ABUSE' : 'ACTIVAR ADMIN ABUSE'}
                 </button>
+              </>
+            )}
+
+            {tab === 'bote' && (
+              <>
+                <div className={`bp-live ${potOpen ? '' : 'bp-live--off'}`}>
+                  <span className="bp-live__dot" aria-hidden="true" />
+                  <div>
+                    <b>{potOpen ? 'BOTE ABIERTO' : 'BOTE CERRADO'}</b>
+                    <small>
+                      {bote ? `En la jaula: ${eur(bote.pot)}` : 'Cargando…'}
+                      {potOpen && (
+                        <>
+                          {' · '}
+                          <Clock size={12} /> {potOpen.hasta ? `Quedan ${hours(potOpen.hasta - Date.now())}` : 'Sin límite'}
+                          {potOpen.una ? ' · se cierra al salir' : ''}
+                        </>
+                      )}
+                    </small>
+                  </div>
+                  {potOpen && (
+                    <button type="button" disabled={busy} onClick={closePot}>
+                      Cerrar
+                    </button>
+                  )}
+                </div>
+                <p className="bp-muted">
+                  Mientras el bote está cerrado nadie se lo lleva, ni con la bola dorada ni cantando bingo antes de la bola 66:
+                  la jaula sigue creciendo. Lo que decidas vale desde la próxima partida que cierre la venta; la que ya se
+                  está jugando sigue como empezó.
+                </p>
+                <div className="bp-row">
+                  <span className="bp-label">Abierto durante</span>
+                  <div className="bp-seg" role="radiogroup">
+                    {POT_MINUTES.map((m) => (
+                      <button key={String(m)} type="button" role="radio" aria-checked={potFor === m} onClick={() => setPotFor(m)}>
+                        {potMinutes(m)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="bp-check-row">
+                  <input type="checkbox" checked={potOnce} onChange={(e) => setPotOnce(e.target.checked)} />
+                  Cerrarlo en cuanto alguien se lo lleve (así no sale varias veces seguidas)
+                </label>
+                <button type="button" className="bp-go bp-go--gold" disabled={busy} onClick={openPot}>
+                  <Trophy size={18} /> {potOpen ? 'Volver a abrir con estas opciones' : 'Abrir el bote'}
+                </button>
+                {bote && bote.botes.length > 0 && (
+                  <ul className="bp-perks">
+                    {bote.botes.map((b) => (
+                      <li key={b.round}>
+                        {eur(b.jackpot)} para {b.bingo.join(', ') || '—'}
+                        {b.golden ? ' (bola dorada)' : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </>
             )}
 

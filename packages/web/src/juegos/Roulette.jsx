@@ -161,7 +161,7 @@ function Wheel({ clock, spin, rest, reduced }) {
   )
 }
 
-function Table({ totals, hit, lucky, disabled, onPlace }) {
+function Table({ totals, hit, lucky, disabled, erasing, onPlace, onRemove }) {
   const luckyOrder = Object.keys(lucky)
   return (
     <div className="felt">
@@ -187,7 +187,11 @@ function Table({ totals, hit, lucky, disabled, onPlace }) {
             }}
             disabled={disabled}
             aria-label={amount ? `${name}, apostado ${eur(amount)}` : name}
-            onClick={() => onPlace([cell.id])}
+            onClick={() => (erasing ? onRemove(cell.id) : onPlace([cell.id]))}
+            onContextMenu={(event) => {
+              event.preventDefault()
+              onRemove(cell.id)
+            }}
           >
             {cell.diamond && <span className={`diamond diamond--${cell.diamond}`} />}
             <span className="cell__label">{cell.label}</span>
@@ -228,9 +232,12 @@ function trackPoint(k) {
 // Se empieza por el 19 para que el cero quede en el centro de la curva de la izquierda, como en las mesas reales.
 const TRACK_ORDER = WHEEL.map((_, k) => WHEEL[(k + 3) % WHEEL.length])
 
-function Racetrack({ totals, hit, disabled, onPlace }) {
+function Racetrack({ totals, hit, disabled, chip, onPlace }) {
   return (
     <div className="track">
+      <p className="track__hint">
+        Los números van en el orden de la rueda. Toca uno y apuestas a él y a sus 2 vecinos de cada lado: 5 fichas de {eur(chip)}.
+      </p>
       <svg viewBox={`0 0 ${TRACK.w} ${TRACK.h}`} role="group" aria-label="Pista de vecinos">
         <rect
           x={TRACK.pad}
@@ -282,7 +289,9 @@ function Racetrack({ totals, hit, disabled, onPlace }) {
             onClick={() => onPlace(sector.numbers.map((n) => `n:${n}`))}
           >
             {sector.name}
-            <small>{plural(sector.numbers.length, 'ficha', 'fichas')}</small>
+            <small>
+              {plural(sector.numbers.length, 'número', 'números')} · {eur(sector.numbers.length * chip)}
+            </small>
           </button>
         ))}
       </div>
@@ -356,7 +365,7 @@ function Stats({ numbers }) {
 
 // Cuenta atrás de la ronda: un aro que se vacía mientras se puede apostar.
 function Countdown({ phase, offset }) {
-  const left = phase === 'betting' ? Math.ceil((BETS_MS - offset) / 1000) : 0
+  const left = Math.ceil(((phase === 'betting' ? BETS_MS : ROUND_MS) - offset) / 1000)
   const fraction = phase === 'betting' ? 1 - offset / BETS_MS : 0
   return (
     <div
@@ -364,16 +373,13 @@ function Countdown({ phase, offset }) {
       style={{ '--left': fraction }}
       aria-hidden="true"
     >
-      <span>{phase === 'betting' ? left : phase === 'spinning' ? '•' : '✓'}</span>
+      <span>{left}</span>
     </div>
   )
 }
 
 // La ruleta en vivo: una sola rueda para todos que gira cada 25 s. El servidor sortea la ronda y paga; aquí se
 // apuesta mientras la mesa está abierta y se anima la rueda con el reloj del servidor.
-// Fuera de servicio temporalmente: la mesa no deja apostar (el servidor tampoco) y lo avisa.
-const CLOSED = true
-
 function Roulette({ onExit, juegos }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [view, setView] = useState('table')
@@ -381,6 +387,8 @@ function Roulette({ onExit, juegos }) {
   const [live, setLive] = useState(null) // última respuesta del servidor (ronda, número, historial, jugadores)
   const [sending, setSending] = useState(false)
   const [winners, setWinners] = useState({ round: null, list: [] })
+  const [notice, setNotice] = useState(null) // { round, text }: fichas que no llegaron a jugar
+  const [erasing, setErasing] = useState(false)
   const [, setTick] = useState(0)
   const skew = useRef(null)
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
@@ -465,6 +473,7 @@ function Roulette({ onExit, juegos }) {
     // Lo que no llegó a enviarse antes del «no va más» no juega: la mesa vuelve a lo confirmado.
     if (phase !== 'betting') {
       dispatch({ type: 'REJECTED', round })
+      setNotice({ round, text: 'Esas últimas fichas llegaron tarde y no juegan: solo cuenta lo que se guardó antes del «no va más».' })
       return
     }
     const bets = placed
@@ -474,7 +483,10 @@ function Roulette({ onExit, juegos }) {
       const body = await ask({ a: 'bet', round, bets })
       setSending(false)
       if (body?.solo) dispatch({ type: 'CONFIRMED', round, bets })
-      else dispatch({ type: 'REJECTED', round })
+      else {
+        dispatch({ type: 'REJECTED', round })
+        setNotice({ round, text: 'No se pudo guardar tu apuesta: la mesa vuelve a lo que ya estaba guardado.' })
+      }
     }, wait)
     return () => clearTimeout(timer)
     // offset cambia cuatro veces por segundo: solo se vuelve a programar si cambian las fichas o la ronda.
@@ -484,7 +496,7 @@ function Roulette({ onExit, juegos }) {
   // Lo que se puede apostar todavía: el saldo del servidor (ya sin lo confirmado) menos lo pendiente de confirmar.
   const available = Math.max(0, balance - unconfirmed(state))
   const onTable = totalOf(placed)
-  const betting = !CLOSED && ready && phase === 'betting' && state.round === round
+  const betting = ready && phase === 'betting' && state.round === round
 
   // Resultado de esta ronda (si ya se conoce) y tu jugada en ella.
   const draw = live?.round === round && live.number !== null ? live : null
@@ -499,6 +511,8 @@ function Roulette({ onExit, juegos }) {
     : null
   const landed = spin !== null && clock() >= spin.land
   const mine = live?.last && live.last.round === round ? live.last : null
+  // La última jugada que ya se vio caer (la de esta ronda, solo cuando la bola se para).
+  const lastPlay = live?.last && (live.last.round !== round || landed) ? live.last : null
   // Hasta que la bola cae no se ve lo ganado: el saldo del servidor ya lo incluye.
   const hidden = mine && !landed ? mine.payout + mine.bonus : 0
   const shownBank = useCountUp(Math.max(0, available - hidden))
@@ -532,9 +546,19 @@ function Roulette({ onExit, juegos }) {
 
   function place(ids) {
     if (!betting) return
+    setNotice(null)
     if (state.chip * ids.length <= available) playChip()
     dispatch({ type: 'PLACE', ids, available })
   }
+
+  function remove(id) {
+    if (!betting) return
+    setNotice(null)
+    dispatch({ type: 'REMOVE', id })
+  }
+
+  // El modo de quitar fichas solo vale mientras hay algo que quitar.
+  const erasingOn = erasing && betting && placed.length > 0
 
   const canRepeat = betting && placed.length === 0 && totalOf(lastPlaced) > 0 && totalOf(lastPlaced) <= available
   const broke = balance === 0 && onTable === 0
@@ -554,22 +578,24 @@ function Roulette({ onExit, juegos }) {
     if (phase === 'betting') {
       call = BETS_MS - offset <= LAST_CALL_MS ? 'Últimas apuestas' : 'Hagan sus apuestas'
       if (broke) detail = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a tener 15.000 €.'
-      else if (onTable > 0) detail = sending || dirty ? `Enviando ${eur(onTable)}…` : `Apuesta aceptada: ${eur(onTable)}.`
-      else detail = 'Elige una ficha y toca la mesa.'
+      else if (onTable > 0) detail = sending || dirty ? `Guardando ${eur(onTable)}…` : `✓ Apuesta guardada: ${eur(onTable)}. Puedes cambiarla hasta el «no va más».`
+      else detail = 'Elige el valor de la ficha abajo y toca una casilla. Se guarda sola, no hay que confirmar.'
     } else if (!landed) {
       call = 'No va más'
-      const flashes = Object.keys(lucky)
-      detail = flashes.length ? `Relámpago en ${listOf(flashes)}.` : onTable > 0 ? `Juegas ${eur(onTable)}.` : 'La bola está en marcha.'
+      const flashes = Object.entries(lucky).map(([n, x]) => `${n} (×${x})`)
+      detail = flashes.length
+        ? `⚡ Relámpago en ${listOf(flashes)}: si tienes ficha a pleno en uno de ellos, ese pleno paga eso.`
+        : onTable > 0
+          ? `Juegas ${eur(onTable)}.`
+          : 'La bola está en marcha. Apuesta en la siguiente ronda.'
     } else {
       call = `${COLOR_NAMES[colorOf(spin.number)]} ${spin.number}`
       if (mine) detail = mine.net > 0 ? `¡Has ganado ${eur(mine.net)}! Felicidades.` : mine.net < 0 ? `Perdiste ${eur(-mine.net)}.` : 'Quedaste igual.'
       else detail = 'Prepárate para la siguiente ronda.'
     }
+    if (phase !== 'betting') detail += ` Siguiente ronda en ${Math.ceil((ROUND_MS - offset) / 1000)} s.`
+    if (notice?.round === round) detail = notice.text
     if (juegos.error) detail = juegos.error
-  }
-  if (CLOSED) {
-    call = 'Fuera de servicio'
-    detail = 'La ruleta está fuera de servicio temporalmente. Las apuestas que ya tenías puestas se pagan igual.'
   }
 
   return (
@@ -587,10 +613,10 @@ function Roulette({ onExit, juegos }) {
               <dd>{eur(onTable)}</dd>
             </div>
             <div>
-              <dt>Racha</dt>
+              <dt title="Victorias seguidas en las que ganas al menos el doble de lo apostado">Racha</dt>
               <dd className={streak >= 2 ? 'money__hot' : ''}>
                 {streak}
-                {nextBonus > 0 && <small>+{nextBonus}% si ganas</small>}
+                {nextBonus > 0 && <small>+{nextBonus}% si ganas el doble</small>}
               </dd>
             </div>
           </dl>
@@ -615,13 +641,18 @@ function Roulette({ onExit, juegos }) {
                 apostar; con el «no va más» la mesa se cierra y la bola gira.
               </p>
               <p>
-                Tus fichas se envían solas al servidor. Mientras la mesa esté abierta puedes cambiarlas o quitarlas.
+                Elige el valor de la ficha y toca una casilla: la apuesta se guarda sola, no hay que confirmar. Mientras la
+                mesa esté abierta puedes cambiarla: «Deshacer» quita la última ficha, «Quitar fichas» (o el clic derecho)
+                quita las de la casilla que toques y «Quitar todo» lo retira todo.
               </p>
               <p>
                 En la pista, tocar un número apuesta a él y a sus dos vecinos de la rueda (5 fichas). Los sectores ponen una
                 ficha a pleno en cada número: Vecinos del cero (17), Tercio (12), Huérfanos (8) y Juego cero (7).
               </p>
-              <p>En cada tirada caen de 1 a 3 números relámpago: si aciertas uno a pleno, paga entre 50 y 150 a 1.</p>
+              <p>
+                Relámpago ⚡: con el «no va más» se marcan de 1 a 3 números al azar. Si la bola cae en uno y tenías ficha a
+                pleno en él, ese pleno paga entre 50 y 150 a 1 en vez de {STRAIGHT_PAYS} a 1.
+              </p>
               <p>Cada victoria seguida en la que al menos duplicas lo apostado suma un 5% extra a la siguiente, hasta un 15%. El
                 extra se calcula sobre la ganancia más pequeña de la racha.
               </p>
@@ -680,10 +711,24 @@ function Roulette({ onExit, juegos }) {
               hit={landed ? spin.number : null}
               lucky={lucky}
               disabled={!betting || broke}
+              erasing={erasingOn}
               onPlace={place}
+              onRemove={remove}
             />
           ) : (
-            <Racetrack totals={totalsById(placed)} hit={landed ? spin.number : null} disabled={!betting || broke} onPlace={place} />
+            <Racetrack totals={totalsById(placed)} hit={landed ? spin.number : null} disabled={!betting || broke} chip={chip} onPlace={place} />
+          )}
+          <p className="pays">
+            Pleno {STRAIGHT_PAYS} a 1 · Docena y columna 2 a 1 · Rojo, negro, par, impar, 1-18 y 19-36: 1 a 1
+          </p>
+          {lastPlay && (
+            <p className={`last-play ${lastPlay.net > 0 ? 'last-play--win' : lastPlay.net < 0 ? 'last-play--lose' : ''}`}>
+              <span className={`tile tile--${colorOf(lastPlay.number)}`}>{lastPlay.number}</span>
+              Tu última jugada: apostaste {eur(lastPlay.stake)} y{' '}
+              {lastPlay.net > 0 ? `ganaste ${eur(lastPlay.net)}` : lastPlay.net < 0 ? `perdiste ${eur(-lastPlay.net)}` : 'quedaste igual'}
+              {lastPlay.boosted ? ` · ⚡ relámpago ×${lastPlay.boosted}` : ''}
+              {lastPlay.bonus > 0 ? ` · racha +${eur(lastPlay.bonus)}` : ''}
+            </p>
           )}
 
           <div className="controls">
@@ -695,6 +740,7 @@ function Roulette({ onExit, juegos }) {
                   className={`chip chip--${value}`}
                   aria-pressed={chip === value}
                   disabled={available < value}
+                  title={available < value ? 'No te llega el saldo para esta ficha' : `Fichas de ${eur(value)}`}
                   onClick={() => dispatch({ type: 'SELECT_CHIP', chip: value })}
                 >
                   {value}
@@ -712,6 +758,17 @@ function Roulette({ onExit, juegos }) {
                   <button type="button" disabled={!betting || placed.length === 0} onClick={() => dispatch({ type: 'UNDO' })}>
                     Deshacer
                   </button>
+                  {view === 'table' && (
+                    <button
+                      type="button"
+                      aria-pressed={erasingOn}
+                      disabled={!betting || placed.length === 0}
+                      title="Toca una casilla para quitar sus fichas de una en una"
+                      onClick={() => setErasing(!erasingOn)}
+                    >
+                      Quitar fichas
+                    </button>
+                  )}
                   <button type="button" disabled={!betting || placed.length === 0} onClick={() => dispatch({ type: 'CLEAR' })}>
                     Quitar todo
                   </button>

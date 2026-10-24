@@ -96,12 +96,14 @@ function Board({ drawn, latest, golden }) {
 }
 
 // La barra de las 90 bolas, con la zona del bote (hasta la bola POT_BALL) en dorado.
-function Track({ count, end }) {
+function Track({ count, end, potOpen }) {
   return (
     <div className="btrack" aria-hidden="true">
-      <span className="btrack__pot" style={{ width: `${(POT_BALL / BALLS) * 100}%` }}>
-        <em>Bote hasta la {POT_BALL}</em>
-      </span>
+      {potOpen && (
+        <span className="btrack__pot" style={{ width: `${(POT_BALL / BALLS) * 100}%` }}>
+          <em>Bote hasta la {POT_BALL}</em>
+        </span>
+      )}
       <span className={`btrack__fill ${count > POT_BALL ? 'is-late' : ''}`} style={{ width: `${(count / BALLS) * 100}%` }} />
       {end !== null && <span className="btrack__end" style={{ left: `${(end / BALLS) * 100}%` }} />}
     </div>
@@ -168,6 +170,9 @@ function Bingo({ onExit, juegos }) {
   const latest = drawnList.at(-1) ?? null
   const lineHit = Boolean(draw?.lineBall) && count >= draw.lineBall
   const bingoHit = Boolean(draw?.bingoBall) && count >= draw.bingoBall
+  // La banca decide cuándo se puede llevar el bote: ¿lo da esta partida? (y si está abierto ahora mismo).
+  const potOpen = view ? Boolean(view.potOpen) : Boolean(live?.bote?.abierto)
+  const potNow = live?.bote ?? null
   const cards = view?.cards ?? []
   const prices = view?.prices ?? []
   const free = view?.free ?? []
@@ -265,14 +270,14 @@ function Bingo({ onExit, juegos }) {
     } else if (bingoHit) {
       call = '¡Bingo!'
       const who = namesOf(draw.bingo)
-      const how = draw.goldenHit ? ' ¡con la bola dorada! Se lleva el bote' : draw.jackpot ? ' ¡y se lleva el bote!' : ''
+      const how = draw.jackpot ? (draw.goldenHit ? ' ¡con la bola dorada! Se lleva el bote' : ' ¡y se lleva el bote!') : ''
       detail = `${listOf(who)} con la bola ${draw.bingoBall}${how} · Siguiente partida en ${clockOf(startOf(round + 1) - t)}`
     } else {
       call = count ? `Bola ${count}` : 'Sale la primera bola…'
       detail = lineHit
-        ? `Línea para ${listOf(namesOf(draw.line))}. Ahora, a por el bingo${count < POT_BALL ? ` (bote hasta la bola ${POT_BALL})` : ''}.`
+        ? `Línea para ${listOf(namesOf(draw.line))}. Ahora, a por el bingo${potOpen && count < POT_BALL ? ` (bote hasta la bola ${POT_BALL})` : ''}.`
         : 'Se juega la línea.'
-      if (latest === golden && golden !== null) detail = `¡Bola dorada: el ${golden}! Si cierra un bingo, se lleva el bote.`
+      if (latest === golden && golden !== null && potOpen) detail = `¡Bola dorada: el ${golden}! Si cierra un bingo, se lleva el bote.`
     }
     if (juegos.error) detail = juegos.error
   }
@@ -330,7 +335,10 @@ function Bingo({ onExit, juegos }) {
                 Carrera y Blackjack) va a la jaula. Se la lleva quien cante bingo con la bola {POT_BALL} o antes, o justo con la{' '}
                 <b>bola dorada</b>: una de las 90, distinta en cada partida, que brilla al salir (~1 partida de cada 90).
               </p>
-              <p>La jaula se vacía con el reinicio del domingo, como los saldos.</p>
+              <p>
+                La banca decide cuándo está abierto el bote. Mientras está cerrado nadie se lo lleva y la jaula sigue creciendo; lo
+                verás arriba, junto al bote. La jaula se vacía con el reinicio del domingo, como los saldos.
+              </p>
             </Help>
           </div>
         </div>
@@ -342,7 +350,11 @@ function Bingo({ onExit, juegos }) {
           <p className="bingo__potline">
             <small id="bingo-pot">Bote en la jaula</small>
             <strong>{eur(shownPot)}</strong>
-            <span>Para quien cante bingo con la bola {POT_BALL} o antes, o con la bola dorada</span>
+            <span>
+              {potNow?.abierto
+                ? `Bote abierto${potNow.una ? ' hasta que alguien se lo lleve' : ''}: para quien cante bingo con la bola ${POT_BALL} o antes, o con la bola dorada`
+                : 'Bote cerrado ahora: la jaula sigue creciendo hasta que la banca lo abra'}
+            </span>
           </p>
           {history.length > 0 && (
             <ol className="bingo__history" aria-label="Últimas partidas">
@@ -377,7 +389,7 @@ function Bingo({ onExit, juegos }) {
               </ol>
             </div>
           </div>
-          <Track count={count} end={bingoHit ? draw.bingoBall : null} />
+          <Track count={count} end={bingoHit ? draw.bingoBall : null} potOpen={potOpen} />
           <div className="bingo__boardwrap">
             <Board drawn={drawn} latest={latest} golden={golden} />
           </div>

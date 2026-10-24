@@ -187,6 +187,12 @@ export function reducer(state, action) {
     }
     case 'UNDO':
       return { ...state, placed: state.placed.slice(0, -1) }
+    // Quita la última ficha puesta en una casilla concreta.
+    case 'REMOVE': {
+      const i = state.placed.findLastIndex((bet) => bet.id === action.id)
+      if (i < 0) return state
+      return { ...state, placed: [...state.placed.slice(0, i), ...state.placed.slice(i + 1)] }
+    }
     case 'CLEAR':
       return { ...state, placed: [] }
     case 'DOUBLE': {

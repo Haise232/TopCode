@@ -55,8 +55,8 @@ const SOLO = [
   {
     id: 'roulette',
     name: 'Ruleta',
-    blurb: 'Fuera de servicio temporalmente.',
-    off: true,
+    blurb: 'Una tirada para todos cada 25 s. Apuesta y mira caer la bola.',
+    live: true,
     art: <span className="game__wheel" />,
   },
   {

@@ -8,7 +8,8 @@
 // ahí ya no se puede hacer nada, así que da igual que la pantalla lo conozca antes de que salgan las bolas.
 // El bote (la jaula) está en juegos_bingo: lo alimentan el 25 % de los cartones y lo que se pierde en el resto del casino
 // (feed), y se lo lleva quien cante bingo con la bola bingo.POT_BALL o antes, o justo con la bola dorada (otra del mismo
-// sorteo, una por partida).
+// sorteo, una por partida), pero solo en las partidas que la banca deja (juegos_bingo.control, ver bingo.openingAt): el
+// master abre el bote un rato o hasta que alguien se lo lleve, y mientras está cerrado la jaula solo crece.
 // Se paga sin temporizador: la primera petición que llega después de la bola del bingo reparte los premios (settleDue).
 //   bingo   cualquiera: a «sync» (ponerse al día) o «buy» (n cartones más de tipo kind para la partida en curso)
 import { randomInt } from 'node:crypto'
@@ -120,8 +121,14 @@ export function createBingo({ db, now, secret, move, abuse }) {
   }
 
   async function potRow() {
-    const { rows } = await db.query(`select bote, historial from public.juegos_bingo where id = 1`)
-    return { pot: Number(rows[0]?.bote ?? 0), history: rows[0]?.historial ?? [] }
+    const { rows } = await db.query(`select bote, historial, control from public.juegos_bingo where id = 1`)
+    return { pot: Number(rows[0]?.bote ?? 0), history: rows[0]?.historial ?? [], control: rows[0]?.control ?? [] }
+  }
+
+  // Lo que la pantalla enseña del bote: si ahora está abierto y hasta cuándo.
+  const potState = (control, t) => {
+    const open = bingo.openingAt(control, t)
+    return { abierto: Boolean(open), hasta: open?.hasta ?? null, una: Boolean(open?.una) }
   }
 
   // Paga las partidas cuya bola del bingo ya salió. Barato: en cada instancia mira la base de datos como mucho una vez
@@ -147,13 +154,18 @@ export function createBingo({ db, now, secret, move, abuse }) {
   async function pay(round) {
     const week = weekOf(now()).key
     await db.tx(async (q) => {
-      const pot = Number((await q(`select bote from public.juegos_bingo where id = 1 for update`)).rows[0]?.bote ?? 0)
+      const row = (await q(`select bote, control from public.juegos_bingo where id = 1 for update`)).rows[0]
+      const pot = Number(row?.bote ?? 0)
+      const control = row?.control ?? []
+      // ¿Se cerró la venta de esta partida con el bote abierto? Si no, juega con la jaula a 0 y la jaula sigue entera.
+      const opening = bingo.openingAt(control, revealAt(round))
       const { rows, cards } = await cardsOf(q, round, true)
       const open = rows.filter((r) => r.estado.paid === false)
       if (!open.length) return
       // Cartones de otra semana: el saldo ya se reinició, no se paga nada.
       const stale = open.some((r) => r.estado.week !== week)
-      const result = bingo.settle(stale ? [] : cards, orderOf(secret, round), pot, goldenOf(secret, round))
+      const result = bingo.settle(stale ? [] : cards, orderOf(secret, round), opening ? pot : 0, goldenOf(secret, round))
+      const potAfter = result.potAfter + (opening ? 0 : pot)
       const won = new Map()
       cards.forEach((c, i) => {
         const p = result.prizes[i]
@@ -192,9 +204,14 @@ export function createBingo({ db, now, secret, move, abuse }) {
         jackpot: result.prizes.reduce((sum, p) => sum + p.pot, 0), // lo que salió de la jaula
         golden: result.jackpot && result.golden,
       }
+      // Apertura de «una vez»: con este bote se cierra, también para las partidas que vengan detrás.
+      const closed =
+        result.jackpot && opening?.una
+          ? control.map((o) => (o === opening ? { ...o, hasta: Math.min(o.hasta ?? Infinity, revealAt(round) + 1) } : o))
+          : control
       await q(
-        `update public.juegos_bingo set bote = $1, historial = (jsonb_build_array($2::jsonb) || historial) - ${HISTORY} where id = 1`,
-        [result.potAfter, JSON.stringify(entry)],
+        `update public.juegos_bingo set bote = $1, historial = (jsonb_build_array($2::jsonb) || historial) - ${HISTORY}, control = $3 where id = 1`,
+        [potAfter, JSON.stringify(entry), JSON.stringify(closed)],
       )
     })
   }
@@ -203,7 +220,7 @@ export function createBingo({ db, now, secret, move, abuse }) {
   async function view(userId, saved, balance) {
     const t = now()
     const { round, phase, drawn } = bingo.phaseAt(t)
-    const [{ pot, history }, counts] = await Promise.all([
+    const [{ pot, history, control }, counts] = await Promise.all([
       potRow(),
       t < revealAt(round)
         ? db.query(
@@ -223,6 +240,8 @@ export function createBingo({ db, now, secret, move, abuse }) {
       phase,
       drawn: drawn ?? 0,
       pot,
+      bote: potState(control, t),
+      potOpen: Boolean(bingo.openingAt(control, revealAt(round))), // ¿esta partida puede dar bote?
       cards: mine,
       prices,
       free,
@@ -235,7 +254,7 @@ export function createBingo({ db, now, secret, move, abuse }) {
             bingoBall: outcome.bingoBall,
             line: outcome.line.map(({ name, amount, owner }) => ({ name, amount, me: owner === userId })),
             bingo: outcome.bingo.map(({ name, amount, owner }) => ({ name, amount, me: owner === userId })),
-            jackpot: outcome.jackpot,
+            jackpot: outcome.jackpot && Boolean(bingo.openingAt(control, revealAt(round))),
             golden: outcome.golden,
             goldenHit: outcome.goldenHit,
           }
@@ -305,14 +324,37 @@ export function createBingo({ db, now, secret, move, abuse }) {
 
   // Para el menú: lo que hay en la jaula y el último bote que salió.
   async function summary() {
-    const { pot, history } = await potRow()
+    const { pot, history, control } = await potRow()
     const t = now()
     const { round, phase } = bingo.phaseAt(t)
-    return { pot, round, phase, next: phase === 'buy' ? bingo.drawStart(round) : bingo.startOf(round + 1), lastJackpot: history.find((h) => h.jackpot > 0) ?? null }
+    return { pot, bote: potState(control, t), round, phase, next: phase === 'buy' ? bingo.drawStart(round) : bingo.startOf(round + 1), lastJackpot: history.find((h) => h.jackpot > 0) ?? null }
   }
 
   // Reinicio del domingo: los saldos vuelven a 15.000 € y la jaula se vacía con ellos.
   const sweep = (q) => q(`update public.juegos_bingo set bote = 0`)
 
-  return { handle, feed, settleDue, summary, sweep }
+  // Banca: abre el bote (minutos: uno de bingo.POT_OPEN_MINUTES, null = sin límite; una: se cierra tras el primer bote)
+  // o lo cierra (minutos undefined y cerrar). Cerrar no toca las partidas cuya venta ya se cerró.
+  async function setPot(msg) {
+    const t = now()
+    if (!msg.cerrar && !bingo.POT_OPEN_MINUTES.includes(msg.minutos)) return null
+    return db.tx(async (q) => {
+      const control = (await q(`select control from public.juegos_bingo where id = 1 for update`)).rows[0]?.control ?? []
+      // La apertura en curso termina ahora (y deja de ser «en curso» aunque se abra otra justo después).
+      let next = control.map((o) => (bingo.openingAt([o], t) ? { ...o, hasta: t } : o))
+      if (!msg.cerrar) next = [{ desde: t, hasta: msg.minutos === null ? null : t + msg.minutos * 60000, una: msg.una !== false }, ...next]
+      next = next.slice(0, bingo.MAX_OPENINGS)
+      await q(`update public.juegos_bingo set control = $1 where id = 1`, [JSON.stringify(next)])
+      return potState(next, t)
+    })
+  }
+
+  // Para el panel de la banca: el estado del bote, lo que hay en la jaula y los últimos botes que salieron.
+  async function potAdmin() {
+    const { pot, history, control } = await potRow()
+    const t = now()
+    return { ...potState(control, t), pot, botes: history.filter((h) => h.jackpot > 0).slice(0, 5), ahora: t }
+  }
+
+  return { handle, feed, settleDue, summary, sweep, setPot, potAdmin }
 }

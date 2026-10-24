@@ -132,7 +132,7 @@
 /* --- Cifras --- */
 .bp__stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
   padding: 0 20px 12px;
 }
@@ -727,6 +727,30 @@
   font-weight: 700;
   color: #ff8a9b;
   background: transparent;
+}
+
+.bp-live--off {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+.bp-live--off small {
+  color: var(--muted);
+}
+.bp-live--off .bp-live__dot {
+  background: var(--muted);
+  animation: none;
+}
+.bp-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.bp-check-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
 }
 
 .bp-note {

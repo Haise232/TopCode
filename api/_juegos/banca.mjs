@@ -8,6 +8,8 @@
 //   banca_dar     master: { para: id | 'todos', importe, texto? }
 //   banca_mensaje master: { para: id | 'todos', texto }
 //   banca_abuso   master: { modo: 'x2' | 'x3' | 'gratis' | null, ambito: 'todo' | 'poker', minutos }
+//   banca_bote    master: sin más, el estado del bote del bingo; { minutos: 30 | 60 | 120 | 240 | null, una } lo abre
+//                 (null: sin límite; una: se cierra en cuanto alguien se lo lleve) y { cerrar: true } lo cierra
 //
 // Admin Abuse (juegos_meta.abuso): x2 y x3 multiplican lo que ganas en una jugada (la banca paga la diferencia) y dan
 // más suerte donde el sorteo es de cada uno (gacha, plinko, rana, laberinto y cartones gratis en el bingo); «gratis»
@@ -45,7 +47,7 @@ const cleanText = (text) =>
         .slice(0, MAX_TEXT)
     : ''
 
-export function createBanca({ db, ping, now, credit }) {
+export function createBanca({ db, ping, now, credit, pot }) {
   let abuseCache = { at: -Infinity, value: null }
   const masters = new Map()
 
@@ -195,7 +197,17 @@ export function createBanca({ db, ping, now, credit }) {
     return { banca: { abuso: value } }
   }
 
-  const MASTER_ONLY = { banca_gente: people, banca_dar: give, banca_mensaje: message, banca_abuso: setAbuse }
+  // El bote del bingo: abrirlo o cerrarlo vale desde la próxima partida que cierre la venta.
+  async function jackpot(user, msg) {
+    if (msg.cerrar === true || 'minutos' in msg) {
+      const state = await pot().setPot({ cerrar: msg.cerrar === true, minutos: msg.minutos, una: msg.una })
+      if (!state) return { error: 'BAD_MESSAGE' }
+      await ping('juegos-lobby')
+    }
+    return { banca: { bote: await pot().potAdmin() } }
+  }
+
+  const MASTER_ONLY = { banca_gente: people, banca_dar: give, banca_mensaje: message, banca_abuso: setAbuse, banca_bote: jackpot }
 
   async function handle(user, msg) {
     if (msg.t === 'banca') return status(user)
