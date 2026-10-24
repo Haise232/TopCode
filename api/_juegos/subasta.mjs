@@ -77,7 +77,8 @@ export function createAuction({ db, now, secret, move, feed, abuse }) {
         for (const b of bids) deltas[b.owner] = b === win ? prize + extra : b.amount
         const real = Object.fromEntries(Object.entries(deltas).filter(([, d]) => d > 0))
         if (Object.keys(real).length) await move(q, real)
-        if (win.amount - prize - extra > 0) await feed(q, win.amount - prize - extra)
+        // Lo que gana la casa va a la jaula, aunque el Admin Abuse «gratis» se lo devuelva al ganador.
+        if (win.amount > prize) await feed(q, win.amount - prize)
       }
       for (const r of rows) {
         const mine = bids.find((b) => b.owner === r.usuario_id)

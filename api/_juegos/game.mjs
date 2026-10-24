@@ -115,6 +115,9 @@ BlackjackRoom.prototype.onTimer = {
 // Admin Abuse (banca.mjs): al pagar la ronda, la banca pone encima lo que toque. `abuse` lo deja withTable al abrir la mesa.
 BlackjackRoom.prototype.settle = function settle() {
   Room.prototype.settle.call(this)
+  // Lo que la mesa pierde contra la banca va a la jaula del bingo (withTable lo apunta al guardar; no se guarda en la mesa).
+  // Se cuenta antes del Admin Abuse: con «gratis» la banca te lo devuelve, pero la jaula crece igual.
+  for (const seat of this.seats) if (seat?.locked && seat.bet > seat.paid) this.lost = (this.lost ?? 0) + seat.bet - seat.paid
   let changed = false
   for (const seat of this.seats) {
     if (!seat?.locked) continue
@@ -124,8 +127,6 @@ BlackjackRoom.prototype.settle = function settle() {
     seat.paid += extra
     changed = true
   }
-  // Lo que la mesa pierde contra la banca va a la jaula del bingo (withTable lo apunta al guardar; no se guarda en la mesa).
-  for (const seat of this.seats) if (seat?.locked && seat.bet > seat.paid) this.lost = (this.lost ?? 0) + seat.bet - seat.paid
   if (changed) this.broadcast()
 }
 
@@ -694,8 +695,9 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
           out.delta += extra
           out.abuse = { modo: abuse.modo, extra }
         }
-        // Lo que se pierde contra el casino (ya con seguros y Admin Abuse) va a la jaula del bingo.
-        await bingo.feed(q, -(settled.net + (hit?.extra ?? 0) + (extra ?? 0)))
+        // Lo que se pierde contra el casino (ya con los seguros del gacha) va a la jaula del bingo. El Admin Abuse no lo
+        // resta: con «gratis» la banca te devuelve lo perdido, pero la jaula crece igual.
+        await bingo.feed(q, -(settled.net + (hit?.extra ?? 0)))
       }
       // Toda jugada cuenta para el Score, también la que te deja igual (entras en la clasificación y se anota el día).
       if (out.played || out.delta) accounts.adjust(user.id, out.delta)

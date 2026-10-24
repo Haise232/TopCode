@@ -95,7 +95,13 @@ export function abusePerks(a: Pick<Abuse, 'modo' | 'ambito'>): string[] {
   if (a.modo === 'gratis') {
     return a.ambito === 'poker'
       ? ['Si pierdes una mano de póker, la banca te devuelve lo apostado', 'Lo que ganes, para ti']
-      : ['Si pierdes en cualquier juego, la banca te lo devuelve', 'Cartones del bingo sin premio: te devuelven lo que costaron', 'Lo que ganes, para ti', 'Tiradas del gacha gratis']
+      : [
+          'Si pierdes en cualquier juego, la banca te lo devuelve',
+          'Lo que pierdas sigue sumando al bote del bingo',
+          'Cartones del bingo sin premio: te devuelven lo que costaron',
+          'Lo que ganes, para ti',
+          'Tiradas del gacha gratis',
+        ]
   }
   if (a.ambito === 'poker') return [`Todo lo que ganes en el póker, ${m}`, 'La banca pone la diferencia']
   return [

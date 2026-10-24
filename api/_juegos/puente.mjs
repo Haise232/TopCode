@@ -94,13 +94,13 @@ export function createBridge({ db, now, secret, move, feed, abuse }) {
         const p = players.find((x) => x.owner === r.usuario_id)
         if (boost) extras[p.owner] = abuseExtra({ modo: boost, ambito: 'todo' }, 'bridge', (out.prizes[p.owner] ?? 0) - p.stake)
       }
-      const given = Object.values(extras).reduce((sum, e) => sum + e, 0)
       if (!stale) {
         const real = Object.fromEntries(
           players.map((p) => [p.owner, (out.prizes[p.owner] ?? 0) + (extras[p.owner] ?? 0)]).filter(([, d]) => d > 0),
         )
         if (Object.keys(real).length) await move(q, real)
-        if (out.house - given > 0) await feed(q, out.house - given)
+        // La parte de la casa va a la jaula entera, aunque el Admin Abuse «gratis» devuelva entradas.
+        if (out.house > 0) await feed(q, out.house)
       }
       for (const r of rows) {
         const p = players.find((x) => x.owner === r.usuario_id)
