@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useEffectEvent } from './useEffectEvent.js'
 import {
   BASE_FLOORS,
@@ -25,9 +25,86 @@ import WinBurst from './WinBurst.jsx'
 import Help from './Help.jsx'
 import Avatar from './Avatar.jsx'
 import GachaCard from './GachaCard.jsx'
-import './season3.css'
+import './Heist.css'
 
 const HISTORY = 12
+const MEDALS = ['🥇', '🥈', '🥉']
+// Lo que se lleva cada ruta en la planta: el dibujo de su salida (conducto, puerta o pared con dinamita).
+const ROUTE_TEXT = { sigilo: 'Conducto de ventilación', normal: 'Puerta de seguridad', loco: 'Pared con explosivos' }
+// Lluvia de botín al huir: posiciones y tipos fijos (sin azar) para que el render sea puro.
+const PARTY = Array.from({ length: 26 }, (_, i) => ({ x: (i * 37 + 11) % 100, d: ((i * 53) % 90) / 100, s: 0.8 + ((i * 29) % 50) / 100, kind: ['ingot', 'bill', 'conf', 'conf', 'bill'][i % 5], hue: (i * 47) % 360 }))
+
+// Dibujo de cada ruta. state: '' (cerrada) | 'work' (la estás abriendo) | 'open' (superada) | 'fail' (os pillaron aquí).
+function RouteArt({ id, state = '' }) {
+  if (id === 'sigilo')
+    return (
+      <span className={`hs-art hs-art--sigilo ${state && `is-${state}`}`} aria-hidden="true">
+        <span className="hs-art__duct">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <i key={i} style={{ '--i': i }} />
+          ))}
+        </span>
+        <b className="hs-art__dark" />
+      </span>
+    )
+  if (id === 'normal')
+    return (
+      <span className={`hs-art hs-art--normal ${state && `is-${state}`}`} aria-hidden="true">
+        <span className="hs-art__frame">
+          <b className="hs-art__dark" />
+          <span className="hs-art__door">
+            <i />
+          </span>
+        </span>
+        <span className="hs-art__pad">
+          <i />
+          <i />
+          <i />
+          <em />
+        </span>
+      </span>
+    )
+  return (
+    <span className={`hs-art hs-art--loco ${state && `is-${state}`}`} aria-hidden="true">
+      <span className="hs-art__wall">
+        <b className="hs-art__dark" />
+      </span>
+      <span className="hs-art__tnt">
+        <i />
+        <i />
+        <i />
+        <em />
+      </span>
+      <span className="hs-art__boom" />
+      <span className="hs-art__smoke">
+        <i />
+        <i />
+        <i />
+      </span>
+    </span>
+  )
+}
+
+// La banda como personajes: el ladrón (silueta con antifaz) y sus cartas, cada una con su papel.
+function Squad({ crew, state, size = 'm' }) {
+  return (
+    <div className={`hs-squad hs-squad--${size} is-${state}`}>
+      <span className="hs-squad__who">
+        <span className="hs-thief">
+          <i className="hs-thief__head" />
+          <i className="hs-thief__body" />
+          <i className="hs-thief__bag" />
+        </span>
+        {crew.map((c) => (
+          <figure key={c.id} className="hs-mate" title={`${c.name} · ${c.role}`}>
+            <GachaCard card={c} mini />
+            <figcaption>{c.role}</figcaption>
+          </figure>
+        ))}
+      </span>
+    </div>
+  )
+}
 
 // El Atraco lo sortea el servidor con el saldo semanal (cuenta en el Score): cada planta la pide el jugador.
 function Heist({ onExit, juegos }) {
@@ -42,9 +119,13 @@ function Heist({ onExit, juegos }) {
   const [history, setHistory] = useState([])
   const [ranking, setRanking] = useState([])
   const [burst, setBurst] = useState(null)
+  const [pick, setPick] = useState(null) // { route, at }: la ruta que se está abriendo
+  const [end, setEnd] = useState(null) // { round, kind }: cómo acabó el último golpe (escape = llegó a la cámara)
+  const [party, setParty] = useState(null) // ronda que celebra con lluvia de botín
   const [bank, setBank] = useState(null) // { round, extra, modo }: lo que puso el Admin Abuse en el último golpe
   const [ready, setReady] = useState(false)
   const lock = useRef(false)
+  const view = useRef(null)
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
   const { request } = juegos
   const serverBalance = juegos.me?.balance ?? 0
@@ -85,9 +166,19 @@ function Heist({ onExit, juegos }) {
 
   useEffect(() => {
     if (!flash) return
-    const timer = setTimeout(() => setFlash(null), reduced ? 250 : flash === 'caught' ? 1600 : 600)
+    const timer = setTimeout(() => {
+      setFlash(null)
+      setPick(null)
+    }, reduced ? 250 : flash === 'caught' ? 1600 : 900)
     return () => clearTimeout(timer)
   }, [flash, reduced])
+
+  // La fiesta de botín dura unos segundos.
+  useEffect(() => {
+    if (!party) return
+    const timer = setTimeout(() => setParty(null), reduced ? 600 : 4800)
+    return () => clearTimeout(timer)
+  }, [party, reduced])
 
   async function act(message) {
     if (lock.current) return null
@@ -139,11 +230,16 @@ function Heist({ onExit, juegos }) {
 
   async function go(route) {
     if (busy || !run) return
+    setPick({ route, at: depth + 1 })
     const view = await act({ a: 'go', route })
-    if (!view) return
+    if (!view) {
+      setPick(null)
+      return
+    }
     if (view.ev === 'caught') {
       if (view.abuse) setBank({ round: view.last.round, ...view.abuse })
       setFlash('caught')
+      setEnd({ round: view.last.round, kind: 'caught' })
       if (!isMuted()) playSiren()
       buzz([80, 60, 200])
       setRun((r) => (r ? { ...r, path: [...r.path, { route, ok: false }] } : r))
@@ -156,12 +252,16 @@ function Heist({ onExit, juegos }) {
     }
     setFlash('ok')
     playLand(view.routes?.length ?? depth + 1)
-    apply(view)
-    if (view.ev === 'escape') {
-      record(view.last)
-      setBalance(view.balance)
-      finish(view.last, view.abuse)
-    }
+    // Un momento para ver cómo se abre la ruta antes de que la banda baje a la planta siguiente.
+    setTimeout(() => {
+      apply(view)
+      if (view.ev === 'escape') {
+        record(view.last)
+        setBalance(view.balance)
+        setEnd({ round: view.last.round, kind: 'escape' })
+        finish(view.last, view.abuse)
+      }
+    }, reduced ? 100 : 700)
   }
 
   async function cash() {
@@ -171,12 +271,14 @@ function Heist({ onExit, juegos }) {
     apply(view)
     record(view.last)
     setBalance(view.balance)
+    setEnd({ round: view.last.round, kind: 'cash' })
     finish(view.last, view.abuse)
   }
 
   function finish(result, abuse) {
     if (abuse) setBank({ round: result.round, ...abuse })
     if (result.net <= 0) return
+    setParty(result.round)
     playCash(Math.min(10, Math.round(result.mult)))
     playWin(result.mult >= 10)
     buzz([60, 40, 80])
@@ -217,9 +319,45 @@ function Heist({ onExit, juegos }) {
   // Sin atraco en marcha se ve el último: por dónde bajasteis y dónde os pillaron.
   const path = run?.path ?? last?.path ?? []
   const trail = run ? routes : path.filter((p) => p.ok).map((p) => p.route)
+  const kind = run || !last ? null : end?.round === last.round ? end.kind : last.net > 0 ? 'cash' : 'caught'
+  const openFloors = Math.max(floors, kind === 'caught' ? (last?.floor ?? 0) + 1 : 0)
+  const caughtNow = Boolean(run && flash === 'caught')
+
+  // Dónde está la banda: en la planta que intenta cruzar, en la azotea (huida), en la cámara (escape) o atrapada.
+  let at = 'roof'
+  let mode = 'idle'
+  if (run) {
+    at = depth + 1
+    mode = caughtNow ? 'caught' : pick?.at === at ? 'work' : 'idle'
+  } else if (kind === 'caught') {
+    at = (last?.floor ?? 0) + 1
+    mode = 'caught'
+  } else if (kind === 'escape') {
+    at = 'vault'
+    mode = 'win'
+  } else if (kind === 'cash') mode = 'win'
+  const siren = caughtNow
+  const busted = kind === 'caught' && !run
+
+  // La cámara sigue a la banda: su planta queda a media altura.
+  useLayoutEffect(() => {
+    const box = view.current
+    const target = box?.querySelector(`[data-at="${at}"]`)
+    if (!box || !target) return
+    const b = box.getBoundingClientRect()
+    const t = target.getBoundingClientRect()
+    const top = t.top - b.top + box.scrollTop + t.height / 2 - box.clientHeight * 0.56
+    box.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' })
+  }, [at, reduced])
+
+  const shownWorth = useCountUp(run ? worth : 0)
+  const grow = 1 + Math.min(1, Math.log(mult + 1) / Math.log(MAX_MULT + 1)) * 0.9 // la bolsa crece con el botín
+  const level = alarm >= 75 ? 2 : alarm >= 40 ? 1 : 0
+  const isOpenVault = kind === 'escape'
+  const squad = (size) => <Squad crew={crewShown} state={mode} size={size} />
 
   return (
-    <main className="app s3-app heist-app" data-alarm={alarm >= 75 ? 2 : alarm >= 40 ? 1 : 0}>
+    <main className="app hs-app" data-alarm={level}>
       <header className="top">
         <h1>El Atraco</h1>
         <div className="hud">
@@ -277,129 +415,312 @@ function Heist({ onExit, juegos }) {
         </div>
       </header>
 
-      <div className="s3 fill">
-        <section className={`s3__stage heist ${flash === 'caught' ? 'is-caught' : ''}`} aria-label="La cámara acorazada">
+      <div className="hs fill">
+        <div className="hs-main">
           <p className={`status ${last?.net > 0 && !run ? 'status--win' : ''}`} aria-live="polite">
             {status}
           </p>
-          <div className="heist__crew" aria-label="Tu banda">
-            {crewShown.length === 0 ? (
-              <p className="s3__hint">Sin banda: hasta la planta {BASE_FLOORS}. Elige cartas a la derecha para bajar más.</p>
-            ) : (
-              crewShown.map((c) => (
-                <div key={c.id} className="heist__member">
-                  <GachaCard card={c} mini />
-                  <span>
-                    <b>{c.role}</b>
-                    <small>{c.name}</small>
+          <section className={`hs-stage ${siren ? 'is-siren' : ''} ${busted ? 'is-busted' : ''}`} aria-label="El banco y su cámara acorazada">
+            <div className="hs-sky" aria-hidden="true" />
+
+            <div className="hs-hud" data-level={level}>
+              <div className="hs-alarm" style={{ '--alarm': alarm / 100 }} role="img" aria-label={`Alarma al ${alarm} %`}>
+                <span className="hs-alarm__lamp" />
+                <span className="hs-alarm__body">
+                  <small>Alarma</small>
+                  <span className="hs-alarm__track">
+                    <i className="hs-alarm__mask" />
+                    <i className="hs-alarm__tick" style={{ left: '25%' }} />
+                    <i className="hs-alarm__tick" style={{ left: '50%' }} />
+                    <i className="hs-alarm__tick" style={{ left: '75%' }} />
                   </span>
-                </div>
-              ))
-            )}
-            <div className="heist__alarm" style={{ '--alarm': alarm / 100 }} aria-label={`Alarma al ${alarm} %`}>
-              <small>Alarma</small>
-              <span />
-              <b>{alarm} %</b>
+                </span>
+                <b>{alarm} %</b>
+              </div>
+              <div className={`hs-sack ${run && depth ? 'is-live' : ''}`} style={{ '--grow': grow }}>
+                <span className="hs-bag" key={depth}>
+                  <i>€</i>
+                </span>
+                <span className="hs-sack__txt">
+                  <small>{run ? 'Botín' : 'Apuesta'}</small>
+                  <b>{eur(run ? shownWorth : shownBet)}</b>
+                </span>
+              </div>
             </div>
-          </div>
-          <ol className="heist__shaft">
-            {levels.map((n) => {
-              const locked = n > floors
-              const done = n <= trail.length
-              const current = run && n === depth + 1 && !locked
-              const tried = path[n - 1]
-              return (
-                <li key={n} className={`heist__floor ${locked ? 'is-locked' : ''} ${done ? 'is-done' : ''} ${current ? 'is-current' : ''} ${tried && !tried.ok ? 'is-caught' : ''}`}>
-                  <span className="heist__num">P{n}</span>
-                  {current ? (
-                    <span className="heist__routes">
-                      {Object.entries(ROUTES).map(([id, r], i) => (
-                        <button key={id} type="button" className={`heist__route heist__route--${id}`} disabled={busy} onClick={() => go(id)}>
-                          <b>
-                            {r.icon} {r.name}
-                          </b>
-                          <small>
-                            {Math.round(routeChance(id) * 100)} % · {eur(payout(run.bet, [...routes, id]))}
-                          </small>
-                          <kbd>{i + 1}</kbd>
-                        </button>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="heist__info">
-                      {locked
-                        ? '🔒 Necesitas más banda'
-                        : done
-                          ? `${ROUTES[trail[n - 1]].icon} ${ROUTES[trail[n - 1]].name} · ${fmtMult(multOf(trail.slice(0, n)))}`
-                          : tried && !tried.ok
-                            ? `🚨 Pillados (${ROUTES[tried.route].name})`
-                            : n === floors
-                              ? '💰 Cámara del tesoro'
-                              : ''}
-                    </span>
+
+            <div className="hs-view" ref={view}>
+              <ol className="hs-world">
+                <li className={`hs-roof ${at === 'roof' ? 'has-squad' : ''}`} data-at="roof">
+                  <span className="hs-moon" />
+                  <span className="hs-skyline" />
+                  <span className="hs-sign">Banco Central</span>
+                  <span className="hs-van" />
+                  <span className="hs-beacon" />
+                  {at === 'roof' && (
+                    <div className="hs-slot hs-slot--roof">
+                      {squad('l')}
+                    </div>
                   )}
                 </li>
-              )
-            })}
-          </ol>
-        </section>
 
-        <aside className="s3__panel">
-          <div className="s3__group">
-            <h2>Botín</h2>
+                {levels.map((n) => {
+                  const locked = n > openFloors
+                  const done = n <= trail.length
+                  const current = Boolean(run) && n === depth + 1 && !locked
+                  const tried = path[n - 1]
+                  const failed = Boolean(tried) && !tried.ok
+                  const here = at === n
+                  const picked = pick?.at === n ? pick.route : null
+                  return (
+                    <li
+                      key={n}
+                      data-at={n}
+                      className={`hs-floor ${locked ? 'is-locked' : ''} ${done ? 'is-done' : ''} ${current ? 'is-current' : ''} ${failed ? 'is-failed' : ''} ${n === openFloors ? 'is-last' : ''}`}
+                      style={{ '--n': n }}
+                    >
+                      <span className="hs-plate">
+                        <b>P{n}</b>
+                        <em>{locked ? '🔒' : done ? fmtMult(multOf(trail.slice(0, n))) : failed ? '🚨' : ''}</em>
+                      </span>
+                      <div className="hs-room">
+                        <span className="hs-lamp" />
+                        <span className="hs-vent" />
+                        <span className="hs-cam" style={{ '--flip': n % 2 }}>
+                          <i />
+                        </span>
+                        <span className="hs-lasers">
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                        <span className="hs-ground" />
+                        <div className="hs-row">
+                          {here && (
+                            <div className="hs-slot">
+                              {squad('m')}
+                              {mode === 'caught' && <span className="hs-stamp">¡Pillados!</span>}
+                            </div>
+                          )}
+                          {current ? (
+                            <div className="hs-routes">
+                              {Object.entries(ROUTES).map(([id, r], i) => (
+                                <button
+                                  key={id}
+                                  type="button"
+                                  className={`hs-route hs-route--${id} ${picked === id ? 'is-pick' : ''} ${picked && picked !== id ? 'is-off' : ''}`}
+                                  disabled={busy}
+                                  onClick={() => go(id)}
+                                  aria-label={`${r.name}: ${ROUTE_TEXT[id]}. ${Math.round(routeChance(id) * 100)} % de salir bien, pagaría ${eur(payout(run.bet, [...routes, id]))}`}
+                                >
+                                  <RouteArt id={id} state={picked === id ? (caughtNow ? 'fail' : 'work') : ''} />
+                                  <span className="hs-route__info">
+                                    <b>{r.name}</b>
+                                    <span className="hs-route__odds">{Math.round(routeChance(id) * 100)} %</span>
+                                    <span className="hs-route__pay">{eur(payout(run.bet, [...routes, id]))}</span>
+                                  </span>
+                                  <kbd>{i + 1}</kbd>
+                                </button>
+                              ))}
+                            </div>
+                          ) : failed ? (
+                            <div className="hs-passed hs-passed--fail">
+                              <RouteArt id={tried.route} state="fail" />
+                              <span>
+                                <b>Alarma</b>
+                                <small>por {ROUTES[tried.route].name.toLowerCase()}</small>
+                              </span>
+                            </div>
+                          ) : done ? (
+                            <div className="hs-passed">
+                              <RouteArt id={trail[n - 1]} state="open" />
+                              <span>
+                                <b>Despejada</b>
+                                <small>{ROUTES[trail[n - 1]].name}</small>
+                              </span>
+                            </div>
+                          ) : locked ? null : (
+                            <div className="hs-ghosts" aria-hidden="true">
+                              <RouteArt id="sigilo" />
+                              <RouteArt id="normal" />
+                              <RouteArt id="loco" />
+                            </div>
+                          )}
+                        </div>
+                        {locked && (
+                          <div className="hs-boards">
+                            <i className="hs-plank" />
+                            <i className="hs-plank" />
+                            <i className="hs-plank" />
+                            <span className="hs-padlock" />
+                            <p>
+                              <b>Tapiada</b>
+                              <small>Necesitas más banda</small>
+                            </p>
+                          </div>
+                        )}
+                        {n === openFloors && openFloors < MAX_FLOORS && <span className="hs-lift">Montacargas a la cámara</span>}
+                      </div>
+                    </li>
+                  )
+                })}
+
+                <li className={`hs-vault ${isOpenVault ? 'is-open' : ''}`} data-at="vault">
+                  <span className="hs-vault__glow" />
+                  <div className="hs-gold hs-gold--l">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                  <div className="hs-gold hs-gold--r">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                  <div className="hs-door" key={isOpenVault ? 'open' : 'shut'}>
+                    <span className="hs-door__ring" />
+                    <span className="hs-door__bolts" />
+                    <span className="hs-door__wheel">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    <span className="hs-door__hub" />
+                  </div>
+                  <span className="hs-vault__plaque">
+                    Cámara del tesoro
+                    <small>Se llega tras la planta {openFloors}</small>
+                  </span>
+                  {at === 'vault' && (
+                    <div className="hs-slot hs-slot--vault">
+                      {squad('m')}
+                    </div>
+                  )}
+                </li>
+              </ol>
+            </div>
+
+            <div className="hs-lights" aria-hidden="true">
+              <i />
+              <i />
+            </div>
+            <div className="hs-alert" aria-hidden="true" />
+            {party && (
+              <div className="hs-party" key={party} aria-hidden="true">
+                {PARTY.map((p, i) => (
+                  <i key={i} className={`hs-p hs-p--${p.kind}`} style={{ '--x': `${p.x}%`, '--d': `${p.d}s`, '--s': p.s, '--h': p.hue }} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside className="hs-panel">
+          <div className={`hs-loot ${run && depth ? 'is-live' : ''}`} data-level={level}>
             {run ? (
-              <p className="s3__big">
-                {depth ? `${fmtMult(mult)} · ${eur(worth)}` : 'Elige ruta'}
-                <small>
-                  Planta {depth} de {floors}
-                </small>
-              </p>
+              <>
+                <small>{depth ? `Botín tras la planta ${depth}` : 'Estáis dentro'}</small>
+                <b>{depth ? eur(worth) : eur(run.bet)}</b>
+                <span className="hs-loot__mult">{depth ? fmtMult(mult) : 'apostado'}</span>
+                <span className="hs-risk">
+                  <span className="hs-risk__bar" style={{ '--alarm': alarm / 100 }}>
+                    <i />
+                  </span>
+                  <small>
+                    Planta {depth} de {floors} · riesgo acumulado {alarm} %
+                  </small>
+                </span>
+              </>
             ) : (
-              <p className="s3__big">
-                Hasta {floors} plantas
-                <small>Botín máximo {fmtMult(MAX_MULT)}</small>
-              </p>
+              <>
+                <small>Si llegáis al fondo</small>
+                <b>{fmtMult(MAX_MULT)}</b>
+                <span className="hs-loot__mult">hasta {floors} plantas</span>
+              </>
             )}
           </div>
 
-          {!run && (
-            <div className="s3__group">
-              <h2>
-                Tu banda ({crew.length}/{CREW_MAX})
-              </h2>
-              {cards.length === 0 ? (
-                <p className="s3__hint">No tienes cartas del gacha. Consigue alguna en la Colección para bajar más hondo.</p>
-              ) : (
-                <ul className="heist__picker">
-                  {cards.map((c) => {
-                    const on = crew.includes(c.id)
-                    return (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          aria-pressed={on}
-                          disabled={!on && crew.length >= CREW_MAX}
-                          onClick={() => toggle(c.id)}
-                          title={`${c.name} · ${RARITY[c.rarity] ?? c.rarity} · +${RARITY_FLOORS[c.rarity] ?? 0} plantas`}
-                        >
-                          <GachaCard card={c} mini />
-                          <small>+{RARITY_FLOORS[c.rarity] ?? 0}</small>
-                        </button>
+          <div className="hs-group">
+            {run ? (
+              <>
+                <h2>La banda</h2>
+                {crewShown.length === 0 ? (
+                  <p className="hs-hint">Vais solos: no hay banda en este golpe.</p>
+                ) : (
+                  <ul className="hs-roster">
+                    {crewShown.map((c) => (
+                      <li key={c.id} className={`rar-${c.rarity}`}>
+                        <GachaCard card={c} mini />
+                        <span>
+                          <b>{c.role}</b>
+                          <small>{c.name}</small>
+                        </span>
                       </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </div>
-          )}
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <>
+                <h2>
+                  Tu banda <span>{crew.length}/{CREW_MAX}</span>
+                </h2>
+                <div className="hs-depth" aria-label={`${plannedFloors} plantas de ${MAX_FLOORS}`}>
+                  {levels.map((n) => (
+                    <i key={n} className={n <= BASE_FLOORS ? 'is-base' : n <= plannedFloors ? 'is-crew' : ''} />
+                  ))}
+                  <small>
+                    {plannedFloors} plantas{plannedFloors > BASE_FLOORS ? ` (+${plannedFloors - BASE_FLOORS} por la banda)` : ' sin banda'}
+                  </small>
+                </div>
+                {cards.length === 0 ? (
+                  <p className="hs-hint">No tienes cartas del gacha. Consigue alguna en la Colección para bajar más hondo.</p>
+                ) : (
+                  <ul className="hs-picker">
+                    {cards.map((c) => {
+                      const on = crew.includes(c.id)
+                      return (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            className={`rar-${c.rarity}`}
+                            aria-pressed={on}
+                            disabled={!on && crew.length >= CREW_MAX}
+                            onClick={() => toggle(c.id)}
+                            title={`${c.name} · ${RARITY[c.rarity] ?? c.rarity} · +${RARITY_FLOORS[c.rarity] ?? 0} plantas`}
+                          >
+                            <GachaCard card={c} mini />
+                            <span className="hs-pick__plus">+{RARITY_FLOORS[c.rarity] ?? 0} plantas</span>
+                            <b>{c.role}</b>
+                            <small>{RARITY[c.rarity] ?? c.rarity}</small>
+                            {on && <i className="hs-pick__on">✓</i>}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
 
-          <div className="s3__group">
+          <div className="hs-group">
             <h2>Apuesta</h2>
-            <label className="s3__slider">
-              <span className="s3__amount">{eur(shownBet)}</span>
-              <input type="range" min={MIN_BET} max={Math.max(maxBet, MIN_BET)} step={STEP} value={shownBet} disabled={!canBet} aria-label="Apuesta" onChange={(e) => setBet(Number(e.target.value))} />
-            </label>
-            <div className="s3__quick">
+            <div className="hs-bet">
+              <button type="button" disabled={!canBet} onClick={() => setBet(clampBet(shownBet - STEP * 5, maxBet))} aria-label="Bajar la apuesta">
+                −
+              </button>
+              <span>{eur(shownBet)}</span>
+              <button type="button" disabled={!canBet} onClick={() => setBet(clampBet(shownBet + STEP * 5, maxBet))} aria-label="Subir la apuesta">
+                +
+              </button>
+            </div>
+            <input className="hs-slider" type="range" min={MIN_BET} max={Math.max(maxBet, MIN_BET)} step={STEP} value={shownBet} disabled={!canBet} aria-label="Apuesta" onChange={(e) => setBet(Number(e.target.value))} />
+            <div className="hs-quick">
               <button type="button" disabled={!canBet} onClick={() => setBet(MIN_BET)}>
                 Mín
               </button>
@@ -415,36 +736,35 @@ function Heist({ onExit, juegos }) {
             </div>
           </div>
 
-          <div className="actions s3__actions">
-            {!run ? (
-              <button type="button" className="primary" disabled={busy || shownBet > balance || balance < MIN_BET} onClick={start}>
-                {asking ? 'Entrando…' : 'Dar el golpe'}
-              </button>
-            ) : (
-              <button type="button" className="primary s3__cash" disabled={busy || !depth} onClick={cash}>
-                {depth ? `Huir con ${eur(worth)}` : 'Baja al menos una planta'} <kbd>C</kbd>
-              </button>
-            )}
-          </div>
+          {!run ? (
+            <button type="button" className="hs-go" disabled={busy || shownBet > balance || balance < MIN_BET} onClick={start}>
+              {asking ? 'Entrando…' : 'Dar el golpe'}
+            </button>
+          ) : (
+            <button type="button" className="hs-go hs-go--cash" disabled={busy || !depth} onClick={cash}>
+              {depth ? `Huir con ${eur(worth)}` : 'Baja al menos una planta'}
+              <kbd>C</kbd>
+            </button>
+          )}
 
-          <div className="s3__group">
+          <div className="hs-group">
             <h2>Golpe del día</h2>
             {ranking.length === 0 ? (
-              <p className="s3__hint">Hoy nadie ha salido con botín todavía.</p>
+              <p className="hs-hint">Hoy nadie ha salido con botín todavía.</p>
             ) : (
-              <ol className="s3__rank">
+              <ol className="hs-rank">
                 {ranking.map((r, i) => (
                   <li key={`${r.name}-${i}`} className={r.me ? 'is-me' : ''}>
-                    <b>{i + 1}</b>
-                    <Avatar name={r.name} src={r.avatar} size={24} />
-                    <span>{r.name}</span>
+                    <span className="hs-rank__pos">{MEDALS[i] ?? i + 1}</span>
+                    <Avatar name={r.name} src={r.avatar} size={26} />
+                    <span className="hs-rank__name">{r.name}</span>
                     <em>{fmtMult(r.mult)}</em>
                   </li>
                 ))}
               </ol>
             )}
             {history.length > 0 && (
-              <ol className="s3__chips" aria-label="Últimos golpes">
+              <ol className="hs-history" aria-label="Últimos golpes">
                 {history.map((h) => (
                   <li key={h.id} className={h.mult > 0 ? 'is-win' : 'is-lose'}>
                     {h.mult > 0 ? fmtMult(h.mult) : '🚨'}
