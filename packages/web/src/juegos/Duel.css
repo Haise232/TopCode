@@ -584,6 +584,16 @@
   }
 }
 @media (max-width: 640px) {
+  /* Cabecera: «← Juegos» y el título en una fila; el saldo a la izquierda y los botones a la derecha, debajo. */
+  .juegos-root .duel-top {
+    gap: 10px;
+  }
+  .juegos-root .duel-top__right {
+    flex: 1 1 100%;
+  }
+  .juegos-root .duel-top__bank {
+    margin-right: auto;
+  }
   .juegos-root .duel-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

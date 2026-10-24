@@ -249,7 +249,7 @@ export default function Duel({ onExit, juegos }) {
           >
             Sonido
           </button>
-          <Help title="Cómo funcionan los duelos">
+          <Help title="Cómo funcionan los duelos" className="hub-btn hub-btn--ghost">
             <p>Retas a alguien (o a quien quiera) y pones la apuesta. Quien acepta pone lo mismo y el servidor lo sortea al momento: el ganador se lleva lo del otro.</p>
             <p>Es 50 % contra 50 %: la banca no se queda nada. Si nadie acepta en {EXPIRE_MS / 60000} minutos, se cancela y te devuelven el dinero.</p>
             <p>Cara o cruz: quien reta es cara. Dados y carta alta: si empatáis, se repite.</p>

@@ -1129,7 +1129,17 @@
   .juegos-root .hub-top__who {
     grid-column: 1 / -1;
     justify-content: space-between;
+    gap: 8px;
     margin-left: 0;
+  }
+  /* En 360 px no caben tú, Tutorial y TopCode con el relleno de escritorio: tu nombre cede y los botones se estrechan. */
+  .juegos-root .hub-me {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .juegos-root .hub-top__who .hub-btn:not(.hub-bank) {
+    flex: 0 0 auto;
+    padding: 0 14px;
   }
   .juegos-root .hub-me__text small {
     max-width: 14ch;

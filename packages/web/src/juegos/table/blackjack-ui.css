@@ -980,6 +980,10 @@
     padding: 10px 16px 12px;
     translate: -50% 0;
   }
+  /* Sin cuenta atrás no hay segunda columna: el título iba a la primera y salía descentrado. */
+  .juegos-root .bj-wait:not(.bj-wait--count) {
+    grid-template-columns: auto;
+  }
   .juegos-root .bj-wait h2 {
     font-size: 21px;
   }

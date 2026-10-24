@@ -1604,6 +1604,18 @@
     display: none;
   }
 }
+/* «Laberinto» es el título más largo: en 360 px los tres botones bajaban de uno en uno a otra fila. */
+@media (max-width: 400px) {
+  .juegos-root .dg-app .top h1 {
+    font-size: 26px;
+  }
+  .juegos-root .dg-app .toggles {
+    flex-wrap: nowrap;
+  }
+  .juegos-root .dg-app .toggles button {
+    padding-inline: 8px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .juegos-root .dg__timer span,
   .juegos-root .dg__next-bar {

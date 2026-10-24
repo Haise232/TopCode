@@ -376,24 +376,83 @@
   }
 }
 
-/* Tablet y móvil: el panel debajo del tablero. */
-@media (max-width: 900px) {
+/* Pantallas bajas (escritorio pequeño, tableta o móvil en horizontal): el tablero se mide con el alto libre y el
+   panel se desplaza por dentro cuando no cabe. */
+@media (max-height: 760px) {
+  .juegos-root .plinko__panel {
+    align-self: stretch;
+    align-content: start;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+@media (max-height: 560px) and (orientation: landscape) {
   .juegos-root .plinko {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    align-content: center;
-    align-items: stretch;
     gap: 12px;
   }
+  .juegos-root .plinko__machine {
+    padding: 8px;
+    border-radius: 14px;
+  }
+  .juegos-root .plinko__machine .status {
+    min-height: 0;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .juegos-root .plinko__board {
+    padding: 4px;
+  }
   .juegos-root .plinko__board svg {
+    height: calc(100svh - 150px);
+    min-height: 160px;
+  }
+  .juegos-root .plinko__panel {
+    gap: 10px;
+    padding: 12px;
+  }
+  .juegos-root .plinko__last,
+  .juegos-root .plinko__group h2,
+  .juegos-root .plinko__drop kbd {
+    display: none;
+  }
+  .juegos-root .plinko-app .plinko__drop button.primary {
+    min-height: 48px;
+    font-size: 18px;
+  }
+}
+
+/* Tableta y móvil en vertical: el tablero a lo ancho con su proporción y el panel debajo; la pantalla se desplaza
+   (antes el tablero se aplastaba para caber y en los móviles bajos casi desaparecía). */
+@media (max-width: 900px) and (orientation: portrait) {
+  .juegos-root .plinko {
+    grid-template-columns: minmax(0, 1fr);
+    /* max-content: con min-height: 0 en el mueble, una fila auto se encogía y los clavos se salían del marco. */
+    grid-template-rows: max-content max-content;
+    align-content: start;
+    align-items: stretch;
+    gap: 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .juegos-root .plinko__machine {
+    max-height: none;
+  }
+  .juegos-root .plinko__board svg {
+    width: 100%;
     height: auto;
-    max-height: calc(100svh - 430px);
+    max-height: 62svh;
     min-height: 0;
   }
   .juegos-root .plinko__panel {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: end;
     gap: 10px 16px;
+  }
+  /* Lo primero bajo el tablero es el botón de soltar. */
+  .juegos-root .plinko__drop {
+    grid-column: 1 / -1;
+    order: -1;
   }
   .juegos-root .plinko__panel .plinko__group:last-child {
     display: none;
@@ -429,6 +488,14 @@
   }
   .juegos-root .plinko__drop kbd {
     display: none;
+  }
+  /* En el móvil .actions no salta de línea: el botón se estrujaba junto al turbo («Solta bola» en dos líneas). */
+  .juegos-root .plinko__drop {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .juegos-root .plinko__drop button.primary {
+    flex: 1 1 100%;
   }
   .juegos-root .plinko__seg button,
   .juegos-root .plinko__bets button {

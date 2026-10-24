@@ -388,6 +388,11 @@
   .juegos-root .crash-live .side {
     container-type: inline-size;
   }
+  /* La columna centra a sus hijos: la cinta sin saltos de línea medía lo que su contenido y se salía por los lados. */
+  .juegos-root .crash__recent {
+    align-self: stretch;
+    min-width: 0;
+  }
   .juegos-root .sky {
     max-height: 52svh;
   }

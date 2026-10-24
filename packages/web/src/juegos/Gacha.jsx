@@ -826,7 +826,9 @@ export default function Gacha({ onExit, juegos, initialTab = 'tirar' }) {
               <h2 id="mesa-title" className="hub-title">
                 La mesa <small>gratis y sin límite · {state?.nextDropAt ? `otra carta en ${wait(state.nextDropAt - t)}` : 'llena'}</small>
               </h2>
-              <ul className="gacha-mesa__cards">
+              {/* key: con el imán del carrusel (móvil), al llegar una carta el navegador seguía enganchado al hueco que
+                  ocupaba el primer puesto y la lista salía desplazada; con otra lista vuelve al principio. */}
+              <ul className="gacha-mesa__cards" key={table.map((entry) => entry.id).join()}>
                 {table.map((entry) => (
                   <li key={entry.id}>
                     <GachaCard card={entry.card} />
