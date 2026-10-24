@@ -13,7 +13,27 @@ const STEP_MS = 650 // lo que dura el salto a una baldosa
 const FALL_MS = 1500 // lo que se ve la caída antes de volver a empezar
 const HISTORY = 12
 const MEDALS = ['🥇', '🥈', '🥉']
-const SHARDS = 9
+const SHARDS = 10
+const PUFFS = 5
+const EMBERS = 16
+const BURSTS = 3 // fuegos artificiales al llegar a la cima
+const RAYS = 12 // chispas de cada fuego
+const ICONS = { facil: '☀️', normal: '🌙', dificil: '⛈️', extremo: '🔥' }
+// Pisos de abajo (enredaderas), del medio (cadenas) y de arriba (hielo y nubes).
+const zoneOf = (n, floors) => (n / floors <= 0.34 ? 'low' : n / floors <= 0.72 ? 'mid' : 'high')
+
+// Gárgola de las esquinas de la cima (la derecha es la misma, volteada con CSS).
+function Gargoyle({ side }) {
+  return (
+    <svg className={`tw-garg tw-garg--${side}`} viewBox="0 0 40 44" aria-hidden="true">
+      <path d="M2 40V26l6-4 2-12 6 6 4-6 4 6 8-2-2 8 6 4v14Z" fill="#5a5578" />
+      <path d="M2 40V26l6-4 2-12 6 6 4-6 4 6 8-2-2 8 6 4v14Z" fill="none" stroke="#2a2640" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M14 26l4 3 4-3" stroke="#2a2640" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <circle cx="13" cy="21" r="2" fill="#ffd25e" />
+      <circle cx="25" cy="21" r="2" fill="#ffd25e" />
+    </svg>
+  )
+}
 
 // La Torre la sortea el servidor con el saldo semanal (cuenta en el Score): cada piso lo pide el jugador y aquí se anima.
 function Tower({ onExit, juegos }) {
@@ -99,6 +119,7 @@ function Tower({ onExit, juegos }) {
   const busy = asking || !ready || Boolean(reveal)
   const canBet = !run && !asking && maxBet >= MIN_BET
   const worth = run && floor > 0 ? payout(run.bet, run.mode, floor) : 0
+  const liveWorth = useCountUp(worth, 450)
   const pct = Math.round(chance(shownMode) * 100)
   // Sin torre en marcha se ve la última subida (si es de esta dificultad), con la baldosa rota donde caíste.
   const path = run?.path ?? (last?.mode === mode ? (last.path ?? []) : [])
@@ -109,6 +130,25 @@ function Tower({ onExit, juegos }) {
   else if (run && floor > 0) pawn = { at: floor, x: (path[floor - 1].tile + 0.5) / cfg.tiles, state: 'stand' }
   else if (!run && last?.net > 0 && last.mode === mode) pawn = { at: last.floor, x: (last.path[last.floor - 1].tile + 0.5) / cfg.tiles, state: 'win' }
   const height = Math.min(1, pawn.at / cfg.floors) // para el cielo: 0 abajo, 1 en la cima
+  // Llegaste arriba del todo: fuegos artificiales en la cima.
+  const summit = !run && last?.net > 0 && last.mode === mode && last.floor === cfg.floors
+  // Racha de subidas cobradas seguidas y récord del día, que se ven dentro de la escena.
+  let streak = 0
+  for (const h of history) {
+    if (h.mult <= 0) break
+    streak++
+  }
+  const best = ranking[0]
+  // El piso de esta torre donde llegó el récord del día (si fue en esta dificultad).
+  let recFloor = 0
+  if (best && best.mode === shownMode) {
+    for (let n = 1; n <= cfg.floors; n++) {
+      if (multAt(shownMode, n) >= best.mult - 0.005) {
+        recFloor = n
+        break
+      }
+    }
+  }
 
   // La cámara sigue a la ficha: su piso queda algo por debajo del centro.
   useLayoutEffect(() => {
@@ -285,20 +325,40 @@ function Tower({ onExit, juegos }) {
       </header>
 
       <div className="tw fill">
-        <section className={`tw-stage ${reveal?.fell ? 'is-shake' : ''} ${tone === 'good' ? 'is-win' : ''}`} aria-label="La torre">
+        <section
+          className={`tw-stage tw-env--${shownMode} ${reveal?.fell ? 'is-shake' : ''} ${tone === 'good' ? 'is-win' : ''} ${run ? 'is-run' : ''}`}
+          aria-label="La torre"
+        >
           <div className="tw-sky" aria-hidden="true">
             <span className="tw-sky__dusk" />
             <span className="tw-sky__night" />
             <span className="tw-sky__space" />
             <span className="tw-stars" />
             <span className="tw-moon" />
+            <span className="tw-sun" />
             <span className="tw-cloud tw-cloud--1" />
             <span className="tw-cloud tw-cloud--2" />
             <span className="tw-cloud tw-cloud--3" />
+            <span className="tw-storm" />
+            <span className="tw-rain" />
+            <span className="tw-bolt" />
+            <span className="tw-glow" />
+            {Array.from({ length: EMBERS }, (_, i) => (
+              <span key={i} className="tw-ember" style={{ '--i': i }} />
+            ))}
             <svg className="tw-city" viewBox="0 0 400 80" preserveAspectRatio="none">
               <path d="M0 80V52h18V38h14v14h10V30h16v22h12V44h20V24h12v28h14V36h18v16h10V20h8v-8h6v8h8v32h14V40h16v12h12V32h18v20h10V46h20V28h14v24h12V40h16v12h18V34h14v18h12V48h14v32Z" />
+              <path
+                className="tw-city__lights"
+                d="M23 44h3v3h-3zM50 38h3v3h-3zM97 34h3v3h-3zM125 50h3v3h-3zM155 30h3v3h-3zM190 26h3v3h-3zM214 44h3v3h-3zM250 36h3v3h-3zM282 48h3v3h-3zM318 34h3v3h-3zM350 44h3v3h-3zM378 40h3v3h-3z"
+              />
             </svg>
+            <span className="tw-wind tw-wind--1" />
+            <span className="tw-wind tw-wind--2" />
+            <span className="tw-wind tw-wind--3" />
+            <span className="tw-vignette" />
           </div>
+          {reveal?.fell && <span className="tw-flash" aria-hidden="true" />}
 
           <p className={`tw-banner ${tone ? `tw-banner--${tone}` : ''}`} aria-live="polite">
             {status}
@@ -306,13 +366,55 @@ function Tower({ onExit, juegos }) {
 
           <div className="tw-view" ref={view}>
             <div className={`tw-tower tw-tower--${shownMode}`} style={{ '--floors': cfg.floors, '--tiles': cfg.tiles }}>
-              <div className="tw-crown">
-                <span className="tw-crown__rays" aria-hidden="true" />
+              <div className={`tw-crown ${summit ? 'is-summit' : ''}`}>
+                <span className="tw-crown__fx" aria-hidden="true">
+                  <span className="tw-crown__rays" />
+                </span>
+                <svg className="tw-crown__roof" viewBox="0 0 400 64" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="tw-gold" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stopColor="#fff0b0" />
+                      <stop offset="0.5" stopColor="#ffd25e" />
+                      <stop offset="1" stopColor="#b9801a" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M22 64V34L50 4l28 30v30ZM322 64V34l28-30 28 30v30Z" fill="url(#tw-gold)" stroke="#7a5210" strokeWidth="2" strokeLinejoin="round" />
+                  <path d="M138 64V42Q138 10 200 10t62 32v22Z" fill="url(#tw-gold)" stroke="#7a5210" strokeWidth="2" />
+                  <path d="M200 10V1" stroke="#ffd25e" strokeWidth="3" />
+                  <path d="M80 64V48h6v-6h8v6h8v-6h8v6h8v-6h8v6h6v16ZM262 64V48h6v-6h8v6h8v-6h8v6h8v-6h8v6h6v16Z" fill="#4a4466" />
+                  <path d="M160 64V44q0-14 40-14t40 14v20Z" fill="#241d12" opacity="0.75" />
+                  <path d="M170 64V50q0-9 30-9t30 9v14Z" fill="#ffd25e" opacity="0.35" />
+                </svg>
+                <svg className="tw-bunting" viewBox="0 0 400 26" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M0 3Q200 14 400 3" stroke="#e9e1ff" strokeWidth="1.5" fill="none" opacity="0.7" />
+                  {Array.from({ length: 11 }, (_, i) => {
+                    const x = 14 + i * 37
+                    const y = 3 + 8 * Math.sin((Math.PI * (x + 12)) / 400)
+                    return <path key={i} d={`M${x} ${y}h22l-11 12Z`} fill={['#ff6b6b', '#ffd25e', '#5ee0a0', '#7aa8ff'][i % 4]} />
+                  })}
+                </svg>
+                <Gargoyle side="l" />
+                <Gargoyle side="r" />
                 <span className="tw-crown__icon" aria-hidden="true">
                   👑
                 </span>
-                <b>La cima · {fmtMult(top)}</b>
-                <small>{eur(payout(shownBet, shownMode, cfg.floors))}</small>
+                <span className="tw-crown__text">
+                  <b>La cima · {fmtMult(top)}</b>
+                  <small>{eur(payout(shownBet, shownMode, cfg.floors))}</small>
+                </span>
+                <i className="tw-hoard tw-hoard--l" aria-hidden="true" />
+                <i className="tw-hoard tw-hoard--r" aria-hidden="true" />
+                {summit && (
+                  <div className="tw-fw" aria-hidden="true">
+                    {Array.from({ length: BURSTS }, (_, b) => (
+                      <span key={b} className="tw-fw__burst" style={{ '--b': b }}>
+                        {Array.from({ length: RAYS }, (_, r) => (
+                          <i key={r} style={{ '--a': `${r * (360 / RAYS)}deg`, '--r': r }} />
+                        ))}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {floors.map((n) => {
@@ -321,11 +423,41 @@ function Tower({ onExit, juegos }) {
                 const shown = reveal?.floor === n ? reveal : done ? { tile: done.tile, broken: done.broken } : null
                 const passed = run ? n <= floor : Boolean(done && !done.broken.includes(done.tile))
                 const state = current ? 'is-current' : passed ? 'is-done' : n > (run ? floor + 1 : 1) ? 'is-far' : ''
+                const zone = zoneOf(n, cfg.floors)
+                // Lo que sube el botín si esta baldosa aguanta (y lo que subió al pisarla).
+                const before = n > 1 ? payout(shownBet, shownMode, n - 1) : shownBet
+                const gain = Math.max(0, payout(shownBet, shownMode, n) - (current && floor > 0 ? worth : before))
                 return (
-                  <div key={n} data-floor={n} className={`tw-floor ${state}`}>
+                  <div
+                    key={n}
+                    data-floor={n}
+                    className={`tw-floor tw-floor--${zone} ${n % 2 ? 'tw-floor--tl' : 'tw-floor--tr'} ${n % 3 === 0 ? 'tw-floor--balc' : ''} ${state}`}
+                  >
+                    <span className="tw-deco" aria-hidden="true">
+                      <i className="tw-torch" />
+                      {zone === 'low' && (
+                        <>
+                          <i className="tw-vine tw-vine--a" />
+                          <i className="tw-vine tw-vine--b" />
+                        </>
+                      )}
+                      {zone === 'mid' && (
+                        <>
+                          <i className="tw-chain tw-chain--a" />
+                          <i className="tw-chain tw-chain--b" />
+                        </>
+                      )}
+                      {zone === 'high' && (
+                        <>
+                          <i className="tw-ice" />
+                          <i className="tw-wisp" />
+                        </>
+                      )}
+                    </span>
                     <span className="tw-plaque">
                       <small>{n}</small>
                       {fmtMult(multAt(shownMode, n))}
+                      {recFloor === n && <em>★ récord</em>}
                     </span>
                     <span className="tw-tiles">
                       {Array.from({ length: cfg.tiles }, (_, t) => {
@@ -341,10 +473,16 @@ function Tower({ onExit, juegos }) {
                             aria-label={current ? `Baldosa ${t + 1} del piso ${n}` : `Piso ${n}`}
                           >
                             {current && <kbd>{t + 1}</kbd>}
+                            {current && <span className="tw-gain">+{eur(gain)}</span>}
+                            {reveal?.floor === n && mine && !broke && <span className="tw-pop">+{eur(gain)}</span>}
                             {mine && broke && (
                               <span className="tw-shards" aria-hidden="true">
+                                <em />
                                 {Array.from({ length: SHARDS }, (_, i) => (
                                   <i key={i} style={{ '--i': i }} />
+                                ))}
+                                {Array.from({ length: PUFFS }, (_, i) => (
+                                  <b key={i} style={{ '--i': i }} />
                                 ))}
                               </span>
                             )}
@@ -352,7 +490,21 @@ function Tower({ onExit, juegos }) {
                         )
                       })}
                     </span>
-                    <span className="tw-prize">{eur(payout(shownBet, shownMode, n))}</span>
+                    <span className="tw-prize">
+                      {eur(payout(shownBet, shownMode, n))}
+                      {current && (
+                        <span className="tw-pips" title={`${cfg.broken} de ${cfg.tiles} rotas`}>
+                          <span className="tw-pips__row">
+                            {Array.from({ length: cfg.tiles }, (_, t) => (
+                              <i key={t} className={t >= cfg.tiles - cfg.broken ? 'is-bad' : ''} />
+                            ))}
+                          </span>
+                          <small>
+                            {cfg.broken} rota{cfg.broken > 1 ? 's' : ''} de {cfg.tiles}
+                          </small>
+                        </span>
+                      )}
+                    </span>
                   </div>
                 )
               })}
@@ -363,22 +515,65 @@ function Tower({ onExit, juegos }) {
                 <span className="tw-lamp" aria-hidden="true" />
               </div>
 
-              <div
-                className={`tw-pawn is-${pawn.state}`}
-                style={{ '--at': pawn.at, '--x': pawn.x }}
-                aria-hidden="true"
-              >
-                <span key={`${pawn.at}-${pawn.state}`} className="tw-pawn__body">
-                  <Avatar name={juegos.me?.name ?? 'Tú'} src={juegos.me?.avatar} size={36} />
+              <div className={`tw-pawn is-${pawn.state}`} style={{ '--at': pawn.at, '--x': pawn.x }} aria-hidden="true">
+                <span key={`${pawn.at}-${pawn.state === 'fall' ? 'f' : pawn.state === 'win' ? 'w' : 'm'}`} className="tw-pawn__act">
+                  <span className="tw-pawn__body">
+                    <span className="tw-hero">
+                      <i className="tw-hero__arm tw-hero__arm--l" />
+                      <i className="tw-hero__arm tw-hero__arm--r" />
+                      <i className="tw-hero__leg tw-hero__leg--l" />
+                      <i className="tw-hero__leg tw-hero__leg--r" />
+                      <i className="tw-hero__torso" />
+                      <span className="tw-hero__head">
+                        <Avatar name={juegos.me?.name ?? 'Tú'} src={juegos.me?.avatar} size={26} />
+                      </span>
+                    </span>
+                  </span>
+                  {pawn.at > 0 && pawn.state !== 'fall' && (
+                    <span className="tw-dust">
+                      {Array.from({ length: 6 }, (_, i) => (
+                        <i key={i} style={{ '--i': i }} />
+                      ))}
+                    </span>
+                  )}
+                  {pawn.state === 'fall' && <span className="tw-scream">¡Aaah!</span>}
+                  {pawn.state === 'win' && (
+                    <span className="tw-sparks">
+                      {Array.from({ length: 6 }, (_, i) => (
+                        <i key={i} style={{ '--i': i }} />
+                      ))}
+                    </span>
+                  )}
                 </span>
                 <span className="tw-pawn__shadow" />
               </div>
             </div>
           </div>
 
+          <div className="tw-chips">
+            <span className="tw-chip">
+              <small>Piso</small>
+              <b>
+                {pawn.at}/{cfg.floors}
+              </b>
+            </span>
+            <span className={`tw-chip ${streak > 0 ? 'is-hot' : ''}`}>
+              <small>Racha</small>
+              <b>🔥 {streak}</b>
+            </span>
+            {best && (
+              <span className="tw-chip tw-chip--rec">
+                <small>Récord hoy</small>
+                <b>👑 {fmtMult(best.mult)}</b>
+                <em>{best.name}</em>
+              </span>
+            )}
+          </div>
+
           <div className="tw-alt" aria-hidden="true">
             <span className="tw-alt__bar">
               <span className="tw-alt__fill" />
+              <span className="tw-alt__knob" />
             </span>
             <span className="tw-alt__now">{pawn.at > 0 ? fmtMult(multAt(shownMode, pawn.at)) : 'Suelo'}</span>
           </div>
@@ -389,7 +584,7 @@ function Tower({ onExit, juegos }) {
             {run ? (
               <>
                 <small>{floor > 0 ? `Botín en el piso ${floor}` : 'Elige baldosa'}</small>
-                <b>{floor > 0 ? eur(worth) : eur(run.bet)}</b>
+                <b>{floor > 0 ? eur(liveWorth) : eur(run.bet)}</b>
                 <span className="tw-loot__mult">{floor > 0 ? fmtMult(multAt(run.mode, floor)) : 'apostado'}</span>
                 <span className="tw-risk">
                   <span>
@@ -423,6 +618,9 @@ function Tower({ onExit, juegos }) {
                   disabled={Boolean(run) || asking}
                   onClick={() => setMode(id)}
                 >
+                  <span className="tw-mode__ico" aria-hidden="true">
+                    {ICONS[id]}
+                  </span>
                   <span className="tw-mode__tiles" aria-hidden="true">
                     {Array.from({ length: m.tiles }, (_, t) => (
                       <i key={t} className={t >= m.tiles - m.broken ? 'is-bad' : ''} />
@@ -482,7 +680,14 @@ function Tower({ onExit, juegos }) {
             </button>
           ) : (
             <button type="button" className="tw-go tw-go--cash" disabled={busy || floor < 1} onClick={cash}>
-              {floor < 1 ? 'Sube al menos un piso' : `Cobrar ${eur(worth)}`}
+              {floor < 1 ? (
+                'Sube al menos un piso'
+              ) : (
+                <span className="tw-go__cash">
+                  <small>Cobrar ahora</small>
+                  <b>{eur(liveWorth)}</b>
+                </span>
+              )}
               <kbd>C</kbd>
             </button>
           )}
