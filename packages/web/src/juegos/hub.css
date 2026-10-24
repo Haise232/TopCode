@@ -1347,3 +1347,36 @@
     display: none;
   }
 }
+
+/* Season 3: juegos nuevos. */
+.juegos-root .hub-pill--new {
+  background: rgba(255, 210, 63, 0.18);
+  color: #ffe27a;
+}
+.juegos-root .hub-pill--new::before {
+  background: #ffd23f;
+  animation: none;
+}
+.juegos-root .hub-tile--new {
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 63, 0.35);
+}
+.juegos-root .hub-tile__art .game__s3 {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #1b2340;
+  box-shadow: inset 0 0 0 2px var(--brass);
+}
+.juegos-root .game__s3-tile {
+  fill: #6f84b3;
+}
+.juegos-root .game__s3-hot {
+  fill: #ffd23f;
+}
+.juegos-root .game__s3-bad {
+  fill: #c2332c;
+}
+.juegos-root .game__s3-ink {
+  fill: #f1e9d6;
+}

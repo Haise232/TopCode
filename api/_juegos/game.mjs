@@ -660,7 +660,7 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
     const abuse = await banca.abuse()
     const t = now()
     const week = weekOf(t)
-    const ctx = { now: t, secret, week: week.key, userId: user.id, luck: abuseLuck(abuse, game) }
+    const ctx = { now: t, secret, week: week.key, day: `${week.key}:${week.day}`, userId: user.id, luck: abuseLuck(abuse, game) }
     return db.tx(async (q) => {
       ctx.q = q // la carrera mira quién pilota cada coche dentro de la misma transacción
       const accRows = (await q(`select usuario_id, saldo, dias, jugado from public.juegos_cuentas where usuario_id = $1 for update`, [user.id])).rows
@@ -774,6 +774,20 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       [String(round), game],
     )
     return rows[0].n
+  }
+
+  // Clasificación del día de la Torre: el mejor cobro de cada uno hoy (se guarda en su partida), de más a menos.
+  async function towerRanking(userId) {
+    const week = weekOf(now())
+    const { rows } = await db.query(
+      `select c.nombre as name, c.avatar, (s.estado->'best'->>'mult')::float as mult, (s.estado->'best'->>'payout')::bigint as payout,
+              s.estado->'best'->>'mode' as mode, s.usuario_id = $2 as me
+       from public.juegos_solo s join public.juegos_cuentas c on c.usuario_id = s.usuario_id
+       where s.juego = 'tower' and s.estado->'best'->>'day' = $1
+       order by mult desc, payout desc limit 5`,
+      [`${week.key}:${week.day}`, userId],
+    )
+    return rows.map((r) => ({ name: r.name, avatar: r.avatar ?? null, mult: r.mult, payout: Number(r.payout), mode: r.mode, me: r.me }))
   }
 
   // Pilotos de una carrera: quién lleva cada coche (los demás los lleva la IA).
@@ -917,10 +931,12 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
       }
       case 'solo_dungeon':
       case 'solo_plinko':
-      case 'solo_frog': {
+      case 'solo_frog':
+      case 'solo_tower': {
         const out = await playSolo(user, msg)
         if (out.error) reply.error = { code: out.error, message: ERRORS[out.error] }
         else reply.solo = out.result
+        if (msg.t === 'solo_tower' && reply.solo) reply.solo.ranking = await towerRanking(user.id)
         if (out.power) reply.power = out.power
         if (out.abuse) reply.abuse = out.abuse
         me.balance = (await db.query(`select saldo from public.juegos_cuentas where usuario_id = $1`, [user.id])).rows[0].saldo

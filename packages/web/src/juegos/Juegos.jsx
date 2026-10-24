@@ -14,6 +14,7 @@ import Dungeon from './Dungeon.jsx'
 import Plinko from './Plinko.jsx'
 import Frog from './Frog.jsx'
 import Race from './Race.jsx'
+import Tower from './Tower.jsx'
 import Bingo from './Bingo.jsx'
 import BingoCage from './BingoCage.jsx'
 import Gacha from './Gacha.jsx'
@@ -125,6 +126,20 @@ const SOLO = [
         <circle cx="25" cy="12" r="3.6" className="game__frog-eye" />
         <circle cx="15" cy="12" r="1.5" className="game__frog-pupil" />
         <circle cx="25" cy="12" r="1.5" className="game__frog-pupil" />
+      </svg>
+    ),
+  },
+]
+
+// Lo nuevo de la Season 3, en su propia sección arriba del todo.
+const SEASON3 = [
+  {
+    id: 'tower',
+    name: 'La Torre',
+    blurb: 'Sube piso a piso sin pisar una baldosa rota. Récord del día para el mejor golpe.',
+    art: (
+      <svg className="game__s3" viewBox="0 0 40 40">
+        {[0, 1, 2, 3].map((r) => [0, 1, 2].map((c) => <rect key={`${r}-${c}`} x={6 + c * 10} y={30 - r * 8} width="8" height="6" rx="1.5" className={r === 3 && c === 1 ? 'game__s3-hot' : r === 2 && c === 0 ? 'game__s3-bad' : 'game__s3-tile'} />))}
       </svg>
     ),
   },
@@ -474,6 +489,26 @@ function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome, duelCo
         <BingoBanner info={lobby?.bingo} online={connected} onOpen={() => onPick('bingo')} />
       </section>
 
+      <section aria-labelledby="s3-title">
+        <h2 id="s3-title" className="hub-title">
+          Nuevo en la Season 3 <small>juegos recién salidos</small>
+        </h2>
+        <ul className="hub-tiles">
+          {SEASON3.map(({ id, name, blurb, art, live }) => (
+            <li key={id}>
+              <button type="button" className={`hub-tile hub-tile--${id} hub-tile--new`} disabled={!connected} onClick={() => onPick(id)}>
+                <span className="hub-tile__art" aria-hidden="true">
+                  {art}
+                </span>
+                {live ? <em className="hub-pill">En vivo</em> : <em className="hub-pill hub-pill--new">Nuevo</em>}
+                <span className="hub-tile__name">{name}</span>
+                <span className="hub-tile__blurb">{blurb}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section aria-labelledby="solo-title" data-tour="solo">
         <h2 id="solo-title" className="hub-title">
           Para jugar solo <small>con tu saldo de la semana</small>
@@ -580,7 +615,7 @@ function Notice({ title, children, actions }) {
 
 // Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
 const SCREEN_KEY = 'juegos-pantalla'
-const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score'])
+const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower'])
 function savedScreen() {
   try {
     const screen = sessionStorage.getItem(SCREEN_KEY)
@@ -674,6 +709,7 @@ function JuegosScreens() {
   if (screen === 'plinko') return show(<Plinko onExit={exit} juegos={juegos} />)
   if (screen === 'frog') return show(<Frog onExit={exit} juegos={juegos} />)
   if (screen === 'race') return show(<Race onExit={exit} juegos={juegos} />)
+  if (screen === 'tower') return show(<Tower onExit={exit} juegos={juegos} />)
   if (screen === 'duel') return show(<Duel onExit={exit} juegos={juegos} />, true)
   if (screen === 'gacha') return show(<Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />)
   if (screen === 'join') return show(<Joining juegos={juegos} request={view} onExit={exit} />)

@@ -1,0 +1,336 @@
+/* Juegos de la Season 3 (Torre, Atraco, Subasta y Puente): escena a la izquierda y panel a la derecha. */
+.juegos-root .s3 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 25vw, 340px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(14px, 2.4vw, 36px);
+  min-height: 0;
+}
+.juegos-root .s3__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+.juegos-root .s3__stage > .status {
+  margin: 0;
+  min-height: 2.6em;
+  font-size: clamp(15px, 1.6vw, 18px);
+}
+.juegos-root .s3__panel {
+  display: grid;
+  align-content: safe start;
+  gap: clamp(10px, 1.6vh, 16px);
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: clamp(14px, 1.6vw, 20px);
+  border: 1px solid rgba(200, 162, 75, 0.3);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.28);
+}
+.juegos-root .s3__group h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .s3__big {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(22px, 2.2vw, 30px);
+  color: var(--brass);
+}
+.juegos-root .s3__big small {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .s3__hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .s3__seg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 6px;
+}
+.juegos-root .s3__seg button {
+  display: grid;
+  gap: 1px;
+  min-height: 46px;
+  padding: 6px 4px;
+  border: 1px solid rgba(241, 233, 214, 0.25);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--ivory);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.juegos-root .s3__seg button small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.juegos-root .s3__seg button[aria-checked='true'] {
+  border-color: var(--brass);
+  background: rgba(200, 162, 75, 0.2);
+  color: var(--bolt);
+}
+.juegos-root .s3__seg button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.juegos-root .s3__slider {
+  display: grid;
+  gap: 6px;
+}
+.juegos-root .s3__slider input {
+  width: 100%;
+  accent-color: var(--brass);
+}
+.juegos-root .s3__amount {
+  font-family: var(--display);
+  font-size: 24px;
+  color: var(--ivory);
+}
+.juegos-root .s3__quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.juegos-root .s3__quick button {
+  min-height: 36px;
+}
+.juegos-root .s3__actions {
+  display: grid;
+  gap: 8px;
+}
+.juegos-root .s3__actions .primary {
+  min-height: 54px;
+  font-size: 17px;
+}
+.juegos-root .s3__cash:not(:disabled) {
+  background: linear-gradient(180deg, #ffd96a, #c8a24b);
+  color: #2a1a00;
+  animation: s3-glow 1.4s ease-in-out infinite;
+}
+.juegos-root .s3__rank {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .s3__rank li {
+  display: grid;
+  grid-template-columns: 18px 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 14px;
+}
+.juegos-root .s3__rank li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.juegos-root .s3__rank li em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--brass);
+}
+.juegos-root .s3__rank li.is-me {
+  outline: 1px solid var(--brass);
+}
+.juegos-root .s3__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.juegos-root .s3__chips li {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.juegos-root .s3__chips .is-win {
+  background: rgba(200, 162, 75, 0.25);
+  color: var(--bolt);
+}
+.juegos-root .s3__chips .is-lose {
+  background: rgba(194, 51, 44, 0.25);
+  color: #ff9a92;
+}
+@keyframes s3-glow {
+  50% {
+    box-shadow: 0 0 22px rgba(255, 217, 106, 0.7);
+  }
+}
+@keyframes s3-shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+/* ---------- La Torre ---------- */
+.juegos-root .tower__floors {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  list-style: none;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(10, 16, 40, 0.65), rgba(30, 20, 10, 0.65)),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(255, 255, 255, 0.03) 46px 48px);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+}
+.juegos-root .tower__floors.is-shake {
+  animation: s3-shake 0.45s ease-in-out;
+}
+.juegos-root .tower__floor {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 84px;
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 34px;
+  max-height: 64px;
+  transition: opacity 0.2s;
+}
+.juegos-root .tower__floor.is-far {
+  opacity: 0.55;
+}
+.juegos-root .tower__mult,
+.juegos-root .tower__worth {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.juegos-root .tower__worth {
+  text-align: right;
+}
+.juegos-root .tower__floor.is-current .tower__mult,
+.juegos-root .tower__floor.is-current .tower__worth {
+  color: var(--bolt);
+}
+.juegos-root .tower__tiles {
+  display: grid;
+  grid-template-columns: repeat(var(--tiles), minmax(0, 1fr));
+  gap: 6px;
+  height: 100%;
+}
+.juegos-root .tower__tile {
+  min-height: 30px;
+  border: 1px solid rgba(241, 233, 214, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #5b6b86, #38435a);
+  color: var(--ivory);
+  font: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.25);
+}
+.juegos-root .tower__floor.is-done .tower__tile,
+.juegos-root .tower__floor.is-far .tower__tile {
+  background: linear-gradient(180deg, #3a4357, #262d3c);
+}
+.juegos-root .tower__floor.is-current .tower__tile {
+  cursor: pointer;
+  background: linear-gradient(180deg, #8fa7d6, #5770a8);
+  box-shadow:
+    inset 0 -4px 0 rgba(0, 0, 0, 0.25),
+    0 0 0 2px rgba(255, 226, 122, 0.45);
+  animation: tower-breathe 1.6s ease-in-out infinite;
+}
+.juegos-root .tower__floor.is-current .tower__tile:not(:disabled):hover {
+  translate: 0 -2px;
+  background: linear-gradient(180deg, #b5c8ef, #7189c4);
+}
+.juegos-root .tower__tile.is-safe {
+  background: linear-gradient(180deg, #4fbf86, #2b7c55) !important;
+}
+.juegos-root .tower__tile.is-broken {
+  background:
+    linear-gradient(135deg, transparent 45%, rgba(0, 0, 0, 0.7) 46% 50%, transparent 51%),
+    linear-gradient(45deg, transparent 45%, rgba(0, 0, 0, 0.6) 46% 49%, transparent 50%),
+    linear-gradient(180deg, #d0524a, #7e211c) !important;
+}
+.juegos-root .tower__tile.is-mine {
+  outline: 3px solid var(--bolt);
+  outline-offset: 1px;
+}
+.juegos-root .tower__tile.is-mine.is-broken {
+  animation: tower-fall 0.9s ease-in forwards;
+}
+.juegos-root .tower__ground {
+  padding: 6px;
+  border-top: 2px solid rgba(200, 162, 75, 0.5);
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+@keyframes tower-breathe {
+  50% {
+    filter: brightness(1.15);
+  }
+}
+@keyframes tower-fall {
+  to {
+    transform: translateY(60px) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .juegos-root .s3 {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    overflow-y: auto;
+  }
+  .juegos-root .s3__panel {
+    max-height: none;
+    overflow: visible;
+  }
+  .juegos-root .tower__floors {
+    max-height: 62vh;
+  }
+  .juegos-root .tower__floor {
+    grid-template-columns: 52px minmax(0, 1fr) 70px;
+    gap: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .s3__cash,
+  .juegos-root .tower__floor.is-current .tower__tile,
+  .juegos-root .tower__floors.is-shake,
+  .juegos-root .tower__tile.is-mine.is-broken {
+    animation: none;
+  }
+}

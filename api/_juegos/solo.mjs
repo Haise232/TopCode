@@ -9,8 +9,17 @@ import * as plinko from '../../packages/web/src/juegos/plinko.js'
 import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
 import * as race from '../../packages/web/src/juegos/race.js'
+import * as tower from '../../packages/web/src/juegos/tower.js'
 
-export const SOLO_GAMES = { solo_roulette: 'roulette', solo_dungeon: 'dungeon', solo_plinko: 'plinko', solo_crash: 'crash', solo_frog: 'frog', solo_race: 'race' }
+export const SOLO_GAMES = {
+  solo_roulette: 'roulette',
+  solo_dungeon: 'dungeon',
+  solo_plinko: 'plinko',
+  solo_crash: 'crash',
+  solo_frog: 'frog',
+  solo_race: 'race',
+  solo_tower: 'tower',
+}
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
 // Cada ronda empieza en un múltiplo de ROUND_MS desde 1970: abre apuestas, «no va más», la bola gira y se ve el número.
@@ -427,6 +436,72 @@ export function frogPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: frogView(state, balance, 'jump', to) }
 }
 
+// --- Torre: como la rana, la apuesta ya salió del saldo y queda en juego. En cada piso el servidor sortea qué baldosas
+// están rotas cuando eliges una (antes no existe, así que no se puede adivinar). saved: { bet, mode, floor, week, path,
+// last, best } con bet > 0 mientras hay una torre en marcha; path son los pisos ya subidos ({ tile, broken }) y best, el
+// mejor cobro del día ({ day, mult, payout, mode }) para la clasificación.
+function towerView(state, balance, ev = null, step = null) {
+  const live = state.bet > 0
+  return {
+    bet: live ? state.bet : 0,
+    mode: live ? state.mode : null,
+    floor: live ? state.floor : 0,
+    path: live ? (state.path ?? []) : [],
+    last: state.last ?? null,
+    best: state.best ?? null,
+    balance,
+    ev,
+    step,
+  }
+}
+
+// msg.a: «sync», «start» (bet, mode), «pick» (tile: la baldosa que pisas en el piso siguiente) o «cash» (cobrar ya).
+export function towerPlay(msg, balance, saved, rand, ctx) {
+  let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
+  if (state.best && state.best.day !== ctx.day) state.best = null
+  const live = state.bet > 0
+  const settle = (floor) => {
+    const paid = tower.payout(state.bet, state.mode, floor)
+    const mult = tower.multAt(state.mode, floor)
+    const last = { round: ctx.now, stake: state.bet, mode: state.mode, floor, mult, payout: paid, net: paid - state.bet, path: state.path }
+    if (paid > 0 && (!state.best || mult > state.best.mult)) state.best = { day: ctx.day, mult, payout: paid, mode: state.mode, floor }
+    state = { ...state, bet: 0, floor: 0, path: [], last }
+    return paid
+  }
+  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: towerView(state, balance) }
+  if (msg.a === 'start') {
+    if (live) return { error: 'BAD_PHASE' }
+    if (!tower.validBet(msg.bet) || !tower.validMode(msg.mode)) return { error: 'BAD_MESSAGE' }
+    if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+    state = { ...state, bet: msg.bet, mode: msg.mode, floor: 0, path: [], week: ctx.week }
+    return { delta: -msg.bet, played: true, saved: state, result: towerView(state, balance - msg.bet, 'start') }
+  }
+  if (!live) return { error: 'BAD_PHASE' }
+  if (msg.a === 'cash') {
+    if (state.floor < 1) return { error: 'BAD_PHASE' }
+    const paid = settle(state.floor)
+    return { delta: paid, played: true, saved: state, result: towerView(state, balance + paid, 'cash') }
+  }
+  if (msg.a !== 'pick' || !tower.validTile(state.mode, msg.tile)) return { error: 'BAD_MESSAGE' }
+  // Con suerte del Admin Abuse (ctx.luck 2 o 3), el piso se sortea tantas veces y vale el primero que te deja pasar.
+  let broken = tower.brokenTiles(state.mode, rand)
+  for (let i = 1; i < (ctx.luck ?? 1) && broken.includes(msg.tile); i++) broken = tower.brokenTiles(state.mode, rand)
+  const step = { tile: msg.tile, broken }
+  state = { ...state, path: [...(state.path ?? []), step] }
+  if (broken.includes(msg.tile)) {
+    const floor = state.floor + 1
+    settle(0)
+    state.last.floor = floor // el piso en el que cayó
+    return { delta: 0, played: true, saved: state, result: towerView(state, balance, 'fall', step) }
+  }
+  state = { ...state, floor: state.floor + 1 }
+  if (state.floor >= tower.MODES[state.mode].floors) {
+    const paid = settle(state.floor)
+    return { delta: paid, played: true, saved: state, result: towerView(state, balance + paid, 'top', step) }
+  }
+  return { delta: 0, played: true, saved: state, result: towerView(state, balance, 'up', step) }
+}
+
 // --- Laberinto: como la rana, la apuesta queda en juego (ya salió del saldo) como botín. Cada sala la sortea el
 // servidor al entrar (dungeon.layout: qué hay detrás de cada puerta y cómo se barajan) y la pantalla la anima; el
 // jugador elige una posición y aquí se mira qué quedó en ella. Si el cofre es un mímico se decide al abrirlo, así que
@@ -501,4 +576,4 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, extra) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive }
+export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, tower: towerPlay }
