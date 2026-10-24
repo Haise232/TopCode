@@ -307,6 +307,212 @@
   }
 }
 
+/* ---------- El Atraco ---------- */
+.juegos-root .heist.is-caught {
+  animation: s3-shake 0.45s ease-in-out 2;
+}
+.juegos-root .heist.is-caught .heist__shaft {
+  box-shadow: inset 0 0 60px rgba(255, 46, 77, 0.6);
+  animation: heist-siren 0.4s steps(1) 4;
+}
+.juegos-root .heist__crew {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+}
+.juegos-root .heist__member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.juegos-root .heist__member .gacha-card--mini {
+  width: 44px;
+  flex: none;
+}
+.juegos-root .heist__member span {
+  display: grid;
+  min-width: 0;
+  font-size: 13px;
+}
+.juegos-root .heist__member small {
+  overflow: hidden;
+  max-width: 110px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.juegos-root .heist__alarm {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  min-width: 110px;
+  margin-left: auto;
+  font-size: 12px;
+}
+.juegos-root .heist__alarm span {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #ff2e4d calc(var(--alarm) * 100%), rgba(255, 255, 255, 0.12) 0);
+}
+.juegos-root .heist__alarm b {
+  color: #ff8a9b;
+}
+.juegos-root .heist__shaft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  list-style: none;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #232836, #0d0f15);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+.juegos-root .heist__floor {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  flex: 1 0 30px;
+  max-height: 72px;
+  padding: 2px 8px;
+  border-left: 3px solid rgba(200, 162, 75, 0.25);
+  border-radius: 6px;
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 10px, transparent 10px 20px);
+}
+.juegos-root .heist__floor.is-locked {
+  opacity: 0.35;
+  border-left-color: transparent;
+}
+.juegos-root .heist__floor.is-done {
+  border-left-color: #4fbf86;
+}
+.juegos-root .heist__floor.is-caught {
+  border-left-color: #ff2e4d;
+  background: rgba(255, 46, 77, 0.15);
+}
+.juegos-root .heist__floor.is-current {
+  flex-basis: 64px;
+  border-left-color: var(--bolt);
+  background: rgba(255, 226, 122, 0.06);
+}
+.juegos-root .heist__num {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.juegos-root .heist__info {
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .heist__routes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.juegos-root .heist__route {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 8px 6px;
+  border: 1px solid rgba(241, 233, 214, 0.25);
+  border-radius: 10px;
+  color: var(--ivory);
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+.juegos-root .heist__route small {
+  color: rgba(241, 233, 214, 0.75);
+}
+.juegos-root .heist__route kbd {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.juegos-root .heist__route--sigilo {
+  background: linear-gradient(180deg, #2b5f4a, #183a2d);
+}
+.juegos-root .heist__route--normal {
+  background: linear-gradient(180deg, #3e4f80, #262f4f);
+}
+.juegos-root .heist__route--loco {
+  background: linear-gradient(180deg, #8a2f2a, #511a17);
+}
+.juegos-root .heist__route:not(:disabled):hover {
+  translate: 0 -2px;
+  border-color: var(--bolt);
+}
+.juegos-root .heist__picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+  max-height: 180px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.juegos-root .heist__picker button {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+.juegos-root .heist__picker button[aria-pressed='true'] {
+  border-color: var(--bolt);
+  box-shadow: 0 0 12px rgba(255, 226, 122, 0.5);
+}
+.juegos-root .heist__picker button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.juegos-root .heist__picker small {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--bolt);
+}
+.juegos-root .heist-app[data-alarm='2'] .heist__alarm b {
+  animation: heist-blink 0.6s steps(1) infinite;
+}
+@keyframes heist-siren {
+  50% {
+    box-shadow: inset 0 0 60px rgba(46, 120, 255, 0.6);
+  }
+}
+@keyframes heist-blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+@media (max-width: 860px) {
+  .juegos-root .heist__shaft {
+    max-height: 62vh;
+  }
+  .juegos-root .heist__member small {
+    display: none;
+  }
+}
+
 @media (max-width: 860px) {
   .juegos-root .s3 {
     grid-template-columns: minmax(0, 1fr);
@@ -330,7 +536,10 @@
   .juegos-root .s3__cash,
   .juegos-root .tower__floor.is-current .tower__tile,
   .juegos-root .tower__floors.is-shake,
-  .juegos-root .tower__tile.is-mine.is-broken {
+  .juegos-root .tower__tile.is-mine.is-broken,
+  .juegos-root .heist.is-caught,
+  .juegos-root .heist.is-caught .heist__shaft,
+  .juegos-root .heist-app[data-alarm='2'] .heist__alarm b {
     animation: none;
   }
 }

@@ -10,6 +10,8 @@ import * as crash from '../../packages/web/src/juegos/crash.js'
 import * as frog from '../../packages/web/src/juegos/frog.js'
 import * as race from '../../packages/web/src/juegos/race.js'
 import * as tower from '../../packages/web/src/juegos/tower.js'
+import * as heist from '../../packages/web/src/juegos/heist.js'
+import { cardView } from './gacha.mjs'
 
 export const SOLO_GAMES = {
   solo_roulette: 'roulette',
@@ -19,6 +21,7 @@ export const SOLO_GAMES = {
   solo_frog: 'frog',
   solo_race: 'race',
   solo_tower: 'tower',
+  solo_heist: 'heist',
 }
 
 // --- Ruleta en vivo: una sola rueda para todos que gira cada ROUND_MS, como en un casino en directo. ---
@@ -502,6 +505,90 @@ export function towerPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: towerView(state, balance, 'up', step) }
 }
 
+// --- Atraco: como la torre, pero en cada planta eliges la ruta (más riesgo, más botín) y tu banda de cartas del gacha
+// decide hasta qué planta puedes bajar. saved: { bet, week, crew, floors, routes, path, last, best } con bet > 0 mientras
+// hay un atraco en marcha; routes son las rutas superadas y path, todas las intentadas ({ route, ok }).
+const crewCard = (id) => {
+  const c = cardView(id)
+  return c && { id: c.id, name: c.name, img: c.img, pos: c.pos, rarity: c.rarity, series: c.series, role: heist.roleOf(c.id) }
+}
+
+async function myCards(ctx) {
+  const { rows } = await ctx.q(`select carta from public.juegos_gacha_cartas where usuario_id = $1`, [ctx.userId])
+  return rows.map((r) => crewCard(r.carta)).filter(Boolean)
+}
+
+function heistView(state, balance, extra = {}) {
+  const live = state.bet > 0
+  return {
+    bet: live ? state.bet : 0,
+    crew: live ? (state.crew ?? []).map(crewCard).filter(Boolean) : [],
+    floors: live ? state.floors : heist.BASE_FLOORS,
+    routes: live ? (state.routes ?? []) : [],
+    path: live ? (state.path ?? []) : [],
+    last: state.last ?? null,
+    best: state.best ?? null,
+    balance,
+    ev: null,
+    ...extra,
+  }
+}
+
+// msg.a: «sync» (con tus cartas para elegir banda), «start» (bet, crew: ids de tus cartas), «go» (route) o «cash».
+export async function heistPlay(msg, balance, saved, rand, ctx) {
+  let state = saved && saved.week === ctx.week ? { ...saved } : { last: saved?.last ?? null }
+  if (state.best && state.best.day !== ctx.day) state.best = null
+  const live = state.bet > 0
+  const settle = (routes) => {
+    const paid = heist.payout(state.bet, routes)
+    const mult = heist.multOf(routes)
+    const last = { round: ctx.now, stake: state.bet, floor: routes.length, mult, payout: paid, net: paid - state.bet, path: state.path, crew: state.crew }
+    if (paid > 0 && (!state.best || mult > state.best.mult)) state.best = { day: ctx.day, mult, payout: paid, floor: routes.length }
+    state = { ...state, bet: 0, routes: [], path: [], last }
+    return paid
+  }
+  if (msg.a === 'sync') return { delta: 0, played: false, saved: null, result: heistView(state, balance, { cards: await myCards(ctx) }) }
+  if (msg.a === 'start') {
+    if (live) return { error: 'BAD_PHASE' }
+    const crew = msg.crew ?? []
+    if (!heist.validBet(msg.bet) || !heist.validCrew(crew)) return { error: 'BAD_MESSAGE' }
+    if (msg.bet > balance) return { error: 'INSUFFICIENT_FUNDS' }
+    // Solo cartas que son tuyas ahora mismo.
+    const owned = crew.length
+      ? (await ctx.q(`select carta from public.juegos_gacha_cartas where usuario_id = $1 and carta = any($2::text[])`, [ctx.userId, crew])).rows.map((r) => r.carta)
+      : []
+    if (owned.length !== crew.length) return { error: 'HEIST_CREW' }
+    const floors = heist.floorsFor(crew.map((id) => cardView(id)?.rarity))
+    state = { ...state, bet: msg.bet, week: ctx.week, crew, floors, routes: [], path: [] }
+    return { delta: -msg.bet, played: true, saved: state, result: heistView(state, balance - msg.bet, { ev: 'start' }) }
+  }
+  if (!live) return { error: 'BAD_PHASE' }
+  if (msg.a === 'cash') {
+    if (!state.routes.length) return { error: 'BAD_PHASE' }
+    const paid = settle(state.routes)
+    return { delta: paid, played: true, saved: state, result: heistView(state, balance + paid, { ev: 'cash' }) }
+  }
+  if (msg.a !== 'go' || !heist.validRoute(msg.route)) return { error: 'BAD_MESSAGE' }
+  // Con suerte del Admin Abuse (ctx.luck 2 o 3), la ruta tiene tantos intentos.
+  let ok = false
+  for (let i = 0; i < (ctx.luck ?? 1) && !ok; i++) ok = heist.survives(msg.route, rand)
+  state = { ...state, path: [...state.path, { route: msg.route, ok }] }
+  if (!ok) {
+    const floor = state.routes.length + 1
+    settle([])
+    state.last.floor = floor // la planta en la que te pillaron
+    state.last.caught = msg.route
+    return { delta: 0, played: true, saved: state, result: heistView(state, balance, { ev: 'caught' }) }
+  }
+  const routes = [...state.routes, msg.route]
+  state = { ...state, routes }
+  if (routes.length >= state.floors || heist.multOf(routes) >= heist.MAX_MULT) {
+    const paid = settle(routes)
+    return { delta: paid, played: true, saved: state, result: heistView(state, balance + paid, { ev: 'escape' }) }
+  }
+  return { delta: 0, played: true, saved: state, result: heistView(state, balance, { ev: 'down' }) }
+}
+
 // --- Laberinto: como la rana, la apuesta queda en juego (ya salió del saldo) como botín. Cada sala la sortea el
 // servidor al entrar (dungeon.layout: qué hay detrás de cada puerta y cómo se barajan) y la pantalla la anima; el
 // jugador elige una posición y aquí se mira qué quedó en ella. Si el cofre es un mímico se decide al abrirlo, así que
@@ -576,4 +663,4 @@ export function dungeonPlay(msg, balance, saved, rand, ctx) {
   return { delta: 0, played: true, saved: state, result: dungeonView(state, balance, extra) }
 }
 
-export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, tower: towerPlay }
+export const SOLO_PLAY = { roulette: rouletteLive, dungeon: dungeonPlay, plinko: plinkoDrop, crash: crashLive, frog: frogPlay, race: raceLive, tower: towerPlay, heist: heistPlay }

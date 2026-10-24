@@ -15,6 +15,7 @@ import Plinko from './Plinko.jsx'
 import Frog from './Frog.jsx'
 import Race from './Race.jsx'
 import Tower from './Tower.jsx'
+import Heist from './Heist.jsx'
 import Bingo from './Bingo.jsx'
 import BingoCage from './BingoCage.jsx'
 import Gacha from './Gacha.jsx'
@@ -140,6 +141,21 @@ const SEASON3 = [
     art: (
       <svg className="game__s3" viewBox="0 0 40 40">
         {[0, 1, 2, 3].map((r) => [0, 1, 2].map((c) => <rect key={`${r}-${c}`} x={6 + c * 10} y={30 - r * 8} width="8" height="6" rx="1.5" className={r === 3 && c === 1 ? 'game__s3-hot' : r === 2 && c === 0 ? 'game__s3-bad' : 'game__s3-tile'} />))}
+      </svg>
+    ),
+  },
+  {
+    id: 'heist',
+    name: 'El Atraco',
+    blurb: 'Monta tu banda con tus cartas del gacha y baja a la cámara acorazada. Huye antes de que os pillen.',
+    art: (
+      <svg className="game__s3" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="14" className="game__s3-tile" />
+        <circle cx="20" cy="20" r="9" className="game__s3-ink" />
+        <circle cx="20" cy="20" r="3" className="game__s3-hot" />
+        {[0, 60, 120, 180, 240, 300].map((a) => (
+          <rect key={a} x="19" y="8" width="2" height="5" className="game__s3-hot" transform={`rotate(${a} 20 20)`} />
+        ))}
       </svg>
     ),
   },
@@ -615,7 +631,7 @@ function Notice({ title, children, actions }) {
 
 // Pantalla en la que estabas, para que al recargar la página vuelvas al mismo juego (las mesas ya las recuerda el servidor).
 const SCREEN_KEY = 'juegos-pantalla'
-const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower'])
+const KEEP = new Set(['bingo', 'roulette', 'crash', 'dungeon', 'plinko', 'frog', 'race', 'duel', 'gacha', 'score', 'tower', 'heist'])
 function savedScreen() {
   try {
     const screen = sessionStorage.getItem(SCREEN_KEY)
@@ -710,6 +726,7 @@ function JuegosScreens() {
   if (screen === 'frog') return show(<Frog onExit={exit} juegos={juegos} />)
   if (screen === 'race') return show(<Race onExit={exit} juegos={juegos} />)
   if (screen === 'tower') return show(<Tower onExit={exit} juegos={juegos} />)
+  if (screen === 'heist') return show(<Heist onExit={exit} juegos={juegos} />)
   if (screen === 'duel') return show(<Duel onExit={exit} juegos={juegos} />, true)
   if (screen === 'gacha') return show(<Gacha onExit={exit} juegos={juegos} initialTab={view.tab} />)
   if (screen === 'join') return show(<Joining juegos={juegos} request={view} onExit={exit} />)
