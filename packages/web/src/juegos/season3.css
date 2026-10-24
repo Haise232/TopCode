@@ -394,121 +394,7 @@
   }
 }
 
-/* ---------- Subasta a ciegas ---------- */
-.juegos-root .auction__box {
-  --tone: #a0703a;
-  --glow: rgba(160, 112, 58, 0.45);
-  position: relative;
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 10px;
-  flex: 1;
-  min-height: 260px;
-  padding: 20px;
-  border-radius: 22px;
-  background: radial-gradient(circle at 50% 45%, var(--glow), transparent 60%), rgba(0, 0, 0, 0.3);
-}
-.juegos-root .auction__box--plata {
-  --tone: #c7d0dc;
-  --glow: rgba(199, 208, 220, 0.35);
-}
-.juegos-root .auction__box--oro {
-  --tone: #ffd23f;
-  --glow: rgba(255, 210, 63, 0.4);
-}
-.juegos-root .auction__box--diamante {
-  --tone: #7fe7ff;
-  --glow: rgba(127, 231, 255, 0.45);
-}
-.juegos-root .auction__timer {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background:
-    radial-gradient(closest-side, #0c1a25 78%, transparent 80% 100%),
-    conic-gradient(var(--tone) calc(var(--left) * 360deg), rgba(241, 233, 214, 0.15) 0);
-  font-weight: 800;
-  line-height: 1;
-}
-.juegos-root .auction__timer small {
-  font-size: 9px;
-  font-weight: 400;
-  color: var(--muted);
-}
-.juegos-root .auction__crate {
-  position: relative;
-  width: clamp(130px, 22vw, 200px);
-  aspect-ratio: 1.1;
-  animation: auction-float 3s ease-in-out infinite;
-}
-.juegos-root .auction__lid,
-.juegos-root .auction__body {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border: 3px solid color-mix(in srgb, var(--tone) 60%, #000);
-  border-radius: 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 85%, #fff), color-mix(in srgb, var(--tone) 70%, #000));
-  box-shadow: 0 10px 30px var(--glow);
-}
-.juegos-root .auction__lid {
-  top: 0;
-  height: 26%;
-  z-index: 2;
-  transform-origin: 10% 100%;
-  transition: transform 0.6s cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-.juegos-root .auction__body {
-  top: 22%;
-  bottom: 0;
-  display: grid;
-  place-items: center;
-  font-size: clamp(40px, 7vw, 70px);
-  color: rgba(0, 0, 0, 0.45);
-  font-weight: 900;
-}
-.juegos-root .auction__box.is-open .auction__lid {
-  transform: rotate(-35deg) translateY(-30%);
-}
-.juegos-root .auction__box.is-open .auction__body {
-  color: inherit;
-  animation: auction-pop 0.6s cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-.juegos-root .auction__box.is-open .auction__crate {
-  animation: none;
-}
-.juegos-root .auction__name {
-  display: grid;
-  justify-items: center;
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(22px, 2.6vw, 32px);
-  color: var(--tone);
-}
-.juegos-root .auction__name small {
-  font-family: var(--sans);
-  font-size: 14px;
-  color: var(--muted);
-}
-.juegos-root .auction__bidders {
-  margin: 0;
-  font-size: 14px;
-  color: var(--ivory);
-}
-.juegos-root .auction__bids li.is-top {
-  background: rgba(255, 210, 63, 0.16);
-}
-.juegos-root .s3__reset {
-  width: 100%;
-  min-height: 34px;
-  margin-top: 6px;
-}
+/* Lista de resultados recientes (la usan la Subasta y el Puente). */
 .juegos-root .auction__history {
   display: grid;
   gap: 6px;
@@ -535,16 +421,6 @@
 }
 .juegos-root .auction__history .is-lose small {
   color: #ff9a92;
-}
-@keyframes auction-float {
-  50% {
-    translate: 0 -8px;
-  }
-}
-@keyframes auction-pop {
-  from {
-    scale: 0.4;
-  }
 }
 
 /* ---------- El Puente de Cristal ---------- */
@@ -785,8 +661,6 @@
   .juegos-root .heist.is-caught,
   .juegos-root .heist.is-caught .heist__shaft,
   .juegos-root .heist-app[data-alarm='2'] .heist__alarm b,
-  .juegos-root .auction__crate,
-  .juegos-root .auction__box.is-open .auction__body,
   .juegos-root .bridge__col.is-current .bridge__glass,
   .juegos-root .bridge__glass.is-broken,
   .juegos-root .bridge__pawn {

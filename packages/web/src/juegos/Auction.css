@@ -1,0 +1,1007 @@
+/* Subasta a ciegas: sala con atril y foco de luz a la izquierda (la caja, la cuenta atrás y el lote) y, a la derecha,
+   las paletas y la tensión mientras se puja o la gráfica de pujas al revelar. --tone y --glow dan el color de la caja. */
+.juegos-root .au-scene {
+  --tone: #c98a4a;
+  --glow: rgba(201, 138, 74, 0.5);
+  --crate: clamp(120px, 22vh, 190px);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: clamp(8px, 1.6vw, 22px);
+  flex: 1;
+  min-height: 0;
+  padding: clamp(10px, 1.6vw, 20px);
+  overflow: hidden;
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at 28% 0%, rgba(255, 244, 214, 0.1), transparent 60%),
+    linear-gradient(180deg, #1a1226 0%, #0d1a28 70%, #08121c 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tone) 35%, transparent),
+    0 20px 60px rgba(0, 0, 0, 0.45);
+  isolation: isolate;
+}
+.juegos-root .au-scene--plata {
+  --tone: #cfd8e6;
+  --glow: rgba(207, 216, 230, 0.4);
+}
+.juegos-root .au-scene--oro {
+  --tone: #ffd23f;
+  --glow: rgba(255, 210, 63, 0.5);
+}
+.juegos-root .au-scene--diamante {
+  --tone: #7fe7ff;
+  --glow: rgba(127, 231, 255, 0.55);
+}
+
+/* ---------- Podio ---------- */
+.juegos-root .au-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: end;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding-top: 62px;
+}
+.juegos-root .au-spot {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  width: 90%;
+  height: 78%;
+  translate: -50% 0;
+  background: linear-gradient(180deg, rgba(255, 248, 225, 0.34), color-mix(in srgb, var(--glow) 55%, transparent) 60%, transparent);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+  filter: blur(6px);
+  opacity: 0.8;
+  pointer-events: none;
+  animation: au-spot 5s ease-in-out infinite alternate;
+  z-index: -1;
+}
+.juegos-root .au-lot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 6;
+  margin: 0;
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  font-family: var(--display);
+  font-size: clamp(16px, 1.8vw, 22px);
+  color: var(--tone);
+}
+.juegos-root .au-lot small {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Cuenta atrás grande: aro que se vacía y número; los últimos 5 s, en rojo y con pulso. */
+.juegos-root .au-clock {
+  --ring: var(--tone);
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: clamp(76px, 9vw, 104px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, #0a1520 80%, transparent 82% 100%),
+    conic-gradient(var(--ring) calc(var(--left) * 360deg), rgba(241, 233, 214, 0.14) 0);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--ring) 35%, transparent);
+  line-height: 1;
+}
+.juegos-root .au-clock span {
+  font-family: var(--display);
+  font-size: clamp(34px, 4.2vw, 50px);
+  color: var(--ivory);
+  font-variant-numeric: tabular-nums;
+}
+.juegos-root .au-clock small {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .au-clock.is-reveal {
+  --ring: var(--muted);
+  opacity: 0.8;
+}
+.juegos-root .au-clock.is-hot {
+  --ring: #ff4a3d;
+  animation: au-hot 1s ease-in-out infinite;
+}
+.juegos-root .au-clock.is-hot span {
+  color: #ff6a5e;
+  animation: au-tick 1s ease-out infinite;
+}
+
+/* Chispas que suben alrededor de la caja */
+.juegos-root .au-sparks {
+  position: absolute;
+  inset: 40px 0 70px;
+  pointer-events: none;
+  overflow: hidden;
+}
+.juegos-root .au-sparks i {
+  position: absolute;
+  bottom: 0;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 8px var(--tone);
+  opacity: 0;
+  animation: au-spark var(--d) var(--w) linear infinite;
+}
+
+/* ---------- Caja ---------- */
+.juegos-root .au-crate {
+  position: relative;
+  width: var(--crate);
+  aspect-ratio: 1.1;
+  margin-bottom: -4px;
+  animation: au-float 3.2s ease-in-out infinite;
+}
+.juegos-root .au-crate.is-shaking {
+  animation: au-shake calc(0.5s - var(--amp) * 0.32s) linear infinite;
+}
+.juegos-root .au-lid,
+.juegos-root .au-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border: 3px solid color-mix(in srgb, var(--tone) 55%, #000);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, 0.14) 22px 24px),
+    linear-gradient(180deg, color-mix(in srgb, var(--tone) 88%, #fff), color-mix(in srgb, var(--tone) 68%, #000));
+  box-shadow:
+    0 0 calc(18px + var(--amp, 0) * 26px) var(--glow),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+.juegos-root .au-lid {
+  top: 0;
+  height: 26%;
+  z-index: 3;
+  border-radius: 12px 12px 4px 4px;
+  transform-origin: 8% 100%;
+  transition: transform 0.7s cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+.juegos-root .au-body {
+  top: 24%;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border-radius: 4px 4px 12px 12px;
+}
+/* Cintas de metal */
+.juegos-root .au-body::before,
+.juegos-root .au-body::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 11%;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.35));
+}
+.juegos-root .au-body::before {
+  left: 12%;
+}
+.juegos-root .au-body::after {
+  right: 12%;
+}
+.juegos-root .au-lock {
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--tone) 40%, #000);
+  background: radial-gradient(circle at 35% 30%, #fff8, transparent 50%), color-mix(in srgb, var(--tone) 70%, #222);
+  font-family: var(--display);
+  font-size: clamp(18px, 3vh, 30px);
+  color: rgba(0, 0, 0, 0.6);
+}
+.juegos-root .au-scene.is-open .au-lid {
+  transform: translate(-8%, -55%) rotate(-48deg);
+}
+.juegos-root .au-scene.is-open .au-lid {
+  animation: au-lid 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) backwards;
+}
+.juegos-root .au-scene.is-open .au-crate {
+  animation: none;
+}
+.juegos-root .au-scene.is-open .au-lock {
+  opacity: 0;
+}
+
+/* Premio: sale de la caja con rebote */
+.juegos-root .au-prize {
+  position: absolute;
+  left: 50%;
+  top: -34%;
+  z-index: 4;
+  translate: -50% 0;
+  font-size: calc(var(--crate) * 0.5);
+  line-height: 1;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+  animation: au-prize 1.1s 0.35s cubic-bezier(0.3, 1.4, 0.5, 1) backwards;
+}
+.juegos-root .au-scene.is-stone .au-prize {
+  filter: grayscale(1) brightness(0.8) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+  animation-name: au-prize-sad;
+}
+.juegos-root .au-scene.is-stone .au-crate {
+  filter: grayscale(0.85) brightness(0.8);
+}
+.juegos-root .au-scene.is-stone .au-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 55%, rgba(120, 130, 150, 0.22), transparent 60%);
+  pointer-events: none;
+  animation: au-fade-in 1s both;
+}
+.juegos-root .au-flash {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  z-index: 1;
+  width: 260%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.95), color-mix(in srgb, var(--tone) 60%, transparent) 45%, transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+  animation: au-flash 0.9s 0.25s ease-out;
+}
+.juegos-root .au-scene.is-stone .au-flash {
+  background: radial-gradient(closest-side, rgba(200, 205, 215, 0.5), transparent 70%);
+}
+.juegos-root .au-rays {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  z-index: 0;
+  width: 340%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(160, 240, 255, 0.5) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(closest-side, #000 15%, transparent 72%);
+  mask: radial-gradient(closest-side, #000 15%, transparent 72%);
+  pointer-events: none;
+  animation:
+    au-fade-in 0.8s 0.4s backwards,
+    au-spin 14s linear infinite;
+}
+.juegos-root .au-confetti {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  z-index: 5;
+  pointer-events: none;
+}
+.juegos-root .au-confetti i {
+  position: absolute;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0;
+  animation: au-confetti 1.9s var(--t) cubic-bezier(0.2, 0.7, 0.4, 1) both;
+}
+
+/* Atril */
+.juegos-root .au-pedestal {
+  position: relative;
+  width: calc(var(--crate) * 1.35);
+  height: 26px;
+  margin-top: -2px;
+}
+.juegos-root .au-pedestal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border-top: 3px solid var(--brass);
+  background: linear-gradient(180deg, #6d5320, #2b1f0a);
+  box-shadow:
+    0 14px 24px rgba(0, 0, 0, 0.6),
+    0 0 30px var(--glow);
+}
+.juegos-root .au-pedestal i {
+  position: absolute;
+  inset: 2px 12% auto;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--tone) 70%, #fff), transparent 70%);
+  opacity: 0.55;
+}
+.juegos-root .au-name {
+  display: grid;
+  justify-items: center;
+  margin: 2px 0 0;
+  text-align: center;
+  font-family: var(--display);
+  font-size: clamp(20px, 2.3vw, 30px);
+  color: var(--tone);
+  text-shadow: 0 0 18px var(--glow);
+}
+.juegos-root .au-name small {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--muted);
+  text-shadow: none;
+}
+.juegos-root .au-mine {
+  margin: 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffd96a, #c8a24b);
+  color: #2a1a00;
+  font-size: 14px;
+  animation: au-pop 0.5s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+
+/* ---------- Lado derecho ---------- */
+.juegos-root .au-side {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  min-height: 0;
+}
+.juegos-root .au-room,
+.juegos-root .au-chart {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: clamp(10px, 1.4vw, 16px);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(241, 233, 214, 0.1);
+}
+.juegos-root .au-room h2,
+.juegos-root .au-chart h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .au-empty {
+  margin: 0;
+  align-self: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Paletas levantadas, una por pujador */
+.juegos-root .au-paddles {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  align-content: flex-end;
+  justify-content: center;
+  gap: 6px 8px;
+  min-height: clamp(88px, 16vh, 130px);
+  padding-top: 12px;
+}
+.juegos-root .au-paddle {
+  --pad: hsl(calc(var(--k) * 52 + 12) 70% 58%);
+  position: relative;
+  width: 30px;
+  height: 52px;
+  transform-origin: 50% 100%;
+  animation: au-raise 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+.juegos-root .au-paddle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 5px;
+  height: 22px;
+  translate: -50% 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6b4a2a, #a8794a);
+}
+.juegos-root .au-paddle i {
+  position: absolute;
+  inset: 0 0 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pad) 85%, #fff), var(--pad));
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  color: #2a1a00;
+  animation: au-wave 2.4s calc(var(--k) * 0.3s) ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+.juegos-root .au-paddle.is-me {
+  width: 38px;
+  height: 62px;
+}
+.juegos-root .au-paddle.is-me i {
+  --pad: var(--bolt);
+  background: linear-gradient(160deg, #fff3b0, #ffc93c);
+  box-shadow: 0 0 16px rgba(255, 210, 63, 0.8);
+}
+.juegos-root .au-plus {
+  position: absolute;
+  top: 0;
+  right: 10%;
+  font-family: var(--display);
+  font-size: 30px;
+  color: var(--bolt);
+  text-shadow: 0 0 14px rgba(255, 210, 63, 0.9);
+  pointer-events: none;
+  animation: au-plus 1.4s ease-out forwards;
+}
+.juegos-root .au-count {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ivory);
+}
+.juegos-root .au-count b {
+  font-family: var(--display);
+  font-size: 28px;
+  color: var(--tone);
+}
+.juegos-root .au-count small {
+  color: var(--muted);
+}
+
+/* Medidor de tensión: crece con los pujadores y los segundos */
+.juegos-root .au-heat {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.juegos-root .au-heat b {
+  color: hsl(calc(130 - var(--heat) * 130) 90% 62%);
+}
+.juegos-root .au-heat__bar {
+  position: relative;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.juegos-root .au-heat__bar i {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3fcf8e, #ffd23f 55%, #ff4a3d);
+  background-size: 100% 100%;
+  transform: scaleX(var(--heat));
+  transform-origin: left;
+  transition: transform 1s ease-out;
+}
+.juegos-root .au-heat.is-max .au-heat__bar i {
+  animation: au-glow 0.8s ease-in-out infinite;
+}
+
+/* ---------- Gráfica de pujas ---------- */
+.juegos-root .au-verdict {
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-family: var(--display);
+  font-size: clamp(16px, 1.7vw, 21px);
+  animation: au-pop 0.6s 0.4s cubic-bezier(0.3, 1.8, 0.5, 1) backwards;
+}
+.juegos-root .au-verdict.is-over {
+  background: rgba(194, 51, 44, 0.22);
+  color: #ff9a92;
+}
+.juegos-root .au-verdict.is-under {
+  background: rgba(30, 138, 90, 0.25);
+  color: #8ff0bb;
+}
+.juegos-root .au-rows {
+  --lab: 160px; /* ancho de avatar + nombre, para colocar la línea del valor real */
+  position: relative;
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 16px 0 0;
+  list-style: none;
+}
+.juegos-root .au-rows > li:not(.au-mark) {
+  display: grid;
+  grid-template-columns: 26px calc(var(--lab) - 34px) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: clamp(38px, 6vh, 50px);
+  border-radius: 8px;
+}
+.juegos-root .au-rows > li.is-me {
+  background: rgba(200, 162, 75, 0.12);
+  outline: 1px solid rgba(200, 162, 75, 0.5);
+}
+.juegos-root .au-who {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.juegos-root .au-who em {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--brass);
+}
+.juegos-root .is-top .au-who em {
+  color: var(--bolt);
+}
+.juegos-root .au-track {
+  display: block;
+  height: clamp(22px, 3.4vh, 30px);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.juegos-root .au-bar {
+  display: block;
+  width: calc(var(--w) * 100%);
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #4f6f86, #7fa3bd);
+  transform-origin: left;
+  animation: au-bar 0.9s calc(0.7s + var(--i) * 0.14s) cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+.juegos-root .au-rows > li.is-under .au-bar {
+  background: linear-gradient(90deg, #1e8a5a, #52c98f);
+}
+.juegos-root .au-rows > li.is-over .au-bar {
+  background: linear-gradient(90deg, #a8332c, #e8665c);
+}
+.juegos-root .au-rows > li.is-top .au-bar {
+  background: linear-gradient(90deg, #c8921f, #ffd23f 70%, #fff1a8);
+  box-shadow: 0 0 16px rgba(255, 210, 63, 0.7);
+}
+/* Línea del valor real de la caja */
+.juegos-root .au-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--lab) + (100% - var(--lab)) * var(--x));
+  width: 0;
+  border-left: 2px dashed var(--ivory);
+  pointer-events: none;
+  animation: au-fade-in 0.6s 0.5s backwards;
+}
+.juegos-root .au-mark span {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  translate: -50% -100%;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--ivory);
+  color: #1a1226;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.juegos-root .au-more {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- Panel ---------- */
+.juegos-root .au-amount {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(30px, 3.2vw, 42px);
+  line-height: 1.05;
+  color: var(--bolt);
+  text-shadow: 0 0 18px rgba(255, 210, 63, 0.35);
+  animation: au-pop 0.35s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+.juegos-root .au-amount small {
+  font-family: var(--sans);
+  font-size: 13px;
+  text-shadow: none;
+  color: var(--muted);
+}
+.juegos-root .au-raises {
+  gap: 8px;
+}
+.juegos-root .au-raises button {
+  min-height: 42px;
+  border: 1px solid rgba(200, 162, 75, 0.5);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(200, 162, 75, 0.28), rgba(200, 162, 75, 0.08));
+  font-weight: 800;
+  color: var(--bolt);
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s;
+}
+.juegos-root .au-raises button:not(:disabled):hover {
+  box-shadow: 0 0 14px rgba(255, 210, 63, 0.4);
+}
+.juegos-root .au-raises button:not(:disabled):active {
+  transform: scale(0.93);
+}
+.juegos-root .au-reset {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 8px;
+}
+.juegos-root .au-actions .primary {
+  position: relative;
+  min-height: 60px;
+  overflow: hidden;
+  border-radius: 16px;
+  font-family: var(--display);
+  font-size: 20px;
+}
+.juegos-root .au-actions .primary:not(:disabled) {
+  animation: s3-glow 1.6s ease-in-out infinite;
+}
+.juegos-root .au-actions .primary:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  translate: -120% 0;
+  animation: au-shine 2.8s ease-in-out infinite;
+}
+
+/* Últimas subastas: pares de columnas (puja ganadora y valor real) */
+.juegos-root .au-hist {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 100px;
+  justify-content: center;
+  padding: 8px 6px 0;
+  border-bottom: 1px solid rgba(241, 233, 214, 0.2);
+}
+.juegos-root .au-hist > div {
+  display: grid;
+  flex: 1 1 0;
+  max-width: 54px;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  height: 100%;
+  min-width: 0;
+}
+.juegos-root .au-hist__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+}
+.juegos-root .au-hist__bars i {
+  flex: 1;
+  height: max(4px, calc(var(--h) * 100%));
+  border-radius: 4px 4px 0 0;
+  transform-origin: bottom;
+  animation: au-grow 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+.juegos-root .au-hist .is-bid,
+.juegos-root .au-legend .is-bid::before {
+  background: var(--ivory);
+  opacity: 0.75;
+}
+.juegos-root .au-hist .is-win .is-real,
+.juegos-root .au-legend .is-real::before {
+  background: #3fcf8e;
+}
+.juegos-root .au-hist .is-lose .is-real {
+  background: #ff5a4d;
+}
+.juegos-root .au-hist small {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.juegos-root .au-legend {
+  display: flex;
+  gap: 14px;
+  margin: 6px 0 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.juegos-root .au-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border-radius: 2px;
+}
+
+/* ---------- Animaciones ---------- */
+@keyframes au-spot {
+  to {
+    opacity: 1;
+    scale: 1.06 1;
+  }
+}
+@keyframes au-float {
+  50% {
+    translate: 0 -8px;
+  }
+}
+@keyframes au-shake {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  25% {
+    translate: calc(var(--amp) * -5px) calc(var(--amp) * 2px);
+    rotate: calc(var(--amp) * -2.5deg);
+  }
+  75% {
+    translate: calc(var(--amp) * 5px) calc(var(--amp) * -2px);
+    rotate: calc(var(--amp) * 2.5deg);
+  }
+}
+@keyframes au-spark {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    translate: 0 -170px;
+    opacity: 0;
+  }
+}
+@keyframes au-hot {
+  50% {
+    scale: 1.1;
+    box-shadow: 0 0 36px rgba(255, 74, 61, 0.8);
+  }
+}
+@keyframes au-tick {
+  from {
+    scale: 1.35;
+  }
+}
+@keyframes au-lid {
+  from {
+    transform: none;
+  }
+  35% {
+    transform: translate(-3%, -40%) rotate(-12deg);
+  }
+}
+@keyframes au-prize {
+  0% {
+    translate: -50% 120%;
+    scale: 0.2;
+    opacity: 0;
+  }
+  45% {
+    translate: -50% -70%;
+    scale: 1.35;
+    opacity: 1;
+  }
+  65% {
+    translate: -50% -10%;
+    scale: 0.95;
+  }
+  82% {
+    translate: -50% -30%;
+    scale: 1.05;
+  }
+  100% {
+    translate: -50% 0;
+    scale: 1;
+  }
+}
+@keyframes au-prize-sad {
+  0% {
+    translate: -50% 120%;
+    scale: 0.4;
+    opacity: 0;
+  }
+  50% {
+    translate: -50% -20%;
+    scale: 1;
+    opacity: 1;
+  }
+  100% {
+    translate: -50% 25%;
+    scale: 0.9;
+    rotate: -8deg;
+  }
+}
+@keyframes au-flash {
+  0% {
+    opacity: 0;
+    scale: 0.2;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+@keyframes au-confetti {
+  0% {
+    opacity: 1;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  45% {
+    opacity: 1;
+    translate: calc(var(--dx) * 0.8) var(--dy);
+  }
+  100% {
+    opacity: 0;
+    translate: var(--dx) 150px;
+    rotate: var(--r);
+  }
+}
+@keyframes au-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes au-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes au-raise {
+  from {
+    translate: 0 70px;
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+@keyframes au-wave {
+  50% {
+    rotate: 7deg;
+  }
+}
+@keyframes au-plus {
+  0% {
+    translate: 0 14px;
+    scale: 0.4;
+    opacity: 0;
+  }
+  25% {
+    translate: 0 -8px;
+    scale: 1.4;
+    opacity: 1;
+  }
+  100% {
+    translate: 0 -42px;
+    scale: 1;
+    opacity: 0;
+  }
+}
+@keyframes au-pop {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+@keyframes au-glow {
+  50% {
+    filter: brightness(1.4) saturate(1.3);
+  }
+}
+@keyframes au-bar {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes au-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes au-shine {
+  0%,
+  55% {
+    translate: -120% 0;
+  }
+  100% {
+    translate: 120% 0;
+  }
+}
+
+/* ---------- Pantallas estrechas ---------- */
+@media (max-width: 1100px) {
+  .juegos-root .au-scene {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: min-content;
+    overflow: visible;
+  }
+}
+@media (max-width: 860px) {
+  .juegos-root .au-scene {
+    flex: none;
+    --crate: 140px;
+  }
+  .juegos-root .au-stage {
+    min-height: 360px;
+  }
+}
+@media (max-width: 480px) {
+  .juegos-root .au-rows {
+    --lab: 128px;
+  }
+  .juegos-root .au-who {
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .au-spot,
+  .juegos-root .au-crate,
+  .juegos-root .au-crate.is-shaking,
+  .juegos-root .au-clock.is-hot,
+  .juegos-root .au-clock.is-hot span,
+  .juegos-root .au-sparks i,
+  .juegos-root .au-rays,
+  .juegos-root .au-paddle,
+  .juegos-root .au-paddle i,
+  .juegos-root .au-actions .primary:not(:disabled),
+  .juegos-root .au-actions .primary:not(:disabled)::after,
+  .juegos-root .au-heat__bar i {
+    animation: none;
+  }
+  .juegos-root .au-confetti,
+  .juegos-root .au-flash,
+  .juegos-root .au-plus {
+    display: none;
+  }
+  .juegos-root .au-lid,
+  .juegos-root .au-prize,
+  .juegos-root .au-bar,
+  .juegos-root .au-hist__bars i,
+  .juegos-root .au-verdict,
+  .juegos-root .au-mark,
+  .juegos-root .au-mine,
+  .juegos-root .au-amount {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+}
