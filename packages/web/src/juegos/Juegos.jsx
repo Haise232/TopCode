@@ -150,6 +150,25 @@ const SEASON3 = [
   },
 ]
 
+// Grupo de WhatsApp de Juegos: avisos de los Admin Abuse y de cuánto lleva el bote del Bingo.
+const WHATSAPP_URL = 'https://chat.whatsapp.com/KLOlli4i1X94Mn6wJFFbwH'
+const WHATSAPP_SEEN_KEY = 'juegos-whatsapp-visto' // quien cierra el aviso ya no lo vuelve a ver (el botón sigue arriba)
+const whatsappSeen = () => {
+  try {
+    return localStorage.getItem(WHATSAPP_SEEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="hub-wa__icon">
+      <path d="M12 2.2A9.8 9.8 0 0 0 3.6 17l-1.4 4.8 5-1.3A9.8 9.8 0 1 0 12 2.2Zm0 17.8a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20Zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.7-1.2.1-.1 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.2.2-.6.2-1 .1-1.2-.1-.1-.2-.2-.4-.3Z" />
+    </svg>
+  )
+}
+
 const SCORES_MS = 30000
 // Asientos de las mesas públicas (igual que en el servidor) para dibujar la mesa antes de que llegue el lobby.
 const SEATS = { blackjack: 7, poker: 6 }
@@ -441,6 +460,7 @@ export function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome,
   const { me, lobby, conn, scores, send } = juegos
   const master = useAuth().usuario?.es_superadmin === true
   const [bank, setBank] = useState(false)
+  const [waClosed, setWaClosed] = useState(whatsappSeen)
   const [tour, setTour] = useState(false)
   const connected = conn === 'open' && Boolean(me)
   const balance = useCountUp(me?.balance ?? 0, 900)
@@ -515,6 +535,10 @@ export function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome,
                 <em>Banca</em>
               </button>
             )}
+            <a className="hub-btn hub-wa" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" title="Grupo de WhatsApp de Juegos">
+              <WhatsAppIcon />
+              <em>WhatsApp</em>
+            </a>
             <button type="button" className="hub-btn hub-btn--ghost" onClick={() => setTour(true)}>
               Tutorial
             </button>
@@ -524,6 +548,36 @@ export function GameSelector({ juegos, onPick, onJoin, onScore, onGacha, onHome,
           </div>
         </div>
       </header>
+
+      {!waClosed && (
+        <aside className="hub-wa-banner" aria-label="Grupo de WhatsApp de Juegos">
+          <span className="hub-wa-banner__icon">
+            <WhatsAppIcon />
+          </span>
+          <p>
+            <b>¿Quieres enterarte antes que nadie de los Admin Abuse y de cuánto lleva el bote del Bingo?</b>
+            <span>Únete al grupo de WhatsApp de Juegos: avisamos de cada Admin Abuse y de cuándo se abre el bote.</span>
+          </p>
+          <a className="hub-wa-banner__go" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">
+            Unirme al grupo
+          </a>
+          <button
+            type="button"
+            className="hub-wa-banner__close"
+            aria-label="Cerrar el aviso del grupo de WhatsApp"
+            onClick={() => {
+              setWaClosed(true)
+              try {
+                localStorage.setItem(WHATSAPP_SEEN_KEY, '1')
+              } catch {
+                // sin almacenamiento: el aviso volverá a salir al recargar
+              }
+            }}
+          >
+            ✕
+          </button>
+        </aside>
+      )}
 
       <section aria-labelledby="s3-title" data-tour="season3">
         <h2 id="s3-title" className="hub-title">

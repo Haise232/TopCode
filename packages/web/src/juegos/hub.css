@@ -2087,3 +2087,125 @@
     opacity: 0;
   }
 }
+
+/* ---------- Grupo de WhatsApp: botón de la cabecera y aviso que se puede cerrar ---------- */
+.juegos-root .hub-wa {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: rgba(37, 211, 102, 0.6);
+  background: linear-gradient(180deg, #2fe07a, #1aa851);
+  color: #062b14;
+  text-decoration: none;
+}
+.juegos-root .hub-wa em {
+  font-style: normal;
+  font-weight: 800;
+}
+.juegos-root .hub-wa:hover {
+  filter: brightness(1.08);
+}
+.juegos-root .hub-wa__icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  flex: none;
+}
+.juegos-root .hub-wa-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 22px;
+  padding: 14px 48px 14px 16px;
+  border: 1px solid rgba(37, 211, 102, 0.45);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 50%, rgba(37, 211, 102, 0.25), transparent 45%),
+    linear-gradient(90deg, rgba(10, 40, 26, 0.92), rgba(12, 22, 34, 0.92));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: hub-wa-in 0.5s ease-out both;
+}
+.juegos-root .hub-wa-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2fe07a, #1aa851);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.18);
+  animation: hub-wa-pulse 2.4s ease-in-out infinite;
+}
+.juegos-root .hub-wa-banner__icon .hub-wa__icon {
+  width: 26px;
+  height: 26px;
+}
+.juegos-root .hub-wa-banner p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.juegos-root .hub-wa-banner b {
+  font-size: 15px;
+  color: var(--ivory);
+}
+.juegos-root .hub-wa-banner span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.juegos-root .hub-wa-banner__go {
+  padding: 11px 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2fe07a, #1aa851);
+  color: #062b14;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
+}
+.juegos-root .hub-wa-banner__go:hover {
+  filter: brightness(1.08);
+}
+.juegos-root .hub-wa-banner__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  cursor: pointer;
+}
+.juegos-root .hub-wa-banner__close:hover {
+  color: var(--ivory);
+}
+@keyframes hub-wa-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes hub-wa-pulse {
+  50% {
+    box-shadow: 0 0 0 9px rgba(37, 211, 102, 0.05);
+  }
+}
+@media (max-width: 640px) {
+  .juegos-root .hub-wa-banner {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .juegos-root .hub-wa-banner__go {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .juegos-root .hub-wa-banner,
+  .juegos-root .hub-wa-banner__icon {
+    animation: none;
+  }
+}
