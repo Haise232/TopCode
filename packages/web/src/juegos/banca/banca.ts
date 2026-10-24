@@ -45,10 +45,19 @@ export interface Bote {
   ahora: number
 }
 
+// Lo que se anuncia a todos mientras el bote está abierto (null: cerrado).
+export interface BoteAbierto {
+  desde: number
+  hasta: number | null // null: sin límite
+  una: boolean
+  pot: number
+}
+
 export interface BancaReply {
   banca?: {
     avisos?: Aviso[]
     abuso?: Abuse | null
+    boteAbierto?: BoteAbierto | null
     master?: boolean
     ahora?: number
     gente?: Jugador[]

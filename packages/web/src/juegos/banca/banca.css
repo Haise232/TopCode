@@ -165,6 +165,14 @@
   --gold: #ffd23f;
   background: radial-gradient(circle at 50% 50%, #2a0640, #07020b 70%);
 }
+.banca-abuse--bote {
+  --hot: #ffb52e;
+  --gold: #fff1a8;
+  background: radial-gradient(circle at 50% 50%, #3d2a05, #0b0801 70%);
+}
+.banca-abuse--bote .banca-abuse__badge b {
+  font-size: clamp(40px, min(10vw, 13vh), 130px);
+}
 .banca-abuse__rays {
   position: absolute;
   inset: -50%;
@@ -431,6 +439,20 @@
   animation: banca-slide 4s linear infinite;
   max-width: calc(100vw - 32px);
   white-space: nowrap;
+}
+.banca-pill--bote {
+  color: #2a1a00;
+  background: linear-gradient(90deg, #c98a0b, #ffd23f, #c98a0b);
+  background-size: 200% 100%;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.5),
+    0 6px 24px rgba(255, 181, 46, 0.45);
+}
+.banca-pill--bote .banca-pill__time {
+  color: #5a3a00;
+}
+.banca-pill--second {
+  top: 52px;
 }
 .banca-pill b {
   letter-spacing: 0.08em;

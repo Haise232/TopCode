@@ -128,7 +128,7 @@ export function createBingo({ db, now, secret, move, abuse }) {
   // Lo que la pantalla enseña del bote: si ahora está abierto y hasta cuándo.
   const potState = (control, t) => {
     const open = bingo.openingAt(control, t)
-    return { abierto: Boolean(open), hasta: open?.hasta ?? null, una: Boolean(open?.una) }
+    return { abierto: Boolean(open), desde: open?.desde ?? null, hasta: open?.hasta ?? null, una: Boolean(open?.una) }
   }
 
   // Paga las partidas cuya bola del bingo ya salió. Barato: en cada instancia mira la base de datos como mucho una vez

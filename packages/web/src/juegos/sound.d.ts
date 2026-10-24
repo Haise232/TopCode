@@ -2,3 +2,4 @@
 export function isMuted(): boolean
 export function playSiren(): void
 export function playWin(big?: boolean): void
+export function playCash(mult?: number): void

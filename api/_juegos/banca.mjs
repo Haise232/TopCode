@@ -2,7 +2,7 @@
 // la banca y activa el Admin Abuse. Todo lo comprueba el servidor: el botón del navegador solo lo enseña.
 //
 // Mensajes (msg.t):
-//   banca         cualquiera: tus avisos sin ver, el Admin Abuse activo y si eres el master
+//   banca         cualquiera: tus avisos sin ver, el Admin Abuse activo, si el bote del bingo está abierto y si eres el master
 //   banca_visto   cualquiera: { hasta } marca vistos tus avisos hasta ese id
 //   banca_gente   master: jugadores a los que dar dinero o escribir
 //   banca_dar     master: { para: id | 'todos', importe, texto? }
@@ -23,6 +23,7 @@ const MAX_GIFT = 1_000_000
 const MAX_TEXT = 300
 const ABUSE_TTL_MS = 3000 // cada instancia de la función relee el Admin Abuse como mucho cada este rato
 const MASTER_TTL_MS = 60000
+const POT_TTL_MS = 3000 // como el Admin Abuse: el estado del bote se relee como mucho cada este rato
 
 // ¿Afecta el Admin Abuse a este juego? (póker, blackjack, roulette, crash, race, plinko, frog, dungeon, duel, gacha, bingo)
 export const abuseOn = (abuse, game) => Boolean(abuse) && (abuse.ambito === 'todo' || game === 'poker')
@@ -49,6 +50,18 @@ const cleanText = (text) =>
 
 export function createBanca({ db, ping, now, credit, pot }) {
   let abuseCache = { at: -Infinity, value: null }
+  let potCache = { at: -Infinity, value: null }
+
+  // El bote del bingo tal y como lo anuncia la banca a todos: abierto o no, desde y hasta cuándo y lo que hay en la jaula.
+  async function potPublic() {
+    const t = now()
+    if (t - potCache.at > POT_TTL_MS) {
+      const { abierto, desde, hasta, una, pot: amount } = await pot().potAdmin()
+      potCache = { at: t, value: abierto ? { desde, hasta, una, pot: amount } : null }
+    }
+    const value = potCache.value
+    return value && (value.hasta === null || value.hasta > t) ? value : null
+  }
   const masters = new Map()
 
   // El Admin Abuse activo (o null), con una caché corta: lo miran todas las jugadas.
@@ -80,10 +93,11 @@ export function createBanca({ db, ping, now, credit, pot }) {
 
   // Avisos sin ver: los tuyos y los de todos, de los últimos 2 días, como mucho 10.
   async function status(user) {
-    const [vistos, ab, master] = await Promise.all([
+    const [vistos, ab, master, bote] = await Promise.all([
       db.query(`select ultimo from public.juegos_avisos_vistos where usuario_id = $1`, [user.id]),
       abuse(),
       isMaster(user.id),
+      potPublic(),
     ])
     const after = Number(vistos.rows[0]?.ultimo ?? 0)
     const { rows } = await db.query(
@@ -96,6 +110,7 @@ export function createBanca({ db, ping, now, credit, pot }) {
       banca: {
         avisos: rows.map((r) => ({ id: Number(r.id), tipo: r.tipo, importe: r.importe === null ? null : Number(r.importe), texto: r.texto, todos: r.todos })),
         abuso: ab,
+        boteAbierto: bote,
         master,
         ahora: now(),
       },
@@ -202,7 +217,8 @@ export function createBanca({ db, ping, now, credit, pot }) {
     if (msg.cerrar === true || 'minutos' in msg) {
       const state = await pot().setPot({ cerrar: msg.cerrar === true, minutos: msg.minutos, una: msg.una })
       if (!state) return { error: 'BAD_MESSAGE' }
-      await ping('juegos-lobby')
+      potCache = { at: -Infinity, value: null }
+      await Promise.all([ping(BANK_TOPIC), ping('juegos-lobby')])
     }
     return { banca: { bote: await pot().potAdmin() } }
   }
