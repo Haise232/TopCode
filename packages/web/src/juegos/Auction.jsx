@@ -90,16 +90,24 @@ function Auction({ onExit, juegos }) {
     seen.current = round
     playReveal()
     if (!result.winner?.me) return
-    const net = result.amount - result.winner.bid
+    // Con el Admin Abuse, lo que puso la banca viene en tu última subasta.
+    const mine = live?.last?.round === round ? live.last : null
+    const extra = mine?.abuse ?? 0
+    const net = result.amount - result.winner.bid + extra
     if (net > 0) {
       playCash(5)
       playWin(PRIZES[result.prize].mult >= 4)
       buzz([60, 40, 120])
-      setBurst({ id: round, amount: net, caption: `${PRIZES[result.prize].icon} ${PRIZES[result.prize].name}` })
+      setBurst({
+        id: round,
+        amount: net,
+        caption: `${PRIZES[result.prize].icon} ${PRIZES[result.prize].name}`,
+        tags: extra > 0 ? [`Admin Abuse: +${eur(extra)}`] : [],
+      })
     } else {
       playLose()
     }
-  }, [result, round])
+  }, [result, round, live])
 
   async function bid() {
     if (!bidding || sending || cost > balance) return
@@ -261,7 +269,7 @@ function Auction({ onExit, juegos }) {
         </aside>
       </div>
 
-      {burst && <WinBurst key={burst.id} amount={burst.amount} caption={burst.caption} coins={50} big who={juegos.me?.name} />}
+      {burst && <WinBurst key={burst.id} amount={burst.amount} caption={burst.caption} coins={50} big who={juegos.me?.name} tags={burst.tags} />}
     </main>
   )
 }

@@ -2,11 +2,13 @@
 // Qué cristal aguanta en cada paso sale de HMAC(secreto, ronda), como la ruleta, y el servidor no lo suelta hasta que se
 // acaba el tiempo de elegir ese paso; lo mismo con lo que eligen los demás, para que nadie copie. Si alguien no elige,
 // vale el lado que le toca de HMAC(secreto, ronda, jugador). La partida de cada uno va en juegos_solo (juego «bridge»):
-// { round, week, stake, picks, paid, last }. La entrada sale del saldo al entrar; al acabar de cruzar, la primera
+// { round, week, stake, picks, boost, paid, last } (boost: el Admin Abuse activo al entrar, que se aplica al pagar aunque
+// el evento ya acabara). La entrada sale del saldo al entrar; al acabar de cruzar, la primera
 // petición reparte el bote (settleDue). La parte de la casa va a la jaula del bingo y la partida queda en juegos_rondas.
 //   bridge   cualquiera: a «sync», «join» (stake) o «pick» (step, side: 'L' | 'R')
 import * as bridge from '../../packages/web/src/juegos/bridge.js'
 import { hmacStream } from './solo.mjs'
+import { abuseExtra, abuseOn } from './banca.mjs'
 import { weekOf } from './engine/week.mjs'
 
 const GRACE_MS = 500 // lo que se admite tarde una entrada o una elección que salió a tiempo del navegador
@@ -47,7 +49,7 @@ const shownSteps = (round, t) => {
 }
 const payAt = (round) => bridge.crossEnd(round) + SHOW_PAD_MS
 
-export function createBridge({ db, now, secret, move, feed }) {
+export function createBridge({ db, now, secret, move, feed, abuse }) {
   let nextCheck = 0
 
   const rowsOf = async (q, round, lock = false) =>
@@ -85,15 +87,26 @@ export function createBridge({ db, now, secret, move, feed }) {
         reached: bridge.reachedOf(picksOf(secret, round, r.usuario_id, r.estado.picks), safe),
       }))
       const out = bridge.settle(players)
+      // Admin Abuse de cada uno (el de cuando entró): la banca multiplica lo ganado o devuelve lo perdido.
+      const extras = {}
+      for (const r of rows) {
+        const boost = r.estado.boost ?? null
+        const p = players.find((x) => x.owner === r.usuario_id)
+        if (boost) extras[p.owner] = abuseExtra({ modo: boost, ambito: 'todo' }, 'bridge', (out.prizes[p.owner] ?? 0) - p.stake)
+      }
+      const given = Object.values(extras).reduce((sum, e) => sum + e, 0)
       if (!stale) {
-        const real = Object.fromEntries(Object.entries(out.prizes).filter(([, d]) => d > 0))
+        const real = Object.fromEntries(
+          players.map((p) => [p.owner, (out.prizes[p.owner] ?? 0) + (extras[p.owner] ?? 0)]).filter(([, d]) => d > 0),
+        )
         if (Object.keys(real).length) await move(q, real)
-        if (out.house > 0) await feed(q, out.house)
+        if (out.house - given > 0) await feed(q, out.house - given)
       }
       for (const r of rows) {
         const p = players.find((x) => x.owner === r.usuario_id)
         const payout = out.prizes[p.owner] ?? 0
-        const last = { round, stake: p.stake, reached: p.reached, won: out.winners.includes(p.owner), refund: out.refund, payout, net: payout - p.stake }
+        const bonus = extras[p.owner] ?? 0
+        const last = { round, stake: p.stake, reached: p.reached, won: out.winners.includes(p.owner), refund: out.refund, payout, abuse: bonus, boost: r.estado.boost ?? null, net: payout + bonus - p.stake }
         await q(`update public.juegos_solo set estado = $3, actualizado = now() where usuario_id = $1 and juego = $2`, [r.usuario_id, 'bridge', { ...r.estado, paid: true, last }])
       }
       const entry = {
@@ -122,6 +135,8 @@ export function createBridge({ db, now, secret, move, feed }) {
     const { round, offset } = bridge.phaseAt(t)
     if (offset >= bridge.JOIN_MS + GRACE_MS) return 'BRIDGE_CLOSED'
     const week = weekOf(t).key
+    const ab = await abuse()
+    const boost = abuseOn(ab, 'bridge') ? ab.modo : null
     return db.tx(async (q) => {
       const saved = await savedOf(q, user.id, true)
       if (saved && saved.paid === false && saved.round !== round) return 'BUSY'
@@ -130,7 +145,7 @@ export function createBridge({ db, now, secret, move, feed }) {
       await q(
         `insert into public.juegos_solo (usuario_id, juego, estado) values ($1, 'bridge', $2)
          on conflict (usuario_id, juego) do update set estado = excluded.estado, actualizado = now()`,
-        [user.id, { round, week, stake, picks: Array(bridge.STEPS).fill(null), paid: false, last: saved?.last ?? null }],
+        [user.id, { round, week, stake, picks: Array(bridge.STEPS).fill(null), boost, paid: false, last: saved?.last ?? null }],
       )
       return null
     })

@@ -25,7 +25,8 @@ const ABUSE_TTL_MS = 3000 // cada instancia de la función relee el Admin Abuse 
 const MASTER_TTL_MS = 60000
 const POT_TTL_MS = 3000 // como el Admin Abuse: el estado del bote se relee como mucho cada este rato
 
-// ¿Afecta el Admin Abuse a este juego? (póker, blackjack, roulette, crash, race, plinko, frog, dungeon, duel, gacha, bingo)
+// ¿Afecta el Admin Abuse a este juego? (póker, blackjack, roulette, crash, race, plinko, frog, dungeon, duel, gacha, bingo,
+// tower, heist, auction, bridge)
 export const abuseOn = (abuse, game) => Boolean(abuse) && (abuse.ambito === 'todo' || game === 'poker')
 
 // Lo que pone la banca encima de una jugada que acaba con `net` (ganancia neta; negativa si pierdes).

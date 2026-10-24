@@ -1,12 +1,14 @@
 // Subasta a ciegas en vivo: una caja para todos cada auction.ROUND_MS (reglas en packages/web/src/juegos/auction.js).
 // La caja (tipo y contenido) sale de HMAC(secreto, ronda), como la ruleta: el tipo se enseña desde el principio y el
 // contenido no se suelta hasta que se cierran las pujas. Las pujas de cada uno van en juegos_solo (juego «auction»):
-// { round, week, bid, at, paid, last }; la puja sale del saldo al hacerla y al cerrar se devuelve a quien no gana.
+// { round, week, bid, at, boost, paid, last }; la puja sale del saldo al hacerla y al cerrar se devuelve a quien no gana.
+// boost: el Admin Abuse activo al pujar ('x2' | 'x3' | 'gratis' o null); se aplica al pagar aunque el evento ya acabara.
 // Se paga sin temporizador: la primera petición que llega tras el cierre reparte (settleDue). Lo que gana la casa (la puja
 // ganadora menos lo que llevaba la caja) va a la jaula del bingo. Las últimas subastas quedan en juegos_rondas.
 //   auction   cualquiera: a «sync» o «bid» (amount: tu puja total en la ronda en curso; solo se puede subir)
 import * as auction from '../../packages/web/src/juegos/auction.js'
 import { hmacStream, uniform } from './solo.mjs'
+import { abuseExtra, abuseOn } from './banca.mjs'
 import { weekOf } from './engine/week.mjs'
 
 const GRACE_MS = 600 // pujas que salieron del navegador justo antes del cierre y llegan un poco tarde
@@ -32,7 +34,7 @@ export function boxOf(secret, round) {
 
 const revealAt = (round) => round * auction.ROUND_MS + REVEAL_MS
 
-export function createAuction({ db, now, secret, move, feed }) {
+export function createAuction({ db, now, secret, move, feed, abuse }) {
   let nextCheck = 0
 
   const bidsOf = async (q, round, lock = false) =>
@@ -67,17 +69,21 @@ export function createAuction({ db, now, secret, move, feed }) {
       const bids = rows.map((r) => ({ owner: r.usuario_id, name: r.nombre, avatar: r.avatar, amount: Number(r.estado.bid), at: Number(r.estado.at) }))
       const win = auction.winnerOf(bids)
       const prize = auction.prizeAmount(box.tier, box.prize)
+      // Admin Abuse de quien gana: la banca multiplica lo ganado o le devuelve lo que pagó de más.
+      const boost = rows.find((r) => r.usuario_id === win.owner)?.estado.boost ?? null
+      const extra = boost ? abuseExtra({ modo: boost, ambito: 'todo' }, 'auction', prize - win.amount) : 0
       const deltas = {}
       if (!stale) {
-        for (const b of bids) deltas[b.owner] = b === win ? prize : b.amount
+        for (const b of bids) deltas[b.owner] = b === win ? prize + extra : b.amount
         const real = Object.fromEntries(Object.entries(deltas).filter(([, d]) => d > 0))
         if (Object.keys(real).length) await move(q, real)
-        if (win.amount > prize) await feed(q, win.amount - prize)
+        if (win.amount - prize - extra > 0) await feed(q, win.amount - prize - extra)
       }
       for (const r of rows) {
         const mine = bids.find((b) => b.owner === r.usuario_id)
         const won = mine === win
-        const last = { round, tier: box.tier, prize: box.prize, bid: mine.amount, won, payout: won ? prize : mine.amount, net: won ? prize - mine.amount : 0 }
+        const bonus = won ? extra : 0
+        const last = { round, tier: box.tier, prize: box.prize, bid: mine.amount, won, payout: won ? prize : mine.amount, abuse: bonus, boost: won ? boost : null, net: won ? prize - mine.amount + bonus : 0 }
         await q(`update public.juegos_solo set estado = $3, actualizado = now() where usuario_id = $1 and juego = $2`, [r.usuario_id, 'auction', { ...r.estado, paid: true, last }])
       }
       const entry = {
@@ -111,6 +117,8 @@ export function createAuction({ db, now, secret, move, feed }) {
     const box = boxOf(secret, round)
     if (!auction.validBid(box.tier, amount)) return Number.isInteger(amount) ? 'AUCTION_LOW' : 'BAD_MESSAGE'
     const week = weekOf(t).key
+    const ab = await abuse()
+    const boost = abuseOn(ab, 'auction') ? ab.modo : null
     return db.tx(async (q) => {
       const saved = await savedOf(q, user.id, true)
       if (saved && saved.paid === false && saved.round !== round) return 'BUSY'
@@ -120,7 +128,7 @@ export function createAuction({ db, now, secret, move, feed }) {
       await q(
         `insert into public.juegos_solo (usuario_id, juego, estado) values ($1, 'auction', $2)
          on conflict (usuario_id, juego) do update set estado = excluded.estado, actualizado = now()`,
-        [user.id, { round, week, bid: amount, at: before ? Number(saved.at) : t, paid: false, last: saved?.last ?? null }],
+        [user.id, { round, week, bid: amount, at: before ? Number(saved.at) : t, boost: boost ?? (before ? (saved.boost ?? null) : null), paid: false, last: saved?.last ?? null }],
       )
       return null
     })

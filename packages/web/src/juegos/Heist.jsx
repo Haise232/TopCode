@@ -42,6 +42,7 @@ function Heist({ onExit, juegos }) {
   const [history, setHistory] = useState([])
   const [ranking, setRanking] = useState([])
   const [burst, setBurst] = useState(null)
+  const [bank, setBank] = useState(null) // { round, extra, modo }: lo que puso el Admin Abuse en el último golpe
   const [ready, setReady] = useState(false)
   const lock = useRef(false)
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
@@ -97,6 +98,8 @@ function Heist({ onExit, juegos }) {
     setAsking(false)
     const view = body?.solo ?? null
     if (!view) await resync()
+    // Lo que puso la banca (Admin Abuse) en esta jugada.
+    else if (body.abuse) view.abuse = body.abuse
     return view
   }
 
@@ -139,6 +142,7 @@ function Heist({ onExit, juegos }) {
     const view = await act({ a: 'go', route })
     if (!view) return
     if (view.ev === 'caught') {
+      if (view.abuse) setBank({ round: view.last.round, ...view.abuse })
       setFlash('caught')
       if (!isMuted()) playSiren()
       buzz([80, 60, 200])
@@ -156,7 +160,7 @@ function Heist({ onExit, juegos }) {
     if (view.ev === 'escape') {
       record(view.last)
       setBalance(view.balance)
-      finish(view.last)
+      finish(view.last, view.abuse)
     }
   }
 
@@ -167,15 +171,16 @@ function Heist({ onExit, juegos }) {
     apply(view)
     record(view.last)
     setBalance(view.balance)
-    finish(view.last)
+    finish(view.last, view.abuse)
   }
 
-  function finish(result) {
+  function finish(result, abuse) {
+    if (abuse) setBank({ round: result.round, ...abuse })
     if (result.net <= 0) return
     playCash(Math.min(10, Math.round(result.mult)))
     playWin(result.mult >= 10)
     buzz([60, 40, 80])
-    setBurst({ id: result.round, amount: result.net, mult: result.mult, floor: result.floor })
+    setBurst({ id: result.round, amount: result.net + (abuse?.extra ?? 0), mult: result.mult, floor: result.floor, extra: abuse?.extra ?? 0 })
   }
 
   const onKeys = useEffectEvent((event) => {
@@ -204,6 +209,7 @@ function Heist({ onExit, juegos }) {
   else if (run && !depth) status = 'Estáis dentro. Elige por dónde bajáis a la planta 1.'
   else if (run) status = `Planta ${depth} limpia: ${eur(worth)} en la bolsa. ¿Bajáis más o huis?`
   else if (last?.net > 0) status = `¡Golpe perfecto! Huisteis con ${fmtMult(last.mult)}: ganaste ${eur(last.net)}.`
+  else if (last && bank?.round === last.round && bank.extra > 0) status = `Os pillaron en la planta ${last.floor}, pero el Admin Abuse te devuelve ${eur(bank.extra)}.`
   else if (last) status = `Os pillaron en la planta ${last.floor}. Perdiste ${eur(last.stake)}.`
   else if (balance < MIN_BET) status = 'Te quedaste sin saldo esta semana. El domingo a las 23:59 vuelves a empezar.'
 
@@ -458,6 +464,7 @@ function Heist({ onExit, juegos }) {
           coins={Math.min(70, 20 + Math.round(burst.mult) * 3)}
           big={burst.mult >= 10}
           who={juegos.me?.name}
+          tags={burst.extra > 0 ? [`Admin Abuse: +${eur(burst.extra)}`] : []}
         />
       )}
     </main>

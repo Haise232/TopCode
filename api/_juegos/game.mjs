@@ -755,8 +755,8 @@ export function createJuegos({ db, ping = async () => {}, now = Date.now, secret
   }
   const duelos = createDuelos({ db, ping, now, randomInt, move, abuse: () => banca.abuse() })
   const bingo = createBingo({ db, now, secret, move, abuse: () => banca.abuse() })
-  const auction = createAuction({ db, now, secret, move, feed: (q, amount) => bingo.feed(q, amount) })
-  const glass = createBridge({ db, now, secret, move, feed: (q, amount) => bingo.feed(q, amount) })
+  const auction = createAuction({ db, now, secret, move, feed: (q, amount) => bingo.feed(q, amount), abuse: () => banca.abuse() })
+  const glass = createBridge({ db, now, secret, move, feed: (q, amount) => bingo.feed(q, amount), abuse: () => banca.abuse() })
 
   // Cobro del gacha dentro de su transacción, con el mismo registro que las jugadas (cuenta en el Score).
   // Devuelve el saldo nuevo, o null si no llega.

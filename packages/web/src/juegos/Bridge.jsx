@@ -113,7 +113,12 @@ function Bridge({ onExit, juegos }) {
       if (myLast?.won && myLast.net > 0) {
         playCash(5)
         playWin(true)
-        setBurst({ id: round, amount: myLast.net, caption: `Cruzaste ${myLast.reached} de ${STEPS} paneles` })
+        setBurst({
+          id: round,
+          amount: myLast.net,
+          caption: `Cruzaste ${myLast.reached} de ${STEPS} paneles`,
+          tags: myLast.abuse > 0 ? [`Admin Abuse: +${eur(myLast.abuse)}`] : [],
+        })
       } else if (myLast && myLast.net < 0) playLose()
     }
   }, [view, round, joined, me, result, myLast])
@@ -331,7 +336,12 @@ function Bridge({ onExit, juegos }) {
           </div>
           {myLast && (
             <p className={`s3__hint ${myLast.net > 0 ? 'is-win' : ''}`}>
-              {myLast.refund ? 'Te devolvieron la entrada.' : myLast.won ? `Ganaste ${eur(myLast.payout)} (llegaste a ${myLast.reached}).` : `Llegaste a ${myLast.reached} de ${STEPS}: perdiste ${eur(myLast.stake)}.`}
+              {myLast.refund
+                ? 'Te devolvieron la entrada.'
+                : myLast.won
+                  ? `Ganaste ${eur(myLast.payout)} (llegaste a ${myLast.reached}).`
+                  : `Llegaste a ${myLast.reached} de ${STEPS}: perdiste ${eur(myLast.stake)}.`}
+              {myLast.abuse > 0 && ` Admin Abuse: +${eur(myLast.abuse)}.`}
             </p>
           )}
           <div className="s3__group">
@@ -363,7 +373,7 @@ function Bridge({ onExit, juegos }) {
         </aside>
       </div>
 
-      {burst && <WinBurst key={burst.id} amount={burst.amount} caption={burst.caption} coins={60} big who={juegos.me?.name} />}
+      {burst && <WinBurst key={burst.id} amount={burst.amount} caption={burst.caption} coins={60} big who={juegos.me?.name} tags={burst.tags} />}
     </main>
   )
 }
