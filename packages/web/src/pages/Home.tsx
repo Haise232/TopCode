@@ -6,7 +6,7 @@ import {
   GraduationCap, Shield, ClipboardCheck, Clock,
   ExternalLink, Github, Palette, School,
   MessageCircle, FolderOpen, BookOpen, Users,
-  BookMarked, HelpCircle, CalendarDays, X,
+  BookMarked, HelpCircle, CalendarDays, X, Dices,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -218,6 +218,13 @@ const ENLACES_INTERES = [
     Icon: School,
     href: 'https://www3.gobiernodecanarias.org/medusa/edublog/cifpvilladeaguimes/',
     color: '#61ae98',
+  },
+  {
+    label: 'GcGames',
+    desc: 'Casino',
+    Icon: Dices,
+    href: 'https://play.gcgames.workers.dev',
+    color: '#ffc83d',
   },
 ]
 
