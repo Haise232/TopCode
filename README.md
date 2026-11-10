@@ -6,7 +6,7 @@
 
 ### La intranet académica para estudiantes de DAM, DAW y ASIR
 
-Actividades, calendario, apuntes, documentación en Markdown, foro de dudas, recursos y chat en tiempo real.
+Actividades, calendario, apuntes, documentación en Markdown, foro de dudas, prompts de IA y chat en tiempo real.
 Todo en un solo sitio, con acceso aprobado por administradores y permisos por clase.
 
 <br />
@@ -96,8 +96,8 @@ Todo en un solo sitio, con acceso aprobado por administradores y permisos por cl
 |---|---------|------|-------------|
 | 📖 | **Docs** | `/docs`, `/docs/:coleccionId/:paginaId` | Biblioteca tipo wiki en Markdown, con colecciones, páginas, importación de ficheros e historial de revisiones |
 | 📝 | **Apuntes** | `/apuntes` | Apuntes compartidos entre alumnos (archivos en Supabase Storage) |
-| 🔗 | **Recursos** | `/recursos` | Enlaces, documentos, vídeos, repositorios y herramientas |
-| 🧭 | **Explorar** | `/explorar` | Vista general: dudas sin resolver, recursos y documentación recientes |
+| ✨ | **Prompts IA** | `/prompts` | Biblioteca compartida de prompts para ChatGPT, Claude y otras IAs: buscar, copiar y abrir directamente |
+| 🧭 | **Explorar** | `/explorar` | Vista general: dudas sin resolver, prompts de IA y documentación recientes |
 
 ### 🛡️ Administración
 
@@ -191,7 +191,7 @@ Medidas verificadas en el SQL y la configuración del repositorio:
 
 | Medida | Detalle | Dónde |
 |--------|---------|-------|
-| **Row Level Security** | Activada en las tablas del esquema (`usuarios`, `notas`, `mensajes`, `mensajes_privados`, `apuntes`, `eventos`, `actividades`, `actividades_estado`, `anuncios`, `horario`, docs, foro y recursos) | `setup.sql` y migraciones |
+| **Row Level Security** | Activada en las tablas del esquema (`usuarios`, `notas`, `mensajes`, `mensajes_privados`, `apuntes`, `eventos`, `actividades`, `actividades_estado`, `anuncios`, `horario`, docs, foro y prompts) | `setup.sql` y migraciones |
 | **Política restrictiva `acceso_aprobado`** | Política `AS RESTRICTIVE` que exige `tc_usuario_acceso_aprobado()`: un usuario pendiente o rechazado no lee ni escribe en las tablas protegidas | `migracion_permisos_por_clase.sql`, `migracion_documentacion.sql` |
 | **Permisos por clase** | Un administrador solo gestiona contenido y usuarios de su propia clase; los anuncios son solo del superadministrador | `migracion_permisos_por_clase.sql` |
 | **Permisos mínimos** | `anon` no puede escribir en `usuarios` y nadie puede borrar perfiles desde el cliente; `email` y `es_superadmin` solo se leen mediante RPC | `migracion_seguridad.sql`, `setup.sql` |
@@ -321,6 +321,7 @@ Los scripts SQL están en `supabase/` y se ejecutan en **Supabase → SQL Editor
    4. `supabase/migracion_documentacion.sql`: biblioteca de documentación en Markdown (requiere las funciones `tc_usuario_*` de la migración de permisos; elimina la antigua sección de Noticias).
    5. `supabase/migracion_foro_recursos.sql`: tablas del foro de dudas (`foro_posts`, `foro_respuestas`) y de recursos compartidos.
    6. `supabase/migracion_seguridad.sql`: protege las columnas sensibles de `usuarios` (rol, superadmin, promedio, clase) y ajusta las políticas de Storage.
+   7. `supabase/migracion_prompts_ia.sql`: elimina la tabla `recursos` y crea `prompts` (zona de prompts de IA).
 3. Bot de Telegram y tipos de evento (opcional, en este orden):
    1. `supabase/migracion_telegram.sql`: tablas `telegram_*` con RLS y códigos de vinculación.
    2. `supabase/migracion_telegram_v2.sql`: RPC `crear_evento_telegram`, límite de intentos y `telegram_username`.

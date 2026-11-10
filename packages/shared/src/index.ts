@@ -15,7 +15,9 @@ export type {
   ActividadEstado,
   Anuncio,
   HorarioClase,
-  Recurso,
+  Prompt,
+  PromptCategoria,
+  PromptModelo,
   ForoPost,
   ForoRespuesta,
 } from './lib/types'
@@ -43,5 +45,6 @@ export { useHomeDatos } from './hooks/useHomeDatos'
 export { useHorario } from './hooks/useHorario'
 export { usePublicMensajes, usePrivateMensajes } from './hooks/useMensajes'
 export { useNotas } from './hooks/useNotas'
-export { useRecursos } from './hooks/useRecursos'
+export { usePrompts } from './hooks/usePrompts'
+export type { PromptInput } from './hooks/usePrompts'
 export { useForoPosts, useForoPost } from './hooks/useForo'

@@ -5,7 +5,7 @@ import {
   RefreshCw, ChevronRight,
   GraduationCap, Shield, ClipboardCheck, Clock,
   ExternalLink, Github, Palette, School,
-  MessageCircle, FolderOpen, BookOpen, Users,
+  MessageCircle, FolderOpen, Users, Sparkles,
   BookMarked, HelpCircle, CalendarDays, X, Dices,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -235,7 +235,7 @@ const ACCESOS_INTERNOS = [
   { label: 'Actividades', desc: 'Tareas',         Icon: ClipboardCheck, to: '/calendar?vista=actividades', color: '#818cf8' },
   { label: 'Calendario',  desc: 'Eventos',        Icon: Calendar,       to: '/calendar',    color: '#22d3ee' },
   { label: 'Foro de dudas', desc: 'Preguntas',     Icon: HelpCircle,     to: '/foro',       color: '#60a5fa' },
-  { label: 'Recursos',    desc: 'Enlaces',        Icon: BookOpen,       to: '/recursos',    color: '#a78bfa' },
+  { label: 'Prompts IA',  desc: 'Para la IA',     Icon: Sparkles,       to: '/prompts',     color: '#a78bfa' },
 ]
 
 // Tarjeta de acceso rápido — navegación interna ("Tu espacio")

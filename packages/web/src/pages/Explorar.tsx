@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowRight, BookMarked, BookOpen, FileText, HelpCircle, Loader2, MessageSquare,
+  ArrowRight, BookMarked, FileText, HelpCircle, Loader2, MessageSquare,
   Search, Sparkles,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -16,12 +16,13 @@ type DocItem = {
   docs_colecciones: { titulo: string } | null
 }
 
-type RecursoItem = {
+type PromptItem = {
   id: string
   titulo: string
   descripcion: string | null
-  materia: string
-  tipo: string
+  contenido: string
+  categoria: string
+  autor: string
   created_at: string
 }
 
@@ -37,11 +38,11 @@ type ForoItem = {
 
 type ExploreData = {
   docs: DocItem[]
-  recursos: RecursoItem[]
+  prompts: PromptItem[]
   dudas: ForoItem[]
 }
 
-const EMPTY_DATA: ExploreData = { docs: [], recursos: [], dudas: [] }
+const EMPTY_DATA: ExploreData = { docs: [], prompts: [], dudas: [] }
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('es', { day: 'numeric', month: 'short' })
@@ -81,19 +82,19 @@ export default function Explorar() {
     async function load() {
       setLoading(true)
       setError(false)
-      const [docs, recursos, dudas] = await Promise.all([
+      const [docs, prompts, dudas] = await Promise.all([
         supabase.from('docs_paginas').select('id, coleccion_id, titulo, updated_at, updated_by_nombre, docs_colecciones(titulo)').order('updated_at', { ascending: false }).limit(3),
-        supabase.from('recursos').select('id, titulo, descripcion, materia, tipo, created_at').order('created_at', { ascending: false }).limit(4),
+        supabase.from('prompts').select('id, titulo, descripcion, contenido, categoria, autor, created_at').order('created_at', { ascending: false }).limit(4),
         supabase.from('foro_posts').select('id, titulo, cuerpo, autor, resuelto, created_at, foro_respuestas(id)').eq('resuelto', false).order('created_at', { ascending: false }).limit(4),
       ])
 
       if (cancelled) return
-      if (docs.error || recursos.error || dudas.error) {
+      if (docs.error || prompts.error || dudas.error) {
         setError(true)
       } else {
         setData({
           docs: (docs.data ?? []) as unknown as DocItem[],
-          recursos: (recursos.data ?? []) as RecursoItem[],
+          prompts: (prompts.data ?? []) as PromptItem[],
           dudas: (dudas.data ?? []) as ForoItem[],
         })
       }
@@ -123,7 +124,7 @@ export default function Explorar() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight text-text-primary">Explorar</h1>
-              <p className="mt-1.5 text-sm text-text-muted">Descubre apuntes, recursos y conversaciones de todos tus compañeros.</p>
+              <p className="mt-1.5 text-sm text-text-muted">Descubre apuntes, prompts de IA y conversaciones de todos tus compañeros.</p>
             </div>
             <div className="relative w-full md:w-72">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -167,17 +168,17 @@ export default function Explorar() {
         </section>
 
         <section className="flex flex-col gap-4">
-          <SectionHeader icon={BookOpen} title="Recursos recientes" action="Ver recursos" onAction={() => navigate('/recursos')} />
-          {data.recursos.length === 0 ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">Todavía no hay recursos compartidos.</div>
+          <SectionHeader icon={Sparkles} title="Prompts IA recientes" action="Ver prompts" onAction={() => navigate('/prompts')} />
+          {data.prompts.length === 0 ? (
+            <div className="rounded-2xl border border-white/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">Todavía no hay prompts compartidos.</div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {data.recursos.map(resource => (
-                <button key={resource.id} onClick={() => navigate('/recursos')} className="group text-left rounded-2xl border border-white/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{resource.materia}</span>
-                  <h3 className="mt-2 font-bold text-sm text-text-primary line-clamp-2 group-hover:text-primary-light">{resource.titulo}</h3>
-                  <p className="mt-2 text-xs text-text-muted line-clamp-2">{resource.descripcion || 'Recurso compartido por la comunidad.'}</p>
-                  <span className="mt-4 block text-[11px] text-text-muted">{resource.tipo} · {formatDate(resource.created_at)}</span>
+              {data.prompts.map(item => (
+                <button key={item.id} onClick={() => navigate('/prompts')} className="group text-left rounded-2xl border border-white/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{item.categoria}</span>
+                  <h3 className="mt-2 font-bold text-sm text-text-primary line-clamp-2 group-hover:text-primary-light">{item.titulo}</h3>
+                  <p className="mt-2 text-xs text-text-muted line-clamp-2">{item.descripcion || item.contenido}</p>
+                  <span className="mt-4 block text-[11px] text-text-muted">{item.autor} · {formatDate(item.created_at)}</span>
                 </button>
               ))}
             </div>

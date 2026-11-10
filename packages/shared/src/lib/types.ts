@@ -123,16 +123,20 @@ export interface HorarioClase {
   created_at: string
 }
 
-export interface Recurso {
+export type PromptCategoria = 'general' | 'codigo' | 'estudio' | 'escritura' | 'depuracion' | 'imagen'
+export type PromptModelo = 'cualquiera' | 'chatgpt' | 'claude' | 'gemini' | 'copilot'
+
+export interface Prompt {
   id: string
   usuario_id: string
   autor: string
   titulo: string
-  url: string
+  contenido: string
   descripcion: string | null
-  materia: string
-  tipo: 'link' | 'doc' | 'video' | 'repo' | 'herramienta'
+  categoria: PromptCategoria
+  modelo: PromptModelo
   created_at: string
+  updated_at: string
 }
 
 export interface ForoPost {

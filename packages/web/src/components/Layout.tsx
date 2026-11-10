@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   Home, BookMarked, MessageCircle, FolderOpen, Calendar, Shield,
-  GraduationCap, HelpCircle, BookOpen, Search,
+  GraduationCap, HelpCircle, Sparkles, Search,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useUnreadCounts, type UnreadCounts } from '../hooks/useUnreadCounts'
@@ -20,7 +20,7 @@ const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
   '/apuntes':     () => import('../pages/Apuntes'),
   '/calendar':    () => import('../pages/Calendar'),
   '/foro':        () => import('../pages/Foro'),
-  '/recursos':    () => import('../pages/Recursos'),
+  '/prompts':     () => import('../pages/Prompts'),
   '/admin':       () => import('../pages/Admin'),
   '/profile':     () => import('../pages/Profile'),
 }
@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/docs',        label: 'Docs',        Icon: BookMarked,     badgeKey: 'docs', group: 'comunidad' },
   { to: '/apuntes',     label: 'Apuntes',     Icon: FolderOpen,     group: 'comunidad' },
   { to: '/foro',        label: 'Foro',        Icon: HelpCircle,     group: 'comunidad' },
-  { to: '/recursos',    label: 'Recursos',    Icon: BookOpen,       group: 'comunidad' },
+  { to: '/prompts',     label: 'Prompts IA',  Icon: Sparkles,       group: 'comunidad' },
   { to: '/chat',        label: 'Chat',        Icon: MessageCircle,  badgeKey: 'chat', group: 'comunidad' },
 ]
 
