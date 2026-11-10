@@ -134,14 +134,14 @@ export default function Explorar() {
                 onKeyDown={event => {
                   if (event.key === 'Enter') navigate(`/apuntes?q=${encodeURIComponent(event.currentTarget.value)}`)
                 }}
-                className="w-full rounded-xl border border-white/[0.1] bg-surface px-9 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
+                className="w-full rounded-xl border border-ov/[0.1] bg-surface px-9 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
               />
             </div>
           </div>
         </header>
 
         {error && (
-          <div className="rounded-2xl border border-rose-400/20 bg-rose-400/5 px-4 py-3 text-sm text-rose-300">
+          <div className="rounded-2xl border border-rose-400/20 bg-rose-400/5 px-4 py-3 text-sm text-rose-600 dark:text-rose-300">
             No se pudo cargar todo el contenido comunitario. Puedes seguir usando las secciones individuales.
           </div>
         )}
@@ -149,11 +149,11 @@ export default function Explorar() {
         <section className="flex flex-col gap-4">
           <SectionHeader icon={HelpCircle} title="Dudas sin resolver" action="Ver foro" onAction={() => navigate('/foro')} />
           {data.dudas.length === 0 ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">No hay preguntas pendientes ahora mismo.</div>
+            <div className="rounded-2xl border border-ov/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">No hay preguntas pendientes ahora mismo.</div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {data.dudas.map(post => (
-                <button key={post.id} onClick={() => navigate(`/foro/${post.id}`)} className="group text-left rounded-2xl border border-white/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                <button key={post.id} onClick={() => navigate(`/foro/${post.id}`)} className="group text-left rounded-2xl border border-ov/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
                   <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
                     <span className="flex items-center gap-1.5 text-primary-light"><MessageSquare size={12} />{post.foro_respuestas?.length ?? 0} respuestas</span>
                     <span>{formatDate(post.created_at)}</span>
@@ -170,11 +170,11 @@ export default function Explorar() {
         <section className="flex flex-col gap-4">
           <SectionHeader icon={Sparkles} title="Prompts IA recientes" action="Ver prompts" onAction={() => navigate('/prompts')} />
           {data.prompts.length === 0 ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">Todavía no hay prompts compartidos.</div>
+            <div className="rounded-2xl border border-ov/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">Todavía no hay prompts compartidos.</div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {data.prompts.map(item => (
-                <button key={item.id} onClick={() => navigate('/prompts')} className="group text-left rounded-2xl border border-white/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                <button key={item.id} onClick={() => navigate('/prompts')} className="group text-left rounded-2xl border border-ov/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{item.categoria}</span>
                   <h3 className="mt-2 font-bold text-sm text-text-primary line-clamp-2 group-hover:text-primary-light">{item.titulo}</h3>
                   <p className="mt-2 text-xs text-text-muted line-clamp-2">{item.descripcion || item.contenido}</p>
@@ -188,11 +188,11 @@ export default function Explorar() {
         <section className="flex flex-col gap-4">
           <SectionHeader icon={BookMarked} title="Documentación reciente" action="Ver documentación" onAction={() => navigate('/docs')} />
           {data.docs.length === 0 ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">Todavía no hay documentación publicada.</div>
+            <div className="rounded-2xl border border-ov/[0.08] bg-surface/70 px-5 py-8 text-center text-sm text-text-muted">Todavía no hay documentación publicada.</div>
           ) : (
             <div className="grid gap-3 md:grid-cols-3">
               {data.docs.map(item => (
-                <button key={item.id} onClick={() => navigate(`/docs/${item.coleccion_id}/${item.id}`)} className="group text-left rounded-2xl border border-white/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                <button key={item.id} onClick={() => navigate(`/docs/${item.coleccion_id}/${item.id}`)} className="group text-left rounded-2xl border border-ov/[0.08] bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30">
                   <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
                     <span className="truncate">{item.docs_colecciones?.titulo ?? 'Documentación'}</span><FileText size={12} className="shrink-0" />
                   </div>
@@ -206,7 +206,7 @@ export default function Explorar() {
           )}
         </section>
 
-        <div className="flex flex-wrap gap-3 border-t border-white/[0.08] pt-6">
+        <div className="flex flex-wrap gap-3 border-t border-ov/[0.08] pt-6">
           <Button onClick={() => navigate('/foro')}>Preguntar en el foro</Button>
           <Button variant="ghost" onClick={() => navigate('/apuntes')}>Explorar apuntes</Button>
         </div>

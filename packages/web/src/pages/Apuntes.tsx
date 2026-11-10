@@ -7,6 +7,7 @@ import { MATERIAS } from '@topcode/shared'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 import { Spinner } from '../components/ui'
+import { tinta } from '../lib/tinta'
 import { useTheme } from '../contexts/ThemeContext'
 import { Copo } from '../components/Navidad'
 
@@ -28,7 +29,7 @@ function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
 }
 
 const TIPO_CONFIG = {
-  pdf:    { Icon: FileText, color: '#f43f5e', bg: 'rgba(244,63,94,0.08)',    border: 'rgba(244,63,94,0.18)',    label: 'PDF'  },
+  pdf:    { Icon: FileText, color: tinta('#f43f5e'), bg: 'rgba(244,63,94,0.08)',    border: 'rgba(244,63,94,0.18)',    label: 'PDF'  },
   imagen: { Icon: Image,    color: 'var(--color-primary-dark)', bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.15)',   label: 'IMG'  },
   otro:   { Icon: File,     color: 'var(--color-primary-light)', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.15)', label: 'FILE' },
 }
@@ -261,7 +262,7 @@ export default function Apuntes() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setVistaLista(v => !v)}
-              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 ${vistaLista ? 'text-primary-light' : 'text-text-muted'}`}
+              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-ov/5 ${vistaLista ? 'text-primary-light' : 'text-text-muted'}`}
               style={{
                 border: '1px solid var(--overlay-08)',
                 background: vistaLista ? 'rgb(var(--c-primary) / 0.08)' : 'transparent',
@@ -273,7 +274,7 @@ export default function Apuntes() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted"
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-ov/5 text-text-muted"
               style={{ border: '1px solid var(--overlay-08)' }}
               aria-label="Actualizar"
             >
@@ -581,7 +582,7 @@ export default function Apuntes() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)' }}>
           <div
             className="w-full max-w-sm rounded-2xl p-5 flex flex-col gap-5 animate-scale-in"
-            style={{ background: 'var(--color-surface)', border: '1px solid var(--overlay-08)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--overlay-08)', boxShadow: 'var(--shadow-modal)' }}
           >
             {/* Cabecera */}
             <div className="flex items-start justify-between gap-3">
@@ -709,7 +710,7 @@ export default function Apuntes() {
                   src={previewApunte.url}
                   alt={previewApunte.nombre}
                   className="max-w-full max-h-full object-contain rounded-xl"
-                  style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+                  style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
                 />
               </div>
             ) : (

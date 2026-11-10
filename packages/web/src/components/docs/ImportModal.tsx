@@ -112,7 +112,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
               {' '}Las páginas con el mismo título se sobrescriben.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-white/5 text-text-muted" aria-label="Cerrar">
+          <button type="button" onClick={onClose} className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
             <X size={16} />
           </button>
         </div>
@@ -121,7 +121,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
           <button
             type="button"
             onClick={() => filesRef.current?.click()}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-white/[0.15] px-3 py-5 text-sm font-semibold text-text-secondary hover:border-primary/50 hover:text-primary-light transition-colors"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-ov/[0.15] px-3 py-5 text-sm font-semibold text-text-secondary hover:border-primary/50 hover:text-primary-light transition-colors"
           >
             <FileText size={20} />
             Archivos .md
@@ -129,7 +129,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
           <button
             type="button"
             onClick={() => folderRef.current?.click()}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-white/[0.15] px-3 py-5 text-sm font-semibold text-text-secondary hover:border-primary/50 hover:text-primary-light transition-colors"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-ov/[0.15] px-3 py-5 text-sm font-semibold text-text-secondary hover:border-primary/50 hover:text-primary-light transition-colors"
           >
             <FolderUp size={20} />
             Carpeta completa
@@ -139,8 +139,8 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
         </div>
 
         {archivos.length > 0 && (
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02]">
-            <p className="px-3 py-2 text-xs font-semibold text-text-secondary border-b border-white/[0.06]">
+          <div className="rounded-xl border border-ov/[0.08] bg-ov/[0.02]">
+            <p className="px-3 py-2 text-xs font-semibold text-text-secondary border-b border-ov/[0.06]">
               {archivos.length} {archivos.length === 1 ? 'página' : 'páginas'}
             </p>
             <ul className="max-h-40 overflow-y-auto px-3 py-2 text-sm text-text-primary space-y-1">
@@ -167,7 +167,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
                   disabled={opt === 'existente' && colecciones.length === 0}
                   onClick={() => setDestino(opt)}
                   className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold border transition-colors disabled:opacity-40 ${
-                    destino === opt ? 'border-primary/40 bg-primary/10 text-primary-light' : 'border-white/[0.08] text-text-muted hover:text-text-secondary'
+                    destino === opt ? 'border-primary/40 bg-primary/10 text-primary-light' : 'border-ov/[0.08] text-text-muted hover:text-text-secondary'
                   }`}
                 >
                   {opt === 'nueva' ? 'Nueva colección' : 'Colección existente'}
@@ -188,7 +188,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
 
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>

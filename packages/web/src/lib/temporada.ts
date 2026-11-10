@@ -1,4 +1,24 @@
 export type Tema = 'clasico' | 'navidad'
+export type Modo = 'claro' | 'oscuro'
+
+const MODO_KEY = 'topcode:modo'
+
+/** Modo guardado por el usuario; si no eligió nunca, claro. */
+export function modoGuardado(): Modo {
+  try {
+    return localStorage.getItem(MODO_KEY) === 'oscuro' ? 'oscuro' : 'claro'
+  } catch {
+    return 'claro'
+  }
+}
+
+export function guardarModo(modo: Modo) {
+  try {
+    localStorage.setItem(MODO_KEY, modo)
+  } catch {
+    // sin almacenamiento: el cambio dura hasta recargar
+  }
+}
 
 /**
  * Tema de temporada. La decoración navideña va del 1 de noviembre al 7 de enero
@@ -13,11 +33,17 @@ export function temaDeTemporada(fecha = new Date()): Tema {
   return 'clasico'
 }
 
-/** Aplica el tema en <html> antes del primer render para evitar el parpadeo. */
-export function aplicarTema(tema: Tema) {
-  document.documentElement.dataset.theme = tema
-  const color = tema === 'navidad' ? '#0a1310' : '#0f1117'
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
+const THEME_COLOR: Record<Modo, Record<Tema, string>> = {
+  oscuro: { clasico: '#0f1117', navidad: '#0a1310' },
+  claro:  { clasico: '#f5f7f9', navidad: '#f8f4ed' },
+}
+
+/** Aplica tema y modo en <html> antes del primer render para evitar el parpadeo. */
+export function aplicarTema(tema: Tema, modo: Modo = modoGuardado()) {
+  const html = document.documentElement
+  html.dataset.theme = tema
+  html.dataset.mode = modo
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[modo][tema])
 }
 
 /** Días que faltan para el 25 de diciembre (0 el propio día; null fuera de temporada). */

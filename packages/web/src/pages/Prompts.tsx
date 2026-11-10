@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { tinta } from '../lib/tinta'
 import {
   Sparkles, Plus, Trash2, X, Loader2, Copy, Check, Pencil, Search, ExternalLink,
   Code2, GraduationCap, PenLine, Bug, Image as ImageIcon, LayoutGrid,
@@ -10,7 +11,7 @@ import { Copo } from '../components/Navidad'
 import type { Prompt, PromptCategoria, PromptModelo, PromptInput } from '@topcode/shared'
 
 const CATEGORIAS: Record<PromptCategoria, { label: string; Icon: React.ElementType; color: string }> = {
-  general:    { label: 'General',    Icon: LayoutGrid,    color: '#94a3b8' },
+  general:    { label: 'General',    Icon: LayoutGrid,    color: 'var(--color-text-secondary)' },
   codigo:     { label: 'Código',     Icon: Code2,         color: '#60a5fa' },
   depuracion: { label: 'Depuración', Icon: Bug,           color: '#f87171' },
   estudio:    { label: 'Estudio',    Icon: GraduationCap, color: '#fbbf24' },
@@ -34,7 +35,7 @@ const ABRIR_EN: { label: string; url: (q: string) => string }[] = [
 
 const EMPTY_FORM: PromptInput = { titulo: '', contenido: '', descripcion: '', categoria: 'general', modelo: 'cualquiera' }
 
-const inputCls = 'bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]'
+const inputCls = 'bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]'
 
 export default function Prompts() {
   const { navidad } = useTheme()
@@ -125,7 +126,7 @@ export default function Prompts() {
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
       {/* Header */}
-      <div className="px-4 md:px-6 py-5 border-b border-white/[0.08] flex items-center justify-between gap-4">
+      <div className="px-4 md:px-6 py-5 border-b border-ov/[0.08] flex items-center justify-between gap-4">
         <div>
           <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Prompts IA{navidad && <Copo size={16} className="text-gold" />}</h1>
           <p className="text-xs text-text-muted mt-0.5">Prompts útiles para ChatGPT, Claude y otras IAs, compartidos por la clase</p>
@@ -141,7 +142,7 @@ export default function Prompts() {
       </div>
 
       {/* Búsqueda y filtros */}
-      <div className="px-4 md:px-6 py-3 flex flex-col gap-3 border-b border-white/[0.06]">
+      <div className="px-4 md:px-6 py-3 flex flex-col gap-3 border-b border-ov/[0.06]">
         <div className="relative">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
@@ -162,7 +163,7 @@ export default function Prompts() {
                 style={{
                   background: active ? 'rgb(var(--c-primary) / 0.14)' : 'var(--overlay-03)',
                   border: active ? '1px solid rgb(var(--c-primary) / 0.3)' : '1px solid transparent',
-                  color: active ? 'var(--color-primary)' : '#6b7280',
+                  color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
                 }}
               >
                 {c === 'todos' ? 'Todos' : CATEGORIAS[c].label}
@@ -179,7 +180,7 @@ export default function Prompts() {
             <Loader2 size={24} className="animate-spin text-primary-light" />
           </div>
         ) : error ? (
-          <p className="text-center py-20 text-sm text-rose-400">No se pudieron cargar los prompts: {error}</p>
+          <p className="text-center py-20 text-sm text-rose-600 dark:text-rose-400">No se pudieron cargar los prompts: {error}</p>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgb(var(--c-primary) / 0.08)' }}>
@@ -202,7 +203,7 @@ export default function Prompts() {
               return (
                 <article
                   key={p.id}
-                  className="flex flex-col gap-3 p-4 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-surface to-bg transition-all duration-150 hover:border-white/[0.15] min-w-0"
+                  className="flex flex-col gap-3 p-4 rounded-2xl border border-ov/[0.08] bg-gradient-to-br from-surface to-bg transition-all duration-150 hover:border-ov/[0.15] min-w-0"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -210,7 +211,7 @@ export default function Prompts() {
                         className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}
                       >
-                        <Icon size={14} style={{ color }} />
+                        <Icon size={14} style={{ color: tinta(color) }} />
                       </div>
                       <h2 className="font-semibold text-sm text-text-primary line-clamp-2 leading-snug">{p.titulo}</h2>
                     </div>
@@ -219,7 +220,7 @@ export default function Prompts() {
                         <button
                           onClick={() => openEdit(p)}
                           aria-label="Editar prompt"
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-ov/5"
                         >
                           <Pencil size={12} className="text-text-muted" />
                         </button>
@@ -230,7 +231,7 @@ export default function Prompts() {
                           aria-label="Eliminar prompt"
                           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-500/10"
                         >
-                          <Trash2 size={12} style={{ color: '#f43f5e' }} />
+                          <Trash2 size={12} style={{ color: tinta('#f43f5e') }} />
                         </button>
                       )}
                     </div>
@@ -240,7 +241,7 @@ export default function Prompts() {
                     <p className="text-xs text-text-muted leading-relaxed">{p.descripcion}</p>
                   )}
 
-                  <div className="rounded-xl border border-white/[0.06] bg-black/20 px-3 py-2.5">
+                  <div className="rounded-xl border border-ov/[0.06] bg-ov/[0.04] px-3 py-2.5">
                     <pre className={`whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-text-secondary ${isLong && !isOpen ? 'line-clamp-6' : ''}`}>
                       {p.contenido}
                     </pre>
@@ -266,7 +267,7 @@ export default function Prompts() {
                         href={a.url(p.contenido)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-primary hover:bg-ov/5 transition-colors"
                       >
                         <ExternalLink size={11} />
                         {a.label}
@@ -278,7 +279,7 @@ export default function Prompts() {
                     <div className="flex items-center gap-1.5">
                       <span
                         className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: `color-mix(in srgb, ${color} 10%, transparent)`, color }}
+                        style={{ background: `color-mix(in srgb, ${color} 10%, transparent)`, color: tinta(color) }}
                       >
                         {label}
                       </span>
@@ -303,13 +304,13 @@ export default function Prompts() {
           onClick={e => { if (e.target === e.currentTarget) closeModal() }}
         >
           <div
-            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 flex flex-col gap-4 border border-white/[0.1]"
+            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 flex flex-col gap-4 border border-ov/[0.1]"
             style={{ background: 'var(--color-surface-2)' }}
           >
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-lg text-text-primary">{editing ? 'Editar prompt' : 'Añadir prompt'}</h2>
-              <button onClick={closeModal} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5">
-                <X size={16} style={{ color: '#6b7280' }} />
+              <button onClick={closeModal} aria-label="Cerrar" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ov/5">
+                <X size={16} style={{ color: 'var(--color-text-muted)' }} />
               </button>
             </div>
             <form onSubmit={handleSave} className="flex flex-col gap-3">
@@ -351,7 +352,7 @@ export default function Prompts() {
                   {Object.entries(MODELOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
-              {formError && <p className="text-xs text-rose-400">{formError}</p>}
+              {formError && <p className="text-xs text-rose-600 dark:text-rose-400">{formError}</p>}
               <button
                 type="submit"
                 disabled={saving}

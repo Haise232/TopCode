@@ -42,7 +42,7 @@ function ProfileError() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-bg p-6">
-      <div className="w-full max-w-md rounded-2xl p-8 text-center bg-surface border border-white/[0.08]">
+      <div className="w-full max-w-md rounded-2xl p-8 text-center bg-surface border border-ov/[0.08]">
         <h1 className="text-xl font-bold text-text-primary">No se pudo cargar tu perfil</h1>
         <p className="mt-3 text-sm leading-relaxed text-text-muted">
           Estás conectado, pero no hemos podido comprobar el estado de tu cuenta.
@@ -73,7 +73,7 @@ function AccessPending() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-bg p-6">
-      <div className="w-full max-w-md rounded-2xl p-8 text-center bg-surface border border-white/[0.08]">
+      <div className="w-full max-w-md rounded-2xl p-8 text-center bg-surface border border-ov/[0.08]">
         <h1 className="text-xl font-bold text-text-primary">
           {rechazado ? 'Solicitud no aceptada' : 'Solicitud pendiente'}
         </h1>

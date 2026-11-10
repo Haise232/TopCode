@@ -1,6 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  // «dark:» se aplica en modo oscuro (html[data-mode="oscuro"]); el claro es el de por defecto
+  darkMode: ['selector', '[data-mode="oscuro"]'],
   theme: {
     extend: {
       // Los colores de marca salen de variables CSS (index.css) para poder cambiar de
@@ -12,7 +14,9 @@ export default {
         card:         'rgb(var(--c-surface) / <alpha-value>)',
         'card-hover': 'rgb(var(--c-surface-2) / <alpha-value>)',
         input:        'rgb(var(--c-input) / <alpha-value>)',
-        border:       'rgba(255,255,255,0.08)',
+        border:       'rgb(var(--c-ov) / 0.1)',
+        // «ov» = blanco sobre oscuro, tinta sobre claro: para fondos y bordes translúcidos
+        ov:           'rgb(var(--c-ov) / <alpha-value>)',
         primary: {
           DEFAULT: 'rgb(var(--c-primary) / <alpha-value>)',
           dark:    'rgb(var(--c-primary-dark) / <alpha-value>)',
@@ -58,18 +62,19 @@ export default {
         'text-primary':   'rgb(var(--c-text) / <alpha-value>)',
         'text-secondary': 'rgb(var(--c-text-secondary) / <alpha-value>)',
         'text-muted':     'rgb(var(--c-text-muted) / <alpha-value>)',
-        'overlay-2':  'rgba(255,255,255,0.02)',
-        'overlay-3':  'rgba(255,255,255,0.03)',
-        'overlay-4':  'rgba(255,255,255,0.04)',
-        'overlay-5':  'rgba(255,255,255,0.05)',
-        'overlay-6':  'rgba(255,255,255,0.06)',
-        'overlay-7':  'rgba(255,255,255,0.07)',
-        'overlay-8':  'rgba(255,255,255,0.08)',
-        'overlay-10': 'rgba(255,255,255,0.10)',
-        'overlay-12': 'rgba(255,255,255,0.12)',
-        'overlay-15': 'rgba(255,255,255,0.15)',
-        'overlay-20': 'rgba(255,255,255,0.20)',
-        'overlay-30': 'rgba(255,255,255,0.30)',
+        'text-faint':     'rgb(var(--c-text-faint) / <alpha-value>)',
+        'overlay-2':  'rgb(var(--c-ov) / 0.02)',
+        'overlay-3':  'rgb(var(--c-ov) / 0.03)',
+        'overlay-4':  'rgb(var(--c-ov) / 0.04)',
+        'overlay-5':  'rgb(var(--c-ov) / 0.05)',
+        'overlay-6':  'rgb(var(--c-ov) / 0.06)',
+        'overlay-7':  'rgb(var(--c-ov) / 0.07)',
+        'overlay-8':  'rgb(var(--c-ov) / 0.08)',
+        'overlay-10':  'rgb(var(--c-ov) / 0.10)',
+        'overlay-12':  'rgb(var(--c-ov) / 0.12)',
+        'overlay-15':  'rgb(var(--c-ov) / 0.15)',
+        'overlay-20':  'rgb(var(--c-ov) / 0.20)',
+        'overlay-30':  'rgb(var(--c-ov) / 0.30)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
@@ -83,20 +88,20 @@ export default {
         '4xl': '2rem',
       },
       boxShadow: {
-        'card':           '0 2px 8px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25)',
-        'card-hover':     '0 8px 24px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.3)',
-        'elevated':       '0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35)',
+        'card':           'var(--shadow-card)',
+        'card-hover':     'var(--shadow-card-hover)',
+        'elevated':       'var(--shadow-elevated)',
         'primary':        '0 4px 16px rgb(var(--c-primary) / 0.22)',
         'primary-sm':     '0 2px 8px rgb(var(--c-primary) / 0.16)',
         'teal':           '0 4px 16px rgb(var(--c-teal) / 0.18)',
         'teal-sm':        '0 2px 8px rgb(var(--c-teal) / 0.14)',
         'rose':           '0 4px 16px rgba(244,63,94,0.3)',
         'amber':          '0 4px 16px rgba(245,158,11,0.3)',
-        'modal':          '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)',
+        'modal':          'var(--shadow-modal)',
         'success':        '0 4px 12px rgba(16,185,129,0.25)',
         'error':          '0 4px 12px rgba(244,63,94,0.25)',
         'warning':        '0 4px 12px rgba(245,158,11,0.25)',
-        'inset-border':   'inset 0 0 0 1px rgba(255,255,255,0.06)',
+        'inset-border':   'inset 0 0 0 1px rgb(var(--c-ov) / 0.06)',
       },
       backgroundImage: {
         'gradient-primary':      'linear-gradient(135deg, rgb(var(--c-primary)) 0%, rgb(var(--c-primary-dark)) 100%)',

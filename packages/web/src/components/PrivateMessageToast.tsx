@@ -126,10 +126,10 @@ export default function PrivateMessageToast() {
               Mensaje privado
             </span>
           </div>
-          <p className="text-xs font-semibold leading-tight truncate text-slate-100">
+          <p className="text-xs font-semibold leading-tight truncate text-text-primary">
             {toast.de_nombre}
           </p>
-          <p className="text-xs leading-snug mt-0.5" style={{ color: '#64748b' }}>
+          <p className="text-xs leading-snug mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
             {preview}
           </p>
         </div>
@@ -138,8 +138,8 @@ export default function PrivateMessageToast() {
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <button
             onClick={dismiss}
-            className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-150 hover:bg-white/[0.08]"
-            style={{ color: '#4b5563' }}
+            className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-150 hover:bg-ov/[0.08]"
+            style={{ color: 'var(--color-text-faint)' }}
             aria-label="Cerrar"
           >
             <X size={11} />

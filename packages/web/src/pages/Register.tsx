@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import AlertModal from '../components/AlertModal'
 import { Button, Card, Input } from '../components/ui'
 import { useTheme } from '../contexts/ThemeContext'
+import { tinta } from '../lib/tinta'
 import { Nieve } from '../components/Pattern'
 import { GorroNavidad } from '../components/Navidad'
 import { CLASE_UNICA } from '@topcode/shared'
@@ -82,7 +83,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex bg-bg">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-10 relative overflow-hidden bg-gradient-to-br from-surface-2 via-bg to-surface border-r border-white/5">
+      <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-10 relative overflow-hidden bg-gradient-to-br from-surface-2 via-bg to-surface border-r border-ov/5">
         <div className="absolute pointer-events-none -top-20 -left-20 w-[480px] h-[480px] bg-[radial-gradient(circle,rgb(var(--c-primary)/0.18),transparent_70%)] blur-[40px]" />
         <div className="absolute pointer-events-none bottom-0 -right-[60px] w-[320px] h-[320px] bg-[radial-gradient(circle,rgb(var(--c-primary-dark)/0.12),transparent_70%)] blur-[40px]" />
         {navidad && <div className="absolute inset-0 pointer-events-none"><Nieve /></div>}
@@ -222,13 +223,13 @@ export default function Register() {
                           key={level}
                           className="h-1 flex-1 rounded-full transition-all duration-300"
                           style={{
-                            '--strength-color': passStrength >= level ? strengthColors[passStrength] : 'rgba(255,255,255,0.08)',
+                            '--strength-color': passStrength >= level ? strengthColors[passStrength] : 'rgb(var(--c-ov) / 0.08)',
                             background: 'var(--strength-color)',
                           } as React.CSSProperties}
                         />
                       ))}
                     </div>
-                    <span className="text-xs font-semibold" style={{ color: strengthColors[passStrength] }}>
+                    <span className="text-xs font-semibold" style={{ color: tinta(strengthColors[passStrength] ?? '') }}>
                       {strengthLabels[passStrength]}
                     </span>
                   </div>
@@ -238,7 +239,7 @@ export default function Register() {
               <Button
                 type="submit"
                 loading={loading}
-                className="group mt-1 border border-white/[0.1] from-surface-2 to-surface py-3 text-sm font-semibold text-text-primary shadow-none hover:from-surface hover:to-surface-2"
+                className="group mt-1 border border-ov/[0.1] from-surface-2 to-surface py-3 text-sm font-semibold text-text-primary shadow-none hover:from-surface hover:to-surface-2"
               >
                 {loading ? 'Creando cuenta...' : (
                   <>

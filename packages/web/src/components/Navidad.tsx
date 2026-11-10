@@ -14,7 +14,7 @@ export function Guirnalda({ bombillas = 28 }: { bombillas?: number }) {
             return `${i === 0 ? 'M0,2' : ''} Q${x0 + paso / 2},12 ${x0 + paso},2`
           }).join(' ')}
           fill="none"
-          stroke="rgba(255,255,255,0.18)"
+          stroke="rgb(var(--c-ov) / 0.2)"
           strokeWidth="1"
           vectorEffect="non-scaling-stroke"
         />

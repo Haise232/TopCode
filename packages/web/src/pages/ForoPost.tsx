@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { tinta } from '../lib/tinta'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Clock, Send, Check, Loader2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -87,12 +88,12 @@ export default function ForoPost() {
   return (
     <div className="animate-fade-in h-full flex flex-col">
       {/* Header */}
-      <div className="px-4 md:px-6 py-4 border-b border-white/[0.08] flex items-center gap-3 shrink-0">
+      <div className="px-4 md:px-6 py-4 border-b border-ov/[0.08] flex items-center gap-3 shrink-0">
         <button
           onClick={() => navigate('/foro')}
-          className="w-8 h-8 flex items-center justify-center rounded-xl border border-white/[0.08] hover:bg-white/5 transition-all duration-150"
+          className="w-8 h-8 flex items-center justify-center rounded-xl border border-ov/[0.08] hover:bg-ov/5 transition-all duration-150"
         >
-          <ArrowLeft size={15} style={{ color: '#9ca3af' }} />
+          <ArrowLeft size={15} style={{ color: 'var(--color-text-muted)' }} />
         </button>
         <div className="flex items-center gap-2 min-w-0">
           <span
@@ -109,7 +110,7 @@ export default function ForoPost() {
             Resuelto
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-auto" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c' }}>
+          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-auto" style={{ background: 'rgba(251,146,60,0.1)', color: tinta('#fb923c') }}>
             <Clock size={10} />
             Pendiente
           </span>
@@ -121,7 +122,7 @@ export default function ForoPost() {
         <div className="max-w-3xl mx-auto p-4 md:p-6 flex flex-col gap-4">
 
           {/* Original post */}
-          <div className="p-5 rounded-2xl border border-white/[0.1] bg-gradient-to-br from-surface to-bg">
+          <div className="p-5 rounded-2xl border border-ov/[0.1] bg-gradient-to-br from-surface to-bg">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
                 <UserAvatar nombre={post.autor} size={36} />
@@ -156,7 +157,7 @@ export default function ForoPost() {
                   className="p-4 rounded-2xl border transition-all duration-150"
                   style={{
                     background: r.es_solucion ? 'rgb(var(--c-teal) / 0.05)' : 'var(--overlay-02)',
-                    borderColor: r.es_solucion ? 'rgb(var(--c-teal) / 0.25)' : 'rgba(255,255,255,0.06)',
+                    borderColor: r.es_solucion ? 'rgb(var(--c-teal) / 0.25)' : 'rgb(var(--c-ov) / 0.06)',
                   }}
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -198,7 +199,7 @@ export default function ForoPost() {
       </div>
 
       {/* Reply input */}
-      <div className="shrink-0 border-t border-white/[0.08]" style={{ background: 'var(--color-surface-2)' }}>
+      <div className="shrink-0 border-t border-ov/[0.08]" style={{ background: 'var(--color-surface-2)' }}>
         <form onSubmit={handleReply} className="max-w-3xl mx-auto p-4 flex items-end gap-3">
           <UserAvatar nombre={usuario?.nombre ?? '?'} size={32} />
           <div className="flex-1 flex items-end gap-2">
@@ -207,7 +208,7 @@ export default function ForoPost() {
               onChange={e => setTexto(e.target.value)}
               placeholder="Escribe tu respuesta..."
               rows={1}
-              className="flex-1 bg-input border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.1)] resize-none min-h-[42px] max-h-32 overflow-y-auto"
+              className="flex-1 bg-input border border-ov/[0.08] rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.1)] resize-none min-h-[42px] max-h-32 overflow-y-auto"
               style={{ lineHeight: '1.5' }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (texto.trim()) handleReply(e as unknown as React.FormEvent) }
@@ -228,7 +229,7 @@ export default function ForoPost() {
             >
               {sending
                 ? <Loader2 size={14} className="animate-spin text-white" />
-                : <Send size={14} style={{ color: texto.trim() ? '#fff' : '#64748b', transform: 'translateX(1px)' }} />
+                : <Send size={14} style={{ color: texto.trim() ? '#fff' : 'var(--color-text-muted)', transform: 'translateX(1px)' }} />
               }
             </button>
           </div>

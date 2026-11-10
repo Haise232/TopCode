@@ -167,7 +167,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Profile at bottom */}
-        <div className="shrink-0 p-2 border-t border-white/10">
+        <div className="shrink-0 p-2 border-t border-ov/10">
           <NavLink
             to="/profile"
             className={cn(
@@ -210,7 +210,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* ── Bottom nav — mobile only ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch bg-surface/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_24px_rgba(0,0,0,0.5)] h-[60px] pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch bg-surface/95 backdrop-blur-xl border-t border-ov/10 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.5)] h-[60px] pb-[env(safe-area-inset-bottom)]">
         {mobileItems.map(({ to, label, Icon, badgeKey }) => {
           const count = badgeKey ? (unread[badgeKey] as number ?? 0) : 0
             const isDmItem = to === '/chat'

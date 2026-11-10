@@ -1,9 +1,12 @@
 import { FileText, Briefcase, BookOpen, Terminal, Presentation, Sparkles, type LucideIcon } from 'lucide-react'
 import type { TipoEvento } from '@topcode/shared'
+import { tinta } from './tinta'
 
 export interface TipoEventoVisual {
   label: string
   color: string
+  /** Color legible como texto/icono en ambos modos */
+  texto: string
   bg: string
   border: string
   Icon: LucideIcon
@@ -13,6 +16,7 @@ function visual(label: string, color: string, Icon: LucideIcon): TipoEventoVisua
   return {
     label,
     color,
+    texto: tinta(color),
     bg: `color-mix(in srgb, ${color} 14%, transparent)`,
     border: `color-mix(in srgb, ${color} 32%, transparent)`,
     Icon,
@@ -38,7 +42,7 @@ export function TipoEventoBadge({ tipo, className = '' }: { tipo: string | null 
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${className}`}
-      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+      style={{ background: cfg.bg, color: cfg.texto, border: `1px solid ${cfg.border}` }}
     >
       <cfg.Icon size={11} aria-hidden="true" />
       {cfg.label}

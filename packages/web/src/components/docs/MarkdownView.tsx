@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { parseFrontmatter, parseWikiHref, remarkObsidian, slugify, normalizeTitle } from '../../lib/markdown'
 import { cn } from '../ui/cn'
+import { tinta } from '../../lib/tinta'
 
 const CALLOUTS: Record<string, { Icon: React.ElementType; color: string }> = {
   note:      { Icon: Pencil,        color: '#60a5fa' },
@@ -36,8 +37,8 @@ const CALLOUTS: Record<string, { Icon: React.ElementType; color: string }> = {
   error:     { Icon: Flame,         color: '#f87171' },
   bug:       { Icon: Bug,           color: '#f87171' },
   example:   { Icon: FileText,      color: '#a78bfa' },
-  quote:     { Icon: Quote,         color: '#94a3b8' },
-  cite:      { Icon: Quote,         color: '#94a3b8' },
+  quote:     { Icon: Quote,         color: 'var(--color-text-secondary)' },
+  cite:      { Icon: Quote,         color: 'var(--color-text-secondary)' },
 }
 
 function hastText(node: ElementContent | Element): string {
@@ -134,7 +135,7 @@ function MarkdownView({ content, pages = [], onOpenPage, onMissingPage, showFron
       }
       if (className === 'callout-title') {
         return (
-          <div className="callout-title">
+          <div className="callout-title" style={{ color: tinta(config.color) }}>
             <config.Icon size={15} className="shrink-0" />
             <span>{children}</span>
           </div>
@@ -158,7 +159,7 @@ function MarkdownView({ content, pages = [], onOpenPage, onMissingPage, showFron
   return (
     <div className={cn('md-body', className)}>
       {showFrontmatter && (tags.length > 0 || props.length > 0) && (
-        <div className="mb-6 flex flex-col gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
+        <div className="mb-6 flex flex-col gap-2.5 rounded-xl border border-ov/[0.08] bg-ov/[0.02] px-4 py-3">
           {tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <Tag size={12} className="text-text-muted" />

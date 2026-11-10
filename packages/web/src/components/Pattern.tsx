@@ -28,6 +28,15 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
     let copos: Copo[] = []
     let raf = 0
     let ultimo = performance.now()
+    // Color de la nieve según el modo (blanca en oscuro, gris azulado en claro)
+    let color = '#ffffff'
+    const leerColor = () => {
+      const c = getComputedStyle(document.documentElement).getPropertyValue('--c-nieve').trim()
+      if (c) color = `rgb(${c})`
+    }
+    leerColor()
+    const mo = new MutationObserver(() => { leerColor(); if (quieto) dibujar(0) })
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode', 'data-theme'] })
 
     const nuevoCopo = (yAleatoria: boolean): Copo => {
       const r = Math.random() * 1.8 + 0.6
@@ -56,7 +65,7 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
 
     const dibujar = (dt: number) => {
       ctx.clearRect(0, 0, ancho, alto)
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = color
       for (const c of copos) {
         c.y += c.vy * dt
         c.fase += dt * 0.8
@@ -93,6 +102,7 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
     return () => {
       cancelAnimationFrame(raf)
       ro.disconnect()
+      mo.disconnect()
       document.removeEventListener('visibilitychange', visibilidad)
     }
   }, [densidad])

@@ -7,6 +7,7 @@
    aplicar opacidad: bg-primary/10, rgb(var(--c-primary) / 0.3)…
    El tema activo lo fija <html data-theme> (ver contexts/ThemeContext.tsx).
    ───────────────────────────────────────────────────────────────────────── */
+/* Modo oscuro (base) — temporada clásica */
 :root,
 [data-theme="clasico"] {
   --c-bg:             15 17 23;
@@ -28,11 +29,12 @@
   --c-text:           241 245 249;
   --c-text-secondary: 148 163 184;
   --c-text-muted:     100 116 139;
+  --c-text-faint:     75 85 99;
   --bg-top:           #161a25;
   --bg-bottom:        #0c0e14;
 }
 
-/* Navidad: noche de abeto, rojo acebo, verde pino y dorado */
+/* Modo oscuro — Navidad: noche de abeto, rojo acebo, verde pino y dorado */
 [data-theme="navidad"] {
   --c-bg:             10 19 16;
   --c-surface:        18 32 27;
@@ -53,8 +55,84 @@
   --c-text:           247 244 238;
   --c-text-secondary: 168 185 176;
   --c-text-muted:     110 133 122;
+  --c-text-faint:     72 92 82;
   --bg-top:           #11231c;
   --bg-bottom:        #070d0b;
+}
+
+/* Elementos que dependen solo del modo (oscuro) */
+:root {
+  color-scheme: dark;
+  --oscurecer:        0%;            /* ver lib/tinta.ts */
+  --c-ov:             255 255 255;   /* base de los «overlay»: blanco translúcido sobre oscuro */
+  --c-nieve:          255 255 255;
+  --shadow-card:      0 2px 8px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-card-hover:0 8px 24px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-elevated:  0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-modal:     0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* ── Modo claro (por defecto) ─────────────────────────────────────────── */
+[data-mode="claro"] {
+  color-scheme: light;
+  --oscurecer:        40%;
+  --c-ov:             20 30 40;      /* sobre claro, los overlay oscurecen */
+  --c-nieve:          150 172 190;
+  --shadow-card:      0 1px 3px rgba(20,30,25,0.08), 0 1px 2px rgba(20,30,25,0.05);
+  --shadow-card-hover:0 8px 24px rgba(20,30,25,0.10), 0 2px 6px rgba(20,30,25,0.06);
+  --shadow-elevated:  0 12px 32px rgba(20,30,25,0.12), 0 4px 12px rgba(20,30,25,0.06);
+  --shadow-modal:     0 20px 60px rgba(20,30,25,0.18), 0 0 0 1px rgba(20,30,25,0.06);
+}
+
+[data-mode="claro"][data-theme="clasico"] {
+  --c-bg:             245 247 249;
+  --c-surface:        255 255 255;
+  --c-surface-2:      238 242 245;
+  --c-input:          250 251 252;
+  --c-primary:        47 143 120;
+  --c-primary-dark:   36 112 94;
+  --c-primary-light:  33 115 96;
+  --c-secondary:      16 150 105;
+  --c-secondary-dark: 5 120 85;
+  --c-secondary-light:5 130 92;
+  --c-teal:           31 128 113;
+  --c-teal-dark:      24 100 88;
+  --c-teal-light:     26 112 99;
+  --c-gold:           202 125 8;
+  --c-gold-dark:      170 100 5;
+  --c-gold-light:     160 98 6;
+  --c-text:           15 23 42;
+  --c-text-secondary: 71 85 105;
+  --c-text-muted:     100 116 139;
+  --c-text-faint:     148 163 184;
+  --bg-top:           #ffffff;
+  --bg-bottom:        #eef2f5;
+}
+
+/* Navidad en claro: papel crema y nieve, rojo acebo, verde pino y dorado viejo */
+[data-mode="claro"][data-theme="navidad"] {
+  --c-bg:             248 244 237;
+  --c-surface:        255 255 255;
+  --c-surface-2:      243 237 228;
+  --c-input:          252 250 246;
+  --c-primary:        196 43 56;
+  --c-primary-dark:   150 30 42;
+  --c-primary-light:  176 36 49;
+  --c-secondary:      34 128 79;
+  --c-secondary-dark: 25 99 61;
+  --c-secondary-light:30 115 71;
+  --c-teal:           42 125 84;
+  --c-teal-dark:      30 96 64;
+  --c-teal-light:     33 110 73;
+  --c-gold:           191 138 40;
+  --c-gold-dark:      150 105 25;
+  --c-gold-light:     160 112 24;
+  --c-text:           31 38 34;
+  --c-text-secondary: 74 87 80;
+  --c-text-muted:     112 125 118;
+  --c-text-faint:     160 170 164;
+  --bg-top:           #fdfbf7;
+  --bg-bottom:        #efe7da;
 }
 
 :root {
@@ -64,7 +142,7 @@
   --color-surface-2:      rgb(var(--c-surface-2));
   --color-surface-alpha:  rgb(var(--c-surface) / 0.92);
   --color-glass:          rgb(var(--c-surface) / 0.80);
-  --color-modal-backdrop: rgba(0,0,0,0.65);
+  --color-modal-backdrop: rgba(0,0,0,0.55);
   --color-text:           rgb(var(--c-text));
   --color-text-secondary: rgb(var(--c-text-secondary));
   --color-text-muted:     rgb(var(--c-text-muted));
@@ -73,23 +151,23 @@
   --color-primary-light:  rgb(var(--c-primary-light));
   --color-teal:           rgb(var(--c-teal));
   --color-gold:           rgb(var(--c-gold));
-  --color-border:         rgba(255,255,255,0.08);
-  --border:               rgba(255,255,255,0.08);
+  --color-border:         rgb(var(--c-ov) / 0.1);
+  --border:               rgb(var(--c-ov) / 0.1);
+  --color-text-faint:     rgb(var(--c-text-faint));
   --color-error:          #f43f5e;
   --color-warning:        #f59e0b;
   --color-rose:           #f43f5e;
-  --overlay-02:  rgba(255,255,255,0.02);
-  --overlay-03:  rgba(255,255,255,0.03);
-  --overlay-04:  rgba(255,255,255,0.04);
-  --overlay-05:  rgba(255,255,255,0.05);
-  --overlay-06:  rgba(255,255,255,0.06);
-  --overlay-07:  rgba(255,255,255,0.07);
-  --overlay-08:  rgba(255,255,255,0.08);
-  --overlay-10:  rgba(255,255,255,0.10);
-  --overlay-12:  rgba(255,255,255,0.12);
-  --overlay-15:  rgba(255,255,255,0.15);
-  --overlay-20:  rgba(255,255,255,0.20);
-  --shadow-elevated: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
+  --overlay-02:  rgb(var(--c-ov) / 0.02);
+  --overlay-03:  rgb(var(--c-ov) / 0.03);
+  --overlay-04:  rgb(var(--c-ov) / 0.04);
+  --overlay-05:  rgb(var(--c-ov) / 0.05);
+  --overlay-06:  rgb(var(--c-ov) / 0.06);
+  --overlay-07:  rgb(var(--c-ov) / 0.07);
+  --overlay-08:  rgb(var(--c-ov) / 0.08);
+  --overlay-10:  rgb(var(--c-ov) / 0.10);
+  --overlay-12:  rgb(var(--c-ov) / 0.12);
+  --overlay-15:  rgb(var(--c-ov) / 0.15);
+  --overlay-20:  rgb(var(--c-ov) / 0.20);
   --gradient-card: linear-gradient(145deg, rgb(var(--c-surface)) 0%, rgb(var(--c-input)) 100%);
 }
 
@@ -123,16 +201,15 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.10);
+    background: rgb(var(--c-ov) / 0.14);
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.18);
+    background: rgb(var(--c-ov) / 0.24);
   }
 
   /* Date input */
   input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.4) sepia(1) hue-rotate(190deg) saturate(0.8);
     cursor: pointer;
     opacity: 0.6;
   }
@@ -163,26 +240,26 @@
 
 /* ── Lector de documentación Markdown (páginas /docs) ───────────────────── */
 .md-body {
-  color: #cbd5e1;
+  color: rgb(var(--c-text) / 0.86);
   font-size: 0.9375rem;
   line-height: 1.75;
   overflow-wrap: break-word;
 }
 .md-body > * + * { margin-top: 1rem; }
 .md-body h1, .md-body h2, .md-body h3, .md-body h4, .md-body h5, .md-body h6 {
-  color: #f1f5f9;
+  color: rgb(var(--c-text));
   font-weight: 800;
   line-height: 1.3;
   letter-spacing: -0.01em;
   scroll-margin-top: 1.5rem;
 }
 .md-body h1 { font-size: 1.75rem; margin-top: 0.5rem; }
-.md-body h2 { font-size: 1.35rem; margin-top: 2.25rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.md-body h2 { font-size: 1.35rem; margin-top: 2.25rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
 .md-body h3 { font-size: 1.1rem; margin-top: 1.75rem; }
 .md-body h4, .md-body h5, .md-body h6 { font-size: 1rem; margin-top: 1.5rem; }
 .md-body h1:first-child { margin-top: 0; }
 .md-body p { margin-top: 0.85rem; }
-.md-body strong { color: #f1f5f9; font-weight: 700; }
+.md-body strong { color: rgb(var(--c-text)); font-weight: 700; }
 .md-body a { color: rgb(var(--c-primary-light)); text-decoration: underline; text-decoration-color: rgb(var(--c-primary-light) / 0.35); text-underline-offset: 3px; }
 .md-body a:hover { text-decoration-color: currentColor; }
 .md-body a.wikilink { text-decoration: none; background: rgb(var(--c-primary) / 0.1); border-radius: 6px; padding: 0.05rem 0.35rem; font-weight: 600; }
@@ -192,36 +269,37 @@
 .md-body ul { list-style: disc; }
 .md-body ol { list-style: decimal; }
 .md-body li { margin-top: 0.3rem; }
-.md-body li::marker { color: #64748b; }
+.md-body li::marker { color: rgb(var(--c-text-muted)); }
 .md-body li > ul, .md-body li > ol { margin-top: 0.3rem; }
 .md-body ul.contains-task-list { list-style: none; padding-left: 0.25rem; }
 .md-body input[type="checkbox"] { margin-right: 0.5rem; accent-color: rgb(var(--c-primary)); }
-.md-body hr { border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 2rem 0; }
-.md-body blockquote { border-left: 3px solid rgba(255,255,255,0.15); padding: 0.1rem 0 0.1rem 1rem; color: #94a3b8; }
+.md-body hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+.md-body blockquote { border-left: 3px solid rgb(var(--c-ov) / 0.15); padding: 0.1rem 0 0.1rem 1rem; color: rgb(var(--c-text-secondary)); }
 .md-body img { max-width: 100%; border-radius: 12px; }
 .md-body :not(pre) > code {
   font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.85em;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgb(var(--c-ov) / 0.07);
+  border: 1px solid rgb(var(--c-ov) / 0.06);
   border-radius: 6px;
   padding: 0.1rem 0.35rem;
-  color: #e2e8f0;
+  color: rgb(var(--c-text));
 }
 .md-body pre {
   background: #0b0d13;
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 1rem 1.1rem;
+  color: #e2e8f0;
   overflow-x: auto;
   font-size: 0.8125rem;
   line-height: 1.6;
 }
 .md-body pre code { font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', monospace; color: #e2e8f0; }
-.md-table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; }
+.md-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
 .md-body table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-.md-body th { text-align: left; font-weight: 700; color: #f1f5f9; background: rgba(255,255,255,0.04); }
-.md-body th, .md-body td { padding: 0.55rem 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+.md-body th { text-align: left; font-weight: 700; color: rgb(var(--c-text)); background: rgb(var(--c-ov) / 0.04); }
+.md-body th, .md-body td { padding: 0.55rem 0.85rem; border-bottom: 1px solid rgb(var(--c-ov) / 0.06); vertical-align: top; }
 .md-body tr:last-child td { border-bottom: 0; }
 
 /* Callouts estilo Obsidian: > [!tipo] Título */
@@ -236,7 +314,7 @@
 .md-body .callout-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--callout); }
 
 /* Resaltado de sintaxis (highlight.js) */
-.md-body .hljs-comment, .md-body .hljs-quote { color: #64748b; font-style: italic; }
+.md-body .hljs-comment, .md-body .hljs-quote { color: #7d8aa0; font-style: italic; }
 .md-body .hljs-keyword, .md-body .hljs-selector-tag, .md-body .hljs-meta .hljs-keyword { color: #c792ea; }
 .md-body .hljs-string, .md-body .hljs-attr-value, .md-body .hljs-regexp, .md-body .hljs-addition { color: #a5d6a7; }
 .md-body .hljs-number, .md-body .hljs-literal, .md-body .hljs-symbol { color: #f78c6c; }

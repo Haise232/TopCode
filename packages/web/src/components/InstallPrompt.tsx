@@ -84,7 +84,7 @@ export default function InstallPrompt() {
 
   return (
     <div
-      className={`fixed inset-x-3 z-[60] mx-auto max-w-md rounded-2xl border border-white/10 bg-surface/95 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-3 flex items-center gap-3 ${
+      className={`fixed inset-x-3 z-[60] mx-auto max-w-md rounded-2xl border border-ov/10 bg-surface/95 backdrop-blur-xl shadow-elevated p-3 flex items-center gap-3 ${
         withNav ? 'bottom-[calc(72px+env(safe-area-inset-bottom))] md:bottom-4' : 'bottom-[calc(16px+env(safe-area-inset-bottom))]'
       }`}
       role="dialog"

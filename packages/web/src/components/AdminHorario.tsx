@@ -136,7 +136,7 @@ export default function AdminHorario() {
   return (
     <div className="flex flex-col gap-4">
       {!claseSeleccionada ? (
-        <div className="rounded-2xl border border-white/[0.08] bg-surface p-5 text-sm text-text-muted">
+        <div className="rounded-2xl border border-ov/[0.08] bg-surface p-5 text-sm text-text-muted">
           Este administrador todavía no tiene una clase asignada.
         </div>
       ) : null}
@@ -146,7 +146,7 @@ export default function AdminHorario() {
             className="w-8 h-8 flex items-center justify-center rounded-xl"
             style={{ background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.2)' }}
           >
-            <CalendarClock size={14} className="text-blue-400" />
+            <CalendarClock size={14} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h2 className="font-bold text-sm text-text-primary">Horario</h2>
@@ -253,7 +253,7 @@ export default function AdminHorario() {
               <select
                 value={form.dia_semana}
                 onChange={e => setForm(f => ({ ...f, dia_semana: Number(e.target.value) }))}
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               >
                 {[1, 2, 3, 4, 5].map(d => (
                   <option key={d} value={d}>{DIAS_SEMANA[d]}</option>
@@ -268,7 +268,7 @@ export default function AdminHorario() {
                   type="time"
                   value={form.hora_inicio}
                   onChange={e => setForm(f => ({ ...f, hora_inicio: e.target.value }))}
-                  className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                  className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -277,7 +277,7 @@ export default function AdminHorario() {
                   type="time"
                   value={form.hora_fin}
                   onChange={e => setForm(f => ({ ...f, hora_fin: e.target.value }))}
-                  className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                  className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                 />
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function AdminHorario() {
               <select
                 value={form.codigo}
                 onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))}
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               >
                 {MATERIAS.map(m => (
                   <option key={m.codigo} value={m.codigo}>{m.nombreCorto} ({m.codigo})</option>

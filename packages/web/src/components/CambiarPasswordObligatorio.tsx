@@ -134,7 +134,7 @@ export default function CambiarPasswordObligatorio() {
                       <span
                         key={n}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          fuerza >= n ? (fuerza === 1 ? 'bg-rose-500' : fuerza === 2 ? 'bg-amber-400' : 'bg-primary') : 'bg-white/10'
+                          fuerza >= n ? (fuerza === 1 ? 'bg-rose-500' : fuerza === 2 ? 'bg-amber-400' : 'bg-primary') : 'bg-ov/10'
                         }`}
                       />
                     ))}
@@ -147,7 +147,7 @@ export default function CambiarPasswordObligatorio() {
             <CampoPassword id="repetir-password" label="Repítela" value={repetida} onChange={setRepetida} visible={visible} />
 
             {error && (
-              <p role="alert" className="text-sm text-rose-400">
+              <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">
                 {error}
               </p>
             )}

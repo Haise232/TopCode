@@ -51,7 +51,7 @@ function LoadingNavidad() {
         .arbol-loader .bola { opacity: 0.25; animation: encender 1.8s ease-in-out infinite; }
         .arbol-loader .bola-0 { fill: rgb(var(--c-primary)); filter: drop-shadow(0 0 3px rgb(var(--c-primary))); }
         .arbol-loader .bola-1 { fill: rgb(var(--c-gold-light)); filter: drop-shadow(0 0 3px rgb(var(--c-gold))); }
-        .arbol-loader .bola-2 { fill: #f7f4ee; filter: drop-shadow(0 0 3px #ffffff); }
+        .arbol-loader .bola-2 { fill: rgb(var(--c-nieve)); filter: drop-shadow(0 0 3px rgb(var(--c-nieve))); }
         .arbol-loader .estrella { transform-box: fill-box; transform-origin: center; animation: brillar 2.4s ease-in-out infinite; filter: drop-shadow(0 0 6px rgb(var(--c-gold))); }
         .arbol-loader .espumillon { stroke-dasharray: 4 3; animation: correr 3s linear infinite; }
         .puntos::after { content: ''; display: inline-block; width: 1.2em; text-align: left; animation: puntos 1.2s steps(4) infinite; }

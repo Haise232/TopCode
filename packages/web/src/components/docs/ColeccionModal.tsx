@@ -54,7 +54,7 @@ export default function ColeccionModal({ open, initial, title, submitLabel, onCl
       <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-lg text-text-primary">{title}</h2>
-          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 text-text-muted" aria-label="Cerrar">
+          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
             <X size={16} />
           </button>
         </div>
@@ -75,7 +75,7 @@ export default function ColeccionModal({ open, initial, title, submitLabel, onCl
           placeholder="¿Qué contiene esta documentación?"
         />
         <MateriaSelect value={form.materia} onChange={materia => setForm(f => ({ ...f, materia }))} />
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button type="submit" loading={saving}>{submitLabel}</Button>

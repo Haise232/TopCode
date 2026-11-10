@@ -345,21 +345,21 @@ export default function DocsColeccion() {
 
   const sidebar = (
     <div className="flex flex-col h-full min-h-0">
-      <div className="p-3 flex flex-col gap-2 border-b border-white/[0.06]">
+      <div className="p-3 flex flex-col gap-2 border-b border-ov/[0.06]">
         <div className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={filtroPaginas}
             onChange={e => setFiltroPaginas(e.target.value)}
             placeholder="Filtrar páginas"
-            className="w-full rounded-lg border border-white/[0.08] bg-input pl-8 pr-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
+            className="w-full rounded-lg border border-ov/[0.08] bg-input pl-8 pr-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
           />
         </div>
         <div className="flex gap-1.5">
           <button onClick={() => pedirNuevaPagina()} className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1.5 text-xs font-semibold text-primary-light hover:bg-primary/20 transition-colors">
             <Plus size={13} /> Página
           </button>
-          <button onClick={() => setShowImport(true)} className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-white/[0.04] px-2 py-1.5 text-xs font-semibold text-text-secondary hover:bg-white/[0.08] transition-colors">
+          <button onClick={() => setShowImport(true)} className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-ov/[0.04] px-2 py-1.5 text-xs font-semibold text-text-secondary hover:bg-ov/[0.08] transition-colors">
             <Upload size={13} /> Importar
           </button>
         </div>
@@ -371,7 +371,7 @@ export default function DocsColeccion() {
             onClick={() => abrirPagina(p.id)}
             className={cn(
               'flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors',
-              p.id === paginaId ? 'bg-primary/15 text-primary-light font-semibold' : 'text-text-secondary hover:bg-white/[0.04] hover:text-text-primary'
+              p.id === paginaId ? 'bg-primary/15 text-primary-light font-semibold' : 'text-text-secondary hover:bg-ov/[0.04] hover:text-text-primary'
             )}
           >
             <FileText size={13} className="shrink-0 opacity-60" />
@@ -388,17 +388,17 @@ export default function DocsColeccion() {
   return (
     <div className="animate-fade-in h-full flex flex-col min-h-0">
       {/* Cabecera de la colección */}
-      <div className="px-4 md:px-6 py-3 border-b border-white/[0.08] flex items-center gap-3">
+      <div className="px-4 md:px-6 py-3 border-b border-ov/[0.08] flex items-center gap-3">
         <button
           onClick={() => { if (confirmarSalida()) navigate('/docs') }}
-          className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-white/5 text-text-muted"
+          className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted"
           aria-label="Volver a la biblioteca"
         >
           <ArrowLeft size={16} />
         </button>
         <button
           onClick={() => setSidebarOpen(o => !o)}
-          className="md:hidden w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-white/5 text-text-muted"
+          className="md:hidden w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted"
           aria-label="Páginas"
         >
           <Menu size={16} />
@@ -417,7 +417,7 @@ export default function DocsColeccion() {
           <button
             onClick={() => setMenuColeccionOpen(o => !o)}
             disabled={descargandoZip}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text-muted hover:bg-white/5 hover:text-text-secondary disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text-muted hover:bg-ov/5 hover:text-text-secondary disabled:opacity-60"
             aria-label="Opciones de la colección"
           >
             {descargandoZip ? <Loader2 size={13} className="animate-spin" /> : <Settings2 size={13} />}
@@ -426,7 +426,7 @@ export default function DocsColeccion() {
           {menuColeccionOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuColeccionOpen(false)} />
-              <div className="absolute right-0 top-9 z-30 w-56 rounded-xl border border-white/[0.1] bg-surface-2 p-1 shadow-modal">
+              <div className="absolute right-0 top-9 z-30 w-56 rounded-xl border border-ov/[0.1] bg-surface-2 p-1 shadow-modal">
                 <MenuItem Icon={Download} label="Descargar colección (.zip)" onClick={() => void descargarColeccion()} />
                 {puedeGestionar(coleccion.created_by) && (
                   <>
@@ -442,12 +442,12 @@ export default function DocsColeccion() {
 
       <div className="flex-1 flex min-h-0 relative">
         {/* Índice de páginas */}
-        <aside className="hidden md:flex w-64 shrink-0 border-r border-white/[0.08] flex-col min-h-0">
+        <aside className="hidden md:flex w-64 shrink-0 border-r border-ov/[0.08] flex-col min-h-0">
           {sidebar}
         </aside>
         {sidebarOpen && (
           <div className="md:hidden absolute inset-0 z-20 flex">
-            <div className="w-72 max-w-[85%] bg-surface border-r border-white/[0.08] flex flex-col min-h-0 animate-fade-in">
+            <div className="w-72 max-w-[85%] bg-surface border-r border-ov/[0.08] flex flex-col min-h-0 animate-fade-in">
               {sidebar}
             </div>
             <div className="flex-1 bg-black/40" onClick={() => setSidebarOpen(false)} />
@@ -479,7 +479,7 @@ export default function DocsColeccion() {
             </div>
           ) : editing ? (
             <div className="h-full flex flex-col min-h-0">
-              <div className="px-4 md:px-6 py-3 border-b border-white/[0.06] flex flex-wrap items-center gap-2">
+              <div className="px-4 md:px-6 py-3 border-b border-ov/[0.06] flex flex-wrap items-center gap-2">
                 <div className="flex-1 min-w-[12rem]">
                   <Input
                     value={draft.titulo}
@@ -491,7 +491,7 @@ export default function DocsColeccion() {
                 </div>
                 <button
                   onClick={() => setPreview(p => !p)}
-                  className="lg:hidden flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-text-secondary bg-white/[0.04] hover:bg-white/[0.08]"
+                  className="lg:hidden flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-text-secondary bg-ov/[0.04] hover:bg-ov/[0.08]"
                 >
                   {preview ? <Pencil size={13} /> : <Eye size={13} />}
                   {preview ? 'Editar' : 'Vista previa'}
@@ -509,7 +509,7 @@ export default function DocsColeccion() {
                   spellCheck={false}
                   placeholder="Escribe en Markdown… Usa [[Otra página]] para enlazar páginas de esta colección."
                   className={cn(
-                    'min-h-[60vh] lg:min-h-0 h-full w-full resize-none bg-input px-4 md:px-6 py-4 font-mono text-[13px] leading-relaxed text-text-primary outline-none lg:border-r border-white/[0.06]',
+                    'min-h-[60vh] lg:min-h-0 h-full w-full resize-none bg-input px-4 md:px-6 py-4 font-mono text-[13px] leading-relaxed text-text-primary outline-none lg:border-r border-ov/[0.06]',
                     preview && 'hidden lg:block'
                   )}
                 />
@@ -517,13 +517,13 @@ export default function DocsColeccion() {
                   <MarkdownView content={draft.contenido} pages={paginas} onOpenPage={abrirPagina} onMissingPage={pedirNuevaPagina} />
                 </div>
               </div>
-              <p className="px-4 md:px-6 py-1.5 text-[11px] text-text-muted border-t border-white/[0.06]">
+              <p className="px-4 md:px-6 py-1.5 text-[11px] text-text-muted border-t border-ov/[0.06]">
                 Markdown + GFM · callouts <code>&gt; [!tip]</code> · enlaces <code>[[Página]]</code> · Ctrl+S para guardar
               </p>
             </div>
           ) : (
             <article className="max-w-3xl mx-auto px-4 md:px-8 py-6 md:py-8">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.06]">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-ov/[0.06]">
                 <p className="text-xs text-text-muted">
                   {pagina.updated_by_nombre ? <>Editado por <span className="text-text-secondary">{pagina.updated_by_nombre}</span> · </> : null}
                   {formatFechaHora(pagina.updated_at)}
@@ -534,7 +534,7 @@ export default function DocsColeccion() {
                   </Button>
                   <button
                     onClick={() => setMenuOpen(o => !o)}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/[0.08] text-text-muted hover:bg-white/5"
+                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-ov/[0.08] text-text-muted hover:bg-ov/5"
                     aria-label="Más opciones"
                   >
                     <MoreHorizontal size={16} />
@@ -542,7 +542,7 @@ export default function DocsColeccion() {
                   {menuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-white/[0.1] bg-surface-2 p-1 shadow-modal">
+                      <div className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-ov/[0.1] bg-surface-2 p-1 shadow-modal">
                         <MenuItem Icon={History} label="Historial de cambios" onClick={() => void abrirHistorial()} />
                         <MenuItem Icon={Download} label="Descargar página (.md)" onClick={() => { setMenuOpen(false); descargar(pagina.titulo, pagina.contenido) }} />
                         {puedeGestionar(pagina.created_by) && (
@@ -564,7 +564,7 @@ export default function DocsColeccion() {
         <form onSubmit={handleCrearPagina} className="p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-lg text-text-primary">Nueva página</h2>
-            <button type="button" onClick={() => setNuevaTitulo(null)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5 text-text-muted" aria-label="Cerrar">
+            <button type="button" onClick={() => setNuevaTitulo(null)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
               <X size={16} />
             </button>
           </div>
@@ -587,12 +587,12 @@ export default function DocsColeccion() {
       {/* Historial */}
       <Modal open={revisiones !== null} onClose={() => setRevisiones(null)} maxWidthClassName="max-w-5xl">
         <div className="flex flex-col h-[80vh]">
-          <div className="px-5 py-4 border-b border-white/[0.08] flex items-center justify-between gap-3">
+          <div className="px-5 py-4 border-b border-ov/[0.08] flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-bold text-base text-text-primary">Historial de cambios</h2>
               <p className="text-xs text-text-muted truncate">{pagina?.titulo}</p>
             </div>
-            <button onClick={() => setRevisiones(null)} className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-white/5 text-text-muted" aria-label="Cerrar">
+            <button onClick={() => setRevisiones(null)} className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
               <X size={16} />
             </button>
           </div>
@@ -600,14 +600,14 @@ export default function DocsColeccion() {
             <p className="flex-1 flex items-center justify-center text-sm text-text-muted">Esta página todavía no tiene versiones anteriores.</p>
           ) : (
             <div className="flex-1 min-h-0 flex flex-col md:flex-row">
-              <ul className="md:w-60 shrink-0 max-h-40 md:max-h-none overflow-y-auto border-b md:border-b-0 md:border-r border-white/[0.08] p-2 flex flex-col gap-0.5">
+              <ul className="md:w-60 shrink-0 max-h-40 md:max-h-none overflow-y-auto border-b md:border-b-0 md:border-r border-ov/[0.08] p-2 flex flex-col gap-0.5">
                 {revisiones?.map(r => (
                   <li key={r.id}>
                     <button
                       onClick={() => setRevisionSel(r)}
                       className={cn(
                         'w-full text-left rounded-lg px-3 py-2 transition-colors',
-                        revisionSel?.id === r.id ? 'bg-primary/15' : 'hover:bg-white/[0.04]'
+                        revisionSel?.id === r.id ? 'bg-primary/15' : 'hover:bg-ov/[0.04]'
                       )}
                     >
                       <span className="block text-xs font-semibold text-text-primary">{formatFechaHora(r.created_at)}</span>
@@ -619,7 +619,7 @@ export default function DocsColeccion() {
               <div className="flex-1 min-w-0 flex flex-col min-h-0">
                 {revisionSel && (
                   <>
-                    <div className="px-5 py-2.5 border-b border-white/[0.06] flex items-center justify-between gap-3">
+                    <div className="px-5 py-2.5 border-b border-ov/[0.06] flex items-center justify-between gap-3">
                       <p className="text-xs text-text-muted truncate">Versión «{revisionSel.titulo}»</p>
                       <Button
                         size="sm"
@@ -681,7 +681,7 @@ function MenuItem({ Icon, label, onClick, danger }: { Icon: React.ElementType; l
       onClick={onClick}
       className={cn(
         'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors',
-        danger ? 'text-rose-400 hover:bg-rose-500/10' : 'text-text-secondary hover:bg-white/[0.05] hover:text-text-primary'
+        danger ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10' : 'text-text-secondary hover:bg-ov/[0.05] hover:text-text-primary'
       )}
     >
       <Icon size={14} />

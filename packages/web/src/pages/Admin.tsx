@@ -292,7 +292,7 @@ export default function Admin() {
           <button
             onClick={async () => { setRefreshing(true); await cargar(); setRefreshing(false) }}
             disabled={refreshing}
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted"
+            className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-ov/5 text-text-muted"
             style={{ border: '1px solid var(--overlay-08)' }}
             aria-label="Actualizar"
           >
@@ -436,7 +436,7 @@ export default function Admin() {
                   disabled={updating === u.id}
                   title="Generar contraseña temporal"
                   aria-label={`Generar contraseña temporal para ${u.nombre}`}
-                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-amber-300 bg-amber-400/10 border border-amber-400/20 hover:bg-amber-400/15 transition-colors disabled:opacity-40"
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-amber-600 dark:text-amber-300 bg-amber-400/10 border border-amber-400/20 hover:bg-amber-400/15 transition-colors disabled:opacity-40"
                 >
                   <KeyRound size={14} />
                 </button>
@@ -449,7 +449,7 @@ export default function Admin() {
                   disabled={updating === u.id}
                   title="Eliminar usuario"
                   aria-label={`Eliminar a ${u.nombre}`}
-                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-rose-300 bg-rose-400/10 border border-rose-400/20 hover:bg-rose-400/15 transition-colors disabled:opacity-40"
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-rose-600 dark:text-rose-300 bg-rose-400/10 border border-rose-400/20 hover:bg-rose-400/15 transition-colors disabled:opacity-40"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -463,7 +463,7 @@ export default function Admin() {
                       onClick={() => cambiarAcceso(u, 'aprobado')}
                       disabled={updating === u.id || !puedeGestionarUsuario(u)}
                       title="Aceptar acceso"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 disabled:opacity-40"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-600 dark:text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 disabled:opacity-40"
                     >
                       {updating === u.id ? <Spinner size="sm" /> : <Check size={14} />}
                     </button>
@@ -471,7 +471,7 @@ export default function Admin() {
                       onClick={() => cambiarAcceso(u, 'rechazado')}
                       disabled={updating === u.id || !puedeGestionarUsuario(u)}
                       title="Rechazar acceso"
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-300 bg-rose-400/10 border border-rose-400/20 disabled:opacity-40"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-rose-600 dark:text-rose-300 bg-rose-400/10 border border-rose-400/20 disabled:opacity-40"
                     >
                       <X size={14} />
                     </button>
@@ -499,7 +499,7 @@ export default function Admin() {
                       opacity: (u.id === usuario?.id || !puedeGestionarUsuario(u)) ? 0.5 : 1,
                     } : {
                       background: 'var(--overlay-05)',
-                      color: '#64748b',
+                      color: 'var(--color-text-muted)',
                       border: '1px solid var(--overlay-08)',
                       cursor: (u.id === usuario?.id || !puedeGestionarUsuario(u)) ? 'not-allowed' : 'pointer',
                       opacity: (u.id === usuario?.id || !puedeGestionarUsuario(u)) ? 0.4 : 1,
@@ -569,7 +569,7 @@ export default function Admin() {
               value={nuevoTitulo}
               onChange={e => setNuevoTitulo(e.target.value)}
               placeholder="Título del anuncio..."
-              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+              className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               maxLength={100}
             />
             <textarea
@@ -577,7 +577,7 @@ export default function Admin() {
               onChange={e => setNuevoContenido(e.target.value)}
               placeholder="Escribe aquí el mensaje completo para los alumnos..."
               rows={4}
-              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+              className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               maxLength={1000}
             />
             <div className="flex items-center justify-between">
@@ -621,7 +621,7 @@ export default function Admin() {
                     {a.activo ? (
                       <div className="w-2 h-2 rounded-full animate-pulse bg-success" />
                     ) : (
-                      <div className="w-2 h-2 rounded-full" style={{ background: '#374151' }} />
+                      <div className="w-2 h-2 rounded-full" style={{ background: 'var(--color-text-faint)' }} />
                     )}
                   </div>
 
@@ -647,7 +647,7 @@ export default function Admin() {
                       style={{
                         background: a.activo ? 'rgb(var(--c-teal)/0.1)' : 'var(--overlay-04)',
                         border: a.activo ? '1px solid rgb(var(--c-teal)/0.25)' : '1px solid var(--overlay-08)',
-                        color: a.activo ? 'var(--color-teal)' : '#4b5563',
+                        color: a.activo ? 'var(--color-teal)' : 'var(--color-text-faint)',
                       }}
                     >
                       {toggling === a.id ? (
@@ -663,7 +663,7 @@ export default function Admin() {
                       onClick={() => handleEliminarAnuncio(a)}
                       title="Eliminar"
                       className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
-                      style={{ color: '#4b5563', border: '1px solid transparent' }}
+                      style={{ color: 'var(--color-text-faint)', border: '1px solid transparent' }}
                       onMouseEnter={e => {
                         const el = e.currentTarget as HTMLElement
                         el.style.color = '#f43f5e'
@@ -672,7 +672,7 @@ export default function Admin() {
                       }}
                       onMouseLeave={e => {
                         const el = e.currentTarget as HTMLElement
-                        el.style.color = '#4b5563'
+                        el.style.color = 'var(--color-text-faint)'
                         el.style.background = 'transparent'
                         el.style.borderColor = 'transparent'
                       }}
@@ -695,7 +695,7 @@ export default function Admin() {
         {temporal && (
           <div className="p-6 flex flex-col items-center gap-4 text-center">
             <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-amber-400/10 border border-amber-400/20">
-              <KeyRound size={24} className="text-amber-300" />
+              <KeyRound size={24} className="text-amber-600 dark:text-amber-300" />
             </div>
             <div className="flex flex-col gap-1.5">
               <h3 className="font-bold text-base text-text-primary">Contraseña temporal de {temporal.nombre}</h3>

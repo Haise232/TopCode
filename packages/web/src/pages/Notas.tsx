@@ -5,6 +5,7 @@ import { useNotas, MATERIAS, type Nota, type UsuarioPublico } from '@topcode/sha
 import AlertModal from '../components/AlertModal'
 import { Spinner } from '../components/ui'
 import { supabase } from '../lib/supabase'
+import { tinta } from '../lib/tinta'
 import { useTheme } from '../contexts/ThemeContext'
 import { Copo } from '../components/Navidad'
 
@@ -19,8 +20,8 @@ type AlertState = {
 
 function mediaColor(media: number) {
   if (media >= 7) return 'var(--color-primary)'
-  if (media >= 5) return '#f59e0b'
-  return '#f43f5e'
+  if (media >= 5) return tinta('#f59e0b')
+  return tinta('#f43f5e')
 }
 
 function MediaBadge({ value }: { value: number }) {
@@ -112,7 +113,7 @@ function AddNotaModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.65)' }}>
       <div
         className="w-full max-w-sm rounded-2xl p-5 flex flex-col gap-5 animate-scale-in"
-        style={{ background: 'var(--color-surface)', border: '1px solid var(--overlay-08)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+        style={{ background: 'var(--color-surface)', border: '1px solid var(--overlay-08)', boxShadow: 'var(--shadow-modal)' }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -280,7 +281,7 @@ function MateriaSection({
       {/* Cabecera de materia */}
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-white/[0.02]"
+        className="w-full flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-ov/[0.02]"
       >
         <div className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0"
           style={{ background: 'rgb(var(--c-primary) / 0.10)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}>
@@ -467,7 +468,7 @@ export default function Notas() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-text-muted hover:bg-white/5 transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-text-muted hover:bg-ov/5 transition-all"
               style={{ border: '1px solid var(--overlay-08)' }}
               aria-label="Actualizar"
             >

@@ -18,6 +18,12 @@ import { Modal } from '../components/ui/Modal'
 import { useTheme } from '../contexts/ThemeContext'
 import { Copo, GorroNavidad } from '../components/Navidad'
 import { diasParaNavidad } from '../lib/temporada'
+import SelectorModo from '../components/SelectorModo'
+import { tinta } from '../lib/tinta'
+
+// Mezcla un color con transparente (Tailwind no aplica /N a var() arbitrarias)
+const mez = (c: string, n: number) => `color-mix(in srgb, ${c} ${n}%, transparent)`
+const varsMateria = (c: string) => ({ '--materia-color': c, '--materia-ink': tinta(c), '--m10': mez(c, 10), '--m20': mez(c, 20), '--m50': mez(c, 50), '--m60': mez(c, 60) }) as React.CSSProperties
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,7 +101,7 @@ function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[]> }) {
             )}
           >
             <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-overlay-4">
-              <span className={cn("text-xs font-bold uppercase tracking-wider", esHoy ? "text-primary-light" : "text-gray-500")}>
+              <span className={cn("text-xs font-bold uppercase tracking-wider", esHoy ? "text-primary-light" : "text-text-muted")}>
                 {nombre}
               </span>
               {esHoy ? (
@@ -103,12 +109,12 @@ function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[]> }) {
                   Hoy
                 </span>
               ) : (
-                <span className="text-2xs text-gray-600">{clases.length} clases</span>
+                <span className="text-2xs text-text-faint">{clases.length} clases</span>
               )}
             </div>
 
             {clases.length === 0 && (
-              <div className="px-3 py-4 text-center text-2xs text-gray-500">Sin clases</div>
+              <div className="px-3 py-4 text-center text-2xs text-text-muted">Sin clases</div>
             )}
 
             {clases.map((clase, idx) => {
@@ -122,7 +128,7 @@ function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[]> }) {
                   {hayDescanso && (
                     <div className="flex items-center gap-2 px-3 py-1 border-y border-overlay-4">
                       <div className="flex-1 h-px bg-overlay-4" />
-                      <span className="text-2xs font-medium text-gray-500">Descanso</span>
+                      <span className="text-2xs font-medium text-text-muted">Descanso</span>
                       <div className="flex-1 h-px bg-overlay-4" />
                     </div>
                   )}
@@ -130,20 +136,20 @@ function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[]> }) {
                     className={cn(
                       "flex items-center gap-2 px-3 py-2",
                       idx > 0 && !hayDescanso && "border-t border-overlay-4",
-                      esCurso && "bg-[var(--materia-color)]/10"
+                      esCurso && "bg-[color:var(--m10)]"
                     )}
-                    style={{ '--materia-color': materiaColor(clase.materia) } as React.CSSProperties}
+                    style={varsMateria(materiaColor(clase.materia))}
                   >
                     <div className="shrink-0 w-1.5 h-1.5 rounded-full bg-[var(--materia-color)]" />
                     <div className="flex-1 min-w-0">
-                      <span className={cn("block text-xs truncate", esCurso ? "text-slate-100 font-bold" : "text-slate-400")}>
+                      <span className={cn("block text-xs truncate", esCurso ? "text-text-primary font-bold" : "text-text-secondary")}>
                         {clase.materia}
                       </span>
-                      <span className="block text-2xs font-mono text-gray-500">
+                      <span className="block text-2xs font-mono text-text-muted">
                         {clase.hora_inicio}–{clase.hora_fin}
                       </span>
                     </div>
-                    <span className="shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded-md border bg-overlay-4 text-gray-500 border-overlay-5">
+                    <span className="shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded-md border bg-overlay-4 text-text-muted border-overlay-5">
                       {clase.codigo}
                     </span>
                   </div>
@@ -267,7 +273,7 @@ function QuickActionCard({
   index: number
   onClick: () => void
 }) {
-  const style = { '--action-color': color, animationDelay: `${index * 60}ms` } as React.CSSProperties
+  const style = { '--action-color': color, '--action-ink': tinta(color), '--a3': mez(color, 3), '--a6': mez(color, 6), '--a10': mez(color, 10), '--a12': mez(color, 12), '--a4': mez(color, 4), '--a25': mez(color, 25), '--a30': mez(color, 30), animationDelay: `${index * 60}ms` } as React.CSSProperties
 
   return (
     <button
@@ -277,22 +283,22 @@ function QuickActionCard({
         "group relative flex flex-col items-center gap-2 rounded-2xl transition-all duration-200 active:scale-[0.96] text-center overflow-hidden animate-fade-in w-full",
         "py-[18px] px-3 pb-3.5",
         "bg-gradient-to-br from-surface to-input border border-overlay-7 shadow-card",
-        "hover:-translate-y-1 hover:scale-[1.02] hover:shadow-elevated hover:border-[var(--action-color)]/25"
+        "hover:-translate-y-1 hover:scale-[1.02] hover:shadow-elevated hover:border-[color:var(--a25)]"
       )}
     >
       {/* Halo de color al hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none bg-gradient-to-br from-[var(--action-color)]/[0.06] to-transparent" />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none bg-gradient-to-br from-[color:var(--a6)] to-transparent" />
       {/* Línea de acento superior */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-0 group-hover:w-2/3 transition-all duration-300 rounded-full bg-[var(--action-color)]" />
 
       {/* Icono con fondo glassmorphism */}
-      <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg] bg-gradient-to-br from-[var(--action-color)]/10 to-[var(--action-color)]/[0.03] border border-white/[0.06] shadow-[0_4px_16px_var(--action-color)]/10">
-        <Icon size={24} className="text-[var(--action-color)]" />
+      <div className="relative w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200 group-hover:scale-110 group-hover:rotate-[-4deg] bg-gradient-to-br from-[color:var(--a10)] to-[color:var(--a3)] border border-ov/[0.06] shadow-[0_4px_16px_var(--a10)]">
+        <Icon size={24} className="text-[color:var(--action-ink)]" />
       </div>
 
       <div className="relative flex flex-col items-center gap-0.5 mt-0.5">
-        <span className="text-sm font-bold leading-tight text-slate-200">{label}</span>
-        <span className="text-2xs font-medium text-gray-500">{desc}</span>
+        <span className="text-sm font-bold leading-tight text-text-primary">{label}</span>
+        <span className="text-2xs font-medium text-text-muted">{desc}</span>
       </div>
     </button>
   )
@@ -309,7 +315,7 @@ function ExternalLinkChip({
   href: string
   index: number
 }) {
-  const style = { '--action-color': color, animationDelay: `${index * 60}ms` } as React.CSSProperties
+  const style = { '--action-color': color, '--action-ink': tinta(color), '--a3': mez(color, 3), '--a6': mez(color, 6), '--a10': mez(color, 10), '--a12': mez(color, 12), '--a4': mez(color, 4), '--a25': mez(color, 25), '--a30': mez(color, 30), animationDelay: `${index * 60}ms` } as React.CSSProperties
 
   return (
     <a
@@ -317,18 +323,18 @@ function ExternalLinkChip({
       target="_blank"
       rel="noopener noreferrer"
       style={style}
-      className="group relative flex items-center gap-3 rounded-2xl pl-3 pr-4 py-2.5 border border-overlay-7 bg-surface/60 backdrop-blur-sm transition-all duration-200 animate-fade-in hover:-translate-y-0.5 hover:border-[var(--action-color)]/30 hover:bg-surface"
+      className="group relative flex items-center gap-3 rounded-2xl pl-3 pr-4 py-2.5 border border-overlay-7 bg-surface/60 backdrop-blur-sm transition-all duration-200 animate-fade-in hover:-translate-y-0.5 hover:border-[color:var(--a30)] hover:bg-surface"
     >
-      <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-[var(--action-color)]/12 to-[var(--action-color)]/[0.04] border border-white/[0.06]">
-        <Icon size={16} className="text-[var(--action-color)]" />
+      <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-[color:var(--a12)] to-[color:var(--a4)] border border-ov/[0.06]">
+        <Icon size={16} className="text-[color:var(--action-ink)]" />
       </div>
       <div className="flex flex-col items-start leading-tight min-w-0">
-        <span className="text-xs font-bold text-slate-200 truncate">{label}</span>
-        <span className="text-2xs font-medium text-gray-500 truncate">{desc}</span>
+        <span className="text-xs font-bold text-text-primary truncate">{label}</span>
+        <span className="text-2xs font-medium text-text-muted truncate">{desc}</span>
       </div>
       <ExternalLink
         size={11}
-        className="ml-1 shrink-0 opacity-30 transition-all duration-200 group-hover:opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[var(--action-color)]"
+        className="ml-1 shrink-0 opacity-30 transition-all duration-200 group-hover:opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 text-[color:var(--action-ink)]"
       />
     </a>
   )
@@ -434,13 +440,13 @@ export default function Home() {
                 {navidad
                   ? <Copo size={14} className="text-gold-light" />
                   : <span className="text-sm leading-none">{emoji}</span>}
-                <span className="text-sm font-medium tracking-widest uppercase text-gray-500">
+                <span className="text-sm font-medium tracking-widest uppercase text-text-muted">
                   {navidad ? 'Felices fiestas' : saludo}
                 </span>
               </div>
-              <span className="w-1 h-1 rounded-full bg-white/[0.12] inline-block" />
+              <span className="w-1 h-1 rounded-full bg-ov/[0.12] inline-block" />
               {esAdmin ? (
-                <span className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full bg-rose-500/12 text-rose-300 border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.18)] tracking-wide">
+                <span className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full bg-rose-500/12 text-rose-600 dark:text-rose-300 border border-rose-500/20 dark:shadow-[0_0_10px_rgba(244,63,94,0.18)] tracking-wide">
                   <Shield size={10} />
                   ADMIN
                 </span>
@@ -456,7 +462,7 @@ export default function Home() {
                   style={{
                     backgroundColor: claseInfo(usuario.clase)?.bg,
                     borderColor: claseInfo(usuario.clase)?.border,
-                    color: claseInfo(usuario.clase)?.color,
+                    color: tinta(claseInfo(usuario.clase)?.color ?? 'currentColor'),
                   }}
                 >
                   <Users size={10} />
@@ -465,7 +471,7 @@ export default function Home() {
               )}
             </div>
 
-            <h1 className="font-extrabold text-3xl md:text-4xl tracking-tight mt-1 bg-gradient-to-br from-slate-100 via-slate-100 to-primary-light bg-clip-text text-transparent">
+            <h1 className="font-extrabold text-3xl md:text-4xl tracking-tight mt-1 bg-gradient-to-br from-text-primary via-text-primary to-primary-light bg-clip-text text-transparent">
               {usuario?.nombre ?? 'Estudiante'}
             </h1>
 
@@ -474,10 +480,12 @@ export default function Home() {
               <div className="w-1.5 h-1.5 bg-primary rounded-full opacity-50" />
             </div>
 
-            <p className="text-xs mt-1.5 capitalize flex items-center gap-1.5 text-gray-600">
+            <p className="text-xs mt-1.5 capitalize flex items-center gap-1.5 text-text-faint">
               <span className="inline-block w-1 h-1 rounded-full bg-primary/50" />
               {fechaFormateada()}
             </p>
+
+            <SelectorModo className="sm:hidden mt-2 w-fit" />
 
             {cuentaAtras && (
               <div className="mt-2 inline-flex w-fit items-center gap-2 rounded-full border border-gold/30 bg-gradient-to-r from-gold/15 to-primary/10 px-3 py-1.5 text-xs font-semibold text-gold-light shadow-[0_0_14px_rgb(var(--c-gold)/0.12)]">
@@ -488,10 +496,11 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            <SelectorModo className="hidden sm:inline-flex" />
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 border border-white/[0.08] text-gray-400"
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-ov/5 border border-ov/[0.08] text-text-secondary"
               aria-label="Actualizar"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -528,11 +537,11 @@ export default function Home() {
           return (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   {esFinDeSemana ? 'Próximo lunes' : `Horario — ${diasSemana[diaSemana]}`}
                 </h2>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-600">
+                  <span className="text-xs text-text-faint">
                     {clases.length} clases
                   </span>
                   {usuario?.clase && (
@@ -548,7 +557,7 @@ export default function Home() {
               </div>
               <div className="rounded-2xl overflow-hidden bg-gradient-card border border-overlay-6">
                 {clases.length === 0 && (
-                  <div className="px-4 py-6 text-center text-xs text-gray-500">
+                  <div className="px-4 py-6 text-center text-xs text-text-muted">
                     {usuario?.clase
                       ? 'Sin clases programadas para hoy.'
                       : 'Configura tu clase en el perfil para ver tu horario.'}
@@ -568,7 +577,7 @@ export default function Home() {
                       {hayDescanso && (
                         <div className="flex items-center gap-2 px-4 py-1.5 border-y border-overlay-4">
                           <div className="flex-1 h-px bg-overlay-4" />
-                          <span className="text-2xs font-medium text-gray-500">Descanso</span>
+                          <span className="text-2xs font-medium text-text-muted">Descanso</span>
                           <div className="flex-1 h-px bg-overlay-4" />
                         </div>
                       )}
@@ -578,12 +587,12 @@ export default function Home() {
                           idx > 0 && !hayDescanso && "border-t border-overlay-4",
                           haPasado && "opacity-[0.32]"
                         )}
-                        style={esCurso ? { '--materia-color': color } as React.CSSProperties : undefined}
+                        style={esCurso ? varsMateria(color) : undefined}
                       >
                         {/* Borde izquierdo de color de materia — solo en clase activa */}
                         {esCurso && (
                           <div
-                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-[var(--materia-color)] to-[var(--materia-color)]/50 shadow-[0_0_8px_var(--materia-color)]"
+                            className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-gradient-to-b from-[color:var(--materia-color)] to-[color:var(--m50)]"
                           />
                         )}
 
@@ -592,7 +601,7 @@ export default function Home() {
                           <span
                             className={cn(
                               "text-xs font-mono font-semibold leading-tight",
-                              esCurso ? "text-slate-100" : "text-gray-500"
+                              esCurso ? "text-text-primary" : "text-text-muted"
                             )}
                           >
                             {clase.hora_inicio}
@@ -600,7 +609,7 @@ export default function Home() {
                           <span
                             className={cn(
                               "text-2xs font-mono leading-tight",
-                              esCurso ? "text-[var(--materia-color)]/60" : "text-gray-700"
+                              esCurso ? "text-[color:var(--m60)]" : "text-text-faint"
                             )}
                           >
                             {clase.hora_fin}
@@ -613,8 +622,8 @@ export default function Home() {
                             className={cn(
                               "rounded-full transition-all duration-200",
                               esCurso ? "w-[9px] h-[9px]" : "w-1.5 h-1.5",
-                              haPasado ? "bg-gray-600" : "bg-[var(--materia-color)]",
-                              esCurso && "shadow-[0_0_8px_var(--materia-color)]"
+                              haPasado ? "bg-text-faint" : "bg-[var(--materia-color)]",
+                              esCurso && "shadow-[0_0_6px_var(--m60)]"
                             )}
                           />
                           {esCurso && (
@@ -627,15 +636,15 @@ export default function Home() {
                           <span
                             className={cn(
                               "text-sm truncate block",
-                              esCurso && "text-slate-100 font-bold",
-                              !esCurso && haPasado && "text-gray-600",
-                              !esCurso && !haPasado && "text-slate-400"
+                              esCurso && "text-text-primary font-bold",
+                              !esCurso && haPasado && "text-text-faint",
+                              !esCurso && !haPasado && "text-text-secondary"
                             )}
                           >
                             {clase.materia}
                           </span>
                           {esCurso && (
-                            <span className="text-2xs font-semibold text-[var(--materia-color)] opacity-80">
+                            <span className="text-2xs font-semibold text-[color:var(--materia-ink)] opacity-80">
                               En curso
                             </span>
                           )}
@@ -646,8 +655,8 @@ export default function Home() {
                           className={cn(
                             "shrink-0 text-xs font-bold px-2 py-0.5 rounded-lg border",
                             esCurso
-                              ? "bg-[var(--materia-color)]/10 text-[var(--materia-color)] border-[var(--materia-color)]/20 shadow-[0_0_6px_var(--materia-color)]/10"
-                              : "bg-overlay-4 text-gray-600 border-overlay-5"
+                              ? "bg-[color:var(--m10)] text-[color:var(--materia-ink)] border-[color:var(--m20)]"
+                              : "bg-overlay-4 text-text-faint border-overlay-5"
                           )}
                         >
                           {clase.codigo}
@@ -666,7 +675,7 @@ export default function Home() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-400/10 border border-blue-400/15">
-                <HelpCircle size={15} className="text-blue-300" />
+                <HelpCircle size={15} className="text-blue-600 dark:text-blue-300" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-text-primary">Dudas de la comunidad</h2>
@@ -679,16 +688,16 @@ export default function Home() {
           </div>
 
           {dudasRecientes.length === 0 ? (
-            <button onClick={() => navigate('/foro')} className="rounded-2xl border border-dashed border-white/[0.12] bg-surface/60 px-4 py-5 text-left transition-colors hover:border-primary/30">
+            <button onClick={() => navigate('/foro')} className="rounded-2xl border border-dashed border-ov/[0.12] bg-surface/60 px-4 py-5 text-left transition-colors hover:border-primary/30">
               <p className="text-sm font-semibold text-text-primary">No hay dudas abiertas ahora mismo</p>
               <p className="mt-1 text-xs text-text-muted">Sé el primero en preguntar algo al grupo.</p>
             </button>
           ) : (
             <div className="grid gap-2.5 md:grid-cols-3">
               {dudasRecientes.map(duda => (
-                <button key={duda.id} onClick={() => navigate(`/foro/${duda.id}`)} className="group rounded-2xl border border-white/[0.08] bg-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30">
+                <button key={duda.id} onClick={() => navigate(`/foro/${duda.id}`)} className="group rounded-2xl border border-ov/[0.08] bg-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30">
                   <div className="flex items-center justify-between gap-2 text-[11px] text-text-muted">
-                    <span className="flex items-center gap-1.5 text-blue-300"><MessageCircle size={12} />{duda.foro_respuestas?.length ?? 0} respuestas</span>
+                    <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-300"><MessageCircle size={12} />{duda.foro_respuestas?.length ?? 0} respuestas</span>
                     <ChevronRight size={13} className="opacity-40 group-hover:opacity-100" />
                   </div>
                   <p className="mt-3 text-sm font-bold leading-snug text-text-primary line-clamp-2 group-hover:text-primary-light">{duda.titulo}</p>
@@ -702,7 +711,7 @@ export default function Home() {
         {/* ── Accesos rápidos ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
               Accesos rápidos
             </h2>
             <div className="h-px flex-1 mx-3 bg-gradient-to-r from-primary/15 to-transparent" />
@@ -710,7 +719,7 @@ export default function Home() {
 
           {/* Tu espacio — navegación interna */}
           <div className="flex flex-col gap-3">
-            <span className="text-2xs font-semibold uppercase tracking-wider text-gray-600">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-text-faint">
               Tu espacio
             </span>
             <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8">
@@ -730,7 +739,7 @@ export default function Home() {
 
           {/* Enlaces externos — chips compactos, más discretos que "Tu espacio" */}
           <div className="flex flex-col gap-3">
-            <span className="text-2xs font-semibold uppercase tracking-wider text-gray-600">
+            <span className="text-2xs font-semibold uppercase tracking-wider text-text-faint">
               Enlaces externos
             </span>
             <div className="flex flex-wrap gap-2.5">
@@ -753,7 +762,7 @@ export default function Home() {
         {(proximaActividad || proximoEvento) && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0 text-gray-500">
+              <h2 className="text-xs font-semibold uppercase tracking-wider shrink-0 text-text-muted">
                 Próximamente
               </h2>
               <div className="h-px flex-1 bg-gradient-to-r from-primary/15 to-transparent" />
@@ -775,30 +784,30 @@ export default function Home() {
                   <button
                     onClick={() => navigate('/calendar?vista=actividades')}
                     className="group w-full text-left rounded-2xl flex items-stretch gap-0 transition-all duration-200 overflow-hidden bg-gradient-to-br from-surface to-input border shadow-card hover:-translate-y-0.5 hover:shadow-card-hover"
-                    style={{ borderColor: urgBorder, '--urg-color': urgColor } as React.CSSProperties}
+                    style={{ borderColor: urgBorder, '--urg-color': urgColor, '--urg-ink': tinta(urgColor), '--u5': mez(urgColor, 5), '--u10': mez(urgColor, 10), '--u20': mez(urgColor, 20) } as React.CSSProperties}
                   >
                     {/* Badge de fecha — columna izquierda */}
-                    <div className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5 bg-gradient-to-b from-[var(--urg-color)]/10 to-[var(--urg-color)]/5 border-r border-[var(--urg-color)]/20 min-w-[58px]">
-                      <span className="text-xs font-black leading-none uppercase text-[var(--urg-color)]">
+                    <div className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5 bg-gradient-to-b from-[color:var(--u10)] to-[color:var(--u5)] border-r border-[color:var(--u20)] min-w-[58px]">
+                      <span className="text-xs font-black leading-none uppercase text-[color:var(--urg-ink)]">
                         {fechaEvento.toLocaleDateString('es', { month: 'short' })}
                       </span>
-                      <span className="text-2xl font-black leading-none text-[var(--urg-color)]">
+                      <span className="text-2xl font-black leading-none text-[color:var(--urg-ink)]">
                         {fechaEvento.getDate()}
                       </span>
                     </div>
 
                     {/* Contenido principal */}
                     <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3.5">
-                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-[var(--urg-color)]/10 border border-[var(--urg-color)]/20">
-                        <ClipboardCheck size={16} className="text-[var(--urg-color)]" />
+                      <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-[color:var(--u10)] border border-[color:var(--u20)]">
+                        <ClipboardCheck size={16} className="text-[color:var(--urg-ink)]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-[var(--urg-color)]/10 text-[var(--urg-color)] border border-[var(--urg-color)]/20">
+                          <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-[color:var(--u10)] text-[color:var(--urg-ink)] border border-[color:var(--u20)]">
                             {label}
                           </span>
                           {proximaActividad.materia && (
-                            <span className="text-2xs font-medium text-gray-500">
+                            <span className="text-2xs font-medium text-text-muted">
                               {proximaActividad.materia}
                             </span>
                           )}
@@ -806,12 +815,12 @@ export default function Home() {
                         <p className="text-sm font-semibold truncate text-text-primary">
                           {proximaActividad.titulo}
                         </p>
-                        <p className="text-xs mt-0.5 flex items-center gap-1 text-gray-500">
+                        <p className="text-xs mt-0.5 flex items-center gap-1 text-text-muted">
                           <Clock size={9} />
                           {fechaEvento.toLocaleDateString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
-                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity text-[var(--urg-color)]" />
+                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity text-[color:var(--urg-ink)]" />
                     </div>
                   </button>
                 )
@@ -829,10 +838,10 @@ export default function Home() {
                   >
                     {/* Badge de fecha — columna izquierda */}
                     <div className="shrink-0 flex flex-col items-center justify-center px-4 py-4 gap-0.5 bg-gradient-to-b from-amber-500/15 to-amber-500/5 border-r border-amber-500/20 min-w-[58px]">
-                      <span className="text-xs font-black leading-none uppercase text-amber-300">
+                      <span className="text-xs font-black leading-none uppercase text-amber-600 dark:text-amber-300">
                         {fechaEvt.toLocaleDateString('es', { month: 'short' })}
                       </span>
-                      <span className="text-2xl font-black leading-none text-amber-300">
+                      <span className="text-2xl font-black leading-none text-amber-600 dark:text-amber-300">
                         {fechaEvt.getDate()}
                       </span>
                     </div>
@@ -840,21 +849,21 @@ export default function Home() {
                     {/* Contenido principal */}
                     <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3.5">
                       <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <Calendar size={16} className="text-amber-300" />
+                        <Calendar size={16} className="text-amber-600 dark:text-amber-300" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                          <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20">
                             {evtLabel}
                           </span>
                           <TipoEventoBadge tipo={proximoEvento.tipo} />
                         </div>
                         <p className="text-sm font-semibold truncate text-text-primary">{proximoEvento.titulo}</p>
-                        <p className="text-xs mt-0.5 capitalize text-gray-500">
+                        <p className="text-xs mt-0.5 capitalize text-text-muted">
                           {fechaEvt.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </p>
                       </div>
-                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity text-amber-300" />
+                      <ChevronRight size={15} className="shrink-0 opacity-30 group-hover:opacity-60 transition-opacity text-amber-600 dark:text-amber-300" />
                     </div>
                   </button>
                 )
@@ -868,11 +877,11 @@ export default function Home() {
             <div className="flex items-center gap-2.5">
               <CalendarDays size={16} className="text-primary-light" />
               <h2 className="text-sm font-bold text-text-primary">Horario semanal</h2>
-              {usuario?.clase && <span className="text-xs text-gray-500">{usuario.clase}</span>}
+              {usuario?.clase && <span className="text-xs text-text-muted">{usuario.clase}</span>}
             </div>
             <button
               onClick={() => setSemanaAbierta(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-white/5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:bg-ov/5 transition-colors"
               aria-label="Cerrar"
             >
               <X size={16} />
@@ -884,7 +893,7 @@ export default function Home() {
         </Modal>
 
         <div className="pt-4 pb-2 flex items-center justify-center">
-          <span className="text-gray-800 text-[11px] font-medium">
+          <span className="text-text-faint text-[11px] font-medium">
             TopCode © 2026 · Informática — DAM · DAW · ASIR
           </span>
         </div>

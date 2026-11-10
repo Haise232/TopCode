@@ -17,6 +17,7 @@ import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 import { Button, Spinner } from '../components/ui'
 import { useTheme } from '../contexts/ThemeContext'
 import { Copo } from '../components/Navidad'
+import { tinta } from '../lib/tinta'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -357,9 +358,9 @@ function SectionHeader({ label, count, color }: { label: string; count: number; 
   return (
     <div className="flex items-center gap-3 mb-1">
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color }}>{label}</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: tinta(color) }}>{label}</h2>
         <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--color-surface-alpha)', color, border: 'var(--border) 1px solid' }}>
+          style={{ background: 'var(--color-surface-alpha)', color: tinta(color), border: 'var(--border) 1px solid' }}>
           {count}
         </span>
       </div>
@@ -395,9 +396,9 @@ function DayHeader({ fecha }: { fecha: string }) {
             ? 'rgba(245,158,11,0.10)'
             : 'var(--color-surface-alpha)',
           color: isHoy
-            ? 'var(--color-rose)'
+            ? tinta('var(--color-rose)')
             : isManana
-            ? 'var(--color-warning)'
+            ? tinta('var(--color-warning)')
             : 'var(--color-text-secondary)',
           border: `1px solid ${isHoy ? 'rgba(244,63,94,0.22)' : isManana ? 'rgba(245,158,11,0.22)' : 'var(--border)'}`,
         }}
@@ -680,7 +681,7 @@ export default function CalendarPage() {
                 {todayCount > 0 && (
                   <>
                     <span style={{ color: 'var(--color-text-secondary)', fontSize: 10 }}>·</span>
-                    <StatChip value={todayCount} label="hoy" color="var(--color-rose)" pulse />
+                    <StatChip value={todayCount} label="hoy" color={tinta('var(--color-rose)')} pulse />
                   </>
                 )}
               </div>
@@ -695,11 +696,11 @@ export default function CalendarPage() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar eventos..."
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none pl-9 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none pl-9 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
             </div>
             <button onClick={handleRefresh} disabled={refreshing}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 text-text-muted shrink-0"
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-ov/5 text-text-muted shrink-0"
               style={{ border: '1px solid var(--overlay-08)' }}
               aria-label="Actualizar">
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
@@ -788,7 +789,7 @@ export default function CalendarPage() {
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-200"
                     style={{
                       background: active ? cfg.bg : 'var(--color-surface)',
-                      color: active ? cfg.color : 'var(--color-text)',
+                      color: active ? cfg.texto : 'var(--color-text)',
                       borderColor: active ? cfg.border : 'var(--border)',
                       transform: active ? 'scale(1.03)' : 'scale(1)',
                     }}>
@@ -927,7 +928,7 @@ export default function CalendarPage() {
                     value={form.titulo}
                     onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
                     placeholder="Ej: Actividad 2 de Informática"
-                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                    className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     autoFocus
                   />
                 </div>
@@ -943,7 +944,7 @@ export default function CalendarPage() {
                       value={form.materia}
                       onChange={e => setForm(f => ({ ...f, materia: e.target.value }))}
                       placeholder="Selecciona o escribe..."
-                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                      className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                       list="cal-materias-list"
                     />
                     <datalist id="cal-materias-list">
@@ -960,7 +961,7 @@ export default function CalendarPage() {
                     onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
                     placeholder="Más detalles..."
                     rows={3}
-                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                    className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                   />
                 </div>
 
@@ -972,7 +973,7 @@ export default function CalendarPage() {
                       type="date"
                       value={form.fecha}
                       onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
-                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                      className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -981,7 +982,7 @@ export default function CalendarPage() {
                       type="time"
                       value={form.hora}
                       onChange={e => setForm(f => ({ ...f, hora: e.target.value }))}
-                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                      className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     />
                   </div>
                 </div>
@@ -1061,7 +1062,7 @@ function TipoSelector({ value, onChange }: { value: TipoEvento; onChange: (t: Ti
               className="flex items-center justify-center gap-1.5 text-xs font-semibold px-2 py-2 rounded-xl border transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               style={{
                 background: active ? cfg.bg : 'var(--overlay-03)',
-                color: active ? cfg.color : 'var(--color-text-secondary)',
+                color: active ? cfg.texto : 'var(--color-text-secondary)',
                 borderColor: active ? cfg.color : 'var(--overlay-08)',
                 boxShadow: active ? `0 0 0 1px ${cfg.border}` : 'none',
               }}
@@ -1110,6 +1111,7 @@ function EventCard({
 
   const cat = tipoEventoConfig(evento.tipo)
   const mainColor = cat.color
+  const mainTexto = cat.texto
   const mainBg = cat.bg
   const mainBorder = cat.border
 
@@ -1126,15 +1128,15 @@ function EventCard({
   const badgeStyle = completada ? {
     background: 'rgb(var(--c-teal)/0.1)', color: 'var(--color-teal)', border: '1px solid rgb(var(--c-teal)/0.25)',
   } : vencida ? {
-    background: 'rgba(244,63,94,0.12)', color: 'var(--color-rose)', border: '1px solid rgba(244,63,94,0.28)',
+    background: 'rgba(244,63,94,0.12)', color: tinta('var(--color-rose)'), border: '1px solid rgba(244,63,94,0.28)',
   } : past ? {
     background: 'var(--overlay-03)', color: 'var(--color-text-muted)', border: '1px solid var(--overlay-05)',
   } : daysUntil === 0 ? {
-    background: 'rgba(244,63,94,0.15)', color: 'var(--color-rose)', border: '1px solid rgba(244,63,94,0.3)',
+    background: 'rgba(244,63,94,0.15)', color: tinta('var(--color-rose)'), border: '1px solid rgba(244,63,94,0.3)',
   } : daysUntil === 1 ? {
-    background: 'rgba(249,115,22,0.12)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.25)',
+    background: 'rgba(249,115,22,0.12)', color: tinta('#fb923c'), border: '1px solid rgba(249,115,22,0.25)',
   } : daysUntil <= 3 ? {
-    background: 'rgba(245,158,11,0.12)', color: 'var(--color-warning)', border: '1px solid rgba(245,158,11,0.25)',
+    background: 'rgba(245,158,11,0.12)', color: tinta('var(--color-warning)'), border: '1px solid rgba(245,158,11,0.25)',
   } : daysUntil <= 7 ? {
     background: 'rgb(var(--c-teal)/0.1)', color: 'var(--color-primary-light)', border: '1px solid rgb(var(--c-teal)/0.2)',
   } : {
@@ -1167,11 +1169,11 @@ function EventCard({
             boxShadow: isToday ? `0 4px 16px ${mainColor}50` : 'none',
           }}>
           <span className="text-base font-extrabold leading-none tabular-nums"
-            style={{ color: isToday ? 'white' : past ? 'var(--color-text-muted)' : mainColor }}>
+            style={{ color: isToday ? 'white' : past ? 'var(--color-text-muted)' : mainTexto }}>
             {dayNum}
           </span>
           <span className="text-xs mt-0.5 uppercase font-medium"
-            style={{ color: isToday ? 'rgba(255,255,255,0.7)' : past ? 'var(--color-text-secondary)' : mainColor, opacity: isToday ? 1 : 0.65 }}>
+            style={{ color: isToday ? 'rgba(255,255,255,0.7)' : past ? 'var(--color-text-secondary)' : mainTexto, opacity: isToday ? 1 : 0.65 }}>
             {MESES_CORTO[monthIdx]}
           </span>
         </div>
@@ -1255,7 +1257,7 @@ function EventCard({
           {evento.materia && (
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit max-w-full truncate"
               style={hue !== null
-                ? { background: `hsla(${hue},60%,65%,0.1)`, color: `hsl(${hue},60%,65%)`, border: `1px solid hsla(${hue},60%,65%,0.28)` }
+                ? { background: `hsla(${hue},60%,65%,0.1)`, color: tinta(`hsl(${hue},60%,65%)`), border: `1px solid hsla(${hue},60%,65%,0.28)` }
                 : { background: 'var(--overlay-05)', color: 'var(--color-text-secondary)', border: '1px solid var(--overlay-08)' }}>
               {evento.materia}
             </span>
@@ -1284,7 +1286,7 @@ function EventCard({
             )}
             {evento.hora && (
               <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums"
-                style={{ background: past ? 'var(--overlay-04)' : mainBg, color: past ? 'var(--color-text-muted)' : mainColor, border: `1px solid ${past ? 'var(--overlay-05)' : mainBorder}` }}>
+                style={{ background: past ? 'var(--overlay-04)' : mainBg, color: past ? 'var(--color-text-muted)' : mainTexto, border: `1px solid ${past ? 'var(--overlay-05)' : mainBorder}` }}>
                 <Clock size={10} aria-hidden="true" />
                 {evento.hora.slice(0, 5)}
               </span>

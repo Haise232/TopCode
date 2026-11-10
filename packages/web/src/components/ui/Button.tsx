@@ -7,7 +7,7 @@ type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary: 'bg-gradient-to-br from-primary to-primary-dark text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-primary',
-  ghost: 'bg-surface border text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-slate-200 active:scale-[0.98] transition-all duration-200 border-white/[0.08]',
+  ghost: 'bg-surface border text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] transition-all duration-200 border-ov/[0.08]',
   danger: 'bg-gradient-to-br from-rose-500 to-rose-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-rose',
   subtle: 'font-medium rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-200 bg-teal/10 text-teal-light border border-teal/20 hover:bg-teal/15',
 }

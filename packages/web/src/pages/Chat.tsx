@@ -10,6 +10,7 @@ import { usePublicMensajes, usePrivateMensajes, type Usuario, type UsuarioPublic
 import { markChatVisited } from '../hooks/useUnreadCounts'
 import { useTheme } from '../contexts/ThemeContext'
 import { Copo } from '../components/Navidad'
+import { tinta } from '../lib/tinta'
 
 type SubTab = 'publico' | 'privado'
 
@@ -168,7 +169,7 @@ function MessageInput({
           value={value}
           onChange={e => { onChange(e.target.value); if (e.target.value.trim()) onTyping?.() }}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-600"
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-text-faint"
           style={{ color: 'var(--color-text)' }}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -190,7 +191,7 @@ function MessageInput({
           }}
           aria-label="Enviar"
         >
-          <Send size={13} style={{ color: active ? 'white' : '#64748b', transform: 'translateX(1px)' }} />
+          <Send size={13} style={{ color: active ? 'white' : 'var(--color-text-muted)', transform: 'translateX(1px)' }} />
         </button>
       </div>
     </form>
@@ -249,7 +250,7 @@ function BubbleRow({
               borderRadius: '12px',
               background: 'var(--overlay-03)',
               border: '1px solid var(--overlay-06)',
-              color: '#4b5563',
+              color: 'var(--color-text-faint)',
             }}
           >
             Mensaje eliminado
@@ -289,9 +290,9 @@ function BubbleRow({
             <button
               onClick={onStartEdit}
               className="w-6 h-6 flex items-center justify-center rounded-lg transition-all"
-              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: 'var(--color-text-secondary)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)' }}
               title="Editar"
             >
               <Pencil size={10} />
@@ -299,9 +300,9 @@ function BubbleRow({
             <button
               onClick={onDelete}
               className="w-6 h-6 flex items-center justify-center rounded-lg transition-all"
-              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
+              style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: 'var(--color-text-secondary)' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f43f5e' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text-secondary)' }}
               title="Eliminar"
             >
               <Trash2 size={10} />
@@ -315,7 +316,7 @@ function BubbleRow({
               type="button"
               onClick={onOpenProfile}
               className="text-xs font-semibold ml-1 mb-0.5 hover:underline"
-              style={{ color: `hsla(${getHue(autor)}, 65%, 65%, 1)` }}
+              style={{ color: tinta(`hsl(${getHue(autor)}, 65%, 65%)`) }}
             >
               {autor}
             </button>
@@ -341,16 +342,16 @@ function BubbleRow({
                   if (e.key === 'Escape') onCancelEdit?.()
                 }}
                 className="flex-1 bg-transparent text-sm outline-none"
-                style={{ color: 'white', minWidth: 0 }}
+                style={{ color: 'var(--color-text)', minWidth: 0 }}
               />
               <button onClick={() => onConfirmEdit?.(editText)}
                 className="w-5 h-5 flex items-center justify-center rounded-md transition-all"
-                style={{ background: 'rgb(var(--c-primary) / 0.3)', color: 'white' }}>
+                style={{ background: 'rgb(var(--c-primary) / 0.3)', color: 'var(--color-text)' }}>
                 <Check size={10} />
               </button>
               <button onClick={onCancelEdit}
                 className="w-5 h-5 flex items-center justify-center rounded-md transition-all"
-                style={{ color: '#64748b' }}>
+                style={{ color: 'var(--color-text-muted)' }}>
                 <X size={10} />
               </button>
             </div>
@@ -366,7 +367,7 @@ function BubbleRow({
                 borderRadius: isGrouped ? '4px 18px 18px 4px' : '4px 18px 18px 18px',
                 background: 'var(--color-surface-2)',
                 border: '1px solid var(--overlay-07)',
-                color: '#e2e8f0',
+                color: 'var(--color-text)',
               }}
             >
               {texto}
@@ -374,9 +375,9 @@ function BubbleRow({
           )}
 
           {isLastInGroup && !isEditing && (
-            <span className="text-xs mx-1.5 mt-0.5 flex items-center gap-1.5" style={{ color: '#374151' }}>
+            <span className="text-xs mx-1.5 mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--color-text-faint)' }}>
               {time}
-              {editado && <span style={{ color: '#4b5563', fontSize: 10 }}>(editado)</span>}
+              {editado && <span style={{ color: 'var(--color-text-faint)', fontSize: 10 }}>(editado)</span>}
             </span>
           )}
         </div>
@@ -410,7 +411,7 @@ function EmptyPublicChat() {
       </div>
       <div>
         <p className="font-semibold" style={{ color: 'var(--color-text)' }}>El canal está tranquilo por ahora</p>
-        <p className="text-sm mt-1.5 max-w-[240px]" style={{ color: '#4b5563', lineHeight: 1.5 }}>
+        <p className="text-sm mt-1.5 max-w-[240px]" style={{ color: 'var(--color-text-faint)', lineHeight: 1.5 }}>
           {navidad
             ? 'Sé el primero en escribir algo y reparte un poco de espíritu navideño'
             : 'Sé el primero en escribir algo y empieza la conversación'}
@@ -497,7 +498,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
               {canalInfo.label}
               {navidad && <Copo size={12} className="inline-block ml-1.5 -mt-0.5 text-gold" />}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-faint)' }}>
               {loading ? 'Cargando...' : `${todayCount} mensaje${todayCount !== 1 ? 's' : ''} hoy · ${canalInfo.desc}`}
             </p>
           </div>
@@ -526,7 +527,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
                 style={{
                   background: active ? `color-mix(in srgb, ${c.color} 14%, transparent)` : 'var(--overlay-03)',
                   border: active ? `1px solid color-mix(in srgb, ${c.color} 30%, transparent)` : '1px solid transparent',
-                  color: active ? c.color : '#6b7280',
+                  color: active ? c.color : 'var(--color-text-muted)',
                 }}
               >
                 <Hash size={10} />
@@ -599,7 +600,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
                 style={{ background: 'var(--color-primary)', animation: 'dot-bounce 1.4s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
             ))}
           </div>
-          <span className="text-xs" style={{ color: '#4b5563' }}>
+          <span className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
             {othersTyping.length === 1
               ? `${othersTyping[0]} está escribiendo…`
               : `${othersTyping.slice(0, 2).join(', ')} están escribiendo…`}
@@ -655,7 +656,7 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
           <button type="button" onClick={() => navigate(`/profile/${peer.id}`)} className="font-semibold text-sm leading-tight hover:underline" style={{ color: 'var(--color-text)' }}>{peer.nombre}</button>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Lock size={9} style={{ color: 'var(--color-teal)' }} />
-            <p className="text-xs" style={{ color: '#4b5563' }}>Conversación privada</p>
+            <p className="text-xs" style={{ color: 'var(--color-text-faint)' }}>Conversación privada</p>
           </div>
         </div>
         <span
@@ -696,7 +697,7 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
               <p className="font-semibold" style={{ color: 'var(--color-text)' }}>
                 Hola, ¡empieza la conversación!
               </p>
-              <p className="text-sm mt-1.5 max-w-[220px]" style={{ color: '#4b5563', lineHeight: 1.5 }}>
+              <p className="text-sm mt-1.5 max-w-[220px]" style={{ color: 'var(--color-text-faint)', lineHeight: 1.5 }}>
                 Envía tu primer mensaje a {peer.nombre}
               </p>
             </div>
@@ -798,12 +799,12 @@ function UserList({
           className="flex items-center gap-2 px-3 py-2 rounded-xl"
           style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)' }}
         >
-          <Search size={13} style={{ color: '#4b5563', flexShrink: 0 }} />
+          <Search size={13} style={{ color: 'var(--color-text-faint)', flexShrink: 0 }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Buscar usuario..."
-            className="flex-1 bg-transparent text-xs outline-none placeholder:text-slate-600"
+            className="flex-1 bg-transparent text-xs outline-none placeholder:text-text-faint"
             style={{ color: 'var(--color-text)' }}
           />
         </div>
@@ -823,16 +824,16 @@ function UserList({
               className="w-12 h-12 flex items-center justify-center rounded-2xl"
               style={{ background: 'var(--overlay-04)', border: '1px solid var(--overlay-07)' }}
             >
-              <Users size={20} style={{ color: '#374151' }} />
+              <Users size={20} style={{ color: 'var(--color-text-faint)' }} />
             </div>
-            <p className="text-xs" style={{ color: '#4b5563' }}>
+            <p className="text-xs" style={{ color: 'var(--color-text-faint)' }}>
               {query ? 'Sin resultados' : 'No hay otros usuarios'}
             </p>
           </div>
         ) : (
           <div className="px-2 py-1 flex flex-col gap-0.5">
             {!compact && (
-              <p className="text-xs font-semibold uppercase tracking-wider px-2 py-1.5" style={{ color: '#374151' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider px-2 py-1.5" style={{ color: 'var(--color-text-faint)' }}>
                 {filtered.length} usuario{filtered.length !== 1 ? 's' : ''}
               </p>
             )}
@@ -866,7 +867,7 @@ function UserList({
                   <div className="flex-1 min-w-0">
                     <p
                       className="font-semibold truncate"
-                      style={{ color: isSelected ? 'var(--color-teal-light)' : '#e2e8f0', fontSize: compact ? 12 : 13 }}
+                      style={{ color: isSelected ? 'var(--color-teal-light)' : 'var(--color-text)', fontSize: compact ? 12 : 13 }}
                     >
                       {u.nombre}
                     </p>
@@ -923,7 +924,7 @@ function DesktopSidebar({
 
       {/* General section */}
       <div className="px-2 pt-3 pb-1 shrink-0">
-        <p className="text-xs font-semibold uppercase tracking-wider px-2 mb-1.5" style={{ color: '#374151' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider px-2 mb-1.5" style={{ color: 'var(--color-text-faint)' }}>
           Canales
         </p>
         <button
@@ -940,11 +941,11 @@ function DesktopSidebar({
               background: subTab === 'publico' ? 'rgb(var(--c-primary) / 0.2)' : 'var(--overlay-05)',
             }}
           >
-            <Hash size={11} style={{ color: subTab === 'publico' ? 'var(--color-primary-light)' : '#4b5563' }} />
+            <Hash size={11} style={{ color: subTab === 'publico' ? 'var(--color-primary-light)' : 'var(--color-text-faint)' }} />
           </div>
           <span
             className="text-sm font-medium"
-            style={{ color: subTab === 'publico' ? 'var(--color-primary-light)' : '#6b7280' }}
+            style={{ color: subTab === 'publico' ? 'var(--color-primary-light)' : 'var(--color-text-muted)' }}
           >
             general
           </span>
@@ -962,7 +963,7 @@ function DesktopSidebar({
 
       {/* Private messages section */}
       <div className="px-2 pb-1 shrink-0">
-        <p className="text-xs font-semibold uppercase tracking-wider px-2 mb-1" style={{ color: '#374151' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider px-2 mb-1" style={{ color: 'var(--color-text-faint)' }}>
           Mensajes Directos
         </p>
       </div>
@@ -1006,8 +1007,8 @@ function MobileTabBar({
         {subTab === 'privado' && selectedUser && (
           <button
             onClick={onBack}
-            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 shrink-0"
-            style={{ border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
+            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-ov/5 shrink-0"
+            style={{ border: '1px solid var(--overlay-08)', color: 'var(--color-text-secondary)' }}
           >
             <ArrowLeft size={15} />
           </button>
@@ -1023,7 +1024,7 @@ function MobileTabBar({
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <Lock size={9} style={{ color: 'var(--color-teal)' }} />
-                  <p className="text-xs" style={{ color: '#4b5563' }}>Privado</p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-faint)' }}>Privado</p>
                 </div>
               </div>
             </div>
@@ -1042,11 +1043,11 @@ function MobileTabBar({
                     background: tab === 'publico' ? 'rgb(var(--c-primary) / 0.15)' : 'rgb(var(--c-teal) / 0.12)',
                     border: tab === 'publico' ? '1px solid rgb(var(--c-primary) / 0.25)' : '1px solid rgb(var(--c-teal) / 0.22)',
                     color: tab === 'publico' ? 'var(--color-primary-light)' : 'var(--color-teal-light)',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
                   } : {
                     background: 'transparent',
                     border: '1px solid transparent',
-                    color: '#4b5563',
+                    color: 'var(--color-text-faint)',
                   }}
                 >
                   {tab === 'publico' ? <Hash size={12} /> : <Lock size={12} />}
@@ -1179,7 +1180,7 @@ export default function Chat() {
                   style={{ borderBottom: '1px solid var(--overlay-05)', background: 'var(--color-surface-2)' }}
                 >
                   <p className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Mensajes Directos</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>Selecciona un usuario para chatear</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-faint)' }}>Selecciona un usuario para chatear</p>
                 </div>
                 <UserList
                   usuario={usuario}
@@ -1193,7 +1194,7 @@ export default function Chat() {
             {subTab === 'privado' && !selectedUser && (
               <div
                 className="hidden md:flex flex-col items-center justify-center flex-1 gap-4 text-center"
-                style={{ color: '#374151' }}
+                style={{ color: 'var(--color-text-faint)' }}
               >
                 <div
                   className="w-16 h-16 flex items-center justify-center rounded-2xl"
@@ -1202,10 +1203,10 @@ export default function Chat() {
                   <MessageCircle size={28} style={{ color: 'var(--color-teal-dark)' }} />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm" style={{ color: '#6b7280' }}>
+                  <p className="font-semibold text-sm" style={{ color: 'var(--color-text-muted)' }}>
                     Selecciona una conversación
                   </p>
-                  <p className="text-xs mt-1" style={{ color: '#374151' }}>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-faint)' }}>
                     Elige un usuario del panel izquierdo
                   </p>
                 </div>

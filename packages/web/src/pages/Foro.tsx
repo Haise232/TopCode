@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { tinta } from '../lib/tinta'
 import { useNavigate } from 'react-router-dom'
 import { HelpCircle, Plus, X, Loader2, MessageSquare, CheckCircle2, Clock } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -88,7 +89,7 @@ export default function Foro() {
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
       {/* Header */}
-      <div className="px-4 md:px-6 py-5 border-b border-white/[0.08] flex items-center justify-between gap-4">
+      <div className="px-4 md:px-6 py-5 border-b border-ov/[0.08] flex items-center justify-between gap-4">
         <div>
           <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Foro de dudas{navidad && <Copo size={16} className="text-gold" />}</h1>
           <p className="text-xs text-text-muted mt-0.5">Pregunta, responde y ayúdate entre compañeros</p>
@@ -104,7 +105,7 @@ export default function Foro() {
       </div>
 
       {/* Filters */}
-      <div className="px-4 md:px-6 py-3 flex items-center gap-2 overflow-x-auto scrollbar-none border-b border-white/[0.06]">
+      <div className="px-4 md:px-6 py-3 flex items-center gap-2 overflow-x-auto scrollbar-none border-b border-ov/[0.06]">
         {[{ codigo: 'todos', nombre: 'Todos' }, ...FORO_CATEGORIAS].map(m => {
           const active = filtroMateria === m.codigo
           return (
@@ -115,7 +116,7 @@ export default function Foro() {
               style={{
                 background: active ? 'rgb(var(--c-primary) / 0.14)' : 'var(--overlay-03)',
                 border: active ? '1px solid rgb(var(--c-primary) / 0.3)' : '1px solid transparent',
-                color: active ? 'var(--color-primary)' : '#6b7280',
+                color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
               }}
             >
               {m.nombre}
@@ -129,7 +130,7 @@ export default function Foro() {
           style={{
             background: soloSinResolver ? 'rgba(251,146,60,0.14)' : 'var(--overlay-03)',
             border: soloSinResolver ? '1px solid rgba(251,146,60,0.3)' : '1px solid transparent',
-            color: soloSinResolver ? '#fb923c' : '#6b7280',
+            color: soloSinResolver ? tinta('#fb923c') : 'var(--color-text-muted)',
           }}
         >
           <Clock size={10} />
@@ -166,7 +167,7 @@ export default function Foro() {
               <button
                 key={post.id}
                 onClick={() => navigate(`/foro/${post.id}`)}
-                className="group w-full text-left p-4 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-surface to-bg transition-all duration-150 hover:border-white/[0.18] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex gap-3"
+                className="group w-full text-left p-4 rounded-2xl border border-ov/[0.08] bg-gradient-to-br from-surface to-bg transition-all duration-150 hover:border-ov/[0.18] hover:shadow-card-hover flex gap-3"
               >
                 {/* Left accent */}
                 <div className="w-0.5 rounded-full shrink-0 self-stretch" style={{ background: post.resuelto ? 'var(--color-teal)' : color }} />
@@ -177,7 +178,7 @@ export default function Foro() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
                         className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+                        style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color: tinta(color) }}
                       >
                         {tipo.nombre}
                       </span>
@@ -187,7 +188,7 @@ export default function Foro() {
                           Resuelto
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,146,60,0.1)', color: '#fb923c' }}>
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,146,60,0.1)', color: tinta('#fb923c') }}>
                           <Clock size={9} />
                           Pendiente
                         </span>
@@ -226,13 +227,13 @@ export default function Foro() {
           onClick={e => { if (e.target === e.currentTarget) closeModal() }}
         >
           <div
-            className="w-full max-w-lg rounded-2xl p-6 flex flex-col gap-4 border border-white/[0.1]"
+            className="w-full max-w-lg rounded-2xl p-6 flex flex-col gap-4 border border-ov/[0.1]"
             style={{ background: 'var(--color-surface-2)' }}
           >
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-lg text-text-primary">Nueva pregunta</h2>
-              <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white/5">
-                <X size={16} style={{ color: '#6b7280' }} />
+              <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ov/5">
+                <X size={16} style={{ color: 'var(--color-text-muted)' }} />
               </button>
             </div>
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
@@ -240,12 +241,12 @@ export default function Foro() {
                 value={form.titulo}
                 onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
                 placeholder="¿Qué quieres preguntar? *"
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
+                className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
               <select
                 value={form.materia}
                 onChange={e => setForm(f => ({ ...f, materia: e.target.value }))}
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-slate-100 outline-none focus:border-primary/50"
+                className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary outline-none focus:border-primary/50"
               >
                 {FORO_CATEGORIAS.map(c => <option key={c.codigo} value={c.codigo}>{c.nombre}</option>)}
               </select>
@@ -254,9 +255,9 @@ export default function Foro() {
                 onChange={e => setForm(f => ({ ...f, cuerpo: e.target.value }))}
                 placeholder="Explica tu duda con detalle... *"
                 rows={4}
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)] resize-none"
+                className="bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)] resize-none"
               />
-              {formError && <p className="text-xs text-rose-400">{formError}</p>}
+              {formError && <p className="text-xs text-rose-600 dark:text-rose-400">{formError}</p>}
               <button
                 type="submit"
                 disabled={saving}

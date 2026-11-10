@@ -80,7 +80,7 @@ export default function Docs() {
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
-      <div className="px-4 md:px-6 py-5 border-b border-white/[0.08] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="px-4 md:px-6 py-5 border-b border-ov/[0.08] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Documentación{navidad && <Copo size={16} className="text-gold" />}</h1>
           <p className="text-xs text-text-muted mt-0.5">Biblioteca de documentación en Markdown que toda la clase puede leer, editar y ampliar</p>
@@ -95,7 +95,7 @@ export default function Docs() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 border-b border-white/[0.06]">
+      <div className="px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 border-b border-ov/[0.06]">
         <div className="relative w-full md:w-80 shrink-0">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
@@ -103,7 +103,7 @@ export default function Docs() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Buscar en toda la documentación"
-            className="w-full rounded-xl border border-white/[0.1] bg-surface px-9 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
+            className="w-full rounded-xl border border-ov/[0.1] bg-surface px-9 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
           />
         </div>
         {resultados === null && materiasUsadas.length > 2 && (
@@ -115,7 +115,7 @@ export default function Docs() {
                   key={m.codigo}
                   onClick={() => setFiltro(m.codigo)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 border transition-all duration-150 ${
-                    active ? 'bg-primary/15 border-primary/30 text-primary' : 'bg-white/[0.03] border-transparent text-text-muted'
+                    active ? 'bg-primary/15 border-primary/30 text-primary' : 'bg-ov/[0.03] border-transparent text-text-muted'
                   }`}
                 >
                   {m.nombreCorto}
@@ -136,7 +136,7 @@ export default function Docs() {
               <button
                 key={r.id}
                 onClick={() => navigate(`/docs/${r.coleccion_id}/${r.id}`)}
-                className="group text-left rounded-xl border border-white/[0.08] bg-surface px-4 py-3 hover:border-primary/30 transition-colors"
+                className="group text-left rounded-xl border border-ov/[0.08] bg-surface px-4 py-3 hover:border-primary/30 transition-colors"
               >
                 <div className="flex items-center gap-2 text-[11px] text-text-muted">
                   <Library size={11} />
@@ -152,7 +152,7 @@ export default function Docs() {
             <Loader2 size={24} className="animate-spin text-primary-light" />
           </div>
         ) : error ? (
-          <div className="rounded-2xl border border-rose-400/20 bg-rose-400/5 px-4 py-3 text-sm text-rose-300">
+          <div className="rounded-2xl border border-rose-400/20 bg-rose-400/5 px-4 py-3 text-sm text-rose-600 dark:text-rose-300">
             No se pudo cargar la documentación. {error}
           </div>
         ) : filtradas.length === 0 ? (
@@ -172,7 +172,7 @@ export default function Docs() {
               <button
                 key={c.id}
                 onClick={() => navigate(`/docs/${c.id}`)}
-                className="group text-left flex flex-col gap-3 p-4 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-surface to-bg transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/30"
+                className="group text-left flex flex-col gap-3 p-4 rounded-2xl border border-ov/[0.08] bg-gradient-to-br from-surface to-bg transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/30"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{materiaLabel(c.materia)}</span>

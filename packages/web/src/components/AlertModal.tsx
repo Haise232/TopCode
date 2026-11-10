@@ -1,4 +1,5 @@
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
+import { tinta } from '../lib/tinta'
 import { Modal } from './ui'
 
 interface AlertModalProps {
@@ -62,16 +63,16 @@ export default function AlertModal({
         className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
         style={{
           background: 'var(--overlay-06)',
-          color: '#64748b',
+          color: 'var(--color-text-muted)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget as HTMLElement
-          el.style.color = '#e2e8f0'
+          el.style.color = 'var(--color-text)'
           el.style.background = 'var(--overlay-10)'
         }}
         onMouseLeave={e => {
           const el = e.currentTarget as HTMLElement
-          el.style.color = '#64748b'
+          el.style.color = 'var(--color-text-muted)'
           el.style.background = 'var(--overlay-06)'
         }}
         aria-label="Cerrar"
@@ -89,7 +90,7 @@ export default function AlertModal({
               border: `1px solid ${config.borderColor}`,
             }}
           >
-            <config.Icon size={26} style={{ color: config.iconColor }} />
+            <config.Icon size={26} style={{ color: tinta(config.iconColor) }} />
           </div>
         )}
 
@@ -112,7 +113,7 @@ export default function AlertModal({
           <>
             <button
               onClick={onClose}
-              className="flex-1 bg-surface border border-white/[0.08] text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-slate-200 active:scale-[0.98] transition-all duration-200 py-2.5 text-sm"
+              className="flex-1 bg-surface border border-ov/[0.08] text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] transition-all duration-200 py-2.5 text-sm"
             >
               Cancelar
             </button>
