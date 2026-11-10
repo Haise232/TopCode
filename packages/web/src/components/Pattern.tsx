@@ -13,6 +13,7 @@ export default function Pattern() {
 }
 
 interface Copo { x: number; y: number; r: number; vy: number; fase: number; amp: number; alfa: number }
+interface Estrella { x: number; y: number; r: number; fase: number; vel: number }
 
 export function Nieve({ densidad = 1 }: { densidad?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -26,6 +27,9 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
     let ancho = 0
     let alto = 0
     let copos: Copo[] = []
+    let estrellas: Estrella[] = []
+    // En modo oscuro («Noche de paz») además titilan estrellas en la mitad superior
+    let conEstrellas = false
     let raf = 0
     let ultimo = performance.now()
     // Color de la nieve según el modo (blanca en oscuro, gris azulado en claro)
@@ -33,6 +37,7 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
     const leerColor = () => {
       const c = getComputedStyle(document.documentElement).getPropertyValue('--c-nieve').trim()
       if (c) color = `rgb(${c})`
+      conEstrellas = document.documentElement.dataset.mode === 'oscuro'
     }
     leerColor()
     const mo = new MutationObserver(() => { leerColor(); if (quieto) dibujar(0) })
@@ -60,11 +65,28 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       const total = Math.round(Math.min(140, (ancho * alto) / 14000) * densidad)
       copos = Array.from({ length: total }, () => nuevoCopo(true))
+      estrellas = Array.from({ length: Math.round(total * 0.6) }, () => ({
+        x: Math.random() * ancho,
+        y: Math.pow(Math.random(), 1.6) * alto * 0.65,   // más densas arriba
+        r: Math.random() * 1.1 + 0.3,
+        fase: Math.random() * Math.PI * 2,
+        vel: 0.6 + Math.random() * 1.8,
+      }))
       if (quieto) dibujar(0)
     }
 
     const dibujar = (dt: number) => {
       ctx.clearRect(0, 0, ancho, alto)
+      if (conEstrellas) {
+        ctx.fillStyle = '#fff3d6'
+        for (const e of estrellas) {
+          e.fase += dt * e.vel
+          ctx.globalAlpha = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(e.fase))
+          ctx.beginPath()
+          ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
       ctx.fillStyle = color
       for (const c of copos) {
         c.y += c.vy * dt

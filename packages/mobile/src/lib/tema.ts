@@ -32,19 +32,20 @@ export const CLASICO: Paleta = {
   textMuted: '#6b7280',
 }
 
+// Navidad «Noche de paz»: azul medianoche, azul hielo y dorado (igual que la web en oscuro)
 export const NAVIDAD: Paleta = {
-  bg: '#0a1310',
-  surface: '#12201b',
-  surface2: '#172921',
-  border: '#22382f',
-  primary: '#d9434e',
-  primaryDark: '#a72c37',
-  primaryLight: '#f2838a',
-  teal: '#3a9a6a',
-  gold: '#e7b75a',
-  text: '#f7f4ee',
-  textSecondary: '#a8b9b0',
-  textMuted: '#6e857a',
+  bg: '#0b1226',
+  surface: '#131c36',
+  surface2: '#192442',
+  border: '#24304f',
+  primary: '#4c8fe0',
+  primaryDark: '#2f6fc4',
+  primaryLight: '#9cc7f5',
+  teal: '#4fb38a',
+  gold: '#e8be60',
+  text: '#eef2fa',
+  textSecondary: '#a0aecc',
+  textMuted: '#6a7a9c',
 }
 
 export type Temporada = 'navidad' | 'clasico'

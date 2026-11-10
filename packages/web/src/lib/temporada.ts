@@ -34,7 +34,7 @@ export function temaDeTemporada(fecha = new Date()): Tema {
 }
 
 const THEME_COLOR: Record<Modo, Record<Tema, string>> = {
-  oscuro: { clasico: '#0f1117', navidad: '#0a1310' },
+  oscuro: { clasico: '#0f1117', navidad: '#0b1226' },
   claro:  { clasico: '#f5f7f9', navidad: '#f8f4ed' },
 }
 

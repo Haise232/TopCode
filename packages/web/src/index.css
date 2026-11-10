@@ -34,30 +34,31 @@
   --bg-bottom:        #0c0e14;
 }
 
-/* Modo oscuro — Navidad: noche de abeto, rojo acebo, verde pino y dorado */
+/* Modo oscuro — Navidad «Noche de paz»: azul medianoche, azul hielo, dorado y luces cálidas */
 [data-theme="navidad"] {
-  --c-bg:             10 19 16;
-  --c-surface:        18 32 27;
-  --c-surface-2:      23 41 33;
-  --c-input:          13 24 20;
-  --c-primary:        217 67 78;
-  --c-primary-dark:   167 44 55;
-  --c-primary-light:  242 131 138;
-  --c-secondary:      47 158 100;
-  --c-secondary-dark: 33 122 75;
-  --c-secondary-light:99 199 146;
-  --c-teal:           58 154 106;
-  --c-teal-dark:      42 117 80;
-  --c-teal-light:     111 196 151;
-  --c-gold:           231 183 90;
-  --c-gold-dark:      192 143 53;
-  --c-gold-light:     245 214 143;
-  --c-text:           247 244 238;
-  --c-text-secondary: 168 185 176;
-  --c-text-muted:     110 133 122;
-  --c-text-faint:     72 92 82;
-  --bg-top:           #11231c;
-  --bg-bottom:        #070d0b;
+  --c-bg:             11 18 38;
+  --c-surface:        19 28 54;
+  --c-surface-2:      25 36 66;
+  --c-input:          14 22 45;
+  --c-primary:        76 143 224;
+  --c-primary-dark:   47 111 196;
+  --c-primary-light:  156 199 245;
+  --c-secondary:      79 179 138;
+  --c-secondary-dark: 52 140 104;
+  --c-secondary-light:128 212 176;
+  --c-teal:           79 179 138;
+  --c-teal-dark:      52 140 104;
+  --c-teal-light:     128 212 176;
+  --c-gold:           232 190 96;
+  --c-gold-dark:      196 150 60;
+  --c-gold-light:     246 220 150;
+  --c-text:           238 242 250;
+  --c-text-secondary: 160 174 204;
+  --c-text-muted:     106 122 156;
+  --c-text-faint:     70 84 116;
+  --bg-top:           #142046;
+  --bg-bottom:        #070b18;
+  --c-luz-3:          255 241 214;   /* bombillas: blanco cálido */
 }
 
 /* Elementos que dependen solo del modo (oscuro) */
@@ -109,7 +110,7 @@
   --bg-bottom:        #eef2f5;
 }
 
-/* Navidad en claro: papel crema y nieve, rojo acebo, verde pino y dorado viejo */
+/* Navidad en claro «Mañana nevada»: papel crema y nieve, rojo acebo, verde pino y dorado viejo */
 [data-mode="claro"][data-theme="navidad"] {
   --c-bg:             248 244 237;
   --c-surface:        255 255 255;
@@ -348,8 +349,21 @@
 .guirnalda .bombilla { animation: twinkle 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .guirnalda .bombilla:nth-of-type(3n+1) { fill: rgb(var(--c-primary)); animation-delay: 0s; filter: drop-shadow(0 0 3px rgb(var(--c-primary))); }
 .guirnalda .bombilla:nth-of-type(3n+2) { fill: rgb(var(--c-gold)); animation-delay: 0.6s; filter: drop-shadow(0 0 3px rgb(var(--c-gold))); }
-.guirnalda .bombilla:nth-of-type(3n)   { fill: rgb(var(--c-teal-light)); animation-delay: 1.2s; filter: drop-shadow(0 0 3px rgb(var(--c-teal-light))); }
+.guirnalda .bombilla:nth-of-type(3n)   { fill: rgb(var(--c-luz-3, var(--c-teal-light))); animation-delay: 1.2s; filter: drop-shadow(0 0 3px rgb(var(--c-luz-3, var(--c-teal-light)))); }
 
 @media (prefers-reduced-motion: reduce) {
   .guirnalda .bombilla { animation: none; }
 }
+
+/* Franja de jersey navideño (Navidad en modo claro) */
+.jersey {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: 0 2px 6px rgba(150, 30, 42, 0.18);
+}
+.jersey svg { width: 100%; height: 100%; display: block; }
