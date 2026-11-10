@@ -3,6 +3,10 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
+import { aplicarTema, temaDeTemporada } from './lib/temporada'
+
+// El tema se fija antes de pintar nada (también en /login y en la pantalla de carga).
+aplicarTema(temaDeTemporada())
 
 // Tras un despliegue nuevo, una pestaña abierta antes sigue pidiendo los trozos de JS de la versión anterior, que ya no
 // existen («Failed to fetch dynamically imported module»). Se recarga una vez para coger la versión nueva; si vuelve a

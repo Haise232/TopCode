@@ -74,15 +74,15 @@ export default function AnuncioModal() {
         className="relative w-full max-w-md rounded-2xl shadow-modal"
         style={{
           background: 'var(--gradient-card)',
-          border: '1px solid rgba(61,159,137,0.25)',
-          boxShadow: '0 0 0 1px rgba(61,159,137,0.1), 0 24px 64px var(--color-modal-backdrop)',
+          border: '1px solid rgb(var(--c-primary)/0.25)',
+          boxShadow: '0 0 0 1px rgb(var(--c-primary)/0.1), 0 24px 64px var(--color-modal-backdrop)',
           animation: cerrando ? 'scale-out 0.2s ease-in forwards' : 'scale-in-modal 0.25s cubic-bezier(0.16,1,0.3,1)',
         }}
       >
         {/* Glow superior */}
         <div
           className="absolute inset-x-0 top-0 h-px rounded-t-2xl"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(61,159,137,0.6), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgb(var(--c-primary)/0.6), transparent)' }}
         />
 
         <div className="p-6">
@@ -91,9 +91,9 @@ export default function AnuncioModal() {
             <div
               className="w-11 h-11 flex items-center justify-center rounded-xl shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(61,159,137,0.2), rgba(44,129,120,0.15))',
-                border: '1px solid rgba(61,159,137,0.3)',
-                boxShadow: '0 2px 12px rgba(61,159,137,0.2)',
+                background: 'linear-gradient(135deg, rgb(var(--c-primary)/0.2), rgb(var(--c-primary-dark)/0.15))',
+                border: '1px solid rgb(var(--c-primary)/0.3)',
+                boxShadow: '0 2px 12px rgb(var(--c-primary)/0.2)',
               }}
             >
               <Megaphone size={20} className="text-primary-light" />
@@ -131,9 +131,9 @@ export default function AnuncioModal() {
             onClick={handleLeer}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all duration-150 active:scale-[0.97]"
             style={{
-              background: 'linear-gradient(135deg, #3d9f89, #2c8178)',
+              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
               color: 'white',
-              boxShadow: '0 4px 16px rgba(61,159,137,0.35)',
+              boxShadow: '0 4px 16px rgb(var(--c-primary)/0.35)',
             }}
           >
             <CheckCheck size={16} />

@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { usePublicMensajes, usePrivateMensajes, type Usuario, type UsuarioPublico } from '@topcode/shared'
 import { markChatVisited } from '../hooks/useUnreadCounts'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo } from '../components/Navidad'
 
 type SubTab = 'publico' | 'privado'
 
@@ -20,7 +22,7 @@ interface CanalInfo {
 
 function getCanalesDisponibles(): CanalInfo[] {
   return [
-    { id: 'general', label: 'General', desc: 'Todos los alumnos', color: '#3d9f89' },
+    { id: 'general', label: 'General', desc: 'Todos los alumnos', color: 'var(--color-primary)' },
   ]
 }
 
@@ -85,7 +87,7 @@ function LoadingDots() {
             key={i}
             className="w-2 h-2 rounded-full"
             style={{
-              background: '#3d9f89',
+              background: 'var(--color-primary)',
               animation: 'dot-bounce 1.4s ease-in-out infinite',
               animationDelay: `${i * 0.18}s`,
             }}
@@ -106,9 +108,9 @@ function DateSeparator({ label }: { label: string }) {
       <span
         className="text-xs font-semibold px-3 py-1 rounded-full shrink-0"
         style={{
-          background: 'rgba(61,159,137,0.06)',
-          color: '#3d9f89',
-          border: '1px solid rgba(61,159,137,0.18)',
+          background: 'rgb(var(--c-primary) / 0.06)',
+          color: 'var(--color-primary)',
+          border: '1px solid rgb(var(--c-primary) / 0.18)',
           letterSpacing: '0.04em',
         }}
       >
@@ -129,10 +131,10 @@ function MessageInput({
   onTyping,
   placeholder,
   inputRef,
-  accentGlow = 'rgba(61,159,137,0.08)',
-  accentBorder = 'rgba(61,159,137,0.4)',
-  gradientFrom = '#3d9f89',
-  gradientTo = '#2c8178',
+  accentGlow = 'rgb(var(--c-primary) / 0.08)',
+  accentBorder = 'rgb(var(--c-primary) / 0.4)',
+  gradientFrom = 'var(--color-primary)',
+  gradientTo = 'var(--color-primary-dark)',
 }: {
   value: string
   onChange: (v: string) => void
@@ -288,7 +290,7 @@ function BubbleRow({
               onClick={onStartEdit}
               className="w-6 h-6 flex items-center justify-center rounded-lg transition-all"
               style={{ background: 'var(--color-surface-2)', border: '1px solid var(--overlay-08)', color: '#94a3b8' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#3d9f89' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-primary)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
               title="Editar"
             >
@@ -325,8 +327,8 @@ function BubbleRow({
               className="flex items-center gap-2 px-3 py-2"
               style={{
                 borderRadius: '14px',
-                background: 'rgba(61,159,137,0.1)',
-                border: '1.5px solid rgba(61,159,137,0.4)',
+                background: 'rgb(var(--c-primary) / 0.1)',
+                border: '1.5px solid rgb(var(--c-primary) / 0.4)',
                 minWidth: '180px',
               }}
             >
@@ -343,7 +345,7 @@ function BubbleRow({
               />
               <button onClick={() => onConfirmEdit?.(editText)}
                 className="w-5 h-5 flex items-center justify-center rounded-md transition-all"
-                style={{ background: 'rgba(61,159,137,0.3)', color: 'white' }}>
+                style={{ background: 'rgb(var(--c-primary) / 0.3)', color: 'white' }}>
                 <Check size={10} />
               </button>
               <button onClick={onCancelEdit}
@@ -357,12 +359,12 @@ function BubbleRow({
               className="px-3.5 py-2.5 text-sm leading-relaxed"
               style={isMine ? {
                 borderRadius: isGrouped ? '18px 4px 4px 18px' : '18px 4px 18px 18px',
-                background: 'linear-gradient(135deg, #3d9f89, #2c8178)',
+                background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
                 color: 'white',
-                boxShadow: '0 2px 10px rgba(61,159,137,0.28)',
+                boxShadow: '0 2px 10px rgb(var(--c-primary) / 0.28)',
               } : {
                 borderRadius: isGrouped ? '4px 18px 18px 4px' : '4px 18px 18px 18px',
-                background: '#1e2233',
+                background: 'var(--color-surface-2)',
                 border: '1px solid var(--overlay-07)',
                 color: '#e2e8f0',
               }}
@@ -385,30 +387,33 @@ function BubbleRow({
 
 // ── Empty state SVG ───────────────────────────────────────────────────────────
 function EmptyPublicChat() {
+  const { navidad } = useTheme()
   return (
     <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center py-16 px-6">
       <div
         className="relative w-20 h-20 flex items-center justify-center rounded-3xl"
-        style={{ background: 'rgba(61,159,137,0.08)', border: '1px solid rgba(61,159,137,0.18)' }}
+        style={{ background: 'rgb(var(--c-primary) / 0.08)', border: '1px solid rgb(var(--c-primary) / 0.18)' }}
       >
         {/* Simple SVG illustration */}
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-          <rect x="4" y="8" width="32" height="20" rx="5" fill="rgba(61,159,137,0.25)" stroke="#3d9f89" strokeWidth="1.5"/>
-          <circle cx="12" cy="18" r="2.5" fill="#75b9aa"/>
-          <circle cx="20" cy="18" r="2.5" fill="#75b9aa"/>
-          <circle cx="28" cy="18" r="2.5" fill="#75b9aa"/>
-          <path d="M16 28 L16 33 L22 28" fill="rgba(61,159,137,0.25)" stroke="#3d9f89" strokeWidth="1.5" strokeLinejoin="round"/>
+          <rect x="4" y="8" width="32" height="20" rx="5" fill="rgb(var(--c-primary) / 0.25)" stroke="var(--color-primary)" strokeWidth="1.5"/>
+          <circle cx="12" cy="18" r="2.5" fill="var(--color-primary-light)"/>
+          <circle cx="20" cy="18" r="2.5" fill="var(--color-primary-light)"/>
+          <circle cx="28" cy="18" r="2.5" fill="var(--color-primary-light)"/>
+          <path d="M16 28 L16 33 L22 28" fill="rgb(var(--c-primary) / 0.25)" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinejoin="round"/>
         </svg>
         {/* Decorative glow */}
         <div
           className="absolute inset-0 rounded-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(61,159,137,0.12) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgb(var(--c-primary) / 0.12) 0%, transparent 70%)' }}
         />
       </div>
       <div>
         <p className="font-semibold" style={{ color: 'var(--color-text)' }}>El canal está tranquilo por ahora</p>
         <p className="text-sm mt-1.5 max-w-[240px]" style={{ color: '#4b5563', lineHeight: 1.5 }}>
-          Sé el primero en escribir algo y empieza la conversación
+          {navidad
+            ? 'Sé el primero en escribir algo y reparte un poco de espíritu navideño'
+            : 'Sé el primero en escribir algo y empieza la conversación'}
         </p>
       </div>
     </div>
@@ -417,6 +422,7 @@ function EmptyPublicChat() {
 
 // ── Public chat ──────────────────────────────────────────────────────────────
 function PublicChat({ usuario }: { usuario: Usuario }) {
+  const { navidad } = useTheme()
   const navigate = useNavigate()
   const canales = getCanalesDisponibles()
   const [canalActivo, setCanalActivo] = useState(canales[0].id)
@@ -489,6 +495,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm leading-tight" style={{ color: 'var(--color-text)' }}>
               {canalInfo.label}
+              {navidad && <Copo size={12} className="inline-block ml-1.5 -mt-0.5 text-gold" />}
             </p>
             <p className="text-xs mt-0.5" style={{ color: '#4b5563' }}>
               {loading ? 'Cargando...' : `${todayCount} mensaje${todayCount !== 1 ? 's' : ''} hoy · ${canalInfo.desc}`}
@@ -500,9 +507,9 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
           >
             <div
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: '#2f8f75', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
+              style={{ background: 'var(--color-teal)', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
             />
-            <span className="text-xs font-semibold" style={{ color: '#2f8f75' }}>En vivo</span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--color-teal)' }}>En vivo</span>
           </div>
         </div>
 
@@ -589,7 +596,7 @@ function PublicChat({ usuario }: { usuario: Usuario }) {
           <div className="flex gap-1">
             {[0, 1, 2].map(i => (
               <div key={i} className="w-1.5 h-1.5 rounded-full"
-                style={{ background: '#3d9f89', animation: 'dot-bounce 1.4s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
+                style={{ background: 'var(--color-primary)', animation: 'dot-bounce 1.4s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
             ))}
           </div>
           <span className="text-xs" style={{ color: '#4b5563' }}>
@@ -647,20 +654,20 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
         <div className="flex-1 min-w-0">
           <button type="button" onClick={() => navigate(`/profile/${peer.id}`)} className="font-semibold text-sm leading-tight hover:underline" style={{ color: 'var(--color-text)' }}>{peer.nombre}</button>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <Lock size={9} style={{ color: '#14b8a6' }} />
+            <Lock size={9} style={{ color: 'var(--color-teal)' }} />
             <p className="text-xs" style={{ color: '#4b5563' }}>Conversación privada</p>
           </div>
         </div>
         <span
           className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
           style={peer.rol === 'admin' ? {
-            background: 'rgba(61,159,137,0.12)',
-            color: '#75b9aa',
-            border: '1px solid rgba(61,159,137,0.25)',
+            background: 'rgb(var(--c-primary) / 0.12)',
+            color: 'var(--color-primary-light)',
+            border: '1px solid rgb(var(--c-primary) / 0.25)',
           } : {
-            background: 'rgba(20,184,166,0.08)',
-            color: '#2dd4bf',
-            border: '1px solid rgba(20,184,166,0.2)',
+            background: 'rgb(var(--c-teal) / 0.08)',
+            color: 'var(--color-teal-light)',
+            border: '1px solid rgb(var(--c-teal) / 0.2)',
           }}
         >
           {peer.rol === 'admin' ? 'Admin' : 'Alumno'}
@@ -679,7 +686,7 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
             >
               <div
                 className="absolute inset-0 rounded-2xl blur-xl"
-                style={{ background: 'rgba(20,184,166,0.15)', transform: 'scale(1.2)' }}
+                style={{ background: 'rgb(var(--c-teal) / 0.15)', transform: 'scale(1.2)' }}
               />
               <div className="relative">
                 <Avatar nombre={peer.nombre} url={peer.avatar_url} size={64} />
@@ -727,11 +734,11 @@ function PrivateChat({ usuario, peer }: { usuario: Usuario; peer: UsuarioPublico
         onSubmit={enviar}
         placeholder={`Mensaje a ${peer.nombre}...`}
         inputRef={inputRef}
-        accentColor="#14b8a6"
-        accentGlow="rgba(20,184,166,0.08)"
-        accentBorder="rgba(20,184,166,0.4)"
-        gradientFrom="#14b8a6"
-        gradientTo="#3d9f89"
+        accentColor="var(--color-teal)"
+        accentGlow="rgb(var(--c-teal) / 0.08)"
+        accentBorder="rgb(var(--c-teal) / 0.4)"
+        gradientFrom="var(--color-teal)"
+        gradientTo="var(--color-primary)"
       />
     </div>
   )
@@ -837,8 +844,8 @@ function UserList({
                   onClick={() => onSelect(u)}
                   className="w-full flex items-center gap-2.5 px-2.5 py-2.5 text-left rounded-xl transition-all duration-150"
                   style={{
-                    background: isSelected ? 'rgba(20,184,166,0.1)' : 'transparent',
-                    border: isSelected ? '1px solid rgba(20,184,166,0.2)' : '1px solid transparent',
+                    background: isSelected ? 'rgb(var(--c-teal) / 0.1)' : 'transparent',
+                    border: isSelected ? '1px solid rgb(var(--c-teal) / 0.2)' : '1px solid transparent',
                   }}
                   onMouseEnter={e => {
                     if (!isSelected) {
@@ -859,13 +866,13 @@ function UserList({
                   <div className="flex-1 min-w-0">
                     <p
                       className="font-semibold truncate"
-                      style={{ color: isSelected ? '#2dd4bf' : '#e2e8f0', fontSize: compact ? 12 : 13 }}
+                      style={{ color: isSelected ? 'var(--color-teal-light)' : '#e2e8f0', fontSize: compact ? 12 : 13 }}
                     >
                       {u.nombre}
                     </p>
                   </div>
                   {isSelected && (
-                    <ChevronRight size={12} style={{ color: '#14b8a6', flexShrink: 0 }} />
+                    <ChevronRight size={12} style={{ color: 'var(--color-teal)', flexShrink: 0 }} />
                   )}
                 </button>
               )
@@ -907,7 +914,7 @@ function DesktopSidebar({
       >
         <div
           className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0"
-          style={{ background: 'linear-gradient(135deg, #3d9f89, #2c8178)' }}
+          style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))' }}
         >
           <MessageCircle size={13} style={{ color: 'white' }} />
         </div>
@@ -923,28 +930,28 @@ function DesktopSidebar({
           onClick={() => setSubTab('publico')}
           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all duration-150"
           style={{
-            background: subTab === 'publico' ? 'rgba(61,159,137,0.12)' : 'transparent',
-            border: subTab === 'publico' ? '1px solid rgba(61,159,137,0.22)' : '1px solid transparent',
+            background: subTab === 'publico' ? 'rgb(var(--c-primary) / 0.12)' : 'transparent',
+            border: subTab === 'publico' ? '1px solid rgb(var(--c-primary) / 0.22)' : '1px solid transparent',
           }}
         >
           <div
             className="w-6 h-6 flex items-center justify-center rounded-lg shrink-0"
             style={{
-              background: subTab === 'publico' ? 'rgba(61,159,137,0.2)' : 'var(--overlay-05)',
+              background: subTab === 'publico' ? 'rgb(var(--c-primary) / 0.2)' : 'var(--overlay-05)',
             }}
           >
-            <Hash size={11} style={{ color: subTab === 'publico' ? '#75b9aa' : '#4b5563' }} />
+            <Hash size={11} style={{ color: subTab === 'publico' ? 'var(--color-primary-light)' : '#4b5563' }} />
           </div>
           <span
             className="text-sm font-medium"
-            style={{ color: subTab === 'publico' ? '#75b9aa' : '#6b7280' }}
+            style={{ color: subTab === 'publico' ? 'var(--color-primary-light)' : '#6b7280' }}
           >
             general
           </span>
           {subTab === 'publico' && (
             <div
               className="w-1.5 h-1.5 rounded-full ml-auto"
-              style={{ background: '#2f8f75', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
+              style={{ background: 'var(--color-teal)', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
             />
           )}
         </button>
@@ -990,7 +997,7 @@ function MobileTabBar({
     <div
       className="md:hidden px-4 py-3 shrink-0"
       style={{
-        background: 'rgba(15,17,23,0.97)',
+        background: 'rgb(var(--c-bg) / 0.97)',
         borderBottom: '1px solid var(--overlay-06)',
         backdropFilter: 'blur(12px)',
       }}
@@ -1015,7 +1022,7 @@ function MobileTabBar({
                   {selectedUser.nombre}
                 </p>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <Lock size={9} style={{ color: '#14b8a6' }} />
+                  <Lock size={9} style={{ color: 'var(--color-teal)' }} />
                   <p className="text-xs" style={{ color: '#4b5563' }}>Privado</p>
                 </div>
               </div>
@@ -1032,9 +1039,9 @@ function MobileTabBar({
                   onClick={() => setSubTab(tab)}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all duration-200"
                   style={subTab === tab ? {
-                    background: tab === 'publico' ? 'rgba(61,159,137,0.15)' : 'rgba(20,184,166,0.12)',
-                    border: tab === 'publico' ? '1px solid rgba(61,159,137,0.25)' : '1px solid rgba(20,184,166,0.22)',
-                    color: tab === 'publico' ? '#75b9aa' : '#2dd4bf',
+                    background: tab === 'publico' ? 'rgb(var(--c-primary) / 0.15)' : 'rgb(var(--c-teal) / 0.12)',
+                    border: tab === 'publico' ? '1px solid rgb(var(--c-primary) / 0.25)' : '1px solid rgb(var(--c-teal) / 0.22)',
+                    color: tab === 'publico' ? 'var(--color-primary-light)' : 'var(--color-teal-light)',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                   } : {
                     background: 'transparent',
@@ -1057,9 +1064,9 @@ function MobileTabBar({
           >
             <div
               className="w-1.5 h-1.5 rounded-full"
-              style={{ background: '#2f8f75', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
+              style={{ background: 'var(--color-teal)', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }}
             />
-            <span className="text-xs font-semibold" style={{ color: '#2f8f75' }}>Live</span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--color-teal)' }}>Live</span>
           </div>
         )}
       </div>
@@ -1190,9 +1197,9 @@ export default function Chat() {
               >
                 <div
                   className="w-16 h-16 flex items-center justify-center rounded-2xl"
-                  style={{ background: 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.12)' }}
+                  style={{ background: 'rgb(var(--c-teal) / 0.06)', border: '1px solid rgb(var(--c-teal) / 0.12)' }}
                 >
-                  <MessageCircle size={28} style={{ color: '#115e59' }} />
+                  <MessageCircle size={28} style={{ color: 'var(--color-teal-dark)' }} />
                 </div>
                 <div>
                   <p className="font-semibold text-sm" style={{ color: '#6b7280' }}>

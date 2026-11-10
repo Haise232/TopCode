@@ -4,6 +4,9 @@ import { Eye, EyeOff, GraduationCap, ArrowRight, Sparkles, BarChart3, MessageCir
 import { supabase } from '../lib/supabase'
 import AlertModal from '../components/AlertModal'
 import { Button, Card, Input } from '../components/ui'
+import { useTheme } from '../contexts/ThemeContext'
+import { Nieve } from '../components/Pattern'
+import { GorroNavidad } from '../components/Navidad'
 
 function traducirError(msg: string): string {
   const m = msg.toLowerCase()
@@ -21,6 +24,7 @@ function traducirError(msg: string): string {
 }
 
 export default function Login() {
+  const { navidad } = useTheme()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -45,13 +49,15 @@ export default function Login() {
       {/* Left panel — branding */}
       <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-10 relative overflow-hidden bg-gradient-to-br from-surface-2 via-bg to-surface border-r border-white/5">
         {/* Background glow */}
-        <div className="absolute pointer-events-none -top-20 -left-20 w-[480px] h-[480px] bg-[radial-gradient(circle,rgba(61,159,137,0.18),transparent_70%)] blur-[40px]" />
-        <div className="absolute pointer-events-none bottom-0 -right-[60px] w-[320px] h-[320px] bg-[radial-gradient(circle,rgba(44,129,120,0.12),transparent_70%)] blur-[40px]" />
+        <div className="absolute pointer-events-none -top-20 -left-20 w-[480px] h-[480px] bg-[radial-gradient(circle,rgb(var(--c-primary)/0.18),transparent_70%)] blur-[40px]" />
+        <div className="absolute pointer-events-none bottom-0 -right-[60px] w-[320px] h-[320px] bg-[radial-gradient(circle,rgb(var(--c-primary-dark)/0.12),transparent_70%)] blur-[40px]" />
+        {navidad && <div className="absolute inset-0 pointer-events-none"><Nieve /></div>}
 
         {/* Logo */}
         <div className="relative flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-dark shadow-primary">
+          <div className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-primary-dark shadow-primary">
             <GraduationCap size={20} className="text-white" />
+            <GorroNavidad className="-top-3 -left-2 w-7 -rotate-12" />
           </div>
           <span className="font-bold text-lg text-text-primary">
             Top<span className="text-primary-light">Code</span>
@@ -104,14 +110,16 @@ export default function Login() {
 
       {/* Right panel — form */}
       <div className="flex-1 flex items-center justify-center p-6 relative">
+        {navidad && <div className="absolute inset-0 pointer-events-none"><Nieve densidad={0.6} /></div>}
         {/* Mobile glow */}
-        <div className="absolute inset-0 pointer-events-none lg:hidden bg-[radial-gradient(ellipse_at_top,rgba(61,159,137,0.08),transparent_60%)]" />
+        <div className="absolute inset-0 pointer-events-none lg:hidden bg-[radial-gradient(ellipse_at_top,rgb(var(--c-primary)/0.08),transparent_60%)]" />
 
         <div className="w-full max-w-[400px] relative animate-fade-in">
           {/* Mobile logo */}
           <div className="flex flex-col items-center gap-3 mb-10 lg:hidden">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-primary bg-gradient-to-br from-primary to-primary-dark">
+            <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-primary bg-gradient-to-br from-primary to-primary-dark">
               <GraduationCap size={26} className="text-white" />
+              <GorroNavidad className="-top-4 -left-3 w-9 -rotate-12" />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-extrabold text-text-primary">TopCode</h1>
@@ -152,7 +160,7 @@ export default function Login() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="bg-input border border-border rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none pr-11 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                    className="bg-input border border-border rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none pr-11 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     autoComplete="current-password"
                   />
                   <button

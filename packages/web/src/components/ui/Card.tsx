@@ -6,7 +6,7 @@ type CardPadding = 'none' | 'sm' | 'md' | 'lg'
 
 const VARIANT_CLASS: Record<CardVariant, string> = {
   default: 'bg-surface rounded-2xl border border-border shadow-card hover:shadow-card-hover hover:border-primary/25',
-  teal: 'bg-surface rounded-2xl border border-teal-500/20 shadow-card hover:shadow-card-hover hover:border-teal-500/30',
+  teal: 'bg-surface rounded-2xl border border-teal/20 shadow-card hover:shadow-card-hover hover:border-teal/30',
   rose: 'bg-surface rounded-2xl border border-rose-500/20 shadow-card hover:shadow-card-hover hover:border-rose-500/30',
 }
 

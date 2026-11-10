@@ -280,7 +280,7 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 flex items-center justify-center rounded-xl"
-              style={{ background: 'rgba(61,159,137,0.12)', border: '1px solid rgba(61,159,137,0.2)' }}
+              style={{ background: 'rgb(var(--c-primary)/0.12)', border: '1px solid rgb(var(--c-primary)/0.2)' }}
             >
               <Settings size={15} className="text-primary-light" />
             </div>
@@ -306,9 +306,9 @@ export default function Admin() {
         {/* ── KPI cards ── */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Admins',   value: admins.length,  Icon: Shield,    color: '#75b9aa', border: 'rgba(61,159,137,0.18)',  bg: 'rgba(61,159,137,0.12)'  },
-            { label: 'Alumnos',  value: alumnos.length, Icon: Users,     color: '#2f8f75', border: 'rgba(16,185,129,0.15)',  bg: 'rgba(16,185,129,0.1)'   },
-            { label: 'Total',    value: activos.length,   Icon: TrendingUp, color: '#2c8178', border: 'var(--overlay-07)', bg: 'rgba(44,129,120,0.12)'  },
+            { label: 'Admins',   value: admins.length,  Icon: Shield,    color: 'var(--color-primary-light)', border: 'rgb(var(--c-primary)/0.18)',  bg: 'rgb(var(--c-primary)/0.12)'  },
+            { label: 'Alumnos',  value: alumnos.length, Icon: Users,     color: 'var(--color-teal)', border: 'rgb(var(--c-teal)/0.15)',  bg: 'rgb(var(--c-teal)/0.1)'   },
+            { label: 'Total',    value: activos.length,   Icon: TrendingUp, color: 'var(--color-teal)', border: 'var(--overlay-07)', bg: 'rgb(var(--c-teal)/0.12)'  },
           ].map(({ label, value, Icon, color, border, bg }) => (
             <div
               key={label}
@@ -355,8 +355,8 @@ export default function Admin() {
               <span
                 className="text-xs font-bold px-2 py-0.5 rounded-full text-primary-light"
                 style={{
-                  background: 'rgba(61,159,137,0.12)',
-                  border: '1px solid rgba(61,159,137,0.2)',
+                  background: 'rgb(var(--c-primary)/0.12)',
+                  border: '1px solid rgb(var(--c-primary)/0.2)',
                 }}
               >
                 {usersFiltrados.length}
@@ -394,7 +394,7 @@ export default function Admin() {
                 ) : (
                   <div
                     className="w-9 h-9 flex items-center justify-center"
-                    style={{ background: 'rgba(61,159,137,0.12)' }}
+                    style={{ background: 'rgb(var(--c-primary)/0.12)' }}
                   >
                     <span className="font-bold text-xs text-primary-light">
                       {u.nombre[0]?.toUpperCase() ?? '?'}
@@ -411,8 +411,8 @@ export default function Admin() {
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded-full text-primary-light"
                       style={{
-                        background: 'rgba(61,159,137,0.1)',
-                        border: '1px solid rgba(61,159,137,0.2)',
+                        background: 'rgb(var(--c-primary)/0.1)',
+                        border: '1px solid rgb(var(--c-primary)/0.2)',
                       }}
                     >
                       Tú
@@ -479,7 +479,7 @@ export default function Admin() {
                 ) : updating === u.id ? (
                   <div
                     className="w-6 h-6 rounded-full animate-spin"
-                    style={{ border: '1.5px solid rgba(61,159,137,0.2)', borderTopColor: '#3d9f89' }}
+                    style={{ border: '1.5px solid rgb(var(--c-primary)/0.2)', borderTopColor: 'var(--color-primary)' }}
                   />
                 ) : (
                   <button
@@ -492,9 +492,9 @@ export default function Admin() {
                     }
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150"
                     style={u.rol === 'admin' ? {
-                      background: 'rgba(61,159,137,0.12)',
-                      color: '#75b9aa',
-                      border: '1px solid rgba(61,159,137,0.25)',
+                      background: 'rgb(var(--c-primary)/0.12)',
+                      color: 'var(--color-primary-light)',
+                      border: '1px solid rgb(var(--c-primary)/0.25)',
                       cursor: (u.id === usuario?.id || !puedeGestionarUsuario(u)) ? 'not-allowed' : 'pointer',
                       opacity: (u.id === usuario?.id || !puedeGestionarUsuario(u)) ? 0.5 : 1,
                     } : {
@@ -569,7 +569,7 @@ export default function Admin() {
               value={nuevoTitulo}
               onChange={e => setNuevoTitulo(e.target.value)}
               placeholder="Título del anuncio..."
-              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               maxLength={100}
             />
             <textarea
@@ -577,7 +577,7 @@ export default function Admin() {
               onChange={e => setNuevoContenido(e.target.value)}
               placeholder="Escribe aquí el mensaje completo para los alumnos..."
               rows={4}
-              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+              className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               maxLength={1000}
             />
             <div className="flex items-center justify-between">
@@ -645,9 +645,9 @@ export default function Admin() {
                       title={a.activo ? 'Desactivar' : 'Activar'}
                       className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
                       style={{
-                        background: a.activo ? 'rgba(16,185,129,0.1)' : 'var(--overlay-04)',
-                        border: a.activo ? '1px solid rgba(16,185,129,0.25)' : '1px solid var(--overlay-08)',
-                        color: a.activo ? '#2f8f75' : '#4b5563',
+                        background: a.activo ? 'rgb(var(--c-teal)/0.1)' : 'var(--overlay-04)',
+                        border: a.activo ? '1px solid rgb(var(--c-teal)/0.25)' : '1px solid var(--overlay-08)',
+                        color: a.activo ? 'var(--color-teal)' : '#4b5563',
                       }}
                     >
                       {toggling === a.id ? (

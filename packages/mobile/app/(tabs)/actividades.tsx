@@ -1,4 +1,5 @@
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { colores } from '../../src/lib/tema'
 import { useActividades, useDataInit } from '@topcode/shared'
 import { useAuth } from '../../src/contexts/AuthContext'
 
@@ -11,7 +12,7 @@ export default function ActividadesScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#8ff5d6" />
+        <ActivityIndicator color={colores.primaryLight} />
       </View>
     )
   }
@@ -48,25 +49,25 @@ export default function ActividadesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f0a' },
+  container: { flex: 1, backgroundColor: colores.bg },
   content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, backgroundColor: '#0a0f0a', justifyContent: 'center', alignItems: 'center' },
-  empty: { color: '#6b7280', textAlign: 'center', marginTop: 40 },
+  center: { flex: 1, backgroundColor: colores.bg, justifyContent: 'center', alignItems: 'center' },
+  empty: { color: colores.textMuted, textAlign: 'center', marginTop: 40 },
   card: {
-    backgroundColor: '#111812', borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: '#1e2d1e', marginBottom: 10,
+    backgroundColor: colores.surface, borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: colores.border, marginBottom: 10,
   },
   cardDone: { opacity: 0.6 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   check: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#374151',
+    width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colores.border,
     justifyContent: 'center', alignItems: 'center', marginTop: 2,
   },
-  checkDone: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
+  checkDone: { backgroundColor: colores.primary, borderColor: colores.primary },
   checkMark: { color: '#fff', fontSize: 12, fontWeight: '700' },
   body: { flex: 1 },
-  titulo: { color: '#e5e7eb', fontSize: 15, fontWeight: '600' },
-  tituloDone: { textDecorationLine: 'line-through', color: '#6b7280' },
-  materia: { color: '#8ff5d6', fontSize: 12, marginTop: 2 },
-  fecha: { color: '#6b7280', fontSize: 12, marginTop: 4 },
+  titulo: { color: colores.text, fontSize: 15, fontWeight: '600' },
+  tituloDone: { textDecorationLine: 'line-through', color: colores.textMuted },
+  materia: { color: colores.primaryLight, fontSize: 12, marginTop: 2 },
+  fecha: { color: colores.textMuted, fontSize: 12, marginTop: 4 },
 })

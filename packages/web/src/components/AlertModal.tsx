@@ -23,19 +23,19 @@ const CONFIG = {
   },
   success: {
     Icon: CheckCircle,
-    iconColor: '#2f8f75',
-    bgColor: 'rgba(16,185,129,0.1)',
-    borderColor: 'rgba(16,185,129,0.2)',
-    btnBg: 'linear-gradient(135deg, #2f8f75 0%, #267560 100%)',
-    btnShadow: '0 4px 14px rgba(16,185,129,0.3)',
+    iconColor: 'rgb(var(--c-teal-light))',
+    bgColor: 'rgb(var(--c-teal)/0.12)',
+    borderColor: 'rgb(var(--c-teal)/0.25)',
+    btnBg: 'linear-gradient(135deg, rgb(var(--c-teal)) 0%, rgb(var(--c-teal-dark)) 100%)',
+    btnShadow: '0 4px 14px rgb(var(--c-teal)/0.3)',
   },
   info: {
     Icon: Info,
-    iconColor: '#3b82f6',
-    bgColor: 'rgba(59,130,246,0.1)',
-    borderColor: 'rgba(59,130,246,0.2)',
-    btnBg: 'linear-gradient(135deg, #3d9f89 0%, #2c8178 100%)',
-    btnShadow: '0 4px 14px rgba(61,159,137,0.3)',
+    iconColor: 'var(--color-primary-light)',
+    bgColor: 'rgb(var(--c-primary)/0.1)',
+    borderColor: 'rgb(var(--c-primary)/0.2)',
+    btnBg: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+    btnShadow: '0 4px 14px rgb(var(--c-primary)/0.3)',
   },
   warning: {
     Icon: AlertTriangle,
@@ -51,8 +51,8 @@ export default function AlertModal({
   visible, type, title, message, onClose, onConfirm, confirmLabel, confirmDestructive,
 }: AlertModalProps) {
   const config = type ? CONFIG[type] : null
-  const defaultBtnBg = 'linear-gradient(135deg, #3d9f89 0%, #2c8178 100%)'
-  const defaultBtnShadow = '0 4px 14px rgba(61,159,137,0.3)'
+  const defaultBtnBg = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)'
+  const defaultBtnShadow = '0 4px 14px rgb(var(--c-primary)/0.3)'
 
   return (
     <Modal open={visible} onClose={onClose}>

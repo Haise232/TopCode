@@ -9,6 +9,8 @@ import ColeccionModal from '../components/docs/ColeccionModal'
 import ImportModal from '../components/docs/ImportModal'
 import { Button } from '../components/ui'
 import { parseFrontmatter } from '../lib/markdown'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo } from '../components/Navidad'
 
 function formatFecha(iso: string) {
   return new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -28,6 +30,7 @@ function snippet(contenido: string, q: string) {
 }
 
 export default function Docs() {
+  const { navidad } = useTheme()
   const navigate = useNavigate()
   const { usuario } = useAuth()
   const { colecciones, loading, error } = useDocColecciones()
@@ -79,7 +82,7 @@ export default function Docs() {
     <div className="animate-fade-in h-full overflow-y-auto">
       <div className="px-4 md:px-6 py-5 border-b border-white/[0.08] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Documentación</h1>
+          <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Documentación{navidad && <Copo size={16} className="text-gold" />}</h1>
           <p className="text-xs text-text-muted mt-0.5">Biblioteca de documentación en Markdown que toda la clase puede leer, editar y ampliar</p>
         </div>
         <div className="flex gap-2 shrink-0">

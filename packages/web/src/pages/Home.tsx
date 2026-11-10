@@ -15,6 +15,9 @@ import { useHorario, type EventoCalendario, type HorarioClase, cacheGet, cacheSe
 import { SkeletonBox, SkeletonCard, SkeletonSchedule, SkeletonQuickActions } from '../components/Skeleton'
 import { cn } from '../components/ui/cn'
 import { Modal } from '../components/ui/Modal'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo, GorroNavidad } from '../components/Navidad'
+import { diasParaNavidad } from '../lib/temporada'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +26,21 @@ function saludoEmoji() {
   if (h < 12) return { texto: 'Buenos días', emoji: '☀️' }
   if (h < 20) return { texto: 'Buenas tardes', emoji: '🌤️' }
   return { texto: 'Buenas noches', emoji: '🌙' }
+}
+
+/** Texto de la cuenta atrás navideña según el día (null fuera de temporada). */
+function cuentaAtrasNavidad(): { texto: string; especial: boolean } | null {
+  const dias = diasParaNavidad()
+  if (dias === null) return null
+  const hoy = new Date()
+  const mes = hoy.getMonth()
+  const dia = hoy.getDate()
+  if (mes === 0 && dia === 6) return { texto: '¡Felices Reyes!', especial: true }
+  if (mes === 0 && dia === 7) return { texto: '¡Felices Reyes!', especial: true }
+  if (mes === 0 || (mes === 11 && dia >= 26)) return { texto: '¡Feliz año nuevo!', especial: true }
+  if (mes === 11 && dia === 25) return { texto: '¡Feliz Navidad!', especial: true }
+  if (mes === 11 && dia === 24) return { texto: '¡Hoy es Nochebuena!', especial: true }
+  return { texto: dias === 1 ? 'Falta 1 día para Navidad' : `Faltan ${dias} días para Navidad`, especial: false }
 }
 
 function fechaFormateada() {
@@ -217,7 +235,7 @@ const ENLACES_INTERES = [
     desc: 'Agüimes',
     Icon: School,
     href: 'https://www3.gobiernodecanarias.org/medusa/edublog/cifpvilladeaguimes/',
-    color: '#61ae98',
+    color: 'rgb(var(--c-primary-light))',
   },
   {
     label: 'GcGames',
@@ -230,7 +248,7 @@ const ENLACES_INTERES = [
 
 const ACCESOS_INTERNOS = [
   { label: 'Docs',        desc: 'Documentación',  Icon: BookMarked,     to: '/docs',        color: '#fbbf24' },
-  { label: 'Chat',        desc: 'General',        Icon: MessageCircle,  to: '/chat',        color: '#3d9f89' },
+  { label: 'Chat',        desc: 'General',        Icon: MessageCircle,  to: '/chat',        color: 'rgb(var(--c-primary))' },
   { label: 'Apuntes',     desc: 'Archivos',       Icon: FolderOpen,     to: '/apuntes',     color: '#fb923c' },
   { label: 'Actividades', desc: 'Tareas',         Icon: ClipboardCheck, to: '/calendar?vista=actividades', color: '#818cf8' },
   { label: 'Calendario',  desc: 'Eventos',        Icon: Calendar,       to: '/calendar',    color: '#22d3ee' },
@@ -320,6 +338,7 @@ function ExternalLinkChip({
 
 export default function Home() {
   const { usuario, loading: authLoading } = useAuth()
+  const { navidad } = useTheme()
   const navigate = useNavigate()
   const [proximoEvento, setProximoEvento] = useState<EventoCalendario | null>(null)
   const [proximaActividad, setProximaActividad] = useState<EventoCalendario | null>(null)
@@ -399,6 +418,7 @@ export default function Home() {
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
   const { texto: saludo, emoji } = saludoEmoji()
   const esAdmin = usuario?.rol === 'admin'
+  const cuentaAtras = navidad ? cuentaAtrasNavidad() : null
 
   return (
     <div className="animate-fade-in h-full overflow-y-auto">
@@ -411,9 +431,11 @@ export default function Home() {
             {/* Saludo + badge de rol */}
             <div className="flex items-center gap-2.5 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm leading-none">{emoji}</span>
+                {navidad
+                  ? <Copo size={14} className="text-gold-light" />
+                  : <span className="text-sm leading-none">{emoji}</span>}
                 <span className="text-sm font-medium tracking-widest uppercase text-gray-500">
-                  {saludo}
+                  {navidad ? 'Felices fiestas' : saludo}
                 </span>
               </div>
               <span className="w-1 h-1 rounded-full bg-white/[0.12] inline-block" />
@@ -456,6 +478,13 @@ export default function Home() {
               <span className="inline-block w-1 h-1 rounded-full bg-primary/50" />
               {fechaFormateada()}
             </p>
+
+            {cuentaAtras && (
+              <div className="mt-2 inline-flex w-fit items-center gap-2 rounded-full border border-gold/30 bg-gradient-to-r from-gold/15 to-primary/10 px-3 py-1.5 text-xs font-semibold text-gold-light shadow-[0_0_14px_rgb(var(--c-gold)/0.12)]">
+                <Copo size={13} />
+                <span>{cuentaAtras.texto}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -468,18 +497,21 @@ export default function Home() {
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             </button>
 
-            <button
-              onClick={() => navigate('/profile')}
-              className="relative w-10 h-10 overflow-hidden rounded-xl transition-all duration-150 hover:ring-2 hover:ring-primary/50 border-[1.5px] border-primary/30"
-            >
-              {usuario?.avatar_url ? (
-                <img src={usuario.avatar_url} alt="" className="w-10 h-10 object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-primary/15">
-                  <span className="font-bold text-sm text-primary-light">{initial}</span>
-                </div>
-              )}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => navigate('/profile')}
+                className="relative w-10 h-10 overflow-hidden rounded-xl transition-all duration-150 hover:ring-2 hover:ring-primary/50 border-[1.5px] border-primary/30"
+              >
+                {usuario?.avatar_url ? (
+                  <img src={usuario.avatar_url} alt="" className="w-10 h-10 object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-primary/15">
+                    <span className="font-bold text-sm text-primary-light">{initial}</span>
+                  </div>
+                )}
+              </button>
+              <GorroNavidad className="-top-3 -left-2 w-7 -rotate-12" />
+            </div>
           </div>
         </div>
 
@@ -732,8 +764,8 @@ export default function Home() {
               {proximaActividad && (() => {
                 const diff = fechaLimite(proximaActividad).getTime() - Date.now()
                 const dias = diff / 86400000
-                const urgColor = dias < 1 ? '#f43f5e' : dias < 3 ? '#f59e0b' : '#61ae98'
-                const urgBorder= dias < 1 ? 'rgba(244,63,94,0.2)'  : dias < 3 ? 'rgba(245,158,11,0.2)'  : 'rgba(16,185,129,0.2)'
+                const urgColor = dias < 1 ? '#f43f5e' : dias < 3 ? '#f59e0b' : 'rgb(var(--c-primary-light))'
+                const urgBorder= dias < 1 ? 'rgba(244,63,94,0.2)'  : dias < 3 ? 'rgba(245,158,11,0.2)'  : 'rgb(var(--c-primary-light)/0.2)'
                 const label = diff < 0 ? 'Vence hoy' : dias < 1
                   ? `${Math.floor(diff / 3600000)}h restantes`
                   : dias < 2 ? 'Mañana'

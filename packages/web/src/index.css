@@ -2,23 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Temas ──────────────────────────────────────────────────────────────────
+   Los colores de marca son canales RGB («r g b») para que Tailwind pueda
+   aplicar opacidad: bg-primary/10, rgb(var(--c-primary) / 0.3)…
+   El tema activo lo fija <html data-theme> (ver contexts/ThemeContext.tsx).
+   ───────────────────────────────────────────────────────────────────────── */
+:root,
+[data-theme="clasico"] {
+  --c-bg:             15 17 23;
+  --c-surface:        26 29 39;
+  --c-surface-2:      30 33 48;
+  --c-input:          20 23 32;
+  --c-primary:        61 159 137;
+  --c-primary-dark:   45 120 107;
+  --c-primary-light:  117 185 170;
+  --c-secondary:      16 185 129;
+  --c-secondary-dark: 5 150 105;
+  --c-secondary-light:52 211 153;
+  --c-teal:           36 143 127;
+  --c-teal-dark:      29 113 101;
+  --c-teal-light:     77 169 152;
+  --c-gold:           245 158 11;
+  --c-gold-dark:      217 119 6;
+  --c-gold-light:     251 191 36;
+  --c-text:           241 245 249;
+  --c-text-secondary: 148 163 184;
+  --c-text-muted:     100 116 139;
+  --bg-top:           #161a25;
+  --bg-bottom:        #0c0e14;
+}
+
+/* Navidad: noche de abeto, rojo acebo, verde pino y dorado */
+[data-theme="navidad"] {
+  --c-bg:             10 19 16;
+  --c-surface:        18 32 27;
+  --c-surface-2:      23 41 33;
+  --c-input:          13 24 20;
+  --c-primary:        217 67 78;
+  --c-primary-dark:   167 44 55;
+  --c-primary-light:  242 131 138;
+  --c-secondary:      47 158 100;
+  --c-secondary-dark: 33 122 75;
+  --c-secondary-light:99 199 146;
+  --c-teal:           58 154 106;
+  --c-teal-dark:      42 117 80;
+  --c-teal-light:     111 196 151;
+  --c-gold:           231 183 90;
+  --c-gold-dark:      192 143 53;
+  --c-gold-light:     245 214 143;
+  --c-text:           247 244 238;
+  --c-text-secondary: 168 185 176;
+  --c-text-muted:     110 133 122;
+  --bg-top:           #11231c;
+  --bg-bottom:        #070d0b;
+}
+
 :root {
-  --color-bg:             #0f1117;
-  --color-surface:        #1a1d27;
-  --color-surface-2:      #1e2130;
-  --color-surface-alpha:  rgba(26,29,39,0.92);
-  --color-glass:          rgba(26,29,39,0.80);
+  /* Alias de compatibilidad: se usan en estilos en línea y en CSS suelto */
+  --color-bg:             rgb(var(--c-bg));
+  --color-surface:        rgb(var(--c-surface));
+  --color-surface-2:      rgb(var(--c-surface-2));
+  --color-surface-alpha:  rgb(var(--c-surface) / 0.92);
+  --color-glass:          rgb(var(--c-surface) / 0.80);
   --color-modal-backdrop: rgba(0,0,0,0.65);
-  --color-text:           #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted:     #64748b;
-  --color-primary:        #3d9f89;
-  --color-primary-light:  #75b9aa;
+  --color-text:           rgb(var(--c-text));
+  --color-text-secondary: rgb(var(--c-text-secondary));
+  --color-text-muted:     rgb(var(--c-text-muted));
+  --color-primary:        rgb(var(--c-primary));
+  --color-primary-dark:   rgb(var(--c-primary-dark));
+  --color-primary-light:  rgb(var(--c-primary-light));
+  --color-teal:           rgb(var(--c-teal));
+  --color-gold:           rgb(var(--c-gold));
   --color-border:         rgba(255,255,255,0.08);
   --border:               rgba(255,255,255,0.08);
   --color-error:          #f43f5e;
   --color-warning:        #f59e0b;
-  --color-teal:           #248f7f;
   --color-rose:           #f43f5e;
   --overlay-02:  rgba(255,255,255,0.02);
   --overlay-03:  rgba(255,255,255,0.03);
@@ -32,7 +90,7 @@
   --overlay-15:  rgba(255,255,255,0.15);
   --overlay-20:  rgba(255,255,255,0.20);
   --shadow-elevated: 0 12px 32px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
-  --gradient-card: linear-gradient(145deg, #1a1d27 0%, #141720 100%);
+  --gradient-card: linear-gradient(145deg, rgb(var(--c-surface)) 0%, rgb(var(--c-input)) 100%);
 }
 
 @layer base {
@@ -44,8 +102,8 @@
 
   html, body, #root {
     height: 100%;
-    background-color: #0f1117;
-    color: #f1f5f9;
+    background-color: rgb(var(--c-bg));
+    color: rgb(var(--c-text));
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -85,14 +143,14 @@
 
   /* Selection */
   ::selection {
-    background: rgba(61,159,137,0.25);
-    color: #f1f5f9;
+    background: rgb(var(--c-primary) / 0.3);
+    color: rgb(var(--c-text));
   }
 }
 
 @layer utilities {
   .shimmer {
-    background: linear-gradient(90deg, #1a1d27 0%, #1e2130 30%, rgba(61,159,137,0.06) 50%, #1e2130 70%, #1a1d27 100%);
+    background: linear-gradient(90deg, rgb(var(--c-surface)) 0%, rgb(var(--c-surface-2)) 30%, rgb(var(--c-primary) / 0.06) 50%, rgb(var(--c-surface-2)) 70%, rgb(var(--c-surface)) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.8s ease-in-out infinite;
   }
@@ -125,10 +183,10 @@
 .md-body h1:first-child { margin-top: 0; }
 .md-body p { margin-top: 0.85rem; }
 .md-body strong { color: #f1f5f9; font-weight: 700; }
-.md-body a { color: #75b9aa; text-decoration: underline; text-decoration-color: rgba(117,185,170,0.35); text-underline-offset: 3px; }
+.md-body a { color: rgb(var(--c-primary-light)); text-decoration: underline; text-decoration-color: rgb(var(--c-primary-light) / 0.35); text-underline-offset: 3px; }
 .md-body a:hover { text-decoration-color: currentColor; }
-.md-body a.wikilink { text-decoration: none; background: rgba(61,159,137,0.1); border-radius: 6px; padding: 0.05rem 0.35rem; font-weight: 600; }
-.md-body a.wikilink:hover { background: rgba(61,159,137,0.2); }
+.md-body a.wikilink { text-decoration: none; background: rgb(var(--c-primary) / 0.1); border-radius: 6px; padding: 0.05rem 0.35rem; font-weight: 600; }
+.md-body a.wikilink:hover { background: rgb(var(--c-primary) / 0.2); }
 .md-body a.wikilink-missing { color: #fb7185; background: rgba(244,63,94,0.08); text-decoration: underline dashed; }
 .md-body ul, .md-body ol { padding-left: 1.5rem; margin-top: 0.75rem; }
 .md-body ul { list-style: disc; }
@@ -137,7 +195,7 @@
 .md-body li::marker { color: #64748b; }
 .md-body li > ul, .md-body li > ol { margin-top: 0.3rem; }
 .md-body ul.contains-task-list { list-style: none; padding-left: 0.25rem; }
-.md-body input[type="checkbox"] { margin-right: 0.5rem; accent-color: #3d9f89; }
+.md-body input[type="checkbox"] { margin-right: 0.5rem; accent-color: rgb(var(--c-primary)); }
 .md-body hr { border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 2rem 0; }
 .md-body blockquote { border-left: 3px solid rgba(255,255,255,0.15); padding: 0.1rem 0 0.1rem 1rem; color: #94a3b8; }
 .md-body img { max-width: 100%; border-radius: 12px; }
@@ -184,9 +242,36 @@
 .md-body .hljs-number, .md-body .hljs-literal, .md-body .hljs-symbol { color: #f78c6c; }
 .md-body .hljs-title, .md-body .hljs-title.function_, .md-body .hljs-section { color: #82aaff; }
 .md-body .hljs-title.class_, .md-body .hljs-type, .md-body .hljs-built_in { color: #ffcb6b; }
-.md-body .hljs-attr, .md-body .hljs-attribute, .md-body .hljs-variable, .md-body .hljs-template-variable { color: #75b9aa; }
+.md-body .hljs-attr, .md-body .hljs-attribute, .md-body .hljs-variable, .md-body .hljs-template-variable { color: rgb(var(--c-teal-light)); }
 .md-body .hljs-tag, .md-body .hljs-name, .md-body .hljs-selector-class, .md-body .hljs-selector-id { color: #f07178; }
 .md-body .hljs-meta, .md-body .hljs-doctag { color: #89ddff; }
 .md-body .hljs-deletion { color: #f87171; }
 .md-body .hljs-emphasis { font-style: italic; }
 .md-body .hljs-strong { font-weight: 700; }
+
+/* ── Decoración navideña ───────────────────────────────────────────────── */
+@keyframes twinkle {
+  0%, 100% { opacity: 1; filter: brightness(1.15); }
+  50%      { opacity: 0.35; filter: brightness(0.7); }
+}
+
+/* Guirnalda de luces: cable + bombillas que parpadean por turnos */
+.guirnalda {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+  pointer-events: none;
+  z-index: 20;
+  overflow: hidden;
+}
+.guirnalda svg { width: 100%; height: 100%; display: block; }
+.guirnalda .bombilla { animation: twinkle 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.guirnalda .bombilla:nth-of-type(3n+1) { fill: rgb(var(--c-primary)); animation-delay: 0s; filter: drop-shadow(0 0 3px rgb(var(--c-primary))); }
+.guirnalda .bombilla:nth-of-type(3n+2) { fill: rgb(var(--c-gold)); animation-delay: 0.6s; filter: drop-shadow(0 0 3px rgb(var(--c-gold))); }
+.guirnalda .bombilla:nth-of-type(3n)   { fill: rgb(var(--c-teal-light)); animation-delay: 1.2s; filter: drop-shadow(0 0 3px rgb(var(--c-teal-light))); }
+
+@media (prefers-reduced-motion: reduce) {
+  .guirnalda .bombilla { animation: none; }
+}

@@ -7,6 +7,8 @@ import { MATERIAS } from '@topcode/shared'
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 import { Spinner } from '../components/ui'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo } from '../components/Navidad'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -27,8 +29,8 @@ function tipoFromMime(mime: string): 'pdf' | 'imagen' | 'otro' {
 
 const TIPO_CONFIG = {
   pdf:    { Icon: FileText, color: '#f43f5e', bg: 'rgba(244,63,94,0.08)',    border: 'rgba(244,63,94,0.18)',    label: 'PDF'  },
-  imagen: { Icon: Image,    color: '#2f8f75', bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.15)',   label: 'IMG'  },
-  otro:   { Icon: File,     color: '#75b9aa', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.15)', label: 'FILE' },
+  imagen: { Icon: Image,    color: 'var(--color-primary-dark)', bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.15)',   label: 'IMG'  },
+  otro:   { Icon: File,     color: 'var(--color-primary-light)', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.15)', label: 'FILE' },
 }
 
 function UserAvatar({ nombre, url, size = 24 }: { nombre: string; url?: string | null; size?: number }) {
@@ -86,6 +88,7 @@ function ApuntesSkeleton() {
 
 export default function Apuntes() {
   const { usuario } = useAuth()
+  const { navidad } = useTheme()
   const isAdmin = usuario?.rol === 'admin'
   const canManage = isAdmin && usuario?.clase != null
 
@@ -238,12 +241,12 @@ export default function Apuntes() {
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 flex items-center justify-center rounded-xl"
-              style={{ background: 'rgba(61,159,137,0.12)', border: '1px solid rgba(61,159,137,0.2)' }}
+              style={{ background: 'rgb(var(--c-primary) / 0.12)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}
             >
               <FolderOpen size={15} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Apuntes</h1>
+              <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Apuntes{navidad && <Copo size={16} className="text-gold-light" />}</h1>
               <p className="text-xs text-text-muted">
                 {apuntes.length} archivo{apuntes.length !== 1 ? 's' : ''} · {totalUsuarios} usuario{totalUsuarios !== 1 ? 's' : ''}
                 {apuntes.length > 0 && (
@@ -261,7 +264,7 @@ export default function Apuntes() {
               className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 hover:bg-white/5 ${vistaLista ? 'text-primary-light' : 'text-text-muted'}`}
               style={{
                 border: '1px solid var(--overlay-08)',
-                background: vistaLista ? 'rgba(61,159,137,0.08)' : 'transparent',
+                background: vistaLista ? 'rgb(var(--c-primary) / 0.08)' : 'transparent',
               }}
               aria-label={vistaLista ? 'Vista en cuadrícula' : 'Vista en lista'}
             >
@@ -317,7 +320,7 @@ export default function Apuntes() {
                   placeholder="Buscar archivos…"
                   className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all duration-150 text-text-primary"
                   style={{ background: 'var(--color-surface)', border: '1px solid var(--border)' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(61,159,137,0.5)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,159,137,0.12)' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgb(var(--c-primary) / 0.5)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgb(var(--c-primary) / 0.12)' }}
                   onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                 />
               </div>
@@ -332,8 +335,8 @@ export default function Apuntes() {
                       onClick={() => setFiltroTipo(f.key)}
                       className={`px-3 py-2 text-xs font-semibold rounded-xl transition-all duration-150 ${isActive ? 'text-primary-light' : 'text-text-muted'}`}
                       style={{
-                        background: isActive ? 'rgba(61,159,137,0.15)' : 'var(--color-surface)',
-                        border: isActive ? '1px solid rgba(61,159,137,0.35)' : '1px solid var(--border)',
+                        background: isActive ? 'rgb(var(--c-primary) / 0.15)' : 'var(--color-surface)',
+                        border: isActive ? '1px solid rgb(var(--c-primary) / 0.35)' : '1px solid var(--border)',
                       }}
                     >
                       {f.label}
@@ -349,8 +352,8 @@ export default function Apuntes() {
                   onChange={e => setFiltroMateria(e.target.value)}
                   className="px-3 py-2 text-xs font-semibold rounded-xl outline-none transition-all duration-150 cursor-pointer shrink-0"
                   style={{
-                    background: filtroMateria !== 'todas' ? 'rgba(61,159,137,0.15)' : 'var(--color-surface)',
-                    border: filtroMateria !== 'todas' ? '1px solid rgba(61,159,137,0.35)' : '1px solid var(--border)',
+                    background: filtroMateria !== 'todas' ? 'rgb(var(--c-primary) / 0.15)' : 'var(--color-surface)',
+                    border: filtroMateria !== 'todas' ? '1px solid rgb(var(--c-primary) / 0.35)' : '1px solid var(--border)',
                     color: filtroMateria !== 'todas' ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
                   }}
                 >
@@ -374,13 +377,13 @@ export default function Apuntes() {
                 )}
                 {filtroTipo !== 'todos' && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-primary-light"
-                    style={{ background: 'rgba(61,159,137,0.1)', border: '1px solid rgba(61,159,137,0.25)' }}>
+                    style={{ background: 'rgb(var(--c-primary) / 0.1)', border: '1px solid rgb(var(--c-primary) / 0.25)' }}>
                     {FILTROS.find(f => f.key === filtroTipo)?.label}
                   </span>
                 )}
                 {filtroMateria !== 'todas' && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-primary-light"
-                    style={{ background: 'rgba(61,159,137,0.1)', border: '1px solid rgba(61,159,137,0.25)' }}>
+                    style={{ background: 'rgb(var(--c-primary) / 0.1)', border: '1px solid rgb(var(--c-primary) / 0.25)' }}>
                     <BookOpen size={10} /> {filtroMateria}
                   </span>
                 )}
@@ -406,15 +409,15 @@ export default function Apuntes() {
             <div
               className="py-16 flex flex-col items-center gap-4 text-center rounded-2xl transition-all duration-200"
               style={{
-                background: dragOver ? 'rgba(61,159,137,0.08)' : 'var(--color-surface)',
-                border: `2px dashed ${dragOver ? 'rgba(61,159,137,0.5)' : 'var(--border)'}`,
+                background: dragOver ? 'rgb(var(--c-primary) / 0.08)' : 'var(--color-surface)',
+                border: `2px dashed ${dragOver ? 'rgb(var(--c-primary) / 0.5)' : 'var(--border)'}`,
               }}
             >
               <div
                 className="w-16 h-16 flex items-center justify-center rounded-2xl transition-transform duration-200"
                 style={{
-                  background: dragOver ? 'rgba(61,159,137,0.15)' : 'var(--color-surface-2)',
-                  border: `1px solid ${dragOver ? 'rgba(61,159,137,0.35)' : 'var(--border)'}`,
+                  background: dragOver ? 'rgb(var(--c-primary) / 0.15)' : 'var(--color-surface-2)',
+                  border: `1px solid ${dragOver ? 'rgb(var(--c-primary) / 0.35)' : 'var(--border)'}`,
                   transform: dragOver ? 'scale(1.1)' : 'scale(1)',
                 }}
               >
@@ -429,7 +432,7 @@ export default function Apuntes() {
                 </p>
               </div>
               <span className="text-xs font-semibold px-4 py-2 rounded-xl"
-                style={{ background: 'rgba(61,159,137,0.12)', border: '1px solid rgba(61,159,137,0.25)', color: 'var(--color-primary)' }}>
+                style={{ background: 'rgb(var(--c-primary) / 0.12)', border: '1px solid rgb(var(--c-primary) / 0.25)', color: 'var(--color-primary)' }}>
                 Seleccionar archivo
               </span>
             </div>
@@ -442,7 +445,7 @@ export default function Apuntes() {
             style={{ background: 'var(--color-surface)', border: '1px solid var(--border)' }}
           >
             <div className="w-14 h-14 flex items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(61,159,137,0.08)', border: '1px solid rgba(61,159,137,0.15)' }}>
+              style={{ background: 'rgb(var(--c-primary) / 0.08)', border: '1px solid rgb(var(--c-primary) / 0.15)' }}>
               <SearchX size={24} className="text-primary-light" />
             </div>
             <div>
@@ -456,7 +459,7 @@ export default function Apuntes() {
             <button
               onClick={() => { setBusqueda(''); setFiltroTipo('todos'); setFiltroMateria('todas') }}
               className="text-xs font-semibold px-4 py-2 rounded-xl transition-all duration-150"
-              style={{ background: 'rgba(61,159,137,0.1)', border: '1px solid rgba(61,159,137,0.2)', color: 'var(--color-primary)' }}
+              style={{ background: 'rgb(var(--c-primary) / 0.1)', border: '1px solid rgb(var(--c-primary) / 0.2)', color: 'var(--color-primary)' }}
             >
               Limpiar filtros
             </button>
@@ -468,7 +471,7 @@ export default function Apuntes() {
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 flex items-center justify-center rounded-lg"
-                  style={{ background: 'rgba(61,159,137,0.12)', border: '1px solid rgba(61,159,137,0.2)' }}>
+                  style={{ background: 'rgb(var(--c-primary) / 0.12)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}>
                   <User size={14} style={{ color: 'var(--color-primary)' }} />
                 </div>
                 <span className="font-semibold text-sm text-text-primary">Mis apuntes</span>
@@ -510,7 +513,7 @@ export default function Apuntes() {
             <section className="flex flex-col gap-6">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 flex items-center justify-center rounded-lg"
-                  style={{ background: 'rgba(44,129,120,0.10)', border: '1px solid rgba(44,129,120,0.2)' }}>
+                  style={{ background: 'rgb(var(--c-primary-dark) / 0.10)', border: '1px solid rgb(var(--c-primary-dark) / 0.2)' }}>
                   <Users size={14} style={{ color: 'var(--color-teal)' }} />
                 </div>
                 <span className="font-semibold text-sm text-text-primary">Apuntes de compañeros</span>
@@ -610,7 +613,7 @@ export default function Apuntes() {
                 onChange={e => setUploadMateria(e.target.value)}
                 className="w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-all duration-150"
                 style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)', color: uploadMateria ? 'var(--color-text)' : 'var(--color-text-muted)' }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(61,159,137,0.5)' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgb(var(--c-primary) / 0.5)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
               >
                 <option value="">Sin categoría</option>
@@ -633,7 +636,7 @@ export default function Apuntes() {
                 onClick={handleConfirmUpload}
                 disabled={subiendo}
                 className="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 text-white flex items-center justify-center gap-2 disabled:opacity-60"
-                style={{ background: 'linear-gradient(135deg, #3d9f89, #2c8178)' }}
+                style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))' }}
               >
                 {subiendo ? <><Spinner size="sm" className="text-white" /> Subiendo…</> : <><Upload size={13} /> Subir</>}
               </button>
@@ -724,7 +727,7 @@ export default function Apuntes() {
                     href={previewApunte.url}
                     download
                     className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl text-white"
-                    style={{ background: 'linear-gradient(135deg, #3d9f89, #2c8178)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))' }}
                   >
                     <Download size={14} /> Descargar archivo
                   </a>
@@ -777,7 +780,7 @@ function ApunteCard({
           background: 'var(--color-surface)',
           border: '1px solid var(--border)',
         }}
-        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `${config.color}30`; el.style.background = 'var(--color-surface-2)' }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `color-mix(in srgb, ${config.color} 19%, transparent)`; el.style.background = 'var(--color-surface-2)' }}
         onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.background = 'var(--color-surface)' }}
       >
         <div className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0"
@@ -801,7 +804,7 @@ function ApunteCard({
               onClick={onPreview}
               className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-150"
               style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)', color: 'var(--color-text-muted)' }}
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--color-primary-light)'; el.style.background = 'rgba(61,159,137,0.08)' }}
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--color-primary-light)'; el.style.background = 'rgb(var(--c-primary) / 0.08)' }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--color-text-muted)'; el.style.background = 'var(--color-surface-2)' }}
               aria-label="Vista previa"
             >
@@ -846,7 +849,7 @@ function ApunteCard({
         border: '1px solid var(--border)',
         boxShadow: '0 1px 4px var(--overlay-04)',
       }}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `${config.color}30`; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 24px var(--overlay-08)' }}
+      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = `color-mix(in srgb, ${config.color} 19%, transparent)`; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 24px var(--overlay-08)' }}
       onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.transform = 'translateY(0)'; el.style.boxShadow = '0 1px 4px var(--overlay-04)' }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -866,7 +869,7 @@ function ApunteCard({
           <p className="text-xs text-text-muted">{fecha}</p>
           {ap.materia && (
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-1"
-              style={{ background: 'rgba(61,159,137,0.08)', color: 'var(--color-primary-light)', border: '1px solid rgba(61,159,137,0.2)' }}>
+              style={{ background: 'rgb(var(--c-primary) / 0.08)', color: 'var(--color-primary-light)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}>
               <BookOpen size={9} />
               {ap.materia}
             </span>
@@ -880,7 +883,7 @@ function ApunteCard({
             onClick={onPreview}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl transition-all duration-150"
             style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)', color: 'var(--color-text-muted)' }}
-            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--color-primary-light)'; el.style.background = 'rgba(61,159,137,0.08)'; el.style.borderColor = 'rgba(61,159,137,0.25)' }}
+            onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--color-primary-light)'; el.style.background = 'rgb(var(--c-primary) / 0.08)'; el.style.borderColor = 'rgb(var(--c-primary) / 0.25)' }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--color-text-muted)'; el.style.background = 'var(--color-surface-2)'; el.style.borderColor = 'var(--border)' }}
           >
             <Eye size={11} /> Ver

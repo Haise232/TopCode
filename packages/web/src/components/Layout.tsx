@@ -10,6 +10,7 @@ import AnuncioModal from './AnuncioModal'
 import PrivateMessageToast from './PrivateMessageToast'
 import ActivityToast from './ActivityToast'
 import Pattern from './Pattern'
+import { Guirnalda, GorroNavidad } from './Navidad'
 import { cn } from './ui/cn'
 
 const ROUTE_PREFETCH: Record<string, () => Promise<unknown>> = {
@@ -77,7 +78,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           className="shrink-0 flex items-center gap-3 px-4 h-14 w-full transition-colors duration-150 hover:bg-overlay-3"
           aria-label={expanded ? 'Colapsar' : 'Expandir'}
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-primary to-primary-dark shadow-[0_2px_10px_rgba(61,159,137,0.35)]">
+          <div className="relative w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-primary to-primary-dark shadow-[0_2px_10px_rgb(var(--c-primary)/0.35)]">
             <img
               src="/logo.svg"
               alt=""
@@ -88,6 +89,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               }}
             />
             <GraduationCap size={16} className="text-white absolute hidden" aria-hidden />
+            <GorroNavidad className="-top-3 -right-2.5 w-6 h-5 rotate-[18deg]" />
           </div>
           {expanded && (
             <span className="font-bold text-sm tracking-tight text-text-primary whitespace-nowrap">
@@ -130,7 +132,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {({ isActive }) => (
                   <>
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r-full w-[3px] h-[60%] bg-gradient-to-b from-primary to-primary-dark shadow-[0_0_8px_rgba(61,159,137,0.4)]" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r-full w-[3px] h-[60%] bg-gradient-to-b from-primary to-primary-dark shadow-[0_0_8px_rgb(var(--c-primary)/0.4)]" />
                     )}
                     <div className="relative shrink-0">
                       <Icon size={20} />
@@ -144,7 +146,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       <div className="flex-1 min-w-0 flex flex-col">
                         <span className="text-xs font-medium whitespace-nowrap">{label}</span>
                         {isDmItem && dmSenders.length > 0 && (
-                          <span className="text-[9px] font-semibold truncate" style={{ color: '#75b9aa', lineHeight: 1.2 }}>
+                          <span className="text-[9px] font-semibold truncate" style={{ color: 'var(--color-primary-light)', lineHeight: 1.2 }}>
                             {dmSenders.length === 1
                               ? dmSenders[0]
                               : `${dmSenders[0]} +${dmSenders.length - 1}`}
@@ -201,6 +203,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* ── Content ── */}
       <main className="relative flex-1 min-h-0 overflow-hidden pb-[60px] md:pb-0">
         <Pattern />
+        <Guirnalda />
         <div className="relative z-10 h-full">
           {children}
         </div>
@@ -236,7 +239,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     )}
                   </div>
                   {isDmItem && dmSenders.length > 0 && !isActive ? (
-                    <span className="text-[8px] font-semibold leading-none truncate max-w-[52px]" style={{ color: '#75b9aa' }}>
+                    <span className="text-[8px] font-semibold leading-none truncate max-w-[52px]" style={{ color: 'var(--color-primary-light)' }}>
                       {dmSenders[0]}{dmSenders.length > 1 ? ` +${dmSenders.length - 1}` : ''}
                     </span>
                   ) : (

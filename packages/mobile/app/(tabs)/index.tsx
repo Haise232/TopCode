@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { colores, esNavidad } from '../../src/lib/tema'
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
 import { useHomeDatos, useDataInit } from '@topcode/shared'
 import { useAuth } from '../../src/contexts/AuthContext'
@@ -20,6 +21,7 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.greeting}>{saludo()}, {usuario?.nombre?.split(' ')[0]}</Text>
       <Text style={styles.clase}>{usuario?.clase ?? 'Sin clase asignada'}</Text>
+      {esNavidad && <Text style={styles.fiestas}>❄ Felices fiestas ❄</Text>}
 
       {/* Próximo evento */}
       {proximoEvento && (
@@ -58,25 +60,26 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f0a' },
+  container: { flex: 1, backgroundColor: colores.bg },
   content: { padding: 20, paddingBottom: 40 },
-  greeting: { fontSize: 22, fontWeight: '700', color: '#e5e7eb', marginBottom: 2 },
-  clase: { fontSize: 13, color: '#8ff5d6', marginBottom: 20 },
+  greeting: { fontSize: 22, fontWeight: '700', color: colores.text, marginBottom: 2 },
+  fiestas: { fontSize: 12, color: colores.gold, marginBottom: 12, letterSpacing: 0.5 },
+  clase: { fontSize: 13, color: colores.primaryLight, marginBottom: 20 },
   card: {
-    backgroundColor: '#111812', borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: '#1e2d1e', marginBottom: 12,
+    backgroundColor: colores.surface, borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: colores.border, marginBottom: 12,
   },
-  cardLabel: { fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
-  cardTitle: { fontSize: 16, color: '#e5e7eb', fontWeight: '600' },
-  cardMeta: { fontSize: 13, color: '#8ff5d6', marginTop: 4 },
+  cardLabel: { fontSize: 11, color: colores.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  cardTitle: { fontSize: 16, color: colores.text, fontWeight: '600' },
+  cardMeta: { fontSize: 13, color: colores.primaryLight, marginTop: 4 },
   section: { marginTop: 8 },
-  sectionTitle: { fontSize: 14, color: '#6b7280', marginBottom: 10, fontWeight: '600' },
+  sectionTitle: { fontSize: 14, color: colores.textMuted, marginBottom: 10, fontWeight: '600' },
   row: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#111812', borderRadius: 10, padding: 12,
-    borderWidth: 1, borderColor: '#1e2d1e', marginBottom: 6,
+    backgroundColor: colores.surface, borderRadius: 10, padding: 12,
+    borderWidth: 1, borderColor: colores.border, marginBottom: 6,
   },
-  rowLabel: { color: '#d1d5db', fontSize: 14 },
-  rowValue: { color: '#8ff5d6', fontWeight: '700', fontSize: 16 },
-  loading: { color: '#6b7280', textAlign: 'center', marginTop: 20 },
+  rowLabel: { color: colores.textSecondary, fontSize: 14 },
+  rowValue: { color: colores.primaryLight, fontWeight: '700', fontSize: 16 },
+  loading: { color: colores.textMuted, textAlign: 'center', marginTop: 20 },
 })

@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { usePrompts } from '@topcode/shared'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo } from '../components/Navidad'
 import type { Prompt, PromptCategoria, PromptModelo, PromptInput } from '@topcode/shared'
 
 const CATEGORIAS: Record<PromptCategoria, { label: string; Icon: React.ElementType; color: string }> = {
@@ -32,9 +34,10 @@ const ABRIR_EN: { label: string; url: (q: string) => string }[] = [
 
 const EMPTY_FORM: PromptInput = { titulo: '', contenido: '', descripcion: '', categoria: 'general', modelo: 'cualquiera' }
 
-const inputCls = 'bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]'
+const inputCls = 'bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]'
 
 export default function Prompts() {
+  const { navidad } = useTheme()
   const { usuario } = useAuth()
   const { prompts, loading, error, addPrompt, updatePrompt, deletePrompt } = usePrompts()
   const [filtro, setFiltro] = useState<'todos' | PromptCategoria>('todos')
@@ -124,13 +127,13 @@ export default function Prompts() {
       {/* Header */}
       <div className="px-4 md:px-6 py-5 border-b border-white/[0.08] flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Prompts IA</h1>
+          <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Prompts IA{navidad && <Copo size={16} className="text-gold" />}</h1>
           <p className="text-xs text-text-muted mt-0.5">Prompts útiles para ChatGPT, Claude y otras IAs, compartidos por la clase</p>
         </div>
         <button
           onClick={openNew}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 shrink-0"
-          style={{ background: 'linear-gradient(135deg,#3d9f89,#2c8178)', color: '#0d1117' }}
+          style={{ background: 'linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))', color: '#fff' }}
         >
           <Plus size={14} />
           Añadir
@@ -157,9 +160,9 @@ export default function Prompts() {
                 onClick={() => setFiltro(c)}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all duration-150"
                 style={{
-                  background: active ? 'rgba(61,159,137,0.14)' : 'var(--overlay-03)',
-                  border: active ? '1px solid rgba(61,159,137,0.3)' : '1px solid transparent',
-                  color: active ? '#3d9f89' : '#6b7280',
+                  background: active ? 'rgb(var(--c-primary) / 0.14)' : 'var(--overlay-03)',
+                  border: active ? '1px solid rgb(var(--c-primary) / 0.3)' : '1px solid transparent',
+                  color: active ? 'var(--color-primary)' : '#6b7280',
                 }}
               >
                 {c === 'todos' ? 'Todos' : CATEGORIAS[c].label}
@@ -179,8 +182,8 @@ export default function Prompts() {
           <p className="text-center py-20 text-sm text-rose-400">No se pudieron cargar los prompts: {error}</p>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(61,159,137,0.08)' }}>
-              <Sparkles size={22} style={{ color: '#3d9f89' }} />
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgb(var(--c-primary) / 0.08)' }}>
+              <Sparkles size={22} style={{ color: 'var(--color-primary)' }} />
             </div>
             <p className="font-semibold text-text-secondary">
               {prompts.length === 0 ? 'Sin prompts todavía' : 'Ningún prompt coincide'}
@@ -252,7 +255,7 @@ export default function Prompts() {
                     <button
                       onClick={() => handleCopy(p)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95"
-                      style={{ background: 'rgba(61,159,137,0.14)', color: '#3d9f89' }}
+                      style={{ background: 'rgb(var(--c-primary) / 0.14)', color: 'var(--color-primary)' }}
                     >
                       {copiedId === p.id ? <Check size={12} /> : <Copy size={12} />}
                       {copiedId === p.id ? 'Copiado' : 'Copiar'}
@@ -353,7 +356,7 @@ export default function Prompts() {
                 type="submit"
                 disabled={saving}
                 className="py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-95 disabled:opacity-60"
-                style={{ background: 'linear-gradient(135deg,#3d9f89,#2c8178)', color: '#0d1117' }}
+                style={{ background: 'linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))', color: '#fff' }}
               >
                 {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Guardar prompt'}
               </button>

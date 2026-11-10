@@ -25,7 +25,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           id={id}
           className={cn(
             'bg-input border border-border rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none',
-            'focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]',
+            'focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.15)]',
             icon && 'pl-10',
             className
           )}
@@ -54,7 +54,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
         id={id}
         className={cn(
           'bg-input border border-border rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none',
-          'focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]',
+          'focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.15)]',
           className
         )}
         {...rest}

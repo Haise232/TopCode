@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { colores } from '../../src/lib/tema'
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native'
 import { useNotas, useDataInit } from '@topcode/shared'
 import { useAuth } from '../../src/contexts/AuthContext'
@@ -12,7 +13,7 @@ export default function NotasScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#8ff5d6" />
+        <ActivityIndicator color={colores.primaryLight} />
       </View>
     )
   }
@@ -44,18 +45,18 @@ export default function NotasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f0a' },
+  container: { flex: 1, backgroundColor: colores.bg },
   content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, backgroundColor: '#0a0f0a', justifyContent: 'center', alignItems: 'center' },
-  empty: { color: '#6b7280', textAlign: 'center', marginTop: 40 },
+  center: { flex: 1, backgroundColor: colores.bg, justifyContent: 'center', alignItems: 'center' },
+  empty: { color: colores.textMuted, textAlign: 'center', marginTop: 40 },
   card: {
-    backgroundColor: '#111812', borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: '#1e2d1e', marginBottom: 10,
+    backgroundColor: colores.surface, borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: colores.border, marginBottom: 10,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  materia: { color: '#8ff5d6', fontWeight: '700', fontSize: 15 },
-  tema: { color: '#d1d5db', fontSize: 13, marginTop: 2 },
-  media: { color: '#22c55e', fontSize: 28, fontWeight: '700' },
+  materia: { color: colores.primaryLight, fontWeight: '700', fontSize: 15 },
+  tema: { color: colores.textSecondary, fontSize: 13, marginTop: 2 },
+  media: { color: colores.primary, fontSize: 28, fontWeight: '700' },
   detailRow: { flexDirection: 'row', gap: 16, marginTop: 10 },
-  detail: { color: '#6b7280', fontSize: 12 },
+  detail: { color: colores.textMuted, fontSize: 12 },
 })

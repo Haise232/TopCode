@@ -94,17 +94,17 @@ export default function ActivityToast() {
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
           style={{
-            background: 'linear-gradient(135deg, rgba(61,159,137,0.25), rgba(44,129,120,0.2))',
-            border: '1.5px solid rgba(61,159,137,0.3)',
+            background: 'linear-gradient(135deg, rgb(var(--c-primary) / 0.25), rgb(var(--c-primary-dark) / 0.2))',
+            border: '1.5px solid rgb(var(--c-primary) / 0.3)',
           }}
         >
-          <ClipboardCheck size={16} style={{ color: '#3d9f89' }} />
+          <ClipboardCheck size={16} style={{ color: 'var(--color-primary)' }} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#3d9f89' }}>
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>
               Nueva actividad
             </span>
           </div>
@@ -130,9 +130,9 @@ export default function ActivityToast() {
             onClick={() => { navigate(RUTA_ACTIVIDADES); dismiss() }}
             className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
             style={{
-              background: 'rgba(61,159,137,0.15)',
-              color: '#3d9f89',
-              border: '1px solid rgba(61,159,137,0.25)',
+              background: 'rgb(var(--c-primary) / 0.15)',
+              color: 'var(--color-primary)',
+              border: '1px solid rgb(var(--c-primary) / 0.25)',
             }}
           >
             Ver

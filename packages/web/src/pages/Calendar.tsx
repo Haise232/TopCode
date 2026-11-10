@@ -15,6 +15,8 @@ import { TIPO_EVENTO_CONFIG, TipoEventoBadge, tipoEventoConfig } from '../lib/ti
 import AlertModal from '../components/AlertModal'
 import { SkeletonBox, SkeletonCard } from '../components/Skeleton'
 import { Button, Spinner } from '../components/ui'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo } from '../components/Navidad'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -80,7 +82,7 @@ function VistaSwitch({ value, onChange }: { value: Vista; onChange: (v: Vista) =
             className="flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             style={active ? {
               background: 'linear-gradient(135deg, var(--color-primary), var(--color-teal))',
-              color: 'white', boxShadow: '0 2px 10px rgba(61,159,137,0.3)',
+              color: 'white', boxShadow: '0 2px 10px rgb(var(--c-primary)/0.3)',
             } : { color: 'var(--color-text-secondary)', border: '1px solid transparent' }}>
             <Icon size={14} aria-hidden="true" />
             {label}
@@ -197,6 +199,7 @@ function MiniCalendario({
   onPrevMonth: () => void
   onNextMonth: () => void
 }) {
+  const { navidad } = useTheme()
   const hoy = new Date()
   const todayDay = hoy.getDate()
   const isCurrentMonth = hoy.getFullYear() === viewYear && hoy.getMonth() === viewMonth
@@ -218,6 +221,11 @@ function MiniCalendario({
   const cells: (number | null)[] = []
   for (let i = 0; i < offset; i++) cells.push(null)
   for (let d = 1; d <= totalDias; d++) cells.push(d)
+
+  // Fechas señaladas: 24, 25 y 31 de diciembre y 6 de enero
+  function esFestivo(d: number) {
+    return (viewMonth === 11 && (d === 24 || d === 25 || d === 31)) || (viewMonth === 0 && d === 6)
+  }
 
   function fechaStr(d: number) {
     return `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
@@ -267,6 +275,7 @@ function MiniCalendario({
           const hasEvento = coloresDia !== undefined
           const fs = fechaStr(dia)
           const isHighlighted = diaHighlight === fs
+          const festivo = navidad && !isToday && esFestivo(dia)
 
           return (
             <button key={dia} onClick={() => hasEvento && onDiaClick(fs)}
@@ -274,11 +283,13 @@ function MiniCalendario({
               style={{
                 background: isToday
                   ? 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))'
-                  : isHighlighted ? 'rgba(61,159,137,0.15)'
+                  : isHighlighted ? 'rgb(var(--c-primary)/0.15)'
+                  : festivo ? 'rgb(var(--c-gold)/0.12)'
                   : hasEvento ? 'var(--overlay-04)' : 'transparent',
-                border: isHighlighted && !isToday ? '1px solid rgba(61,159,137,0.3)' : '1px solid transparent',
+                border: isHighlighted && !isToday ? '1px solid rgb(var(--c-primary)/0.3)'
+                  : festivo ? '1px solid rgb(var(--c-gold)/0.3)' : '1px solid transparent',
                 cursor: hasEvento ? 'pointer' : 'default',
-                boxShadow: isToday ? '0 2px 8px rgba(61,159,137,0.35)' : 'none',
+                boxShadow: isToday ? '0 2px 8px rgb(var(--c-primary)/0.35)' : 'none',
               }}
             >
               <span className="text-xs font-semibold tabular-nums"
@@ -288,6 +299,7 @@ function MiniCalendario({
                 }}>
                 {dia}
               </span>
+              {festivo && <Copo size={8} className="absolute top-0.5 right-0.5 text-gold" />}
               {hasEvento && !isToday && (
                 <span className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
                   {coloresDia!.map(c => (
@@ -314,12 +326,12 @@ function EmptyState({ isAdmin, onNew, actividades }: { isAdmin: boolean; onNew: 
         <rect x="8" y="16" width="64" height="16" rx="8" fill="rgba(245,158,11,0.12)" />
         <rect x="22" y="8" width="4" height="16" rx="2" fill="#f59e0b" opacity="0.6" />
         <rect x="54" y="8" width="4" height="16" rx="2" fill="#f59e0b" opacity="0.6" />
-        <rect x="20" y="44" width="12" height="12" rx="3" fill="rgba(61,159,137,0.25)" stroke="rgba(61,159,137,0.3)" strokeWidth="1" />
+        <rect x="20" y="44" width="12" height="12" rx="3" fill="rgb(var(--c-primary)/0.25)" stroke="rgb(var(--c-primary)/0.3)" strokeWidth="1" />
         <rect x="36" y="44" width="12" height="12" rx="3" fill="rgba(245,158,11,0.15)" stroke="rgba(245,158,11,0.2)" strokeWidth="1" />
-        <rect x="52" y="44" width="12" height="12" rx="3" fill="rgba(20,184,166,0.12)" stroke="rgba(20,184,166,0.2)" strokeWidth="1" />
-        <circle cx="60" cy="60" r="12" fill="rgba(61,159,137,0.15)" stroke="rgba(61,159,137,0.3)" strokeWidth="1.5" />
-        <line x1="60" y1="55" x2="60" y2="60" stroke="#75b9aa" strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="60" y1="60" x2="63" y2="63" stroke="#75b9aa" strokeWidth="1.5" strokeLinecap="round" />
+        <rect x="52" y="44" width="12" height="12" rx="3" fill="rgb(var(--c-teal)/0.12)" stroke="rgb(var(--c-teal)/0.2)" strokeWidth="1" />
+        <circle cx="60" cy="60" r="12" fill="rgb(var(--c-primary)/0.15)" stroke="rgb(var(--c-primary)/0.3)" strokeWidth="1.5" />
+        <line x1="60" y1="55" x2="60" y2="60" stroke="var(--color-primary-light)" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="60" y1="60" x2="63" y2="63" stroke="var(--color-primary-light)" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
       <div className="flex flex-col gap-2">
         <p className="font-bold text-lg text-text-primary">{actividades ? 'Sin actividades todavía' : 'Sin exámenes programados'}</p>
@@ -431,6 +443,7 @@ const EMPTY_FORM: FormState = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
+  const { navidad } = useTheme()
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
   const canManage = isAdmin && usuario?.clase != null
@@ -651,6 +664,7 @@ export default function CalendarPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-extrabold text-xl tracking-tight capitalize text-text-primary">Calendario</h1>
+                {navidad && <Copo size={14} className="text-gold" />}
                 {todayCount > 0 && (
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full animate-pulse-soft text-rose"
                     style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.25)' }}>
@@ -681,7 +695,7 @@ export default function CalendarPage() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Buscar eventos..."
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none pl-9 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none pl-9 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
             </div>
             <button onClick={handleRefresh} disabled={refreshing}
@@ -725,7 +739,7 @@ export default function CalendarPage() {
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--overlay-06)' }}>
                     <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, background: pct === 100 ? 'linear-gradient(90deg, #2f8f75, #267560)' : 'linear-gradient(90deg, #3d9f89, #2c8178)' }} />
+                      style={{ width: `${pct}%`, background: pct === 100 ? 'linear-gradient(90deg, var(--color-teal), rgb(var(--c-teal-dark)))' : 'linear-gradient(90deg, var(--color-primary), var(--color-primary-dark))' }} />
                   </div>
                   <p className="text-xs mt-1.5 text-text-muted">{totalHechas} de {eventos.length} completadas</p>
                 </div>
@@ -740,13 +754,13 @@ export default function CalendarPage() {
                       <button key={f.key} onClick={() => setFiltroEstado(f.key)} aria-pressed={active}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150"
                         style={{
-                          background: active ? 'rgba(61,159,137,0.15)' : 'var(--overlay-04)',
-                          border: `1px solid ${active ? 'rgba(61,159,137,0.3)' : 'var(--overlay-07)'}`,
+                          background: active ? 'rgb(var(--c-primary)/0.15)' : 'var(--overlay-04)',
+                          border: `1px solid ${active ? 'rgb(var(--c-primary)/0.3)' : 'var(--overlay-07)'}`,
                           color: active ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
                         }}>
                         {f.label}
                         <span className="px-1.5 py-0.5 rounded-md text-2xs font-bold tabular-nums"
-                          style={{ background: active ? 'rgba(61,159,137,0.2)' : 'var(--overlay-06)' }}>{f.count}</span>
+                          style={{ background: active ? 'rgb(var(--c-primary)/0.2)' : 'var(--overlay-06)' }}>{f.count}</span>
                       </button>
                     )
                   })}
@@ -913,7 +927,7 @@ export default function CalendarPage() {
                     value={form.titulo}
                     onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
                     placeholder="Ej: Actividad 2 de Informática"
-                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     autoFocus
                   />
                 </div>
@@ -929,7 +943,7 @@ export default function CalendarPage() {
                       value={form.materia}
                       onChange={e => setForm(f => ({ ...f, materia: e.target.value }))}
                       placeholder="Selecciona o escribe..."
-                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                       list="cal-materias-list"
                     />
                     <datalist id="cal-materias-list">
@@ -946,7 +960,7 @@ export default function CalendarPage() {
                     onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
                     placeholder="Más detalles..."
                     rows={3}
-                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                    className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none resize-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                   />
                 </div>
 
@@ -958,7 +972,7 @@ export default function CalendarPage() {
                       type="date"
                       value={form.fecha}
                       onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
-                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -967,7 +981,7 @@ export default function CalendarPage() {
                       type="time"
                       value={form.hora}
                       onChange={e => setForm(f => ({ ...f, hora: e.target.value }))}
-                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                      className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm transition-all duration-200 w-full outline-none [color-scheme:dark] focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
                     />
                   </div>
                 </div>
@@ -1110,7 +1124,7 @@ function EventCard({
   const relativoLabel = completada ? 'Completada' : vencida ? 'Vencida' : relativo
 
   const badgeStyle = completada ? {
-    background: 'rgba(16,185,129,0.1)', color: '#2f8f75', border: '1px solid rgba(16,185,129,0.25)',
+    background: 'rgb(var(--c-teal)/0.1)', color: 'var(--color-teal)', border: '1px solid rgb(var(--c-teal)/0.25)',
   } : vencida ? {
     background: 'rgba(244,63,94,0.12)', color: 'var(--color-rose)', border: '1px solid rgba(244,63,94,0.28)',
   } : past ? {
@@ -1122,7 +1136,7 @@ function EventCard({
   } : daysUntil <= 3 ? {
     background: 'rgba(245,158,11,0.12)', color: 'var(--color-warning)', border: '1px solid rgba(245,158,11,0.25)',
   } : daysUntil <= 7 ? {
-    background: 'rgba(16,185,129,0.1)', color: '#61ae98', border: '1px solid rgba(16,185,129,0.2)',
+    background: 'rgb(var(--c-teal)/0.1)', color: 'var(--color-primary-light)', border: '1px solid rgb(var(--c-teal)/0.2)',
   } : {
     background: 'var(--overlay-05)', color: 'var(--color-text-muted)', border: '1px solid var(--overlay-08)',
   }
@@ -1132,12 +1146,12 @@ function EventCard({
       className="flex rounded-2xl overflow-hidden transition-all duration-200"
       style={{
         background: past ? 'var(--color-surface)' : 'var(--gradient-card)',
-        border: highlight ? '1px solid rgba(61,159,137,0.45)'
+        border: highlight ? '1px solid rgb(var(--c-primary)/0.45)'
           : isToday ? '1px solid rgba(244,63,94,0.2)'
           : past ? '1px solid var(--overlay-04)'
           : '1px solid var(--overlay-07)',
         opacity: past ? 0.55 : completada ? 0.75 : 1,
-        boxShadow: highlight ? '0 0 0 3px rgba(61,159,137,0.12)'
+        boxShadow: highlight ? '0 0 0 3px rgb(var(--c-primary)/0.12)'
           : isToday ? '0 0 0 1px rgba(244,63,94,0.08), inset 0 1px 0 var(--overlay-04)'
           : 'inset 0 1px 0 var(--overlay-03)',
       }}
@@ -1187,8 +1201,8 @@ function EventCard({
                   role="checkbox" aria-checked={estado.completada}
                   className="w-8 h-8 sm:w-6 sm:h-6 flex items-center justify-center rounded-md transition-all duration-200 active:scale-90 shrink-0"
                   style={{
-                    background: estado.completada ? '#2f8f75' : 'transparent',
-                    border: `2px solid ${estado.completada ? '#2f8f75' : 'var(--overlay-20)'}`,
+                    background: estado.completada ? 'var(--color-teal)' : 'transparent',
+                    border: `2px solid ${estado.completada ? 'var(--color-teal)' : 'var(--overlay-20)'}`,
                   }}
                   aria-label={estado.completada ? 'Marcar como pendiente' : 'Marcar como completada'}>
                   {estado.toggling ? <Spinner size="sm" className="!w-2.5 !h-2.5 text-white" />
@@ -1203,8 +1217,8 @@ function EventCard({
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement
                       el.style.color = 'var(--color-primary-light)'
-                      el.style.background = 'rgba(61,159,137,0.08)'
-                      el.style.borderColor = 'rgba(61,159,137,0.2)'
+                      el.style.background = 'rgb(var(--c-primary)/0.08)'
+                      el.style.borderColor = 'rgb(var(--c-primary)/0.2)'
                     }}
                     onMouseLeave={e => {
                       const el = e.currentTarget as HTMLElement

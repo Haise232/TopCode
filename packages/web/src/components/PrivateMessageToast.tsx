@@ -121,8 +121,8 @@ export default function PrivateMessageToast() {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
-            <MessageCircle size={10} style={{ color: '#75b9aa', flexShrink: 0 }} />
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: '#75b9aa' }}>
+            <MessageCircle size={10} style={{ color: 'var(--color-primary-light)', flexShrink: 0 }} />
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-primary-light)' }}>
               Mensaje privado
             </span>
           </div>
@@ -151,9 +151,9 @@ export default function PrivateMessageToast() {
             }}
             className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
             style={{
-              background: 'rgba(61,159,137,0.15)',
-              color: '#75b9aa',
-              border: '1px solid rgba(61,159,137,0.25)',
+              background: 'rgb(var(--c-primary) / 0.15)',
+              color: 'var(--color-primary-light)',
+              border: '1px solid rgb(var(--c-primary) / 0.25)',
             }}
           >
             Abrir

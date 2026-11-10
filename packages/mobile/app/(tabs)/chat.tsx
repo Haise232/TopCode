@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { colores } from '../../src/lib/tema'
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
@@ -51,7 +52,7 @@ export default function ChatScreen() {
           value={texto}
           onChangeText={t => { setTexto(t); if (usuario) emitirTyping(usuario.nombre) }}
           placeholder="Escribe un mensaje..."
-          placeholderTextColor="#6b7280"
+          placeholderTextColor={colores.textMuted}
           multiline
         />
         <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
@@ -63,23 +64,23 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f0a' },
+  container: { flex: 1, backgroundColor: colores.bg },
   list: { padding: 12, paddingBottom: 8 },
   bubble: {
     maxWidth: '80%', borderRadius: 16, padding: 10, marginBottom: 6,
   },
-  bubbleMe: { alignSelf: 'flex-end', backgroundColor: '#14532d' },
-  bubbleThem: { alignSelf: 'flex-start', backgroundColor: '#111812', borderWidth: 1, borderColor: '#1e2d1e' },
-  autor: { fontSize: 11, color: '#8ff5d6', marginBottom: 2, fontWeight: '600' },
-  texto: { color: '#e5e7eb', fontSize: 15 },
+  bubbleMe: { alignSelf: 'flex-end', backgroundColor: colores.primaryDark },
+  bubbleThem: { alignSelf: 'flex-start', backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.border },
+  autor: { fontSize: 11, color: colores.primaryLight, marginBottom: 2, fontWeight: '600' },
+  texto: { color: colores.text, fontSize: 15 },
   inputRow: {
     flexDirection: 'row', padding: 12, borderTopWidth: 1,
-    borderTopColor: '#1e2d1e', backgroundColor: '#0d1a0d', alignItems: 'flex-end',
+    borderTopColor: colores.border, backgroundColor: colores.surface2, alignItems: 'flex-end',
   },
   input: {
-    flex: 1, backgroundColor: '#111812', borderRadius: 12, padding: 10,
-    color: '#e5e7eb', maxHeight: 120, fontSize: 15, marginRight: 8,
+    flex: 1, backgroundColor: colores.surface, borderRadius: 12, padding: 10,
+    color: colores.text, maxHeight: 120, fontSize: 15, marginRight: 8,
   },
-  sendBtn: { backgroundColor: '#22c55e', borderRadius: 12, padding: 10, justifyContent: 'center', alignItems: 'center' },
+  sendBtn: { backgroundColor: colores.primary, borderRadius: 12, padding: 10, justifyContent: 'center', alignItems: 'center' },
   sendText: { color: '#fff', fontSize: 18 },
 })

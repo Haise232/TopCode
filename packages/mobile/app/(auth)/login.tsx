@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { colores, esNavidad } from '../../src/lib/tema'
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform,
@@ -29,11 +30,12 @@ export default function LoginScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>TopCode</Text>
         <Text style={styles.subtitle}>Intranet académica</Text>
+        {esNavidad && <Text style={styles.fiestas}>❄ Felices fiestas ❄</Text>}
 
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#6b7280"
+          placeholderTextColor={colores.textMuted}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -42,7 +44,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Contraseña"
-          placeholderTextColor="#6b7280"
+          placeholderTextColor={colores.textMuted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -63,15 +65,16 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f0a', justifyContent: 'center', padding: 24 },
-  card: { backgroundColor: '#111812', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: '#1e2d1e' },
-  title: { fontSize: 28, fontWeight: '700', color: '#8ff5d6', textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 24 },
+  container: { flex: 1, backgroundColor: colores.bg, justifyContent: 'center', padding: 24 },
+  card: { backgroundColor: colores.surface, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: colores.border },
+  title: { fontSize: 28, fontWeight: '700', color: colores.primaryLight, textAlign: 'center', marginBottom: 4 },
+  fiestas: { fontSize: 13, color: colores.gold, textAlign: 'center', marginTop: -16, marginBottom: 20 },
+  subtitle: { fontSize: 14, color: colores.textMuted, textAlign: 'center', marginBottom: 24 },
   input: {
-    backgroundColor: '#0d1a0d', borderWidth: 1, borderColor: '#1e2d1e',
-    borderRadius: 10, padding: 14, color: '#e5e7eb', marginBottom: 12, fontSize: 15,
+    backgroundColor: colores.surface2, borderWidth: 1, borderColor: colores.border,
+    borderRadius: 10, padding: 14, color: colores.text, marginBottom: 12, fontSize: 15,
   },
   error: { color: '#f87171', marginBottom: 12, fontSize: 13 },
-  button: { backgroundColor: '#22c55e', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 4 },
+  button: { backgroundColor: colores.primary, borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 4 },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 })

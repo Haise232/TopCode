@@ -97,14 +97,14 @@ export default function ForoPost() {
         <div className="flex items-center gap-2 min-w-0">
           <span
             className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
-            style={{ background: 'rgba(61,159,137,0.1)', color: '#3d9f89' }}
+            style={{ background: 'rgb(var(--c-primary) / 0.1)', color: 'var(--color-primary)' }}
           >
             {materiaLabel(post.materia)}
           </span>
           <h1 className="font-bold text-sm text-text-primary truncate">{post.titulo}</h1>
         </div>
         {post.resuelto ? (
-          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-auto" style={{ background: 'rgba(16,185,129,0.12)', color: '#2f8f75' }}>
+          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-auto" style={{ background: 'rgb(var(--c-teal) / 0.12)', color: 'var(--color-teal)' }}>
             <CheckCircle2 size={10} />
             Resuelto
           </span>
@@ -134,7 +134,7 @@ export default function ForoPost() {
                 <button
                   onClick={markResuelto}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150 hover:opacity-80 shrink-0"
-                  style={{ background: 'rgba(16,185,129,0.1)', color: '#2f8f75', border: '1px solid rgba(16,185,129,0.2)' }}
+                  style={{ background: 'rgb(var(--c-teal) / 0.1)', color: 'var(--color-teal)', border: '1px solid rgb(var(--c-teal) / 0.2)' }}
                 >
                   <CheckCircle2 size={11} />
                   Marcar resuelta
@@ -155,8 +155,8 @@ export default function ForoPost() {
                   key={r.id}
                   className="p-4 rounded-2xl border transition-all duration-150"
                   style={{
-                    background: r.es_solucion ? 'rgba(16,185,129,0.05)' : 'var(--overlay-02)',
-                    borderColor: r.es_solucion ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.06)',
+                    background: r.es_solucion ? 'rgb(var(--c-teal) / 0.05)' : 'var(--overlay-02)',
+                    borderColor: r.es_solucion ? 'rgb(var(--c-teal) / 0.25)' : 'rgba(255,255,255,0.06)',
                   }}
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -169,7 +169,7 @@ export default function ForoPost() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {r.es_solucion && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.12)', color: '#2f8f75' }}>
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--c-teal) / 0.12)', color: 'var(--color-teal)' }}>
                           <Check size={9} />
                           Solución
                         </span>
@@ -179,7 +179,7 @@ export default function ForoPost() {
                           onClick={() => handleMarkSolucion(r.id)}
                           disabled={markingId === r.id}
                           className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all hover:opacity-80 disabled:opacity-50"
-                          style={{ background: 'rgba(16,185,129,0.08)', color: '#2f8f75', border: '1px solid rgba(16,185,129,0.15)' }}
+                          style={{ background: 'rgb(var(--c-teal) / 0.08)', color: 'var(--color-teal)', border: '1px solid rgb(var(--c-teal) / 0.15)' }}
                         >
                           <Check size={9} />
                           Solución
@@ -207,7 +207,7 @@ export default function ForoPost() {
               onChange={e => setTexto(e.target.value)}
               placeholder="Escribe tu respuesta..."
               rows={1}
-              className="flex-1 bg-input border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.1)] resize-none min-h-[42px] max-h-32 overflow-y-auto"
+              className="flex-1 bg-input border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-text-muted outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.1)] resize-none min-h-[42px] max-h-32 overflow-y-auto"
               style={{ lineHeight: '1.5' }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (texto.trim()) handleReply(e as unknown as React.FormEvent) }
@@ -223,12 +223,12 @@ export default function ForoPost() {
               disabled={!texto.trim() || sending}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-150 active:scale-90 disabled:opacity-40 shrink-0"
               style={{
-                background: texto.trim() ? 'linear-gradient(135deg,#3d9f89,#2c8178)' : 'var(--overlay-04)',
+                background: texto.trim() ? 'linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))' : 'var(--overlay-04)',
               }}
             >
               {sending
                 ? <Loader2 size={14} className="animate-spin text-white" />
-                : <Send size={14} style={{ color: texto.trim() ? '#0d1117' : '#64748b', transform: 'translateX(1px)' }} />
+                : <Send size={14} style={{ color: texto.trim() ? '#fff' : '#64748b', transform: 'translateX(1px)' }} />
               }
             </button>
           </div>

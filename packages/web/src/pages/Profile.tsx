@@ -6,6 +6,7 @@ import { useTelegramVinculo, type CodigoTelegram } from '@topcode/shared'
 import { useAuth } from '../hooks/useAuth'
 import AlertModal from '../components/AlertModal'
 import { Badge, Button, Spinner } from '../components/ui'
+import { GorroNavidad } from '../components/Navidad'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -18,7 +19,7 @@ type AlertState = {
 } | null
 
 function gradeColor(n: number) {
-  if (n >= 8) return '#2f8f75'
+  if (n >= 8) return 'var(--color-primary-dark)'
   if (n >= 6) return '#f59e0b'
   return '#f43f5e'
 }
@@ -84,6 +85,7 @@ function PublicProfile({ userId }: { userId: string }) {
           <div className="h-24 bg-gradient-to-br from-primary/15 via-primary-dark/10 to-primary/5 border-b border-primary/10" />
           <div className="relative px-6 pb-6">
             <div className="relative -mt-10 mb-4 w-fit">
+              <GorroNavidad className="-top-5 -left-3 w-12 -rotate-12 z-10" />
               <div className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl bg-primary/15 border-[3px] border-surface shadow-primary">
                 {profile.avatar_url ? <img src={profile.avatar_url} alt={profile.nombre} className="w-20 h-20 object-cover" /> : <span className="font-extrabold text-3xl text-primary-light">{initial}</span>}
               </div>
@@ -400,7 +402,7 @@ function OwnProfile() {
         {/* ── Hero avatar card ── */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-surface to-bg border border-white/[0.08]">
           {/* Background gradient accent */}
-          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(61,159,137,0.12),transparent_70%)]" />
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgb(var(--c-primary)/0.12),transparent_70%)]" />
 
           {/* Top gradient strip */}
           <div className="h-24 w-full bg-gradient-to-br from-primary/15 via-primary-dark/10 to-primary/5 border-b border-primary/10" />
@@ -408,6 +410,7 @@ function OwnProfile() {
           <div className="relative px-6 pb-6">
             {/* Avatar — overlaps strip */}
             <div className="relative -mt-10 mb-4 w-fit">
+              <GorroNavidad className="-top-5 -left-3 w-12 -rotate-12 z-10" />
               <div className="w-20 h-20 overflow-hidden flex items-center justify-center rounded-2xl bg-primary/15 border-[3px] border-surface shadow-primary">
                 {avatarSrc ? (
                   <img src={avatarSrc} alt={usuario?.nombre} className="w-20 h-20 object-cover" />
@@ -501,7 +504,7 @@ function OwnProfile() {
                 value={nombre}
                 onChange={e => setNombre(e.target.value)}
                 placeholder="Tu nombre"
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
             </div>
             <Button
@@ -531,7 +534,7 @@ function OwnProfile() {
                 maxLength={200}
                 rows={2}
                 placeholder="Cuéntanos algo de ti..."
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)] resize-none"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)] resize-none"
               />
               <p className="text-[10px] text-right text-text-muted">{bio.length}/200</p>
             </div>
@@ -546,7 +549,7 @@ function OwnProfile() {
                 onChange={e => setGithubUrl(e.target.value)}
                 type="url"
                 placeholder="https://github.com/usuario"
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
             </div>
 
@@ -560,7 +563,7 @@ function OwnProfile() {
                 onChange={e => setLinkedinUrl(e.target.value)}
                 type="url"
                 placeholder="https://linkedin.com/in/usuario"
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
             </div>
 
@@ -574,7 +577,7 @@ function OwnProfile() {
                 onChange={e => setPortfolioUrl(e.target.value)}
                 type="url"
                 placeholder="https://miportfolio.dev"
-                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+                className="bg-input border border-white/[0.08] rounded-xl px-4 py-3 text-slate-100 text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
               />
             </div>
 
@@ -584,13 +587,13 @@ function OwnProfile() {
                 <Code size={11} /> Tecnologías ({stack.length}/12)
               </label>
               <div
-                className="bg-input border border-white/[0.08] rounded-xl px-3 py-2.5 flex flex-wrap gap-1.5 items-center min-h-[46px] focus-within:border-primary/50 focus-within:shadow-[0_0_0_3px_rgba(61,159,137,0.12)] transition-all duration-200"
+                className="bg-input border border-white/[0.08] rounded-xl px-3 py-2.5 flex flex-wrap gap-1.5 items-center min-h-[46px] focus-within:border-primary/50 focus-within:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)] transition-all duration-200"
               >
                 {stack.map(tag => (
                   <span
                     key={tag}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold"
-                    style={{ background: 'rgba(61,159,137,0.1)', color: '#3d9f89', border: '1px solid rgba(61,159,137,0.2)' }}
+                    style={{ background: 'rgb(var(--c-primary) / 0.1)', color: 'var(--color-primary)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}
                   >
                     {tag}
                     <button

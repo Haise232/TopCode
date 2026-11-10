@@ -5,6 +5,8 @@ import { useNotas, MATERIAS, type Nota, type UsuarioPublico } from '@topcode/sha
 import AlertModal from '../components/AlertModal'
 import { Spinner } from '../components/ui'
 import { supabase } from '../lib/supabase'
+import { useTheme } from '../contexts/ThemeContext'
+import { Copo } from '../components/Navidad'
 
 type AlertState = {
   type?: 'error' | 'success' | 'info' | 'warning'
@@ -16,17 +18,19 @@ type AlertState = {
 } | null
 
 function mediaColor(media: number) {
-  if (media >= 7) return '#3d9f89'
+  if (media >= 7) return 'var(--color-primary)'
   if (media >= 5) return '#f59e0b'
   return '#f43f5e'
 }
 
 function MediaBadge({ value }: { value: number }) {
-  const color = mediaColor(value)
+  const { navidad } = useTheme()
+  // En Navidad, las notas sobresalientes llevan acento dorado
+  const color = navidad && value >= 9 ? 'var(--color-gold)' : mediaColor(value)
   return (
     <span
       className="inline-flex items-center justify-center text-xs font-bold rounded-lg px-2 py-0.5 min-w-[2.5rem]"
-      style={{ background: `${color}18`, color, border: `1px solid ${color}30` }}
+      style={{ background: `color-mix(in srgb, ${color} 9%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 19%, transparent)` }}
     >
       {value.toFixed(2)}
     </span>
@@ -113,7 +117,7 @@ function AddNotaModal({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center rounded-lg"
-              style={{ background: 'rgba(61,159,137,0.12)', border: '1px solid rgba(61,159,137,0.2)' }}>
+              style={{ background: 'rgb(var(--c-primary) / 0.12)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}>
               <Plus size={14} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
@@ -136,7 +140,7 @@ function AddNotaModal({
               required
               className="w-full px-3 py-2.5 text-sm rounded-xl outline-none"
               style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)', color: form.materia ? 'var(--color-text)' : 'var(--color-text-muted)' }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(61,159,137,0.5)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgb(var(--c-primary) / 0.5)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
             >
               <option value="" disabled>Seleccionar materia…</option>
@@ -157,7 +161,7 @@ function AddNotaModal({
               required
               className="w-full px-3 py-2.5 text-sm rounded-xl outline-none text-text-primary"
               style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)' }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(61,159,137,0.5)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgb(var(--c-primary) / 0.5)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
             />
           </div>
@@ -175,7 +179,7 @@ function AddNotaModal({
                 required
                 className="w-full px-3 py-2.5 text-sm rounded-xl outline-none text-text-primary"
                 style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)' }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(61,159,137,0.5)' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgb(var(--c-primary) / 0.5)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
               />
             </div>
@@ -190,7 +194,7 @@ function AddNotaModal({
                 required
                 className="w-full px-3 py-2.5 text-sm rounded-xl outline-none text-text-primary"
                 style={{ background: 'var(--color-surface-2)', border: '1px solid var(--border)' }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(61,159,137,0.5)' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgb(var(--c-primary) / 0.5)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
               />
             </div>
@@ -215,7 +219,7 @@ function AddNotaModal({
             </button>
             <button type="submit" disabled={!valid || saving}
               className="flex-1 py-2.5 text-sm font-semibold rounded-xl text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, #3d9f89, #2c8178)' }}>
+              style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))' }}>
               {saving ? <><Spinner size="sm" className="text-white" /> Guardando…</> : <><Plus size={13} /> Añadir</>}
             </button>
           </div>
@@ -279,7 +283,7 @@ function MateriaSection({
         className="w-full flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-white/[0.02]"
       >
         <div className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0"
-          style={{ background: 'rgba(61,159,137,0.10)', border: '1px solid rgba(61,159,137,0.2)' }}>
+          style={{ background: 'rgb(var(--c-primary) / 0.10)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}>
           <BookOpen size={12} style={{ color: 'var(--color-primary)' }} />
         </div>
         <span className="flex-1 text-left font-semibold text-sm text-text-primary">{materia}</span>
@@ -336,6 +340,7 @@ function NotasSkeleton() {
 
 export default function Notas() {
   const { usuario } = useAuth()
+  const { navidad } = useTheme()
   const isAdmin = usuario?.rol === 'admin'
 
   // Para admin: selector de alumno
@@ -423,11 +428,11 @@ export default function Notas() {
         <div className="max-w-[900px] mx-auto flex flex-wrap gap-3 justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 flex items-center justify-center rounded-xl"
-              style={{ background: 'rgba(61,159,137,0.12)', border: '1px solid rgba(61,159,137,0.2)' }}>
+              style={{ background: 'rgb(var(--c-primary) / 0.12)', border: '1px solid rgb(var(--c-primary) / 0.2)' }}>
               <GraduationCap size={16} style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <h1 className="font-extrabold text-xl tracking-tight text-text-primary">Mis Notas</h1>
+              <h1 className="font-extrabold text-xl tracking-tight text-text-primary flex items-center gap-2">Mis Notas{navidad && <Copo size={16} className="text-gold-light" />}</h1>
               {promedioGlobal !== null && (
                 <p className="text-xs text-text-muted flex items-center gap-1.5 mt-0.5">
                   <TrendingUp size={10} /> Promedio global
@@ -475,7 +480,7 @@ export default function Notas() {
                 onClick={() => setAddOpen(true)}
                 disabled={!targetId}
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl text-white transition-all disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg, #3d9f89, #2c8178)' }}
+                style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))' }}
               >
                 <Plus size={14} /> Añadir nota
               </button>
@@ -492,7 +497,7 @@ export default function Notas() {
           <div className="py-16 flex flex-col items-center gap-4 text-center rounded-2xl animate-fade-in"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--border)' }}>
             <div className="w-14 h-14 flex items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(61,159,137,0.08)', border: '1px solid rgba(61,159,137,0.15)' }}>
+              style={{ background: 'rgb(var(--c-primary) / 0.08)', border: '1px solid rgb(var(--c-primary) / 0.15)' }}>
               <User size={24} className="text-primary-light" />
             </div>
             <div>
@@ -508,7 +513,7 @@ export default function Notas() {
           <div className="py-16 flex flex-col items-center gap-4 text-center rounded-2xl animate-fade-in"
             style={{ background: 'var(--color-surface)', border: '1px solid var(--border)' }}>
             <div className="w-14 h-14 flex items-center justify-center rounded-2xl"
-              style={{ background: 'rgba(61,159,137,0.08)', border: '1px solid rgba(61,159,137,0.15)' }}>
+              style={{ background: 'rgb(var(--c-primary) / 0.08)', border: '1px solid rgb(var(--c-primary) / 0.15)' }}>
               <BookOpen size={24} className="text-primary-light" />
             </div>
             <div>

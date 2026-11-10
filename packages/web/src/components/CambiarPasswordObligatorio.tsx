@@ -38,7 +38,7 @@ function CampoPassword({ id, label, value, onChange, visible, autoFocus }: {
         placeholder="••••••••"
         autoComplete="new-password"
         autoFocus={autoFocus}
-        className="bg-input border border-border rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(61,159,137,0.12)]"
+        className="bg-input border border-border rounded-xl px-4 py-3 text-text-primary text-sm placeholder:text-text-muted transition-all duration-200 w-full outline-none focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]"
       />
     </label>
   )
@@ -96,7 +96,7 @@ export default function CambiarPasswordObligatorio() {
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-bg relative">
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgba(61,159,137,0.08),transparent_60%)]" />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,rgb(var(--c-primary)/0.08),transparent_60%)]" />
       <div className="w-full max-w-[400px] relative animate-fade-in">
         <div className="flex flex-col items-center gap-3 mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-primary bg-gradient-to-br from-primary to-primary-dark">
