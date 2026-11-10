@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
+import { BookMarked, Pencil } from 'lucide-react'
 import { MATERIAS } from '@topcode/shared'
-import { Modal, Button, Input, TextArea } from '../ui'
-import { SELECT_CLASS, type ColeccionInput } from '../../hooks/useDocs'
+import { Button } from '../ui'
+import { type ColeccionInput } from '../../hooks/useDocs'
+import { Dialogo, ETIQUETA, INPUT } from './Piezas'
 
 export function MateriaSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const id = useId()
   return (
-    <label className="flex flex-col gap-1.5 w-full">
-      <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Asignatura</span>
-      <select value={value} onChange={e => onChange(e.target.value)} className={SELECT_CLASS}>
+    <div className="flex flex-col gap-1.5 w-full">
+      <label htmlFor={id} className={ETIQUETA}>Asignatura</label>
+      <select id={id} value={value} onChange={e => onChange(e.target.value)} className={INPUT}>
         <option value="general">General</option>
         {MATERIAS.map(m => <option key={m.codigo} value={m.codigo}>{m.nombreCorto}</option>)}
       </select>
-    </label>
+    </div>
   )
 }
 
@@ -31,6 +33,8 @@ export default function ColeccionModal({ open, initial, title, submitLabel, onCl
   const [form, setForm] = useState<ColeccionInput>(initial ?? EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const idTitulo = useId()
+  const idDesc = useId()
 
   useEffect(() => {
     if (open) { setForm(initial ?? EMPTY); setError(null) }
@@ -49,38 +53,31 @@ export default function ColeccionModal({ open, initial, title, submitLabel, onCl
     if (err) setError(err)
   }
 
+  const editando = !!initial
   return (
-    <Modal open={open} onClose={onClose} maxWidthClassName="max-w-md">
-      <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold text-lg text-text-primary">{title}</h2>
-          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
-            <X size={16} />
-          </button>
-        </div>
-        <Input
-          label="Título"
-          value={form.titulo}
-          maxLength={200}
-          autoFocus
+    <Dialogo
+      open={open} onClose={onClose} titulo={title} Icon={editando ? Pencil : BookMarked}
+      subtitulo={editando ? 'Cambia el nombre, la descripción o la asignatura' : 'Agrupa las páginas de un mismo tema o asignatura'}
+      ancho="sm:max-w-md" onSubmit={handleSubmit}
+      pie={<>
+        <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+        <Button type="submit" loading={saving}>{submitLabel}</Button>
+      </>}
+    >
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={idTitulo} className={ETIQUETA}>Título</label>
+        <input id={idTitulo} value={form.titulo} maxLength={200} autoFocus className={INPUT}
           onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
-          placeholder="Ej. PGL · Análisis de AplicacionVistas"
-        />
-        <TextArea
-          label="Descripción (opcional)"
-          value={form.descripcion ?? ''}
-          maxLength={1000}
-          rows={3}
+          placeholder="Ej. PGL · Análisis de AplicacionVistas" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor={idDesc} className={ETIQUETA}>Descripción (opcional)</label>
+        <textarea id={idDesc} value={form.descripcion ?? ''} maxLength={1000} rows={3} className={`${INPUT} resize-none`}
           onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-          placeholder="¿Qué contiene esta documentación?"
-        />
-        <MateriaSelect value={form.materia} onChange={materia => setForm(f => ({ ...f, materia }))} />
-        {error && <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" loading={saving}>{submitLabel}</Button>
-        </div>
-      </form>
-    </Modal>
+          placeholder="¿Qué contiene esta documentación?" />
+      </div>
+      <MateriaSelect value={form.materia} onChange={materia => setForm(f => ({ ...f, materia }))} />
+      {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}
+    </Dialogo>
   )
 }

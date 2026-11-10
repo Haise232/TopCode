@@ -159,12 +159,12 @@ function MarkdownView({ content, pages = [], onOpenPage, onMissingPage, showFron
   return (
     <div className={cn('md-body', className)}>
       {showFrontmatter && (tags.length > 0 || props.length > 0) && (
-        <div className="mb-6 flex flex-col gap-2.5 rounded-xl border border-ov/[0.08] bg-ov/[0.02] px-4 py-3">
+        <div className="mb-6 flex flex-col gap-2.5 rounded-2xl bg-surface border border-ov/[0.07] shadow-card px-4 py-3.5">
           {tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <Tag size={12} className="text-text-muted" />
+              <Tag size={12} className="text-text-muted" aria-hidden="true" />
               {tags.map(tag => (
-                <span key={tag} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary-light">
+                <span key={tag} className="rounded-full bg-ov/[0.06] px-2.5 py-0.5 text-xs font-semibold text-text-secondary">
                   #{tag}
                 </span>
               ))}

@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  ArrowLeft, BookMarked, Download, Eye, FileText, History, Loader2, Menu, MoreHorizontal,
-  Pencil, Plus, Save, Search, Settings2, Trash2, Upload, X,
-} from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { markDocsVisited } from '../hooks/useUnreadCounts'
 import {
   useDocColeccion, fetchPagina, createPagina, savePagina, deletePagina, fetchRevisiones,
-  updateColeccion, deleteColeccion, fetchPaginasCompletas, materiaLabel,
+  updateColeccion, deleteColeccion, fetchPaginasCompletas,
   type DocPagina, type DocRevision, type ColeccionInput,
 } from '../hooks/useDocs'
-import MarkdownView from '../components/docs/MarkdownView'
+import LectorView from '../components/docs/LectorView'
+import { HistorialDialogo, NuevaPaginaDialogo } from '../components/docs/Dialogos'
+import { Vacio } from '../components/docs/Piezas'
 import ColeccionModal from '../components/docs/ColeccionModal'
 import ImportModal from '../components/docs/ImportModal'
 import AlertModal from '../components/AlertModal'
-import { Button, Input, Modal } from '../components/ui'
-import { cn } from '../components/ui/cn'
+import { Button } from '../components/ui'
 import { slugify } from '../lib/markdown'
 import { crearZip } from '../lib/zip'
 
@@ -28,10 +26,6 @@ type AlertState = {
   confirmLabel?: string
   confirmDestructive?: boolean
 } | null
-
-function formatFechaHora(iso: string) {
-  return new Date(iso).toLocaleString('es', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
 
 function nombreArchivo(nombre: string) {
   return nombre.replace(/[\\/:*?"<>|]/g, '_').trim() || 'sin-titulo'
@@ -64,8 +58,6 @@ export default function DocsColeccion() {
   const [saving, setSaving] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [filtroPaginas, setFiltroPaginas] = useState('')
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [menuColeccionOpen, setMenuColeccionOpen] = useState(false)
   const [descargandoZip, setDescargandoZip] = useState(false)
   const [alert, setAlert] = useState<AlertState>(null)
   const [nuevaTitulo, setNuevaTitulo] = useState<string | null>(null)
@@ -157,11 +149,6 @@ export default function DocsColeccion() {
     setNuevaTitulo(titulo)
   }, [])
 
-  const paginasFiltradas = useMemo(() => {
-    const q = filtroPaginas.trim().toLowerCase()
-    return q ? paginas.filter(p => p.titulo.toLowerCase().includes(q)) : paginas
-  }, [paginas, filtroPaginas])
-
   const coleccionInitial = useMemo<ColeccionInput | undefined>(
     () => coleccion ? { titulo: coleccion.titulo, descripcion: coleccion.descripcion, materia: coleccion.materia } : undefined,
     [coleccion]
@@ -233,7 +220,6 @@ export default function DocsColeccion() {
 
   function confirmarBorrarPagina() {
     if (!pagina) return
-    setMenuOpen(false)
     setAlert({
       type: 'warning',
       title: `¿Borrar «${pagina.titulo}»?`,
@@ -252,7 +238,6 @@ export default function DocsColeccion() {
 
   async function descargarColeccion() {
     if (!coleccion || descargandoZip) return
-    setMenuColeccionOpen(false)
     setDescargandoZip(true)
     const { paginas: completas, error: err } = await fetchPaginasCompletas(coleccion.id)
     setDescargandoZip(false)
@@ -273,8 +258,6 @@ export default function DocsColeccion() {
 
   function confirmarBorrarColeccion() {
     if (!coleccion) return
-    setMenuOpen(false)
-    setMenuColeccionOpen(false)
     setAlert({
       type: 'warning',
       title: `¿Borrar la colección «${coleccion.titulo}»?`,
@@ -300,7 +283,6 @@ export default function DocsColeccion() {
 
   async function abrirHistorial() {
     if (!pagina) return
-    setMenuOpen(false)
     setRevisionSel(null)
     setRevisiones([])
     const { revisiones: r, error: err } = await fetchRevisiones(pagina.id)
@@ -327,321 +309,85 @@ export default function DocsColeccion() {
 
   if (loading && !coleccion) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <Loader2 size={26} className="animate-spin text-primary" />
+      <div className="h-full flex items-center justify-center" role="status" aria-label="Cargando colección">
+        <Loader2 size={26} className="motion-safe:animate-spin text-primary-light" />
       </div>
     )
   }
 
   if (error || !coleccion) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
-        <p className="font-semibold text-text-secondary">{error ? 'No se pudo cargar la colección' : 'Esta colección no existe'}</p>
-        {error && <p className="text-sm text-text-muted">{error}</p>}
-        <Button variant="ghost" size="sm" icon={<ArrowLeft size={14} />} onClick={() => navigate('/docs')}>Volver a la biblioteca</Button>
+      <div className="h-full overflow-y-auto">
+        <div className="max-w-xl mx-auto px-4 md:px-6 py-10">
+          <Vacio
+            Icon={ArrowLeft}
+            titulo={error ? 'No se pudo cargar la colección' : 'Esta colección no existe'}
+            mensaje={error ?? 'Puede que se haya borrado o que el enlace no sea correcto.'}
+            accion={<Button variant="ghost" icon={<ArrowLeft size={14} aria-hidden="true" />} onClick={() => navigate('/docs')} className="flex items-center justify-center gap-2">Volver a la biblioteca</Button>}
+          />
+        </div>
       </div>
     )
   }
 
-  const sidebar = (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="p-3 flex flex-col gap-2 border-b border-ov/[0.06]">
-        <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input
-            value={filtroPaginas}
-            onChange={e => setFiltroPaginas(e.target.value)}
-            placeholder="Filtrar páginas"
-            className="w-full rounded-lg border border-ov/[0.08] bg-input pl-8 pr-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none focus:border-primary/50"
-          />
-        </div>
-        <div className="flex gap-1.5">
-          <button onClick={() => pedirNuevaPagina()} className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1.5 text-xs font-semibold text-primary-light hover:bg-primary/20 transition-colors">
-            <Plus size={13} /> Página
-          </button>
-          <button onClick={() => setShowImport(true)} className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-ov/[0.04] px-2 py-1.5 text-xs font-semibold text-text-secondary hover:bg-ov/[0.08] transition-colors">
-            <Upload size={13} /> Importar
-          </button>
-        </div>
-      </div>
-      <nav className="flex-1 overflow-y-auto p-2 flex flex-col gap-0.5">
-        {paginasFiltradas.map(p => (
-          <button
-            key={p.id}
-            onClick={() => abrirPagina(p.id)}
-            className={cn(
-              'flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors',
-              p.id === paginaId ? 'bg-primary/15 text-primary-light font-semibold' : 'text-text-secondary hover:bg-ov/[0.04] hover:text-text-primary'
-            )}
-          >
-            <FileText size={13} className="shrink-0 opacity-60" />
-            <span className="truncate">{p.titulo}</span>
-          </button>
-        ))}
-        {paginas.length > 0 && paginasFiltradas.length === 0 && (
-          <p className="px-2 py-4 text-center text-xs text-text-muted">Sin coincidencias</p>
-        )}
-      </nav>
-    </div>
-  )
-
   return (
-    <div className="animate-fade-in h-full flex flex-col min-h-0">
-      {/* Cabecera de la colección */}
-      <div className="px-4 md:px-6 py-3 border-b border-ov/[0.08] flex items-center gap-3">
-        <button
-          onClick={() => { if (confirmarSalida()) navigate('/docs') }}
-          className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted"
-          aria-label="Volver a la biblioteca"
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <button
-          onClick={() => setSidebarOpen(o => !o)}
-          className="md:hidden w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted"
-          aria-label="Páginas"
-        >
-          <Menu size={16} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <BookMarked size={14} className="shrink-0 text-primary" />
-            <h1 className="font-bold text-sm md:text-base text-text-primary truncate">{coleccion.titulo}</h1>
-          </div>
-          <p className="text-[11px] text-text-muted truncate">
-            {materiaLabel(coleccion.materia)} · {paginas.length} {paginas.length === 1 ? 'página' : 'páginas'}
-            {coleccion.descripcion ? ` · ${coleccion.descripcion}` : ''}
-          </p>
-        </div>
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setMenuColeccionOpen(o => !o)}
-            disabled={descargandoZip}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text-muted hover:bg-ov/5 hover:text-text-secondary disabled:opacity-60"
-            aria-label="Opciones de la colección"
-          >
-            {descargandoZip ? <Loader2 size={13} className="animate-spin" /> : <Settings2 size={13} />}
-            <span className="hidden sm:inline">Colección</span>
-          </button>
-          {menuColeccionOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuColeccionOpen(false)} />
-              <div className="absolute right-0 top-9 z-30 w-56 rounded-xl border border-ov/[0.1] bg-surface-2 p-1 shadow-modal">
-                <MenuItem Icon={Download} label="Descargar colección (.zip)" onClick={() => void descargarColeccion()} />
-                {puedeGestionar(coleccion.created_by) && (
-                  <>
-                    <MenuItem Icon={Pencil} label="Editar colección" onClick={() => { setMenuColeccionOpen(false); setShowEditColeccion(true) }} />
-                    <MenuItem Icon={Trash2} label="Borrar colección" danger onClick={confirmarBorrarColeccion} />
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+    <>
+      <LectorView
+        coleccion={coleccion}
+        paginas={paginas}
+        paginaId={paginaId}
+        pagina={pagina}
+        loading={loading}
+        paginaLoading={paginaLoading}
+        mainRef={mainRef}
+        puedeGestionarColeccion={puedeGestionar(coleccion.created_by)}
+        puedeGestionarPagina={!!pagina && puedeGestionar(pagina.created_by)}
+        descargandoZip={descargandoZip}
+        indiceAbierto={sidebarOpen}
+        onIndiceAbierto={setSidebarOpen}
+        filtroPaginas={filtroPaginas}
+        onFiltroPaginas={setFiltroPaginas}
+        editing={editing}
+        draft={draft}
+        onDraft={setDraft}
+        preview={preview}
+        onPreview={setPreview}
+        saving={saving}
+        dirty={dirty}
+        onGuardar={() => void guardar()}
+        onCancelarEdicion={cancelarEdicion}
+        onEditorKeys={handleEditorKeys}
+        onEmpezarEdicion={() => empezarEdicion()}
+        onVolver={() => { if (confirmarSalida()) navigate('/docs') }}
+        onAbrirPagina={abrirPagina}
+        onNuevaPagina={pedirNuevaPagina}
+        onImportar={() => setShowImport(true)}
+        onEditarColeccion={() => setShowEditColeccion(true)}
+        onBorrarColeccion={confirmarBorrarColeccion}
+        onDescargarColeccion={() => void descargarColeccion()}
+        onHistorial={() => void abrirHistorial()}
+        onDescargarPagina={() => { if (pagina) descargar(pagina.titulo, pagina.contenido) }}
+        onBorrarPagina={confirmarBorrarPagina}
+      />
 
-      <div className="flex-1 flex min-h-0 relative">
-        {/* Índice de páginas */}
-        <aside className="hidden md:flex w-64 shrink-0 border-r border-ov/[0.08] flex-col min-h-0">
-          {sidebar}
-        </aside>
-        {sidebarOpen && (
-          <div className="md:hidden absolute inset-0 z-20 flex">
-            <div className="w-72 max-w-[85%] bg-surface border-r border-ov/[0.08] flex flex-col min-h-0 animate-fade-in">
-              {sidebar}
-            </div>
-            <div className="flex-1 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          </div>
-        )}
+      <NuevaPaginaDialogo
+        titulo={nuevaTitulo}
+        error={nuevaError}
+        creando={creando}
+        onTitulo={setNuevaTitulo}
+        onSubmit={handleCrearPagina}
+        onClose={() => setNuevaTitulo(null)}
+      />
 
-        {/* Contenido */}
-        <div ref={mainRef} className="flex-1 min-w-0 overflow-y-auto">
-          {paginas.length === 0 && !paginaId ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-3 text-center px-6">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-primary/10">
-                <FileText size={22} className="text-primary" />
-              </div>
-              <p className="font-semibold text-text-secondary">La colección está vacía</p>
-              <p className="text-sm text-text-muted">Crea la primera página o importa archivos .md.</p>
-              <div className="flex gap-2 mt-2">
-                <Button size="sm" variant="ghost" icon={<Upload size={14} />} onClick={() => setShowImport(true)}>Importar</Button>
-                <Button size="sm" icon={<Plus size={14} />} onClick={() => pedirNuevaPagina()}>Nueva página</Button>
-              </div>
-            </div>
-          ) : paginaLoading || (!pagina && !!paginaId && loading) ? (
-            <div className="flex justify-center py-24">
-              <Loader2 size={24} className="animate-spin text-primary-light" />
-            </div>
-          ) : !pagina ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-2 text-center">
-              <p className="font-semibold text-text-secondary">Esta página no existe</p>
-              <p className="text-sm text-text-muted">Puede que alguien la haya borrado.</p>
-            </div>
-          ) : editing ? (
-            <div className="h-full flex flex-col min-h-0">
-              <div className="px-4 md:px-6 py-3 border-b border-ov/[0.06] flex flex-wrap items-center gap-2">
-                <div className="flex-1 min-w-[12rem]">
-                  <Input
-                    value={draft.titulo}
-                    maxLength={200}
-                    onChange={e => setDraft(d => ({ ...d, titulo: e.target.value }))}
-                    className="py-2 font-semibold"
-                    aria-label="Título de la página"
-                  />
-                </div>
-                <button
-                  onClick={() => setPreview(p => !p)}
-                  className="lg:hidden flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-text-secondary bg-ov/[0.04] hover:bg-ov/[0.08]"
-                >
-                  {preview ? <Pencil size={13} /> : <Eye size={13} />}
-                  {preview ? 'Editar' : 'Vista previa'}
-                </button>
-                <Button variant="ghost" size="sm" onClick={cancelarEdicion}>Cancelar</Button>
-                <Button size="sm" loading={saving} icon={<Save size={14} />} onClick={() => void guardar()} disabled={!dirty}>
-                  Guardar
-                </Button>
-              </div>
-              <div className="flex-1 min-h-0 grid lg:grid-cols-2">
-                <textarea
-                  value={draft.contenido}
-                  onChange={e => setDraft(d => ({ ...d, contenido: e.target.value }))}
-                  onKeyDown={handleEditorKeys}
-                  spellCheck={false}
-                  placeholder="Escribe en Markdown… Usa [[Otra página]] para enlazar páginas de esta colección."
-                  className={cn(
-                    'min-h-[60vh] lg:min-h-0 h-full w-full resize-none bg-input px-4 md:px-6 py-4 font-mono text-[13px] leading-relaxed text-text-primary outline-none lg:border-r border-ov/[0.06]',
-                    preview && 'hidden lg:block'
-                  )}
-                />
-                <div className={cn('overflow-y-auto px-4 md:px-8 py-6', !preview && 'hidden lg:block')}>
-                  <MarkdownView content={draft.contenido} pages={paginas} onOpenPage={abrirPagina} onMissingPage={pedirNuevaPagina} />
-                </div>
-              </div>
-              <p className="px-4 md:px-6 py-1.5 text-[11px] text-text-muted border-t border-ov/[0.06]">
-                Markdown + GFM · callouts <code>&gt; [!tip]</code> · enlaces <code>[[Página]]</code> · Ctrl+S para guardar
-              </p>
-            </div>
-          ) : (
-            <article className="max-w-3xl mx-auto px-4 md:px-8 py-6 md:py-8">
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-ov/[0.06]">
-                <p className="text-xs text-text-muted">
-                  {pagina.updated_by_nombre ? <>Editado por <span className="text-text-secondary">{pagina.updated_by_nombre}</span> · </> : null}
-                  {formatFechaHora(pagina.updated_at)}
-                </p>
-                <div className="flex items-center gap-1.5 relative">
-                  <Button size="sm" variant="ghost" icon={<Pencil size={13} />} onClick={() => empezarEdicion()}>
-                    Editar
-                  </Button>
-                  <button
-                    onClick={() => setMenuOpen(o => !o)}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-ov/[0.08] text-text-muted hover:bg-ov/5"
-                    aria-label="Más opciones"
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-                  {menuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-11 z-20 w-52 rounded-xl border border-ov/[0.1] bg-surface-2 p-1 shadow-modal">
-                        <MenuItem Icon={History} label="Historial de cambios" onClick={() => void abrirHistorial()} />
-                        <MenuItem Icon={Download} label="Descargar página (.md)" onClick={() => { setMenuOpen(false); descargar(pagina.titulo, pagina.contenido) }} />
-                        {puedeGestionar(pagina.created_by) && (
-                          <MenuItem Icon={Trash2} label="Borrar página" danger onClick={confirmarBorrarPagina} />
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              <MarkdownView content={pagina.contenido} pages={paginas} onOpenPage={abrirPagina} onMissingPage={pedirNuevaPagina} />
-            </article>
-          )}
-        </div>
-      </div>
-
-      {/* Nueva página */}
-      <Modal open={nuevaTitulo !== null} onClose={() => setNuevaTitulo(null)} maxWidthClassName="max-w-sm">
-        <form onSubmit={handleCrearPagina} className="p-6 flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-lg text-text-primary">Nueva página</h2>
-            <button type="button" onClick={() => setNuevaTitulo(null)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
-              <X size={16} />
-            </button>
-          </div>
-          <Input
-            label="Título"
-            value={nuevaTitulo ?? ''}
-            maxLength={200}
-            autoFocus
-            onChange={e => setNuevaTitulo(e.target.value)}
-            placeholder="Ej. 07 - Conclusiones"
-            error={nuevaError ?? undefined}
-          />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setNuevaTitulo(null)}>Cancelar</Button>
-            <Button type="submit" loading={creando}>Crear</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Historial */}
-      <Modal open={revisiones !== null} onClose={() => setRevisiones(null)} maxWidthClassName="max-w-5xl">
-        <div className="flex flex-col h-[80vh]">
-          <div className="px-5 py-4 border-b border-ov/[0.08] flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-bold text-base text-text-primary">Historial de cambios</h2>
-              <p className="text-xs text-text-muted truncate">{pagina?.titulo}</p>
-            </div>
-            <button onClick={() => setRevisiones(null)} className="w-8 h-8 shrink-0 flex items-center justify-center rounded-xl hover:bg-ov/5 text-text-muted" aria-label="Cerrar">
-              <X size={16} />
-            </button>
-          </div>
-          {revisiones && revisiones.length === 0 ? (
-            <p className="flex-1 flex items-center justify-center text-sm text-text-muted">Esta página todavía no tiene versiones anteriores.</p>
-          ) : (
-            <div className="flex-1 min-h-0 flex flex-col md:flex-row">
-              <ul className="md:w-60 shrink-0 max-h-40 md:max-h-none overflow-y-auto border-b md:border-b-0 md:border-r border-ov/[0.08] p-2 flex flex-col gap-0.5">
-                {revisiones?.map(r => (
-                  <li key={r.id}>
-                    <button
-                      onClick={() => setRevisionSel(r)}
-                      className={cn(
-                        'w-full text-left rounded-lg px-3 py-2 transition-colors',
-                        revisionSel?.id === r.id ? 'bg-primary/15' : 'hover:bg-ov/[0.04]'
-                      )}
-                    >
-                      <span className="block text-xs font-semibold text-text-primary">{formatFechaHora(r.created_at)}</span>
-                      <span className="block text-[11px] text-text-muted truncate">{r.editado_por_nombre || 'Desconocido'}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex-1 min-w-0 flex flex-col min-h-0">
-                {revisionSel && (
-                  <>
-                    <div className="px-5 py-2.5 border-b border-ov/[0.06] flex items-center justify-between gap-3">
-                      <p className="text-xs text-text-muted truncate">Versión «{revisionSel.titulo}»</p>
-                      <Button
-                        size="sm"
-                        variant="subtle"
-                        onClick={() => {
-                          setRevisiones(null)
-                          empezarEdicion(revisionSel.contenido)
-                        }}
-                      >
-                        Restaurar en el editor
-                      </Button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto px-5 md:px-8 py-5">
-                      <MarkdownView content={revisionSel.contenido} pages={paginas} />
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
+      <HistorialDialogo
+        revisiones={revisiones}
+        seleccionada={revisionSel}
+        onSeleccionar={setRevisionSel}
+        tituloPagina={pagina?.titulo}
+        paginas={paginas}
+        onRestaurar={r => { setRevisiones(null); empezarEdicion(r.contenido) }}
+        onClose={() => setRevisiones(null)}
+      />
 
       <ColeccionModal
         open={showEditColeccion}
@@ -671,21 +417,6 @@ export default function DocsColeccion() {
         confirmLabel={alert?.confirmLabel}
         confirmDestructive={alert?.confirmDestructive}
       />
-    </div>
-  )
-}
-
-function MenuItem({ Icon, label, onClick, danger }: { Icon: React.ElementType; label: string; onClick: () => void; danger?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors',
-        danger ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10' : 'text-text-secondary hover:bg-ov/[0.05] hover:text-text-primary'
-      )}
-    >
-      <Icon size={14} />
-      {label}
-    </button>
+    </>
   )
 }

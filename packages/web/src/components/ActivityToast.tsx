@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ClipboardCheck, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
 import { useBellSound } from '../hooks/useBellSound'
 import { onBroadcast, type EventoCalendario } from '@topcode/shared'
+import { ToastActividad } from './chat/Toasts'
 
 const RUTA_ACTIVIDADES = '/calendar?vista=actividades'
 
@@ -70,75 +70,12 @@ export default function ActivityToast() {
   if (!toast) return null
 
   return (
-    <div
-      className="fixed bottom-[76px] right-4 z-[9998] md:bottom-5"
-      style={{
-        transition: 'opacity 300ms ease, transform 300ms ease',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateX(0)' : 'translateX(110%)',
-        pointerEvents: visible ? 'auto' : 'none',
-      }}
-    >
-      <div
-        className="flex items-center gap-3 pr-3 pl-3 py-3 rounded-2xl shadow-lg"
-        style={{
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px var(--color-border)',
-          maxWidth: '280px',
-        }}
-      >
-        {/* Icon */}
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, rgb(var(--c-primary) / 0.25), rgb(var(--c-primary-dark) / 0.2))',
-            border: '1.5px solid rgb(var(--c-primary) / 0.3)',
-          }}
-        >
-          <ClipboardCheck size={16} style={{ color: 'var(--color-primary)' }} />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-primary)' }}>
-              Nueva actividad
-            </span>
-          </div>
-          <p className="text-xs font-semibold leading-tight truncate" style={{ color: 'var(--color-text)' }}>
-            {toast.titulo}
-          </p>
-          <p className="text-[10px] leading-snug mt-0.5 truncate" style={{ color: 'var(--color-text-muted)' }}>
-            {toast.materia ? `${toast.materia} — ` : ''}{toast.fecha}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <button
-            onClick={dismiss}
-            className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-150"
-            style={{ color: 'var(--color-text-muted)' }}
-            aria-label="Cerrar"
-          >
-            <X size={11} />
-          </button>
-          <button
-            onClick={() => { navigate(RUTA_ACTIVIDADES); dismiss() }}
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
-            style={{
-              background: 'rgb(var(--c-primary) / 0.15)',
-              color: 'var(--color-primary)',
-              border: '1px solid rgb(var(--c-primary) / 0.25)',
-            }}
-          >
-            Ver
-          </button>
-        </div>
-      </div>
-    </div>
+    <ToastActividad
+      titulo={toast.titulo}
+      detalle={`${toast.materia ? `${toast.materia} — ` : ''}${toast.fecha}`}
+      visible={visible}
+      onCerrar={dismiss}
+      onVer={() => { navigate(RUTA_ACTIVIDADES); dismiss() }}
+    />
   )
 }

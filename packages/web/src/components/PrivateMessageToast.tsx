@@ -1,13 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { MessageCircle, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
 import { MensajePrivado, onBroadcast } from '@topcode/shared'
-
-function getHue(nombre: string) {
-  return nombre.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
-}
+import { ToastMensaje } from './chat/Toasts'
 
 export default function PrivateMessageToast() {
   const { usuario } = useAuth()
@@ -82,84 +78,16 @@ export default function PrivateMessageToast() {
 
   if (!toast) return null
 
-  const hue = getHue(toast.de_nombre)
-  const preview = toast.texto.length > 40 ? toast.texto.slice(0, 40) + '…' : toast.texto
-
   return (
-    <div
-      className="fixed bottom-[76px] left-4 z-[9998] md:bottom-5"
-      style={{
-        transition: 'opacity 300ms ease, transform 300ms ease',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateX(0)' : 'translateX(-110%)',
-        pointerEvents: visible ? 'auto' : 'none',
+    <ToastMensaje
+      nombre={toast.de_nombre}
+      texto={toast.texto}
+      visible={visible}
+      onCerrar={dismiss}
+      onAbrir={() => {
+        navigate(`/chat?dm=${toast.de_id}&from=${encodeURIComponent(toast.de_nombre)}`)
+        dismiss()
       }}
-    >
-      <div
-        className="flex items-center gap-3 pr-3 pl-3 py-3 rounded-2xl shadow-lg"
-        style={{
-          background: 'var(--color-glass)',
-          border: '1px solid var(--border)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: 'var(--shadow-elevated), 0 0 0 1px var(--border)',
-          maxWidth: '280px',
-        }}
-      >
-        {/* Avatar */}
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center font-bold shrink-0 text-sm"
-          style={{
-            background: `hsla(${hue}, 55%, 18%, 0.95)`,
-            border: `1.5px solid hsla(${hue}, 55%, 38%, 0.35)`,
-            color: `hsla(${hue}, 75%, 72%, 1)`,
-          }}
-        >
-          {toast.de_nombre[0]?.toUpperCase() ?? '?'}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <MessageCircle size={10} style={{ color: 'var(--color-primary-light)', flexShrink: 0 }} />
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-primary-light)' }}>
-              Mensaje privado
-            </span>
-          </div>
-          <p className="text-xs font-semibold leading-tight truncate text-text-primary">
-            {toast.de_nombre}
-          </p>
-          <p className="text-xs leading-snug mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-            {preview}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <button
-            onClick={dismiss}
-            className="w-5 h-5 flex items-center justify-center rounded-md transition-all duration-150 hover:bg-ov/[0.08]"
-            style={{ color: 'var(--color-text-faint)' }}
-            aria-label="Cerrar"
-          >
-            <X size={11} />
-          </button>
-          <button
-            onClick={() => {
-              navigate(`/chat?dm=${toast.de_id}&from=${encodeURIComponent(toast.de_nombre)}`)
-              dismiss()
-            }}
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all duration-150"
-            style={{
-              background: 'rgb(var(--c-primary) / 0.15)',
-              color: 'var(--color-primary-light)',
-              border: '1px solid rgb(var(--c-primary) / 0.25)',
-            }}
-          >
-            Abrir
-          </button>
-        </div>
-      </div>
-    </div>
+    />
   )
 }

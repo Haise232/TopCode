@@ -1,6 +1,8 @@
+import { useId } from 'react'
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
-import { tinta } from '../lib/tinta'
-import { Modal } from './ui'
+import Dialogo from './acceso/Dialogo'
+import { cn } from './ui/cn'
+import { FOCO } from './ui/estilos'
 
 interface AlertModalProps {
   visible: boolean
@@ -13,138 +15,59 @@ interface AlertModalProps {
   confirmDestructive?: boolean
 }
 
+// Icono suave + botón sólido por tipo (éxito en teal, error en rose; nunca en primary).
 const CONFIG = {
-  error: {
-    Icon: AlertCircle,
-    iconColor: '#f43f5e',
-    bgColor: 'rgba(244,63,94,0.1)',
-    borderColor: 'rgba(244,63,94,0.2)',
-    btnBg: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-    btnShadow: '0 4px 14px rgba(244,63,94,0.3)',
-  },
-  success: {
-    Icon: CheckCircle,
-    iconColor: 'rgb(var(--c-teal-light))',
-    bgColor: 'rgb(var(--c-teal)/0.12)',
-    borderColor: 'rgb(var(--c-teal)/0.25)',
-    btnBg: 'linear-gradient(135deg, rgb(var(--c-teal)) 0%, rgb(var(--c-teal-dark)) 100%)',
-    btnShadow: '0 4px 14px rgb(var(--c-teal)/0.3)',
-  },
-  info: {
-    Icon: Info,
-    iconColor: 'var(--color-primary-light)',
-    bgColor: 'rgb(var(--c-primary)/0.1)',
-    borderColor: 'rgb(var(--c-primary)/0.2)',
-    btnBg: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
-    btnShadow: '0 4px 14px rgb(var(--c-primary)/0.3)',
-  },
-  warning: {
-    Icon: AlertTriangle,
-    iconColor: '#f59e0b',
-    bgColor: 'rgba(245,158,11,0.1)',
-    borderColor: 'rgba(245,158,11,0.2)',
-    btnBg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    btnShadow: '0 4px 14px rgba(245,158,11,0.3)',
-  },
+  error:   { Icon: AlertCircle,   icono: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',    boton: 'bg-rose-600' },
+  success: { Icon: CheckCircle,   icono: 'bg-teal/15 text-teal-light',                          boton: 'bg-teal-dark' },
+  info:    { Icon: Info,          icono: 'bg-primary/10 text-primary-light',                    boton: 'bg-primary-dark' },
+  warning: { Icon: AlertTriangle, icono: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',  boton: 'bg-amber-700' },
 }
+
+const BOTON = cn('rounded-xl py-3 px-5 text-sm font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.99]', FOCO)
 
 export default function AlertModal({
   visible, type, title, message, onClose, onConfirm, confirmLabel, confirmDestructive,
 }: AlertModalProps) {
+  const id = useId()
+  if (!visible) return null
   const config = type ? CONFIG[type] : null
-  const defaultBtnBg = 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)'
-  const defaultBtnShadow = '0 4px 14px rgb(var(--c-primary)/0.3)'
+  const colorBoton = confirmDestructive ? 'bg-rose-600' : (config?.boton ?? 'bg-primary-dark')
 
   return (
-    <Modal open={visible} onClose={onClose}>
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
-        style={{
-          background: 'var(--overlay-06)',
-          color: 'var(--color-text-muted)',
-        }}
-        onMouseEnter={e => {
-          const el = e.currentTarget as HTMLElement
-          el.style.color = 'var(--color-text)'
-          el.style.background = 'var(--overlay-10)'
-        }}
-        onMouseLeave={e => {
-          const el = e.currentTarget as HTMLElement
-          el.style.color = 'var(--color-text-muted)'
-          el.style.background = 'var(--overlay-06)'
-        }}
-        aria-label="Cerrar"
-      >
-        <X size={14} />
-      </button>
-
-      <div className="p-6 flex flex-col items-center gap-5 text-center">
-        {/* Icon */}
+    <Dialogo onClose={onClose} labelledBy={`${id}-t`} describedBy={message ? `${id}-m` : undefined} alerta>
+      <div className="flex items-start gap-4 px-5 sm:px-6 pt-4 sm:pt-6">
         {config && (
-          <div
-            className="w-14 h-14 flex items-center justify-center rounded-2xl"
-            style={{
-              background: config.bgColor,
-              border: `1px solid ${config.borderColor}`,
-            }}
-          >
-            <config.Icon size={26} style={{ color: tinta(config.iconColor) }} />
-          </div>
+          <span className={cn('w-10 h-10 shrink-0 flex items-center justify-center rounded-xl', config.icono)}>
+            <config.Icon size={18} aria-hidden="true" />
+          </span>
         )}
-
-        {/* Text */}
-        <div className="flex flex-col gap-2">
-          <h3 className="font-bold text-base leading-snug text-text-primary">
-            {title}
-          </h3>
-          {message && (
-            <p className="text-sm leading-relaxed max-w-[260px] mx-auto text-text-muted">
-              {message}
-            </p>
-          )}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <h2 id={`${id}-t`} className="font-extrabold text-lg leading-snug text-text-primary">{title}</h2>
+          {message && <p id={`${id}-m`} className="mt-1.5 text-sm leading-relaxed text-text-secondary">{message}</p>}
         </div>
+        <button onClick={onClose} aria-label="Cerrar"
+          className={cn('-mt-1 -mr-2 w-10 h-10 shrink-0 flex items-center justify-center rounded-xl text-text-muted hover:bg-ov/[0.06] hover:text-text-primary transition-colors', FOCO)}>
+          <X size={18} aria-hidden="true" />
+        </button>
       </div>
 
-      {/* Actions */}
-      <div className={`flex gap-3 px-6 pb-6 ${onConfirm ? '' : 'justify-center'}`}>
+      <div className="flex gap-3 px-5 sm:px-6 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6">
         {onConfirm ? (
           <>
-            <button
-              onClick={onClose}
-              className="flex-1 bg-surface border border-ov/[0.08] text-text-secondary font-medium rounded-xl hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] transition-all duration-200 py-2.5 text-sm"
-            >
+            <button onClick={onClose}
+              className={cn('flex-1 rounded-xl py-3 text-sm font-semibold text-text-secondary bg-ov/[0.04] border border-ov/[0.08] hover:bg-ov/[0.07] hover:text-text-primary transition-colors', FOCO)}>
               Cancelar
             </button>
-            <button
-              onClick={() => { onConfirm(); onClose() }}
-              className="flex-[2] font-semibold py-2.5 text-sm text-white rounded-xl active:scale-[0.98] transition-all duration-200"
-              style={{
-                background: confirmDestructive
-                  ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)'
-                  : defaultBtnBg,
-                boxShadow: confirmDestructive
-                  ? '0 4px 14px rgba(244,63,94,0.3)'
-                  : defaultBtnShadow,
-              }}
-            >
+            <button autoFocus onClick={() => { onConfirm(); onClose() }} className={cn(BOTON, 'flex-[2]', colorBoton)}>
               {confirmLabel ?? 'Confirmar'}
             </button>
           </>
         ) : (
-          <button
-            onClick={onClose}
-            className="font-semibold py-2.5 px-8 text-sm text-white rounded-xl active:scale-[0.98] transition-all duration-200 hover:opacity-90"
-            style={{
-              background: config ? config.btnBg : defaultBtnBg,
-              boxShadow: config ? config.btnShadow : defaultBtnShadow,
-            }}
-          >
+          <button autoFocus onClick={onClose} className={cn(BOTON, 'w-full sm:w-auto sm:ml-auto sm:px-8', colorBoton)}>
             Aceptar
           </button>
         )}
       </div>
-    </Modal>
+    </Dialogo>
   )
 }

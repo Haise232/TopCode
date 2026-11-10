@@ -6,6 +6,7 @@ import Layout from './components/Layout'
 import Loading from './components/Loading'
 import CambiarPasswordObligatorio from './components/CambiarPasswordObligatorio'
 import InstallPrompt from './components/InstallPrompt'
+import { PerfilErrorView, AccesoPendienteView } from './components/acceso/Avisos'
 import { supabase } from './lib/supabase'
 
 const Login       = lazy(() => import('./pages/Login'))
@@ -39,58 +40,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function ProfileError() {
   const { refreshUsuario } = useAuth()
-
-  return (
-    <main className="min-h-screen flex items-center justify-center bg-bg p-6">
-      <div className="w-full max-w-md rounded-2xl p-8 text-center bg-surface border border-ov/[0.08]">
-        <h1 className="text-xl font-bold text-text-primary">No se pudo cargar tu perfil</h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          Estás conectado, pero no hemos podido comprobar el estado de tu cuenta.
-          Revisa tu conexión e inténtalo de nuevo.
-        </p>
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <button
-            onClick={() => { void refreshUsuario() }}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dark transition-colors"
-          >
-            Reintentar
-          </button>
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-text-muted hover:text-text-primary transition-colors"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
-    </main>
-  )
+  return <PerfilErrorView onReintentar={() => { void refreshUsuario() }} onSalir={() => supabase.auth.signOut()} />
 }
 
 function AccessPending() {
   const { usuario } = useAuth()
-  const rechazado = usuario?.estado_acceso === 'rechazado'
-
-  return (
-    <main className="min-h-screen flex items-center justify-center bg-bg p-6">
-      <div className="w-full max-w-md rounded-2xl p-8 text-center bg-surface border border-ov/[0.08]">
-        <h1 className="text-xl font-bold text-text-primary">
-          {rechazado ? 'Solicitud no aceptada' : 'Solicitud pendiente'}
-        </h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          {rechazado
-            ? 'El administrador de tu clase no ha aceptado esta cuenta. Contacta con él si crees que es un error.'
-            : 'Tu cuenta se ha creado correctamente. Un administrador de tu clase debe aceptarla antes de que puedas entrar.'}
-        </p>
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="mt-6 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dark transition-colors"
-        >
-          Cerrar sesión
-        </button>
-      </div>
-    </main>
-  )
+  return <AccesoPendienteView rechazado={usuario?.estado_acceso === 'rechazado'} onSalir={() => supabase.auth.signOut()} />
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {

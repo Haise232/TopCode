@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Download, Share, X } from 'lucide-react'
+import { AvisoInstalar } from './acceso/Avisos'
 
 // Evento de Chrome/Android para instalar la app con un botón propio (no viene en los tipos del DOM).
 interface BeforeInstallPromptEvent extends Event {
@@ -82,37 +82,5 @@ export default function InstallPrompt() {
   // Encima del menú inferior del móvil cuando lo hay
   const withNav = !['/login', '/register'].includes(location.pathname)
 
-  return (
-    <div
-      className={`fixed inset-x-3 z-[60] mx-auto max-w-md rounded-2xl border border-ov/10 bg-surface/95 backdrop-blur-xl shadow-elevated p-3 flex items-center gap-3 ${
-        withNav ? 'bottom-[calc(72px+env(safe-area-inset-bottom))] md:bottom-4' : 'bottom-[calc(16px+env(safe-area-inset-bottom))]'
-      }`}
-      role="dialog"
-      aria-label="Instalar TopCode"
-    >
-      <img src="/icon-192.png" alt="" className="w-10 h-10 rounded-xl shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-text-primary">Instala TopCode</p>
-        {canPrompt ? (
-          <p className="text-xs text-text-muted">Ábrela como una app, a pantalla completa.</p>
-        ) : (
-          <p className="text-xs text-text-muted">
-            Pulsa <Share size={12} className="inline -mt-0.5" aria-label="Compartir" /> y luego «Añadir a pantalla de inicio».
-          </p>
-        )}
-      </div>
-      {canPrompt && (
-        <button
-          onClick={() => { void install() }}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-dark transition-colors"
-        >
-          <Download size={16} />
-          Instalar
-        </button>
-      )}
-      <button onClick={close} className="shrink-0 p-1.5 rounded-lg text-text-muted hover:text-text-primary" aria-label="Cerrar">
-        <X size={16} />
-      </button>
-    </div>
-  )
+  return <AvisoInstalar puedeInstalar={canPrompt} conNav={withNav} onInstalar={() => { void install() }} onCerrar={close} />
 }
