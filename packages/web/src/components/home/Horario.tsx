@@ -1,8 +1,8 @@
 import { CalendarDays, Check, CalendarOff } from 'lucide-react'
 import type { HorarioClase } from '@topcode/shared'
 import { cn } from '../ui/cn'
-import { EnlaceAccion, Seccion } from './comun'
-import { SUPERFICIE, materiaColor, mez, varsColor } from './estilos'
+import { EnlaceAccion, Seccion } from '../ui/Seccion'
+import { SUPERFICIE, materiaColor, mez, varsColor } from '../ui/estilos'
 
 function enMinutos(hora: string): number {
   const [h, m] = hora.split(':').map(Number)

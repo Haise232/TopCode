@@ -9,7 +9,7 @@ import SelectorModo from '../SelectorModo'
 import { Modal } from '../ui/Modal'
 import { cn } from '../ui/cn'
 import { AccesosInternos, EnlacesExternos } from './Accesos'
-import { FOCO, mez } from './estilos'
+import { FOCO, mez } from '../ui/estilos'
 import { HorarioHoy, HorarioSemana } from './Horario'
 import { Dudas, Proximamente, type DudaInicio } from './Lateral'
 

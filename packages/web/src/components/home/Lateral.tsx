@@ -5,8 +5,8 @@ import { TipoEventoBadge } from '../../lib/tiposEvento'
 import { Copo } from '../Navidad'
 import { cn } from '../ui/cn'
 import { tinta } from '../../lib/tinta'
-import { EnlaceAccion, Seccion } from './comun'
-import { SUPERFICIE, SUPERFICIE_PULSABLE, FOCO, mez, varsColor } from './estilos'
+import { EnlaceAccion, Seccion } from '../ui/Seccion'
+import { SUPERFICIE, SUPERFICIE_PULSABLE, FOCO, mez, varsColor } from '../ui/estilos'
 
 export type DudaInicio = {
   id: string

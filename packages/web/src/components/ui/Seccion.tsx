@@ -1,5 +1,5 @@
 import type { ElementType, ReactNode } from 'react'
-import { cn } from '../ui/cn'
+import { cn } from './cn'
 import { FOCO } from './estilos'
 
 /** Cabecera de sección: título en mayúsculas pequeñas + acción opcional a la derecha. */

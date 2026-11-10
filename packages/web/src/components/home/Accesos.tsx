@@ -4,8 +4,8 @@ import {
 } from 'lucide-react'
 import type { ElementType } from 'react'
 import { cn } from '../ui/cn'
-import { Seccion } from './comun'
-import { FOCO, SUPERFICIE, SUPERFICIE_PULSABLE, varsColor } from './estilos'
+import { Seccion } from '../ui/Seccion'
+import { FOCO, SUPERFICIE, SUPERFICIE_PULSABLE, varsColor } from '../ui/estilos'
 
 const ENLACES_INTERES = [
   { label: 'GitHub', desc: 'Código', Icon: Github, href: 'https://github.com', color: '#a78bfa' },

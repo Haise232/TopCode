@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { cn } from '../ui/cn'
+import { cn } from './cn'
 import { tinta } from '../../lib/tinta'
 
 // Mezcla un color con transparente (Tailwind no aplica /N a var() arbitrarias)
