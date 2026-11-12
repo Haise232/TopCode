@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 
 /**
@@ -92,5 +92,71 @@ function FranjaJersey() {
         <rect width="100%" height="100%" fill={`url(#jersey-${id})`} shapeRendering="crispEdges" />
       </svg>
     </div>
+  )
+}
+
+/**
+ * Colinas nevadas con abetos para el pie de un contenedor `relative`.
+ * Hereda los colores del tema: nieve blanca en claro, azul hielo en oscuro.
+ */
+export function PaisajeNevado({ className = '' }: { className?: string }) {
+  const { navidad } = useTheme()
+  if (!navidad) return null
+  // Abeto de tres pisos con la base en (x, y) y altura h
+  const abeto = (x: number, y: number, h: number) => {
+    const a = h * 0.36
+    return `M${x},${y - h} L${x + a * 0.55},${y - h * 0.62} L${x + a * 0.3},${y - h * 0.62} L${x + a * 0.8},${y - h * 0.3} L${x + a * 0.45},${y - h * 0.3} L${x + a},${y} L${x - a},${y} L${x - a * 0.45},${y - h * 0.3} L${x - a * 0.8},${y - h * 0.3} L${x - a * 0.3},${y - h * 0.62} L${x - a * 0.55},${y - h * 0.62} Z`
+  }
+  // Las colinas se estiran a lo ancho; los abetos conservan su forma y quedan centrados
+  const capa = (ajuste: 'none' | 'xMidYMax meet', hijos: ReactNode) => (
+    <svg viewBox="0 0 460 120" preserveAspectRatio={ajuste} className="absolute inset-0 w-full h-full">{hijos}</svg>
+  )
+  return (
+    <div aria-hidden="true" className={`pointer-events-none absolute inset-x-0 bottom-0 ${className}`}>
+      {capa('none', <path d="M0,70 C80,46 150,58 230,64 C320,70 390,44 460,56 L460,120 L0,120 Z" className="fill-ov/[0.05] dark:fill-primary-light/[0.07]" />)}
+      {capa('xMidYMax meet', (
+        <g className="fill-secondary/25 dark:fill-secondary/20">
+          <path d={abeto(60, 70, 34)} />
+          <path d={abeto(84, 70, 24)} />
+          <path d={abeto(352, 70, 30)} />
+          <path d={abeto(398, 66, 40)} />
+        </g>
+      ))}
+      {capa('none', <path d="M0,96 C70,78 140,84 210,92 C300,102 380,80 460,86 L460,120 L0,120 Z" className="fill-white dark:fill-primary-light/[0.13]" />)}
+      {capa('xMidYMax meet', (
+        <>
+          <g className="fill-secondary/60 dark:fill-secondary/45">
+            <path d={abeto(150, 104, 52)} />
+            <path d={abeto(184, 106, 34)} />
+            <path d={abeto(300, 108, 42)} />
+          </g>
+          {/* nieve sobre las puntas */}
+          <g className="fill-white/90 dark:fill-white/70">
+            <circle cx="150" cy="53" r="2.2" />
+            <circle cx="300" cy="67" r="1.8" />
+            <circle cx="398" cy="26.5" r="1.8" />
+          </g>
+        </>
+      ))}
+    </div>
+  )
+}
+
+/** Montoncitos de nieve sobre el borde superior de una tarjeta `relative`. */
+export function CapaNieve() {
+  const { navidad } = useTheme()
+  if (!navidad) return null
+  return (
+    <svg
+      viewBox="0 0 400 18"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      className="pointer-events-none absolute -top-[9px] inset-x-3 h-[18px] w-[calc(100%-1.5rem)] drop-shadow-[0_1px_1px_rgba(30,45,70,0.12)]"
+    >
+      <path
+        className="fill-white dark:fill-[#e8eefb]"
+        d="M0,12 C10,4 26,3 40,8 C52,1 74,0 90,7 C104,3 118,4 128,9 C144,2 170,1 186,8 C200,4 214,5 224,10 C240,3 262,2 280,8 C292,4 306,4 318,9 C332,1 356,1 372,8 C384,4 394,6 400,10 L400,13 C396,16 388,14 380,15 C370,18 362,13 352,15 C330,17 300,13 280,15 C262,18 250,13 236,15 C210,17 180,13 160,15 C146,18 132,13 118,15 C96,17 70,13 52,15 C38,18 24,13 12,15 C6,16 2,14 0,13 Z"
+      />
+    </svg>
   )
 }

@@ -45,7 +45,7 @@ export function LoginView({ email, setEmail, password, setPassword, loading, onS
           <Campo id="login-email" type="email" label="Correo electrónico" value={email}
             onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" autoFocus />
           <CampoPassword id="login-password" label="Contraseña" value={password} onChange={setPassword} autoComplete="current-password" />
-          <BotonEnviar cargando={loading} textoCargando="Verificando...">
+          <BotonEnviar cargando={loading} textoCargando="Verificando…">
             Iniciar sesión
             <ArrowRight size={15} aria-hidden="true" className="motion-safe:group-hover:translate-x-0.5 transition-transform" />
           </BotonEnviar>
@@ -55,7 +55,7 @@ export function LoginView({ email, setEmail, password, setPassword, loading, onS
         <p className="text-sm text-text-muted">
           ¿No tienes cuenta? <Link to="/register" className={ENLACE}>Crear una cuenta</Link>
         </p>
-        <p className="text-xs mt-3 text-text-muted">¿Olvidaste tu contraseña? Pide una temporal al administrador de tu clase.</p>
+        <p className="text-xs mt-3 text-text-muted [text-wrap:balance]">¿Olvidaste tu contraseña? Pide una temporal al administrador de tu clase.</p>
       </div>
     </AccesoLayout>
   )
@@ -87,7 +87,7 @@ export function RegisterView({ nombre, setNombre, email, setEmail, password, set
       <TarjetaForm>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Campo id="register-nombre" type="text" label="Nombre completo" value={nombre}
-            onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" autoFocus />
+            onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" autoComplete="name" autoFocus />
           <Campo id="register-email" type="email" label="Correo electrónico" value={email}
             onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" autoComplete="email" />
           <div className="flex flex-col gap-2">
@@ -95,7 +95,7 @@ export function RegisterView({ nombre, setNombre, email, setEmail, password, set
               placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
             {password.length > 0 && <MedidorFuerza nivel={fuerza} etiquetas={['Débil', 'Media', 'Fuerte']} />}
           </div>
-          <BotonEnviar cargando={loading} textoCargando="Creando cuenta...">
+          <BotonEnviar cargando={loading} textoCargando="Creando cuenta…">
             Crear cuenta
             <ArrowRight size={15} aria-hidden="true" className="motion-safe:group-hover:translate-x-0.5 transition-transform" />
           </BotonEnviar>
@@ -146,7 +146,7 @@ export function CambiarPasswordView({ email, password, setPassword, repetida, se
             <label htmlFor="repetir-password" className={ETIQUETA}>Repítela</label>
             <input
               id="repetir-password" type={visible ? 'text' : 'password'} value={repetida}
-              onChange={e => setRepetida(e.target.value)} placeholder="••••••••" autoComplete="new-password"
+              onChange={e => setRepetida(e.target.value)} placeholder="Repite la contraseña" autoComplete="new-password"
               className={INPUT}
             />
           </div>
@@ -159,7 +159,7 @@ export function CambiarPasswordView({ email, password, setPassword, repetida, se
           )}
 
           <button type="submit" disabled={guardando} className={cn(BOTON_PRINCIPAL, 'mt-1')}>
-            {guardando ? (<><Spinner size="sm" />Guardando...</>) : (<><KeyRound size={15} aria-hidden="true" />Guardar y entrar</>)}
+            {guardando ? (<><Spinner size="sm" />Guardando…</>) : (<><KeyRound size={15} aria-hidden="true" />Guardar y entrar</>)}
           </button>
         </form>
       </TarjetaForm>

@@ -55,3 +55,18 @@ export function diasParaNavidad(fecha = new Date()): number | null {
   const diff = Math.round((navidad.getTime() - hoy.getTime()) / 86_400_000)
   return Math.max(diff, 0)
 }
+
+/** Texto de la cuenta atrás navideña según el día (null fuera de temporada). */
+export function cuentaAtrasNavidad(): { texto: string; especial: boolean } | null {
+  const dias = diasParaNavidad()
+  if (dias === null) return null
+  const hoy = new Date()
+  const mes = hoy.getMonth()
+  const dia = hoy.getDate()
+  if (mes === 0 && dia === 6) return { texto: '¡Felices Reyes!', especial: true }
+  if (mes === 0 && dia === 7) return { texto: '¡Felices Reyes!', especial: true }
+  if (mes === 0 || (mes === 11 && dia >= 26)) return { texto: '¡Feliz año nuevo!', especial: true }
+  if (mes === 11 && dia === 25) return { texto: '¡Feliz Navidad!', especial: true }
+  if (mes === 11 && dia === 24) return { texto: '¡Hoy es Nochebuena!', especial: true }
+  return { texto: dias === 1 ? 'Falta 1 día para Navidad' : `Faltan ${dias} días para Navidad`, especial: false }
+}

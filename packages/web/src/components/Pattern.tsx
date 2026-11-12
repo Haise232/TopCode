@@ -129,5 +129,6 @@ export function Nieve({ densidad = 1 }: { densidad?: number }) {
     }
   }, [densidad])
 
-  return <canvas ref={ref} />
+  // Ocupa todo su contenedor (`relative`/`absolute`): sin tamaño CSS el canvas se queda en 300×150
+  return <canvas ref={ref} className="absolute inset-0 block w-full h-full" aria-hidden="true" />
 }

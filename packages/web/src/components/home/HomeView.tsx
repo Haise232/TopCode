@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CalendarDays, GraduationCap, RefreshCw, Shield, Users, X } from 'lucide-react'
 import { claseInfo, type EventoCalendario, type HorarioClase, type Usuario } from '@topcode/shared'
 import { useTheme } from '../../contexts/ThemeContext'
-import { diasParaNavidad } from '../../lib/temporada'
+import { cuentaAtrasNavidad } from '../../lib/temporada'
 import { tinta } from '../../lib/tinta'
 import { Copo, GorroNavidad } from '../Navidad'
 import SelectorModo from '../SelectorModo'
@@ -20,21 +20,6 @@ function saludoEmoji() {
   if (h < 12) return { texto: 'Buenos días', emoji: '☀️' }
   if (h < 20) return { texto: 'Buenas tardes', emoji: '🌤️' }
   return { texto: 'Buenas noches', emoji: '🌙' }
-}
-
-/** Texto de la cuenta atrás navideña según el día (null fuera de temporada). */
-function cuentaAtrasNavidad(): { texto: string; especial: boolean } | null {
-  const dias = diasParaNavidad()
-  if (dias === null) return null
-  const hoy = new Date()
-  const mes = hoy.getMonth()
-  const dia = hoy.getDate()
-  if (mes === 0 && dia === 6) return { texto: '¡Felices Reyes!', especial: true }
-  if (mes === 0 && dia === 7) return { texto: '¡Felices Reyes!', especial: true }
-  if (mes === 0 || (mes === 11 && dia >= 26)) return { texto: '¡Feliz año nuevo!', especial: true }
-  if (mes === 11 && dia === 25) return { texto: '¡Feliz Navidad!', especial: true }
-  if (mes === 11 && dia === 24) return { texto: '¡Hoy es Nochebuena!', especial: true }
-  return { texto: dias === 1 ? 'Falta 1 día para Navidad' : `Faltan ${dias} días para Navidad`, especial: false }
 }
 
 function fechaFormateada() {

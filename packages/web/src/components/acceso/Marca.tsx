@@ -2,7 +2,8 @@ import { useState, type ElementType, type ReactNode } from 'react'
 import { Eye, EyeOff, GraduationCap } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Nieve } from '../Pattern'
-import { GorroNavidad } from '../Navidad'
+import { CapaNieve, Copo, GorroNavidad, Guirnalda, PaisajeNevado } from '../Navidad'
+import { cuentaAtrasNavidad } from '../../lib/temporada'
 import { cn } from '../ui/cn'
 import { FOCO, SUPERFICIE } from '../ui/estilos'
 
@@ -42,8 +43,12 @@ function PanelMarca({ etiqueta, titulo, acento, bajada, puntos }: {
 }) {
   const { navidad } = useTheme()
   return (
-    <aside className="hidden lg:flex flex-col justify-between w-[460px] shrink-0 p-10 relative overflow-hidden bg-surface-2 border-r border-ov/[0.07]">
-      {navidad && <div className="absolute inset-0 pointer-events-none"><Nieve /></div>}
+    <aside className={cn(
+      'hidden lg:flex flex-col justify-between w-[460px] shrink-0 sticky top-0 h-screen min-h-[680px] p-10 pt-12 overflow-hidden bg-surface-2 border-r border-ov/[0.07]',
+      navidad && 'pb-40 bg-[radial-gradient(90%_55%_at_15%_0%,rgb(var(--c-gold)/0.16),transparent_70%)]',
+    )}>
+      {navidad && <div className="absolute inset-0 pointer-events-none" aria-hidden="true"><Nieve /></div>}
+      <PaisajeNevado className="h-36" />
 
       <div className="relative flex items-center gap-3">
         <LogoMarca />
@@ -71,7 +76,9 @@ function PanelMarca({ etiqueta, titulo, acento, bajada, puntos }: {
         </ul>
       </div>
 
-      <p className="relative text-xs text-text-muted">© 2025 TopCode · Informática (DAM·DAW·ASIR)</p>
+      <p className={cn('relative text-xs', navidad ? 'text-text-secondary' : 'text-text-muted')}>
+        © {new Date().getFullYear()} TopCode · Informática (DAM·DAW·ASIR)
+      </p>
     </aside>
   )
 }
@@ -80,10 +87,17 @@ function PanelMarca({ etiqueta, titulo, acento, bajada, puntos }: {
 export function AccesoLayout({ panel, children }: { panel: Parameters<typeof PanelMarca>[0]; children: ReactNode }) {
   const { navidad } = useTheme()
   return (
-    <div className="min-h-screen flex bg-bg">
+    <div className="min-h-screen flex bg-bg relative">
+      {/* Menos bombillas en móvil para que no queden amontonadas */}
+      <div className="sm:hidden"><Guirnalda bombillas={14} /></div>
+      <div className="hidden sm:block"><Guirnalda bombillas={40} /></div>
       <PanelMarca {...panel} />
-      <main className="flex-1 min-w-0 flex items-center justify-center px-5 py-8 sm:p-8 relative">
-        {navidad && <div className="absolute inset-0 pointer-events-none lg:hidden"><Nieve densidad={0.6} /></div>}
+      <main className={cn(
+        'flex-1 min-w-0 flex items-center justify-center px-4 pt-10 pb-8 sm:p-8 relative overflow-hidden',
+        navidad && 'pb-28 sm:pb-32 lg:pb-8 bg-[radial-gradient(70%_50%_at_50%_0%,rgb(var(--c-primary)/0.07),transparent_70%)]',
+      )}>
+        {navidad && <div className="absolute inset-0 pointer-events-none" aria-hidden="true"><Nieve densidad={0.5} /></div>}
+        <PaisajeNevado className="h-24 sm:h-28 lg:hidden" />
         <div className="w-full max-w-[400px] relative">
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <LogoMarca />
@@ -99,9 +113,27 @@ export function AccesoLayout({ panel, children }: { panel: Parameters<typeof Pan
   )
 }
 
+/** Píldora con la cuenta atrás navideña (solo en temporada). */
+export function CuentaAtras({ className }: { className?: string }) {
+  const { navidad } = useTheme()
+  const cuenta = navidad ? cuentaAtrasNavidad() : null
+  if (!cuenta) return null
+  return (
+    <p className={cn(
+      'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold',
+      cuenta.especial ? 'bg-primary/10 text-primary-light' : 'bg-gold/15 text-gold-light',
+      className,
+    )}>
+      <Copo size={12} className="motion-safe:animate-[spin_8s_linear_infinite]" />
+      {cuenta.texto}
+    </p>
+  )
+}
+
 export function CabeceraForm({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
   return (
     <div className="mb-6">
+      <CuentaAtras className="mb-3" />
       <h1 className="text-2xl font-extrabold tracking-tight text-text-primary">{titulo}</h1>
       <p className="text-sm mt-1.5 text-text-muted">{subtitulo}</p>
     </div>
@@ -110,7 +142,13 @@ export function CabeceraForm({ titulo, subtitulo }: { titulo: string; subtitulo:
 
 /** Tarjeta que envuelve el formulario. */
 export function TarjetaForm({ children }: { children: ReactNode }) {
-  return <div className={cn(SUPERFICIE, 'p-5 sm:p-6')}>{children}</div>
+  const { navidad } = useTheme()
+  return (
+    <div className={cn(SUPERFICIE, 'relative p-5 sm:p-6', navidad && 'mt-3')}>
+      <CapaNieve />
+      {children}
+    </div>
+  )
 }
 
 /** Campo de texto con etiqueta asociada. */
@@ -124,7 +162,7 @@ export function Campo({ id, label, ...rest }: { id: string; label: string } & Re
 }
 
 /** Campo de contraseña con botón de mostrar/ocultar. Si se pasa `visible` el estado lo lleva el padre. */
-export function CampoPassword({ id, label, value, onChange, placeholder = '••••••••', autoComplete, autoFocus, visible, onToggle, etiquetaToggle }: {
+export function CampoPassword({ id, label, value, onChange, placeholder = 'Tu contraseña', autoComplete, autoFocus, visible, onToggle, etiquetaToggle }: {
   id: string
   label: string
   value: string
