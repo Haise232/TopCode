@@ -164,7 +164,7 @@ export default function HomeView({
               <X size={16} />
             </button>
           </div>
-          <div className="p-4 max-h-[80vh] overflow-y-auto">
+          <div className="p-4 md:p-5 max-h-[80vh] overflow-y-auto">
             <HorarioSemana porDia={horarioPorDia} />
           </div>
         </Modal>

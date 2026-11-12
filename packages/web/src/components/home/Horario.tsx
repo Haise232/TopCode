@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { CalendarDays, Check, CalendarOff } from 'lucide-react'
 import type { HorarioClase } from '@topcode/shared'
 import { cn } from '../ui/cn'
@@ -162,70 +163,161 @@ export function HorarioHoy({
   )
 }
 
-/** Horario completo de lunes a viernes (modal), resaltando el día actual y la clase en curso. */
-export function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[]> }) {
-  const ahora = new Date()
-  const diaHoy = ahora.getDay()
-  const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes()
+const DIAS_CORTO = ['', 'L', 'M', 'X', 'J', 'V']
+/** Altura en píxeles de cada minuto en la rejilla semanal. */
+const PX_MIN = 1.15
+
+/** Minutos desde medianoche, actualizados cada minuto. */
+function useMinutosAhora() {
+  const calc = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() }
+  const [min, setMin] = useState(calc)
+  useEffect(() => {
+    const id = setInterval(() => setMin(calc()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  return min
+}
+
+const fmtHora = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:00`
+
+/** Bloque de una clase colocado en la rejilla según su hora. */
+function BloqueClase({
+  clase, inicioRejilla, esCurso, haPasado,
+}: { clase: HorarioClase; inicioRejilla: number; esCurso: boolean; haPasado: boolean }) {
+  const ini = enMinutos(clase.hora_inicio)
+  const fin = enMinutos(clase.hora_fin)
+  const alto = (fin - ini) * PX_MIN
+  const corto = fin - ini < 50
 
   return (
-    <div className="grid gap-3 md:grid-cols-5">
+    <div
+      className="absolute inset-x-1 px-0.5 py-px"
+      style={{ top: (ini - inicioRejilla) * PX_MIN, height: alto }}
+    >
+      <div
+        className={cn(
+          'h-full rounded-lg border-l-[3px] overflow-hidden flex flex-col transition-shadow',
+          corto ? 'px-2 py-1 justify-center' : 'px-2.5 py-1.5',
+          esCurso && 'ring-2 ring-[color:var(--c)] shadow-card',
+          haPasado && 'opacity-45',
+        )}
+        style={{
+          ...varsColor(materiaColor(clase.materia)),
+          borderLeftColor: 'var(--c)',
+          background: esCurso ? 'var(--c-medio)' : 'var(--c-suave)',
+        }}
+        title={`${clase.materia} · ${clase.hora_inicio}–${clase.hora_fin} · ${clase.codigo}`}
+      >
+        <div className="flex items-start justify-between gap-1.5 min-w-0">
+          <span className={cn('text-xs font-semibold leading-tight text-text-primary min-w-0', corto ? 'truncate' : 'line-clamp-2')}>
+            {clase.materia}
+          </span>
+          <span className="shrink-0 text-2xs font-bold leading-tight text-[color:var(--c-ink)]">{clase.codigo}</span>
+        </div>
+        {!corto && (
+          <span className="mt-auto text-2xs font-mono text-text-muted leading-tight">
+            {clase.hora_inicio}–{clase.hora_fin}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Rejilla de lunes a viernes con las clases a escala de tiempo (escritorio). */
+function RejillaSemana({
+  porDia, diaHoy, minutosAhora,
+}: { porDia: Record<number, HorarioClase[]>; diaHoy: number; minutosAhora: number }) {
+  const todas = DIAS_LECTIVOS.flatMap(d => porDia[d.dia] ?? [])
+  if (todas.length === 0) return null
+
+  const inicio = Math.floor(Math.min(...todas.map(c => enMinutos(c.hora_inicio))) / 60) * 60
+  const fin = Math.ceil(Math.max(...todas.map(c => enMinutos(c.hora_fin))) / 60) * 60
+  const alto = (fin - inicio) * PX_MIN
+  const horas: number[] = []
+  for (let m = inicio; m <= fin; m += 60) horas.push(m)
+  const lineaAhora = minutosAhora >= inicio && minutosAhora <= fin
+
+  return (
+    <div className="grid grid-cols-[3rem_repeat(5,minmax(0,1fr))]">
+      {/* Cabecera */}
+      <div />
       {DIAS_LECTIVOS.map(({ dia, nombre }) => {
+        const esHoy = dia === diaHoy
+        const n = porDia[dia]?.length ?? 0
+        return (
+          <div key={dia} className="px-1 pb-3 text-center">
+            <div
+              className={cn(
+                'rounded-xl py-2 transition-colors',
+                esHoy ? 'bg-primary/[0.12]' : 'bg-ov/[0.03]',
+              )}
+            >
+              <span className={cn('block text-xs font-bold uppercase tracking-wider', esHoy ? 'text-primary-light' : 'text-text-secondary')}>
+                {nombre}
+              </span>
+              <span className={cn('block text-2xs mt-0.5', esHoy ? 'text-primary-light/80 font-semibold' : 'text-text-faint')}>
+                {esHoy ? 'Hoy' : n === 0 ? 'Sin clases' : `${n} ${n === 1 ? 'clase' : 'clases'}`}
+              </span>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Eje de horas */}
+      <div className="relative" style={{ height: alto }}>
+        {horas.map(m => (
+          <span
+            key={m}
+            className="absolute right-2 -translate-y-1/2 text-2xs font-mono text-text-faint"
+            style={{ top: (m - inicio) * PX_MIN }}
+          >
+            {fmtHora(m)}
+          </span>
+        ))}
+      </div>
+
+      {/* Columnas de días */}
+      {DIAS_LECTIVOS.map(({ dia }) => {
         const clases = porDia[dia] ?? []
         const esHoy = dia === diaHoy
-
         return (
           <div
             key={dia}
-            className={cn(
-              'rounded-2xl overflow-hidden min-w-0 border',
-              esHoy ? 'border-primary/40 bg-primary/[0.05]' : 'border-ov/[0.07] bg-surface'
-            )}
+            className={cn('relative border-l border-ov/[0.06]', esHoy && 'bg-primary/[0.035]')}
+            style={{ height: alto }}
           >
-            <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-              <span className={cn('text-xs font-bold uppercase tracking-wider', esHoy ? 'text-primary-light' : 'text-text-secondary')}>
-                {nombre}
-              </span>
-              {esHoy ? (
-                <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-light">Hoy</span>
-              ) : (
-                <span className="text-2xs text-text-muted">{clases.length} clases</span>
-              )}
-            </div>
-
-            {clases.length === 0 && (
-              <div className="px-3 pb-4 pt-1 text-center text-2xs text-text-muted">Sin clases</div>
-            )}
-
+            {horas.map(m => (
+              <div
+                key={m}
+                className="absolute inset-x-0 h-px bg-ov/[0.06]"
+                style={{ top: (m - inicio) * PX_MIN }}
+                aria-hidden="true"
+              />
+            ))}
             {clases.map((clase, idx) => {
-              const iniMin = enMinutos(clase.hora_inicio)
-              const finMin = enMinutos(clase.hora_fin)
-              const esCurso = esHoy && minutosAhora >= iniMin && minutosAhora < finMin
-              const hayDescanso = idx > 0 && iniMin - enMinutos(clases[idx - 1].hora_fin) > 5
-
+              const ini = enMinutos(clase.hora_inicio)
+              const finC = enMinutos(clase.hora_fin)
               return (
-                <div key={clase.id}>
-                  {hayDescanso ? <Descanso compacto /> : idx > 0 && <div className="mx-3 h-px bg-ov/[0.06]" />}
-                  <div
-                    className="flex items-center gap-2 px-3 py-2"
-                    style={{ ...varsColor(materiaColor(clase.materia)), background: esCurso ? 'var(--c-suave)' : undefined }}
-                  >
-                    <div className="shrink-0 w-1.5 h-1.5 rounded-full bg-[var(--c)]" />
-                    <div className="flex-1 min-w-0">
-                      <span className={cn('block text-xs truncate', esCurso ? 'text-text-primary font-bold' : 'text-text-secondary')}>
-                        {clase.materia}
-                      </span>
-                      <span className="block text-2xs font-mono text-text-muted">
-                        {clase.hora_inicio}–{clase.hora_fin}
-                      </span>
-                    </div>
-                    <span className="shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded-md bg-ov/[0.05] text-text-muted">
-                      {clase.codigo}
-                    </span>
-                  </div>
-                </div>
+                <BloqueClase
+                  key={clase.id ?? idx}
+                  clase={clase}
+                  inicioRejilla={inicio}
+                  esCurso={esHoy && minutosAhora >= ini && minutosAhora < finC}
+                  haPasado={esHoy && minutosAhora >= finC}
+                />
               )
             })}
+            {esHoy && lineaAhora && (
+              <div
+                className="absolute -inset-x-px z-10 flex items-center pointer-events-none"
+                style={{ top: (minutosAhora - inicio) * PX_MIN }}
+                aria-hidden="true"
+              >
+                <span className="-ml-1 h-2 w-2 rounded-full bg-rose shrink-0" />
+                <span className="flex-1 h-0.5 bg-rose" />
+              </div>
+            )}
           </div>
         )
       })}
@@ -233,3 +325,119 @@ export function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[
   )
 }
 
+/** Selector de día + lista de clases de ese día (móvil). */
+function ListaDia({
+  porDia, diaHoy, minutosAhora,
+}: { porDia: Record<number, HorarioClase[]>; diaHoy: number; minutosAhora: number }) {
+  const [dia, setDia] = useState(diaHoy >= 1 && diaHoy <= 5 ? diaHoy : 1)
+  const clases = porDia[dia] ?? []
+  const esHoy = dia === diaHoy
+
+  return (
+    <div>
+      <div role="tablist" aria-label="Día de la semana" className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-ov/[0.04]">
+        {DIAS_LECTIVOS.map(d => {
+          const activo = d.dia === dia
+          const hoy = d.dia === diaHoy
+          return (
+            <button
+              key={d.dia}
+              role="tab"
+              aria-selected={activo}
+              aria-label={d.nombre}
+              onClick={() => setDia(d.dia)}
+              className={cn(
+                'relative py-2 rounded-lg text-sm font-bold transition-colors',
+                activo ? 'bg-surface text-text-primary shadow-card' : 'text-text-muted hover:text-text-secondary',
+              )}
+            >
+              {DIAS_CORTO[d.dia]}
+              {hoy && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-primary" aria-hidden="true" />}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex items-baseline justify-between mt-4 mb-2 px-1">
+        <span className="text-sm font-bold text-text-primary">
+          {DIAS_LECTIVOS[dia - 1].nombre}
+          {esHoy && <span className="ml-2 text-2xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-light align-middle">Hoy</span>}
+        </span>
+        <span className="text-xs text-text-muted">{clases.length} {clases.length === 1 ? 'clase' : 'clases'}</span>
+      </div>
+
+      {clases.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-10 text-center">
+          <CalendarOff size={20} className="text-text-faint" aria-hidden="true" />
+          <p className="text-sm text-text-muted">Sin clases este día.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {clases.map((clase, idx) => {
+            const ini = enMinutos(clase.hora_inicio)
+            const fin = enMinutos(clase.hora_fin)
+            const esCurso = esHoy && minutosAhora >= ini && minutosAhora < fin
+            const haPasado = esHoy && minutosAhora >= fin
+            const hayDescanso = idx > 0 && ini - enMinutos(clases[idx - 1].hora_fin) > 5
+            return (
+              <div key={clase.id ?? idx}>
+                {hayDescanso && <Descanso compacto />}
+                <div
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl border-l-[3px] px-3 py-2.5',
+                    esCurso && 'ring-2 ring-[color:var(--c)]',
+                    haPasado && 'opacity-45',
+                  )}
+                  style={{
+                    ...varsColor(materiaColor(clase.materia)),
+                    borderLeftColor: 'var(--c)',
+                    background: esCurso ? 'var(--c-medio)' : 'var(--c-suave)',
+                  }}
+                >
+                  <div className="shrink-0 flex flex-col items-end w-11 font-mono leading-tight">
+                    <span className="text-xs font-semibold text-text-primary">{clase.hora_inicio}</span>
+                    <span className="text-2xs text-text-muted">{clase.hora_fin}</span>
+                  </div>
+                  <span className={cn('flex-1 min-w-0 text-sm truncate text-text-primary', esCurso ? 'font-bold' : 'font-medium')}>
+                    {clase.materia}
+                  </span>
+                  {esCurso && <span className="shrink-0 text-2xs font-bold uppercase tracking-wider text-[color:var(--c-ink)]">Ahora</span>}
+                  <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-md bg-surface/70 text-[color:var(--c-ink)]">
+                    {clase.codigo}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Horario completo de lunes a viernes (modal): rejilla temporal en escritorio y selector de día en móvil. */
+export function HorarioSemana({ porDia }: { porDia: Record<number, HorarioClase[]> }) {
+  const diaHoy = new Date().getDay()
+  const minutosAhora = useMinutosAhora()
+  const vacio = DIAS_LECTIVOS.every(d => (porDia[d.dia]?.length ?? 0) === 0)
+
+  if (vacio) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+        <CalendarOff size={22} className="text-text-faint" aria-hidden="true" />
+        <p className="text-sm text-text-muted">No hay clases en el horario.</p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="md:hidden">
+        <ListaDia porDia={porDia} diaHoy={diaHoy} minutosAhora={minutosAhora} />
+      </div>
+      <div className="hidden md:block pr-1">
+        <RejillaSemana porDia={porDia} diaHoy={diaHoy} minutosAhora={minutosAhora} />
+      </div>
+    </>
+  )
+}
