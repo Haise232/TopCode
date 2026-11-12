@@ -207,9 +207,10 @@ COMMENT ON TABLE public.actividades_estado IS
 --   Lectura: todos los autenticados. Escritura/borrado: solo admins.
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.anuncios (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   titulo      TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 100),
   contenido   TEXT NOT NULL CHECK (length(contenido) BETWEEN 1 AND 1000),
+  -- enlace y la tabla anuncios_leidos: ver migracion_anuncios_leidos.sql
   activo      BOOLEAN NOT NULL DEFAULT true,
   created_by  UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
