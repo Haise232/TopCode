@@ -10,6 +10,19 @@ function enMinutos(hora: string): number {
   return h * 60 + m
 }
 
+/** Hora actual, refrescada cada `cadaMs` y al volver a la pestaña. */
+function useAhora(cadaMs: number) {
+  const [ahora, setAhora] = useState(() => new Date())
+  useEffect(() => {
+    const tic = () => setAhora(new Date())
+    const id = setInterval(tic, cadaMs)
+    const alVolver = () => { if (document.visibilityState === 'visible') tic() }
+    document.addEventListener('visibilitychange', alVolver)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', alVolver) }
+  }, [cadaMs])
+  return ahora
+}
+
 const DIAS_LECTIVOS = [
   { dia: 1, nombre: 'Lunes' },
   { dia: 2, nombre: 'Martes' },
@@ -37,7 +50,7 @@ function ClaseDestacada({
   const ini = enMinutos(clase.hora_inicio)
   const fin = enMinutos(clase.hora_fin)
   const progreso = enCurso ? Math.min(100, Math.max(0, ((minutosAhora - ini) / (fin - ini)) * 100)) : 0
-  const restante = enCurso ? fin - minutosAhora : ini - minutosAhora
+  const restante = Math.ceil(enCurso ? fin - minutosAhora : ini - minutosAhora)
   const textoTiempo = enCurso
     ? `Quedan ${restante} min`
     : restante >= 60
@@ -68,7 +81,7 @@ function ClaseDestacada({
       </div>
       {enCurso && (
         <div className="mt-3.5 h-1 rounded-full overflow-hidden" style={{ background: mez('var(--c)', 18) }} role="progressbar" aria-label="Progreso de la clase" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progreso)}>
-          <div className="h-full rounded-full bg-[var(--c)]" style={{ width: `${progreso}%` }} />
+          <div className="h-full rounded-full bg-[var(--c)] motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear" style={{ width: `${progreso}%` }} />
         </div>
       )}
     </div>
@@ -94,12 +107,12 @@ export function HorarioHoy({
   tieneClase: boolean
   onVerSemana: () => void
 }) {
-  const ahora = new Date()
+  const ahora = useAhora(5_000)
   const diaSemana = ahora.getDay() // 0=Dom, 1=Lun ... 6=Sáb
   const esFinDeSemana = diaSemana === 0 || diaSemana === 6
   const diaClases = esFinDeSemana ? 1 : diaSemana
   const clases = porDia[diaClases] ?? []
-  const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes()
+  const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes() + ahora.getSeconds() / 60
 
   const actual = esFinDeSemana ? undefined : clases.find(c => minutosAhora >= enMinutos(c.hora_inicio) && minutosAhora < enMinutos(c.hora_fin))
   const siguiente = esFinDeSemana || actual ? undefined : clases.find(c => enMinutos(c.hora_inicio) > minutosAhora)
@@ -169,13 +182,8 @@ const PX_MIN = 1.15
 
 /** Minutos desde medianoche, actualizados cada minuto. */
 function useMinutosAhora() {
-  const calc = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() }
-  const [min, setMin] = useState(calc)
-  useEffect(() => {
-    const id = setInterval(() => setMin(calc()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-  return min
+  const d = useAhora(60_000)
+  return d.getHours() * 60 + d.getMinutes()
 }
 
 const fmtHora = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:00`
