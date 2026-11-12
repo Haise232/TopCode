@@ -32,7 +32,7 @@ Todo en un solo sitio, con acceso aprobado por administradores y permisos por cl
 
 <img src="docs/screenshots/inicio.png" alt="Panel de inicio de TopCode con el horario del día y accesos rápidos" width="100%" />
 
-<sub><b>Inicio</b> · horario del día con la clase en curso, dudas abiertas del foro y accesos rápidos</sub>
+<sub><b>Inicio</b> · horario del día con la clase en curso, próximas entregas y exámenes, dudas del foro y accesos rápidos</sub>
 
 </div>
 
