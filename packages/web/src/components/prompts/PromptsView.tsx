@@ -85,7 +85,7 @@ export default function PromptsView(p: PromptsViewProps) {
               {!p.loading && !p.error && (
                 <span><b className="font-bold text-text-primary tabular-nums">{p.prompts.length}</b> prompts</span>
               )}
-              <span>Para ChatGPT, Claude y otras IAs, compartidos por la clase</span>
+              <span>Para ChatGPT, Claude, Gemini y otras IAs, compartidos por la clase</span>
             </div>
           </div>
           <Button onClick={p.onNuevo} icon={<Plus size={16} aria-hidden="true" />} className={cn('shrink-0', FOCO)}>

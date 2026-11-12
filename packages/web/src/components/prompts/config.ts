@@ -23,4 +23,5 @@ export const MODELOS: Record<PromptModelo, string> = {
 export const ABRIR_EN: { label: string; url: (q: string) => string }[] = [
   { label: 'ChatGPT', url: q => `https://chatgpt.com/?q=${encodeURIComponent(q)}` },
   { label: 'Claude',  url: q => `https://claude.ai/new?q=${encodeURIComponent(q)}` },
+  { label: 'Gemini',  url: q => `https://gemini.google.com/app?q=${encodeURIComponent(q)}` },
 ]
