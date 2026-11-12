@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { usePrompts } from '@topcode/shared'
 import PromptsView from '../components/prompts/PromptsView'
 import FormularioPrompt from '../components/prompts/FormularioPrompt'
+import AlertModal from '../components/AlertModal'
 import type { Prompt, PromptCategoria, PromptInput } from '@topcode/shared'
 
 const EMPTY_FORM: PromptInput = { titulo: '', contenido: '', descripcion: '', categoria: 'general', modelo: 'cualquiera' }
@@ -19,6 +20,8 @@ export default function Prompts() {
   const [formError, setFormError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [borrando, setBorrando] = useState<Prompt | null>(null)
+  const [errorBorrar, setErrorBorrar] = useState(false)
 
   const isAdmin = usuario?.rol === 'admin'
 
@@ -78,9 +81,10 @@ export default function Prompts() {
     } catch { /* el navegador bloqueó el portapapeles */ }
   }
 
-  async function handleDelete(p: Prompt) {
-    if (!confirm(`¿Eliminar el prompt "${p.titulo}"?`)) return
-    await deletePrompt(p.id)
+  async function confirmarBorrado() {
+    if (!borrando) return
+    const { error: err } = await deletePrompt(borrando.id)
+    if (err) setErrorBorrar(true)
   }
 
   function toggleExpanded(id: string) {
@@ -109,7 +113,7 @@ export default function Prompts() {
         expanded={expanded}
         onNuevo={openNew}
         onEditar={openEdit}
-        onEliminar={handleDelete}
+        onEliminar={setBorrando}
         onCopiar={handleCopy}
         onToggle={toggleExpanded}
       />
@@ -124,6 +128,23 @@ export default function Prompts() {
           onClose={closeModal}
         />
       )}
+      <AlertModal
+        visible={!!borrando}
+        type="warning"
+        title="Eliminar prompt"
+        message={borrando ? `¿Eliminar "${borrando.titulo}"? Esta acción no se puede deshacer.` : undefined}
+        confirmLabel="Eliminar"
+        confirmDestructive
+        onConfirm={confirmarBorrado}
+        onClose={() => setBorrando(null)}
+      />
+      <AlertModal
+        visible={errorBorrar}
+        type="error"
+        title="Error"
+        message="No se pudo eliminar el prompt."
+        onClose={() => setErrorBorrar(false)}
+      />
     </>
   )
 }
