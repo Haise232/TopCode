@@ -20,6 +20,7 @@ type AlertState = {
 
 function PublicProfile({ userId }: { userId: string }) {
   const navigate = useNavigate()
+  const { usuario } = useAuth()
   const [profile, setProfile] = useState<PerfilPublico | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -30,7 +31,9 @@ function PublicProfile({ userId }: { userId: string }) {
       .then(({ data, error: queryError }) => {
         if (!active) return
         if (queryError) setError(true)
-        setProfile((data as PerfilPublico | null) ?? null)
+        // La RPC devuelve una tabla: nos quedamos con la única fila
+        const fila = Array.isArray(data) ? data[0] : data
+        setProfile((fila as PerfilPublico | undefined) ?? null)
       })
       .catch(() => { if (active) setError(true) })
       .finally(() => { if (active) setLoading(false) })
@@ -41,7 +44,16 @@ function PublicProfile({ userId }: { userId: string }) {
   if (loading) return <PerfilPublicoEsqueleto onVolver={volver} />
   if (error) return <PerfilPublicoVacio mensaje="No se pudo cargar el perfil." onVolver={volver} />
   if (!profile) return <PerfilPublicoVacio mensaje="No se encontró este perfil." onVolver={volver} />
-  return <PerfilPublicoView perfil={profile} onVolver={volver} />
+  return (
+    <PerfilPublicoView
+      perfil={profile}
+      onVolver={volver}
+      onMensaje={usuario && usuario.id !== profile.id
+        ? () => navigate(`/chat?dm=${profile.id}&from=${encodeURIComponent(profile.nombre)}`)
+        : undefined}
+      onEditar={usuario?.id === profile.id ? () => navigate('/profile') : undefined}
+    />
+  )
 }
 
 function TelegramSection() {

@@ -35,12 +35,13 @@ export default function Admin() {
   const [nuevoTitulo, setNuevoTitulo] = useState('')
   const [nuevoContenido, setNuevoContenido] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [toggling, setToggling] = useState<string | null>(null)
+  const [nuevoEnlace, setNuevoEnlace] = useState('')
+  const [toggling, setToggling] = useState<number | null>(null)
 
   const cargarAnuncios = useCallback(async () => {
     const { data } = await supabase
       .from('anuncios')
-      .select('id, titulo, contenido, activo, created_at, created_by')
+      .select('id, titulo, contenido, enlace, activo, created_at, created_by')
       .order('created_at', { ascending: false })
       .limit(10)
     if (data) setAnuncios(data as Anuncio[])
@@ -54,6 +55,7 @@ export default function Admin() {
       supabase.from('anuncios').insert({
         titulo: nuevoTitulo.trim(),
         contenido: nuevoContenido.trim(),
+        enlace: nuevoEnlace.trim() || null,
         activo: true,
         created_by: usuario!.id,
       }),
@@ -68,6 +70,7 @@ export default function Admin() {
     }
     setNuevoTitulo('')
     setNuevoContenido('')
+    setNuevoEnlace('')
     cargarAnuncios()
   }
 
@@ -245,6 +248,8 @@ export default function Admin() {
           contenido: nuevoContenido,
           onTitulo: setNuevoTitulo,
           onContenido: setNuevoContenido,
+          enlace: nuevoEnlace,
+          onEnlace: setNuevoEnlace,
           guardando,
           toggling,
           onPublicar: handlePublicar,

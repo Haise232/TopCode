@@ -1,8 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { ArrowLeft, CalendarDays, Camera, Code, Github, Globe, Link2, LogOut, Save, TrendingUp, X as XIcon } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Camera, Code, Github, Globe, Link2, LogOut, Save, X as XIcon } from 'lucide-react'
 import type { Usuario } from '@topcode/shared'
 import { useTheme } from '../../contexts/ThemeContext'
-import { tinta } from '../../lib/tinta'
 import { Button, Spinner } from '../ui'
 import { Copo } from '../Navidad'
 import { cn } from '../ui/cn'
@@ -14,21 +13,6 @@ import type { ReactNode } from 'react'
 
 export type DatosPublicos = {
   bio: string; github_url: string; linkedin_url: string; portfolio_url: string; stack: string[]
-}
-
-function gradeLabel(n: number) {
-  if (n >= 9) return 'Excelente'
-  if (n >= 8) return 'Notable'
-  if (n >= 6) return 'Bien'
-  if (n >= 5) return 'Suficiente'
-  return 'Insuficiente'
-}
-
-/** Color de texto legible de una nota: éxito en teal, aviso ámbar, suspenso rosa. */
-function gradeClase(n: number) {
-  if (n >= 8) return { className: 'text-teal-light' }
-  if (n >= 6) return { style: { color: tinta('#f59e0b') } }
-  return { style: { color: tinta('#f43f5e') } }
 }
 
 export function Cabecera({ titulo, onVolver, extra }: { titulo: string; onVolver: () => void; extra?: ReactNode }) {
@@ -50,7 +34,7 @@ export function Cabecera({ titulo, onVolver, extra }: { titulo: string; onVolver
 }
 
 export interface PerfilViewProps {
-  usuario: Pick<Usuario, 'nombre' | 'email' | 'rol' | 'es_superadmin' | 'clase' | 'avatar_url' | 'promedio' | 'created_at' | 'bio' | 'github_url' | 'linkedin_url' | 'portfolio_url' | 'stack'>
+  usuario: Pick<Usuario, 'nombre' | 'email' | 'rol' | 'es_superadmin' | 'clase' | 'avatar_url' | 'created_at' | 'bio' | 'github_url' | 'linkedin_url' | 'portfolio_url' | 'stack'>
   avatarPreview: string | null
   uploading: boolean
   savingNombre: boolean
@@ -87,8 +71,6 @@ export default function PerfilView(p: PerfilViewProps) {
     if (e.key === 'Backspace' && stackInput === '' && stack.length > 0) setStack(prev => prev.slice(0, -1))
   }
 
-  const promedio = u.promedio ?? 0
-  const grado = gradeClase(promedio)
   const avatarSrc = p.avatarPreview ?? u.avatar_url ?? null
 
   return (
@@ -131,25 +113,12 @@ export default function PerfilView(p: PerfilViewProps) {
               </>
             }
           >
-            <dl className="grid grid-cols-2 gap-3 pt-5 border-t border-ov/[0.08]">
-              <div className="min-w-0">
-                <dt className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-text-muted">
-                  <TrendingUp size={11} aria-hidden="true" />Promedio
-                </dt>
-                <dd className={cn('mt-1 text-2xl font-black tabular-nums leading-none', grado.className)} style={grado.style}>
-                  {promedio.toFixed(2)}
-                </dd>
-                {promedio > 0 && <dd className="mt-1 text-xs font-semibold text-text-secondary">{gradeLabel(promedio)}</dd>}
-              </div>
-              <div className="min-w-0">
-                <dt className="flex items-center gap-1 text-2xs font-bold uppercase tracking-wider text-text-muted">
-                  <CalendarDays size={11} aria-hidden="true" />Miembro
-                </dt>
-                <dd className="mt-1 text-sm font-semibold text-text-primary first-letter:uppercase leading-snug">
-                  {new Date(u.created_at ?? '').toLocaleDateString('es', { month: 'long', year: 'numeric' })}
-                </dd>
-              </div>
-            </dl>
+            <p className="flex items-center gap-2 pt-5 border-t border-ov/[0.08] text-sm text-text-secondary">
+              <CalendarDays size={14} aria-hidden="true" className="text-text-muted" />
+              <span>Miembro desde <span className="font-semibold text-text-primary">
+                {new Date(u.created_at ?? '').toLocaleDateString('es', { month: 'long', year: 'numeric' })}
+              </span></span>
+            </p>
           </Identidad>
 
           {/* ── Ajustes ── */}

@@ -104,9 +104,11 @@ export interface ActividadEstado {
 }
 
 export interface Anuncio {
-  id: string
+  id: number
   titulo: string
   contenido: string
+  /** Ruta interna opcional (p. ej. /docs/<id>) que el modal ofrece abrir. */
+  enlace: string | null
   activo: boolean
   created_at: string
   created_by: string
