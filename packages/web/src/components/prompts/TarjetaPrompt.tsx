@@ -87,7 +87,11 @@ export default function TarjetaPrompt({
         <span className="text-xs text-text-muted sm:ml-1">Abrir en</span>
         {ABRIR_EN.map(a => (
           <a key={a.label} href={a.url(p.contenido)} target="_blank" rel="noopener noreferrer"
-            aria-label={`Abrir en ${a.label} (se abre en una pestaña nueva)`}
+            onClick={a.copiar ? onCopiar : undefined}
+            title={a.copiar ? 'Copia el prompt y abre Gemini: pégalo con Ctrl+V' : undefined}
+            aria-label={a.copiar
+              ? `Copiar el prompt y abrir ${a.label} para pegarlo (se abre en una pestaña nueva)`
+              : `Abrir en ${a.label} (se abre en una pestaña nueva)`}
             className={cn('inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-ov/[0.1] text-text-secondary hover:bg-ov/[0.05] hover:text-text-primary transition-colors', FOCO)}>
             {a.label}
             <ExternalLink size={11} aria-hidden="true" />

@@ -19,9 +19,10 @@ export const MODELOS: Record<PromptModelo, string> = {
   copilot: 'Copilot',
 }
 
-// Enlaces que abren el chat de la IA con el prompt ya escrito.
-export const ABRIR_EN: { label: string; url: (q: string) => string }[] = [
+// Enlaces que abren el chat de la IA con el prompt ya escrito. Gemini no acepta el
+// prompt por URL, así que se abre vacío y el prompt se copia al portapapeles para pegarlo.
+export const ABRIR_EN: { label: string; url: (q: string) => string; copiar?: boolean }[] = [
   { label: 'ChatGPT', url: q => `https://chatgpt.com/?q=${encodeURIComponent(q)}` },
   { label: 'Claude',  url: q => `https://claude.ai/new?q=${encodeURIComponent(q)}` },
-  { label: 'Gemini',  url: q => `https://gemini.google.com/app?q=${encodeURIComponent(q)}` },
+  { label: 'Gemini',  url: () => 'https://gemini.google.com/app', copiar: true },
 ]
