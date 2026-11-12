@@ -157,7 +157,7 @@ export default function LectorView(p: LectorViewProps) {
         <div className="min-w-0 flex-1">
           <h1 className="font-extrabold text-lg md:text-xl leading-tight tracking-tight text-text-primary line-clamp-2">{coleccion.titulo}</h1>
           <p className="mt-0.5 text-xs text-text-muted truncate">
-            <span className="font-bold" style={{ color: tinta(color) }}>{materiaLabel(coleccion.materia)}</span>
+            <span className="font-bold" style={{ color: tinta(color) }}>{materiaLabel(coleccion.materia)}{coleccion.ut != null && ` · UT ${coleccion.ut}`}</span>
             {' · '}<span className="tabular-nums">{paginas.length}</span> {paginas.length === 1 ? 'página' : 'páginas'}
             {coleccion.descripcion ? <span className="hidden md:inline"> · {coleccion.descripcion}</span> : null}
           </p>

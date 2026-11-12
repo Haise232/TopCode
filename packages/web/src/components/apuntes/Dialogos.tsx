@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { BookOpen, Download, ExternalLink, File, Upload, X } from 'lucide-react'
+import { BookOpen, Download, ExternalLink, File, FolderInput, Layers, Upload, X } from 'lucide-react'
 import { MATERIAS } from '@topcode/shared'
 import type { ApunteConAutor } from '../../hooks/useApuntes'
 import { Button } from '../ui'
@@ -8,47 +8,65 @@ import { cn } from '../ui/cn'
 import { FOCO } from '../ui/estilos'
 import Dialogo from '../notas/Dialogo'
 import IconoTipo from './IconoTipo'
+import { UtSelect } from '../ui/Unidades'
 import { TIPO_CONFIG, type TipoApunte } from './tipos'
 import { mez } from '../ui/estilos'
 import { tinta } from '../../lib/tinta'
 
 const INPUT = 'bg-input border border-ov/[0.08] rounded-xl px-4 py-3 text-text-primary text-sm w-full outline-none transition-[border-color,box-shadow] duration-200 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]'
 
-/** Confirmación de subida con selector de materia. */
-export function SubirDialogo({
-  archivo, tipo, materia, onMateria, subiendo, onConfirm, onClose,
+/**
+ * Asignatura y UT de un apunte: al subirlo (archivo nuevo) o al moverlo
+ * a otra carpeta (apunte existente).
+ */
+export function ClasificarDialogo({
+  titulo, subtitulo, tipo, materia, onMateria, ut, onUt, guardando, modo, onConfirm, onClose,
 }: {
-  archivo: File
+  titulo: string
+  subtitulo: string
   tipo: TipoApunte
   materia: string
   onMateria: (m: string) => void
-  subiendo: boolean
+  ut: number | null
+  onUt: (ut: number | null) => void
+  guardando: boolean
+  modo: 'subir' | 'mover'
   onConfirm: () => void
   onClose: () => void
 }) {
+  const subir = modo === 'subir'
   return (
     <Dialogo
-      idTitulo="subir-apunte-titulo"
-      titulo={archivo.name}
-      subtitulo={`${(archivo.size / 1024 / 1024).toFixed(1)} MB · ${TIPO_CONFIG[tipo].nombre}`}
+      idTitulo="clasificar-apunte-titulo"
+      titulo={titulo}
+      subtitulo={subtitulo}
       onClose={onClose}
       icono={<IconoTipo tipo={tipo} />}
     >
-      <div className="flex flex-col gap-1.5 px-5 sm:px-6 pb-5">
-        <label htmlFor="subir-materia" className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
-          <BookOpen size={12} aria-hidden="true" />
-          Materia <span className="text-text-muted font-normal">(opcional)</span>
-        </label>
-        <select id="subir-materia" value={materia} onChange={e => onMateria(e.target.value)}
-          className={cn(INPUT, !materia && 'text-text-muted')}>
-          <option value="">Sin categoría</option>
-          {MATERIAS.map(m => <option key={m.codigo} value={m.nombreCorto}>{m.nombreCorto}</option>)}
-        </select>
+      <div className="grid grid-cols-[1fr_7.5rem] gap-3 px-5 sm:px-6 pb-5">
+        <div className="flex flex-col gap-1.5 min-w-0">
+          <label htmlFor="apunte-materia" className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+            <BookOpen size={12} aria-hidden="true" /> Asignatura
+          </label>
+          <select id="apunte-materia" value={materia} onChange={e => onMateria(e.target.value)}
+            className={cn(INPUT, !materia && 'text-text-muted')}>
+            <option value="">Sin asignatura</option>
+            {MATERIAS.map(m => <option key={m.codigo} value={m.nombreCorto}>{m.nombreCorto}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="apunte-ut" className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+            <Layers size={12} aria-hidden="true" /> Unidad
+          </label>
+          <UtSelect id="apunte-ut" value={ut} onChange={onUt} className={INPUT} />
+        </div>
       </div>
       <div className="flex gap-3 px-5 sm:px-6 py-4 shrink-0 border-t border-ov/[0.07] pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Button type="button" variant="ghost" onClick={onClose} className="flex-1 py-3 text-sm">Cancelar</Button>
-        <Button onClick={onConfirm} disabled={subiendo} loading={subiendo} icon={subiendo ? undefined : <Upload size={15} aria-hidden="true" />} className="flex-[2] py-3 text-sm">
-          {subiendo ? 'Subiendo…' : 'Subir'}
+        <Button onClick={onConfirm} disabled={guardando} loading={guardando}
+          icon={guardando ? undefined : subir ? <Upload size={15} aria-hidden="true" /> : <FolderInput size={15} aria-hidden="true" />}
+          className="flex-[2] py-3 text-sm">
+          {subir ? (guardando ? 'Subiendo…' : 'Subir') : (guardando ? 'Guardando…' : 'Mover')}
         </Button>
       </div>
     </Dialogo>
@@ -74,7 +92,7 @@ export function VistaPrevia({ apunte, onClose }: { apunte: ApunteConAutor; onClo
           <IconoTipo tipo={apunte.tipo} size={36} />
           <div className="min-w-0">
             <h2 id="preview-titulo" className="font-semibold text-sm text-text-primary truncate">{apunte.nombre}</h2>
-            {apunte.materia && <p className="text-xs text-text-muted truncate">{apunte.materia}</p>}
+            {apunte.materia && <p className="text-xs text-text-muted truncate">{apunte.materia}{apunte.ut != null && ` · UT ${apunte.ut}`}</p>}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

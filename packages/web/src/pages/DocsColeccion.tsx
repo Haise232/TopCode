@@ -150,7 +150,7 @@ export default function DocsColeccion() {
   }, [])
 
   const coleccionInitial = useMemo<ColeccionInput | undefined>(
-    () => coleccion ? { titulo: coleccion.titulo, descripcion: coleccion.descripcion, materia: coleccion.materia } : undefined,
+    () => coleccion ? { titulo: coleccion.titulo, descripcion: coleccion.descripcion, materia: coleccion.materia, ut: coleccion.ut } : undefined,
     [coleccion]
   )
 

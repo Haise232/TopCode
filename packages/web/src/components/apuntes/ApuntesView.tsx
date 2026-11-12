@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { CloudUpload, Inbox, LayoutGrid, LayoutList, RefreshCw, Search, SearchX, Upload, Users, X } from 'lucide-react'
+import { CloudUpload, Inbox, LayoutGrid, LayoutList, RefreshCw, Search, SearchX, Upload, X } from 'lucide-react'
+import { MATERIAS } from '@topcode/shared'
 import type { ApunteConAutor } from '../../hooks/useApuntes'
 import { useTheme } from '../../contexts/ThemeContext'
 import { tinta } from '../../lib/tinta'
@@ -10,8 +11,12 @@ import { Seccion } from '../ui/Seccion'
 import { FOCO, SUPERFICIE } from '../ui/estilos'
 import { SkeletonBox } from '../Skeleton'
 import { FilaApunte, TarjetaApunte } from './TarjetaApunte'
-import { SubirDialogo, VistaPrevia } from './Dialogos'
+import { VistaPrevia } from './Dialogos'
 import { TIPO_CONFIG, type FiltroTipo, type TipoApunte } from './tipos'
+import { CabeceraUt, CarpetaAsignatura, VolverAsignaturas, agruparPorUt } from '../ui/Unidades'
+
+/** Valor de `asignatura` para los apuntes sin asignatura. */
+export const SIN_ASIGNATURA = '__sin'
 
 const ACCEPT = '.pdf,image/*,.doc,.docx,.txt,.pptx,.xlsx'
 const CHIP = 'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors duration-150'
@@ -23,28 +28,14 @@ export interface ApuntesViewProps {
   apuntes: ApunteConAutor[]
   subiendo: boolean
   refreshing: boolean
+  /** Asignatura abierta (nombre corto o SIN_ASIGNATURA); null = lista de asignaturas. */
+  asignatura: string | null
+  onAsignatura: (a: string | null) => void
   onRefresh: () => void
   /** Archivo elegido (input o arrastrado): la página valida y abre el diálogo. */
   onArchivo: (file: File) => void
   onEliminar: (ap: ApunteConAutor) => void
-  // Diálogo de subida
-  archivoPendiente: File | null
-  tipoPendiente: TipoApunte
-  materiaPendiente: string
-  onMateriaPendiente: (m: string) => void
-  onConfirmarSubida: () => void
-  onCancelarSubida: () => void
-}
-
-function Avatar({ nombre, url }: { nombre: string; url?: string | null }) {
-  if (url) return <img src={url} alt="" loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover shrink-0" />
-  const hue = nombre.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360
-  return (
-    <span aria-hidden="true" className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
-      style={{ background: `hsla(${hue},55%,60%,0.25)`, color: tinta(`hsl(${hue},70%,62%)`) }}>
-      {nombre[0]?.toUpperCase() ?? '?'}
-    </span>
-  )
+  onMover: (ap: ApunteConAutor) => void
 }
 
 function Vacio({ Icon, titulo, mensaje, accion, compacto }: {
@@ -88,46 +79,58 @@ export default function ApuntesView(p: ApuntesViewProps) {
   const { navidad } = useTheme()
   const [busqueda, setBusqueda] = useState('')
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
-  const [filtroMateria, setFiltroMateria] = useState('todas')
   const [vistaLista, setVistaLista] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [previewApunte, setPreviewApunte] = useState<ApunteConAutor | null>(null)
 
   const { apuntes } = p
-  const cuenta = useMemo(() => ({
-    todos: apuntes.length,
-    pdf: apuntes.filter(a => a.tipo === 'pdf').length,
-    imagen: apuntes.filter(a => a.tipo === 'imagen').length,
-    otro: apuntes.filter(a => a.tipo === 'otro').length,
-  }), [apuntes])
-  const totalUsuarios = useMemo(() => new Set(apuntes.map(a => a.usuario_id)).size, [apuntes])
-
-  const materiasEnUso = useMemo(() => {
-    const set = new Set<string>()
-    apuntes.forEach(a => { if (a.materia) set.add(a.materia) })
-    return Array.from(set).sort()
+  const cuenta = useMemo(() => {
+    const base = p.asignatura === null ? apuntes : apuntes.filter(a => (a.materia ?? SIN_ASIGNATURA) === p.asignatura)
+    return {
+      todos: base.length,
+      pdf: base.filter(a => a.tipo === 'pdf').length,
+      imagen: base.filter(a => a.tipo === 'imagen').length,
+      otro: base.filter(a => a.tipo === 'otro').length,
+    }
+  }, [apuntes, p.asignatura])
+  const asignaturas = useMemo(() => {
+    const cuentas = new Map<string, ApunteConAutor[]>()
+    for (const m of MATERIAS) cuentas.set(m.nombreCorto, [])
+    for (const a of apuntes) {
+      const k = a.materia ?? SIN_ASIGNATURA
+      if (!cuentas.has(k)) cuentas.set(k, [])
+      cuentas.get(k)!.push(a)
+    }
+    return [...cuentas.entries()]
+      .map(([clave, lista]) => ({
+        clave,
+        nombre: clave === SIN_ASIGNATURA ? 'Sin asignatura' : clave,
+        total: lista.length,
+        uts: new Set(lista.filter(a => a.ut != null).map(a => a.ut)).size,
+      }))
+      // Primero las que tienen apuntes; «Sin asignatura» siempre al final.
+      .sort((x, y) => Number(x.clave === SIN_ASIGNATURA) - Number(y.clave === SIN_ASIGNATURA)
+        || Number(y.total > 0) - Number(x.total > 0) || x.nombre.localeCompare(y.nombre, 'es'))
   }, [apuntes])
 
+  const enAsignatura = p.asignatura !== null
+  const nombreAsignatura = p.asignatura === SIN_ASIGNATURA ? 'Sin asignatura' : p.asignatura
+  const buscando = busqueda.trim() !== ''
+
   const filtrados = useMemo(() => apuntes.filter(a => {
-    const okB = busqueda.trim() === '' || a.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    const okA = !enAsignatura || (a.materia ?? SIN_ASIGNATURA) === p.asignatura
+    const okB = !buscando || a.nombre.toLowerCase().includes(busqueda.trim().toLowerCase())
     const okT = filtroTipo === 'todos' || a.tipo === filtroTipo
-    const okM = filtroMateria === 'todas' || a.materia === filtroMateria
-    return okB && okT && okM
-  }), [apuntes, busqueda, filtroTipo, filtroMateria])
+    return okA && okB && okT
+  }), [apuntes, enAsignatura, p.asignatura, buscando, busqueda, filtroTipo])
 
-  const mios = useMemo(() => filtrados.filter(a => a.usuario_id === p.usuarioId), [filtrados, p.usuarioId])
-  const deCompaneros = useMemo(() => filtrados.filter(a => a.usuario_id !== p.usuarioId), [filtrados, p.usuarioId])
-  const grupos = useMemo(() => {
-    const g = deCompaneros.reduce<Record<string, { nombre: string; avatar: string | null; archivos: ApunteConAutor[] }>>((acc, ap) => {
-      if (!acc[ap.usuario_id]) acc[ap.usuario_id] = { nombre: ap.usuarios?.nombre ?? 'Usuario desconocido', avatar: ap.usuarios?.avatar_url ?? null, archivos: [] }
-      acc[ap.usuario_id].archivos.push(ap)
-      return acc
-    }, {})
-    return Object.entries(g).sort(([, a], [, b]) => a.nombre.localeCompare(b.nombre))
-  }, [deCompaneros])
+  const porUt = useMemo(
+    () => agruparPorUt([...filtrados].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true })), a => a.ut),
+    [filtrados],
+  )
 
-  const hayFiltros = busqueda.trim() !== '' || filtroTipo !== 'todos' || filtroMateria !== 'todas'
-  const limpiar = () => { setBusqueda(''); setFiltroTipo('todos'); setFiltroMateria('todas') }
+  const hayFiltros = buscando || filtroTipo !== 'todos'
+  const limpiar = () => { setBusqueda(''); setFiltroTipo('todos') }
 
   function onInput(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -147,9 +150,14 @@ export default function ApuntesView(p: ApuntesViewProps) {
     onDrop,
   }
 
-  function lista(archivos: ApunteConAutor[], puedeEliminar: (ap: ApunteConAutor) => boolean) {
+  function lista(archivos: ApunteConAutor[], mostrarUbicacion = false) {
+    const gestiona = (ap: ApunteConAutor) => p.canManage && ap.clase === p.claseUsuario
     const props = (ap: ApunteConAutor) => ({
-      ap, canDelete: puedeEliminar(ap), onDelete: () => p.onEliminar(ap), onPreview: () => setPreviewApunte(ap),
+      ap, mostrarUbicacion,
+      canDelete: gestiona(ap),
+      onDelete: () => p.onEliminar(ap),
+      onMover: gestiona(ap) ? () => p.onMover(ap) : undefined,
+      onPreview: () => setPreviewApunte(ap),
     })
     return vistaLista ? (
       <div className="flex flex-col gap-2">{archivos.map(ap => <FilaApunte key={ap.id} {...props(ap)} />)}</div>
@@ -175,14 +183,17 @@ export default function ApuntesView(p: ApuntesViewProps) {
 
         {/* ── Cabecera ── */}
         <header className="flex justify-between items-start gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2.5">
-              <h1 className="font-extrabold text-3xl md:text-4xl tracking-tight text-text-primary">Apuntes</h1>
-              {navidad && <Copo size={18} className="text-gold-light" />}
+          <div className="min-w-0 flex flex-col">
+            {enAsignatura && <VolverAsignaturas onClick={() => { limpiar(); p.onAsignatura(null) }} />}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h1 className="font-extrabold text-3xl md:text-4xl tracking-tight text-text-primary truncate">{enAsignatura ? nombreAsignatura : 'Apuntes'}</h1>
+              {navidad && <Copo size={18} className="text-gold-light shrink-0" />}
             </div>
             <div className="mt-2 flex items-center gap-x-3 gap-y-1 flex-wrap text-xs text-text-muted">
-              <span><b className="font-bold text-text-primary tabular-nums">{apuntes.length}</b> archivo{apuntes.length !== 1 ? 's' : ''}</span>
-              <span><b className="font-bold text-text-primary tabular-nums">{totalUsuarios}</b> usuario{totalUsuarios !== 1 ? 's' : ''}</span>
+              <span><b className="font-bold text-text-primary tabular-nums">{cuenta.todos}</b> archivo{cuenta.todos !== 1 ? 's' : ''}</span>
+              {enAsignatura
+                ? <span><b className="font-bold text-text-primary tabular-nums">{porUt.filter(([ut]) => ut != null).length}</b> UT</span>
+                : <span><b className="font-bold text-text-primary tabular-nums">{asignaturas.filter(a => a.total > 0).length}</b> asignaturas con apuntes</span>}
               {cuenta.pdf > 0 && <span style={{ color: tinta(TIPO_CONFIG.pdf.color) }} className="font-semibold">{cuenta.pdf} PDF</span>}
               {cuenta.imagen > 0 && <span style={{ color: tinta(TIPO_CONFIG.imagen.color) }} className="font-semibold">{cuenta.imagen} img</span>}
             </div>
@@ -213,7 +224,7 @@ export default function ApuntesView(p: ApuntesViewProps) {
               <div className="relative flex-1 min-w-0">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" aria-hidden="true" />
                 <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                  placeholder="Buscar archivos…" aria-label="Buscar archivos"
+                  placeholder={enAsignatura ? `Buscar en ${nombreAsignatura}…` : 'Buscar en todos los apuntes…'} aria-label="Buscar archivos"
                   className="bg-input border border-ov/[0.08] rounded-xl pl-10 pr-10 py-2.5 text-text-primary text-sm placeholder:text-text-muted w-full outline-none transition-[border-color,box-shadow] duration-200 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--c-primary)/0.12)]" />
                 {busqueda && (
                   <button onClick={() => setBusqueda('')} aria-label="Borrar búsqueda"
@@ -234,7 +245,7 @@ export default function ApuntesView(p: ApuntesViewProps) {
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div role="group" aria-label="Filtrar por tipo" className="flex items-center gap-2">
+              {(enAsignatura || buscando) && <div role="group" aria-label="Filtrar por tipo" className="flex items-center gap-2">
                 {FILTROS.map(f => {
                   const activo = filtroTipo === f.key
                   const color = f.key === 'todos' ? null : TIPO_CONFIG[f.key as TipoApunte].color
@@ -249,18 +260,7 @@ export default function ApuntesView(p: ApuntesViewProps) {
                     </button>
                   )
                 })}
-              </div>
-              {materiasEnUso.length > 0 && (
-                <>
-                  <label htmlFor="filtro-materia" className="sr-only">Filtrar por materia</label>
-                  <select id="filtro-materia" value={filtroMateria} onChange={e => setFiltroMateria(e.target.value)}
-                    className={cn(CHIP, FOCO, 'cursor-pointer pr-2 shrink-0',
-                      filtroMateria !== 'todas' ? 'bg-text-primary text-bg border-transparent' : 'bg-surface border-ov/[0.1] text-text-secondary')}>
-                    <option value="todas">Todas las materias</option>
-                    {materiasEnUso.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </>
-              )}
+              </div>}
               {hayFiltros && (
                 <button onClick={limpiar} className={cn('shrink-0 rounded-md text-xs font-semibold text-primary-light hover:underline underline-offset-4 px-1', FOCO)}>
                   Limpiar filtros
@@ -286,44 +286,37 @@ export default function ApuntesView(p: ApuntesViewProps) {
             </div>
             <input type="file" accept={ACCEPT} onChange={onInput} className="sr-only" />
           </label>
+        ) : !enAsignatura && !buscando ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {asignaturas.filter(a => a.clave !== SIN_ASIGNATURA || a.total > 0).map(a => (
+              <CarpetaAsignatura key={a.clave} nombre={a.nombre} colorKey={a.clave} total={a.total} uts={a.uts}
+                unidad={['archivo', 'archivos']} onClick={() => { limpiar(); p.onAsignatura(a.clave) }} />
+            ))}
+          </div>
         ) : filtrados.length === 0 ? (
-          <Vacio Icon={SearchX} titulo="Sin resultados"
-            mensaje={busqueda.trim() !== '' ? `No hay archivos para «${busqueda}».` : 'No hay archivos con ese filtro.'}
-            accion={<button onClick={limpiar} className={cn('mt-1 text-sm font-semibold px-5 py-2.5 rounded-xl bg-ov/[0.06] text-text-primary hover:bg-ov/[0.09] transition-colors', FOCO)}>Limpiar filtros</button>} />
+          hayFiltros ? (
+            <Vacio Icon={SearchX} titulo="Sin resultados"
+              mensaje={buscando ? `No hay archivos para «${busqueda}».` : 'No hay archivos con ese filtro.'}
+              accion={<button onClick={limpiar} className={cn('mt-1 text-sm font-semibold px-5 py-2.5 rounded-xl bg-ov/[0.06] text-text-primary hover:bg-ov/[0.09] transition-colors', FOCO)}>Limpiar filtros</button>} />
+          ) : (
+            <Vacio Icon={Inbox} titulo="Aún no hay apuntes de esta asignatura"
+              mensaje={p.canManage ? 'Usa «Subir archivo» o arrastra un archivo aquí: se guardará en esta asignatura.' : 'Cuando se suba material aparecerá aquí.'} />
+          )
+        ) : !enAsignatura ? (
+          <Seccion titulo="Resultados" extra={<span className="text-xs font-semibold tabular-nums text-text-muted">{filtrados.length}</span>}>
+            {lista(filtrados, true)}
+          </Seccion>
         ) : (
-          <>
-            <Seccion titulo="Mis apuntes" extra={<span className="text-xs font-semibold tabular-nums text-text-muted">{mios.length}</span>}>
-              {mios.length === 0
-                ? <Vacio compacto Icon={Inbox} titulo="Aún no subiste apuntes" mensaje='Usa el botón "Subir archivo" para compartir tus apuntes.' />
-                : lista(mios, () => true)}
-            </Seccion>
-
-            <Seccion titulo="Apuntes de compañeros" extra={<span className="text-xs font-semibold tabular-nums text-text-muted">{deCompaneros.length}</span>}>
-              {deCompaneros.length === 0 ? (
-                <Vacio compacto Icon={Users} titulo="Tus compañeros aún no subieron apuntes" mensaje="Cuando suban material aparecerá aquí." />
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {grupos.map(([uid, g]) => (
-                    <div key={uid} className="flex flex-col gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar nombre={g.nombre} url={g.avatar} />
-                        <h3 className="font-semibold text-sm truncate text-text-primary">{g.nombre}</h3>
-                        <span className="text-xs text-text-muted shrink-0">Compañero · <span className="tabular-nums font-semibold">{g.archivos.length}</span></span>
-                      </div>
-                      {lista(g.archivos, ap => p.canManage && ap.clase === p.claseUsuario)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Seccion>
-          </>
+          <div className="flex flex-col gap-7">
+            {porUt.map(([ut, archivos]) => (
+              <CabeceraUt key={ut ?? 'sin'} ut={ut} cuenta={archivos.length}>
+                {lista(archivos)}
+              </CabeceraUt>
+            ))}
+          </div>
         )}
       </div>
 
-      {p.archivoPendiente && (
-        <SubirDialogo archivo={p.archivoPendiente} tipo={p.tipoPendiente} materia={p.materiaPendiente}
-          onMateria={p.onMateriaPendiente} subiendo={p.subiendo} onConfirm={p.onConfirmarSubida} onClose={p.onCancelarSubida} />
-      )}
       {previewApunte && <VistaPrevia apunte={previewApunte} onClose={() => setPreviewApunte(null)} />}
     </div>
   )

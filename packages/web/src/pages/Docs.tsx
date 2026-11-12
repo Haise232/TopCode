@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MATERIAS } from '@topcode/shared'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { markDocsVisited } from '../hooks/useUnreadCounts'
 import { useDocColecciones, createColeccion, buscarDocs, type DocBusqueda, type ColeccionInput } from '../hooks/useDocs'
@@ -12,7 +11,9 @@ export default function Docs() {
   const navigate = useNavigate()
   const { usuario } = useAuth()
   const { colecciones, loading, error } = useDocColecciones()
-  const [filtro, setFiltro] = useState('todos')
+  const [params, setParams] = useSearchParams()
+  const asignatura = params.get('asignatura')
+  const abrirAsignatura = useCallback((a: string | null) => setParams(a ? { asignatura: a } : {}), [setParams])
   const [query, setQuery] = useState('')
   const [resultados, setResultados] = useState<DocBusqueda[] | null>(null)
   const [buscando, setBuscando] = useState(false)
@@ -37,15 +38,6 @@ export default function Docs() {
     return () => { cancelled = true; clearTimeout(id) }
   }, [query])
 
-  const materiasUsadas = useMemo(() => {
-    const set = new Set(colecciones.map(c => c.materia))
-    return [
-      { codigo: 'todos', nombreCorto: 'Todas' },
-      ...(set.has('general') ? [{ codigo: 'general', nombreCorto: 'General' }] : []),
-      ...MATERIAS.filter(m => set.has(m.codigo)),
-    ]
-  }, [colecciones])
-
   async function handleCrear(input: ColeccionInput) {
     const { id, error: e } = await createColeccion(input)
     if (e || !id) return e ?? 'No se pudo crear la colección.'
@@ -60,9 +52,8 @@ export default function Docs() {
         colecciones={colecciones}
         loading={loading}
         error={error}
-        materias={materiasUsadas}
-        filtro={filtro}
-        onFiltro={setFiltro}
+        asignatura={asignatura}
+        onAsignatura={abrirAsignatura}
         query={query}
         onQuery={setQuery}
         resultados={resultados}
@@ -74,6 +65,7 @@ export default function Docs() {
       />
       <ColeccionModal
         open={showNueva}
+        defaults={asignatura ? { materia: asignatura } : undefined}
         title="Nueva colección"
         submitLabel="Crear"
         onClose={() => setShowNueva(false)}
@@ -82,6 +74,7 @@ export default function Docs() {
       <ImportModal
         open={showImport}
         colecciones={colecciones}
+        materiaInicial={asignatura ?? undefined}
         onClose={() => setShowImport(false)}
         onDone={id => { setShowImport(false); navigate(`/docs/${id}`) }}
       />

@@ -7,6 +7,7 @@ export interface DocColeccion {
   titulo: string
   descripcion: string | null
   materia: string
+  ut: number | null
   created_by: string | null
   autor: string
   created_at: string
@@ -47,7 +48,7 @@ export interface DocBusqueda {
   docs_colecciones: { titulo: string } | null
 }
 
-export type ColeccionInput = Pick<DocColeccion, 'titulo' | 'descripcion' | 'materia'>
+export type ColeccionInput = Pick<DocColeccion, 'titulo' | 'descripcion' | 'materia' | 'ut'>
 
 export const SELECT_CLASS =
   'w-full bg-input border border-border rounded-xl px-3 py-3 text-sm text-text-primary outline-none focus:border-primary/50'

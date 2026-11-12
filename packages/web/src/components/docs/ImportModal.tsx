@@ -22,6 +22,8 @@ interface ImportModalProps {
   colecciones?: DocColeccion[]
   /** Si se indica, se importa directamente en esta colección */
   coleccionFija?: DocColeccion
+  /** Asignatura con la que se crea la colección nueva (la que está abierta). */
+  materiaInicial?: string
 }
 
 async function leerArchivos(files: FileList): Promise<{ archivos: ArchivoMd[]; omitidos: string[]; carpeta: string | null }> {
@@ -55,7 +57,7 @@ async function leerArchivos(files: FileList): Promise<{ archivos: ArchivoMd[]; o
   return { archivos, omitidos, carpeta }
 }
 
-export default function ImportModal({ open, onClose, onDone, colecciones = [], coleccionFija }: ImportModalProps) {
+export default function ImportModal({ open, onClose, onDone, colecciones = [], coleccionFija, materiaInicial }: ImportModalProps) {
   const filesRef = useRef<HTMLInputElement>(null)
   const folderRef = useRef<HTMLInputElement>(null)
   const [archivos, setArchivos] = useState<ArchivoMd[]>([])
@@ -64,14 +66,15 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
   const [existenteId, setExistenteId] = useState('')
   const [titulo, setTitulo] = useState('')
   const [materia, setMateria] = useState('general')
+  const [ut, setUt] = useState<number | null>(null)
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setArchivos([]); setOmitidos([]); setError(null)
-    setDestino('nueva'); setExistenteId(''); setTitulo(''); setMateria('general')
-  }, [open])
+    setDestino('nueva'); setExistenteId(''); setTitulo(''); setMateria(materiaInicial ?? 'general'); setUt(null)
+  }, [open, materiaInicial])
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
@@ -92,7 +95,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
     let coleccionId = coleccionFija?.id ?? (destino === 'existente' ? existenteId : '')
     if (!coleccionFija && destino === 'nueva') {
       if (!titulo.trim()) { setError('Ponle un título a la colección.'); setImporting(false); return }
-      const res = await createColeccion({ titulo: titulo.trim(), descripcion: null, materia })
+      const res = await createColeccion({ titulo: titulo.trim(), descripcion: null, materia, ut })
       if (res.error || !res.id) { setError(res.error ?? 'No se pudo crear la colección.'); setImporting(false); return }
       coleccionId = res.id
     }
@@ -179,7 +182,7 @@ export default function ImportModal({ open, onClose, onDone, colecciones = [], c
                 <label htmlFor={idTitulo} className={ETIQUETA}>Título de la colección</label>
                 <input id={idTitulo} value={titulo} maxLength={200} onChange={e => setTitulo(e.target.value)} className={INPUT} />
               </div>
-              <MateriaSelect value={materia} onChange={setMateria} />
+              <MateriaSelect value={materia} onChange={setMateria} ut={ut} onUt={setUt} />
             </>
           ) : (
             <div className="flex flex-col gap-1.5">

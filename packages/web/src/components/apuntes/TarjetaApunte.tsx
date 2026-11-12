@@ -1,4 +1,4 @@
-import { BookOpen, Download, ExternalLink, Eye, Trash2 } from 'lucide-react'
+import { BookOpen, Download, ExternalLink, Eye, FolderInput, Trash2 } from 'lucide-react'
 import type { ApunteConAutor } from '../../hooks/useApuntes'
 import { tinta } from '../../lib/tinta'
 import { cn } from '../ui/cn'
@@ -9,13 +9,13 @@ import { TIPO_CONFIG, extension, fechaCorta } from './tipos'
 const ACCION = cn('flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-ov/[0.06] transition-colors', FOCO)
 const ELIMINAR = cn('flex items-center justify-center rounded-lg text-text-muted hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-500/10 transition-colors', FOCO)
 
-function ChipMateria({ materia }: { materia: string }) {
+function ChipMateria({ materia, ut }: { materia: string; ut: number | null }) {
   const c = materiaColor(materia)
   return (
     <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full max-w-full"
       style={{ background: mez(c, 14), color: tinta(c) }}>
       <BookOpen size={10} aria-hidden="true" className="shrink-0" />
-      <span className="truncate">{materia}</span>
+      <span className="truncate">{materia}{ut != null && ` · UT ${ut}`}</span>
     </span>
   )
 }
@@ -30,10 +30,31 @@ function Extension({ ap }: { ap: ApunteConAutor }) {
   )
 }
 
-interface Props { ap: ApunteConAutor; canDelete: boolean; onDelete: () => void; onPreview: () => void }
+interface Props {
+  ap: ApunteConAutor
+  canDelete: boolean
+  onDelete: () => void
+  onPreview: () => void
+  /** Solo quien gestiona los apuntes puede cambiarlos de asignatura o UT. */
+  onMover?: () => void
+  /** Muestra asignatura y UT (resultados de búsqueda, fuera de su carpeta). */
+  mostrarUbicacion?: boolean
+}
+
+function subtitulo(ap: ApunteConAutor) {
+  return ap.usuarios?.nombre ? `${fechaCorta(ap.created_at)} · ${ap.usuarios.nombre}` : fechaCorta(ap.created_at)
+}
+
+function BotonMover({ ap, onMover }: { ap: ApunteConAutor; onMover: () => void }) {
+  return (
+    <button onClick={onMover} aria-label={`Mover ${ap.nombre}`} title="Cambiar asignatura o UT" className={cn(ACCION, 'w-9 h-9')}>
+      <FolderInput size={15} aria-hidden="true" />
+    </button>
+  )
+}
 
 /** Tarjeta de archivo (vista en rejilla). */
-export function TarjetaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
+export function TarjetaApunte({ ap, canDelete, onDelete, onPreview, onMover, mostrarUbicacion }: Props) {
   const canPreview = ap.tipo === 'pdf' || ap.tipo === 'imagen'
   return (
     <article className={cn(SUPERFICIE, 'p-4 flex flex-col gap-3 min-w-0')}>
@@ -41,11 +62,11 @@ export function TarjetaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
         <IconoTipo tipo={ap.tipo} />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold leading-snug line-clamp-2 break-words text-text-primary" title={ap.nombre}>{ap.nombre}</h3>
-          <p className="text-xs mt-0.5 text-text-muted">{fechaCorta(ap.created_at)}</p>
+          <p className="text-xs mt-0.5 text-text-muted truncate">{subtitulo(ap)}</p>
         </div>
         <Extension ap={ap} />
       </div>
-      {ap.materia && <div className="flex"><ChipMateria materia={ap.materia} /></div>}
+      {mostrarUbicacion && ap.materia && <div className="flex"><ChipMateria materia={ap.materia} ut={ap.ut} /></div>}
       <div className="flex items-center gap-1.5 mt-auto pt-3 border-t border-ov/[0.07]">
         {canPreview ? (
           <button onClick={onPreview}
@@ -61,6 +82,7 @@ export function TarjetaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
         <a href={ap.url} download aria-label={`Descargar ${ap.nombre}`} className={cn(ACCION, 'w-9 h-9')}>
           <Download size={15} aria-hidden="true" />
         </a>
+        {onMover && <BotonMover ap={ap} onMover={onMover} />}
         {canDelete && (
           <button onClick={onDelete} aria-label={`Eliminar ${ap.nombre}`} className={cn(ELIMINAR, 'w-9 h-9')}>
             <Trash2 size={15} aria-hidden="true" />
@@ -72,7 +94,7 @@ export function TarjetaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
 }
 
 /** Fila de archivo (vista en lista). */
-export function FilaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
+export function FilaApunte({ ap, canDelete, onDelete, onPreview, onMover, mostrarUbicacion }: Props) {
   const canPreview = ap.tipo === 'pdf' || ap.tipo === 'imagen'
   return (
     <div className={cn(SUPERFICIE, 'flex items-center gap-3 pl-3 pr-2 py-2 min-w-0')}>
@@ -80,8 +102,8 @@ export function FilaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold truncate text-text-primary" title={ap.nombre}>{ap.nombre}</p>
         <p className="text-xs mt-0.5 text-text-muted truncate">
-          {fechaCorta(ap.created_at)}
-          {ap.materia && <> · <span style={{ color: tinta(materiaColor(ap.materia)) }} className="font-medium">{ap.materia}</span></>}
+          {subtitulo(ap)}
+          {mostrarUbicacion && ap.materia && <> · <span style={{ color: tinta(materiaColor(ap.materia)) }} className="font-medium">{ap.materia}{ap.ut != null && ` · UT ${ap.ut}`}</span></>}
         </p>
       </div>
       <span className="hidden sm:inline-flex"><Extension ap={ap} /></span>
@@ -98,6 +120,7 @@ export function FilaApunte({ ap, canDelete, onDelete, onPreview }: Props) {
         <a href={ap.url} download aria-label={`Descargar ${ap.nombre}`} className={cn(ACCION, 'w-9 h-9')}>
           <Download size={15} aria-hidden="true" />
         </a>
+        {onMover && <BotonMover ap={ap} onMover={onMover} />}
         {canDelete && (
           <button onClick={onDelete} aria-label={`Eliminar ${ap.nombre}`} className={cn(ELIMINAR, 'w-9 h-9')}>
             <Trash2 size={15} aria-hidden="true" />

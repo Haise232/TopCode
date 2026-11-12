@@ -10,6 +10,7 @@ export type ApunteConAutor = {
   url: string
   tipo: 'pdf' | 'imagen' | 'otro'
   materia: string | null
+  ut: number | null
   created_at: string
   usuarios: { nombre: string; avatar_url: string | null } | null
 }
@@ -25,8 +26,10 @@ interface UseApuntesReturn {
     file: File,
     usuarioId: string,
     tipo: 'pdf' | 'imagen' | 'otro',
-    materia?: string | null
+    materia?: string | null,
+    ut?: number | null
   ) => Promise<{ error: string | null }>
+  clasificarApunte: (id: string, materia: string | null, ut: number | null) => Promise<{ error: string | null }>
   eliminarApunte: (ap: ApunteConAutor) => Promise<{ error: string | null }>
 }
 
@@ -96,7 +99,8 @@ export function useApuntes(clase: ClaseId | null | undefined): UseApuntesReturn 
     file: File,
     usuarioId: string,
     tipo: 'pdf' | 'imagen' | 'otro',
-    materia?: string | null
+    materia?: string | null,
+    ut?: number | null
   ): Promise<{ error: string | null }> => {
     if (file.size > 20 * 1024 * 1024) {
       return { error: 'El archivo no puede superar los 20 MB.' }
@@ -121,6 +125,7 @@ export function useApuntes(clase: ClaseId | null | undefined): UseApuntesReturn 
         url,
         tipo,
         materia: materia ?? null,
+        ut: ut ?? null,
         created_at: new Date().toISOString(),
         usuarios: null,
       }
@@ -128,7 +133,7 @@ export function useApuntes(clase: ClaseId | null | undefined): UseApuntesReturn 
 
       const { data, error: insertError } = await supabase
         .from('apuntes')
-        .insert({ usuario_id: usuarioId, clase: clase ?? null, nombre, url, tipo, materia: materia ?? null })
+        .insert({ usuario_id: usuarioId, clase: clase ?? null, nombre, url, tipo, materia: materia ?? null, ut: ut ?? null })
         .select('*, usuarios(nombre, avatar_url)')
         .single()
 
@@ -152,6 +157,17 @@ export function useApuntes(clase: ClaseId | null | undefined): UseApuntesReturn 
       setSubiendo(false)
     }
   }, [clase])
+
+  const clasificarApunte = useCallback(async (
+    id: string, materia: string | null, ut: number | null
+  ): Promise<{ error: string | null }> => {
+    const { error: updateError } = await supabase.from('apuntes').update({ materia, ut }).eq('id', id)
+    if (updateError) return { error: updateError.message }
+    const aplicar = (list: ApunteConAutor[]) => list.map(a => (a.id === id ? { ...a, materia, ut } : a))
+    setApuntes(aplicar)
+    if (cacheRef.current) cacheRef.current = { data: aplicar(cacheRef.current.data), ts: Date.now() }
+    return { error: null }
+  }, [])
 
   const eliminarApunte = useCallback(async (
     ap: ApunteConAutor
@@ -189,5 +205,5 @@ export function useApuntes(clase: ClaseId | null | undefined): UseApuntesReturn 
     return { error: null }
   }, [])
 
-  return { apuntes, loading, error, subiendo, init, refresh, subirApunte, eliminarApunte }
+  return { apuntes, loading, error, subiendo, init, refresh, subirApunte, clasificarApunte, eliminarApunte }
 }
