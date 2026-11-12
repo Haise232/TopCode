@@ -146,6 +146,8 @@ function transformCallout(node: Blockquote) {
   if (!m) return
 
   const type = m[1].toLowerCase()
+  // «-» = plegado (cerrado), «+» = plegable pero abierto: como en Obsidian
+  const fold = m[2]
   firstText.value = firstText.value.slice(m[0].length)
 
   // El título es todo lo que hay hasta el primer salto de línea del párrafo
@@ -171,11 +173,13 @@ function transformCallout(node: Blockquote) {
   const hasTitle = titleChildren.some(c => c.type !== 'text' || c.value.trim())
   const titleNode: Paragraph = {
     type: 'paragraph',
-    data: { hName: 'div', hProperties: { className: ['callout-title'], dataCallout: type } },
+    data: { hName: fold ? 'summary' : 'div', hProperties: { className: ['callout-title'], dataCallout: type } },
     children: hasTitle ? titleChildren : [{ type: 'text', value: type.charAt(0).toUpperCase() + type.slice(1) }],
   }
 
   if (first.children.length === 0) node.children.shift()
   node.children.unshift(titleNode)
-  node.data = { hName: 'div', hProperties: { className: ['callout'], dataCallout: type } }
+  node.data = fold
+    ? { hName: 'details', hProperties: { className: ['callout', 'callout-plegable'], dataCallout: type, open: fold === '+' } }
+    : { hName: 'div', hProperties: { className: ['callout'], dataCallout: type } }
 }

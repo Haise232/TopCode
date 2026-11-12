@@ -5,7 +5,7 @@ import rehypeHighlight from 'rehype-highlight'
 import type { Element, ElementContent } from 'hast'
 import {
   AlertTriangle, Bug, CheckCircle2, ClipboardList, Flame, HelpCircle, Info,
-  Lightbulb, ListChecks, Pencil, Quote, XCircle, FileText, Tag,
+  Lightbulb, ListChecks, Pencil, Quote, XCircle, FileText, Tag, ChevronRight,
 } from 'lucide-react'
 import { parseFrontmatter, parseWikiHref, remarkObsidian, slugify, normalizeTitle } from '../../lib/markdown'
 import { cn } from '../ui/cn'
@@ -142,6 +142,33 @@ function MarkdownView({ content, pages = [], onOpenPage, onMissingPage, showFron
         )
       }
       return <div className={className} {...rest}>{children}</div>
+    },
+
+    // Callouts plegables («> [!tip]-» / «> [!tip]+»): <details> nativo, accesible con teclado
+    details({ node, children }) {
+      const type = (node?.properties?.dataCallout as string | undefined) ?? 'note'
+      const config = CALLOUTS[type] ?? CALLOUTS.note
+      return (
+        <details
+          className="callout callout-plegable"
+          style={{ '--callout': config.color } as React.CSSProperties}
+          open={node?.properties?.open === true || undefined}
+        >
+          {children}
+        </details>
+      )
+    },
+
+    summary({ node, children }) {
+      const type = (node?.properties?.dataCallout as string | undefined) ?? 'note'
+      const config = CALLOUTS[type] ?? CALLOUTS.note
+      return (
+        <summary className="callout-title" style={{ color: tinta(config.color) }}>
+          <config.Icon size={15} className="shrink-0" />
+          <span className="flex-1">{children}</span>
+          <ChevronRight size={15} className="callout-chevron shrink-0" aria-hidden="true" />
+        </summary>
+      )
     },
 
     table({ children }) {

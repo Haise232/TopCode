@@ -313,6 +313,12 @@
 .md-body .callout > * + * { margin-top: 0.5rem; }
 .md-body .callout > p:first-of-type { margin-top: 0.4rem; }
 .md-body .callout-title { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--callout); }
+.md-body .callout-plegable > summary { cursor: pointer; list-style: none; user-select: none; border-radius: 6px; }
+.md-body .callout-plegable > summary::-webkit-details-marker { display: none; }
+.md-body .callout-plegable > summary:focus-visible { outline: 2px solid var(--callout); outline-offset: 3px; }
+.md-body .callout-plegable .callout-chevron { transition: transform 0.15s ease; opacity: 0.7; }
+.md-body .callout-plegable[open] .callout-chevron { transform: rotate(90deg); }
+.md-body .callout-plegable:not([open]) { padding-bottom: 0.75rem; }
 
 /* Resaltado de sintaxis (highlight.js) */
 .md-body .hljs-comment, .md-body .hljs-quote { color: #7d8aa0; font-style: italic; }
