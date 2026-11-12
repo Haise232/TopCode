@@ -9,6 +9,7 @@ import { useUnreadCounts, type UnreadCounts } from '../hooks/useUnreadCounts'
 import AnuncioModal from './AnuncioModal'
 import PrivateMessageToast from './PrivateMessageToast'
 import ActivityToast from './ActivityToast'
+import MobileNav, { type ItemMovil } from './MobileNav'
 import Pattern from './Pattern'
 import { Guirnalda, GorroNavidad } from './Navidad'
 import { cn } from './ui/cn'
@@ -44,14 +45,21 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/chat',        label: 'Chat',        Icon: MessageCircle,  badgeKey: 'chat', group: 'comunidad' },
 ]
 
-const MOBILE_ITEMS = NAV_ITEMS.filter(item => ['/', '/explorar', '/apuntes', '/foro', '/chat'].includes(item.to))
+// Móvil: los 4 destinos más usados en la barra; el resto en el panel «Más»
+const MOVIL_PRINCIPALES = ['/', '/calendar', '/docs', '/chat']
+const DESC_MOVIL: Record<string, string> = {
+  '/explorar': 'Compañeros', '/apuntes': 'Archivos', '/foro': 'Dudas', '/prompts': 'Para la IA', '/admin': 'Gestión',
+}
 const ADMIN_ITEM: NavItem = { to: '/admin', label: 'Admin', Icon: Shield, group: 'curso' }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { usuario } = useAuth()
   const isAdmin = usuario?.rol === 'admin'
   const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS
-  const mobileItems = isAdmin ? [...MOBILE_ITEMS, ADMIN_ITEM] : MOBILE_ITEMS
+  const movilPrincipales: ItemMovil[] = MOVIL_PRINCIPALES.map(to => NAV_ITEMS.find(i => i.to === to)!)
+  const movilResto: ItemMovil[] = items
+    .filter(i => !MOVIL_PRINCIPALES.includes(i.to))
+    .map(i => ({ ...i, desc: DESC_MOVIL[i.to] }))
   const [expanded, setExpanded] = useState(false)
   const location = useLocation()
   const unread = useUnreadCounts()
@@ -201,7 +209,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── Content ── */}
-      <main className="relative flex-1 min-h-0 overflow-hidden pb-[60px] md:pb-0">
+      <main className="relative flex-1 min-h-0 overflow-hidden pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
         <Pattern />
         <Guirnalda />
         <div className="relative z-10 h-full">
@@ -209,51 +217,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* ── Bottom nav — mobile only ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 flex items-stretch bg-surface/95 backdrop-blur-xl border-t border-ov/10 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.5)] h-[60px] pb-[env(safe-area-inset-bottom)]">
-        {mobileItems.map(({ to, label, Icon, badgeKey }) => {
-          const count = badgeKey ? (unread[badgeKey] as number ?? 0) : 0
-            const isDmItem = to === '/chat'
-          const dmSenders = isDmItem ? unread.dmSenders : []
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  "flex-1 flex flex-col items-center justify-center gap-0.5 transition-all duration-150 relative",
-                  isActive ? "text-primary-light" : "text-text-muted"
-                )
-              }
-              onTouchStart={() => { schedulePrefetch(to) }}
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="relative">
-                    <Icon size={20} />
-                    {count > 0 && (
-                      <span className="absolute -top-1.5 -right-2 flex items-center justify-center text-[8px] font-bold text-white rounded-full min-w-3 h-3 px-[3px] bg-gradient-to-br from-rose-400 to-rose-600 shadow-[0_1px_4px_rgba(238,90,111,0.35)]">
-                        {count > 9 ? '9+' : count}
-                      </span>
-                    )}
-                  </div>
-                  {isDmItem && dmSenders.length > 0 && !isActive ? (
-                    <span className="text-[8px] font-semibold leading-none truncate max-w-[52px]" style={{ color: 'var(--color-primary-light)' }}>
-                      {dmSenders[0]}{dmSenders.length > 1 ? ` +${dmSenders.length - 1}` : ''}
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-medium leading-none">{label}</span>
-                  )}
-                  {isActive && (
-                    <span className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full w-6 h-0.5 bg-primary-light" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          )
-        })}
-      </nav>
+      {/* ── Barra inferior (solo móvil) ── */}
+      <MobileNav
+        principales={movilPrincipales}
+        resto={movilResto}
+        unread={unread}
+        perfil={{ nombre: usuario?.nombre ?? 'Usuario', avatarUrl: usuario?.avatar_url ?? null, rol: isAdmin ? 'Admin' : 'Alumno' }}
+        onPrefetch={schedulePrefetch}
+      />
 
       {/* Modal de anuncios */}
       <AnuncioModal />

@@ -1,5 +1,5 @@
 import {
-  Calendar, GraduationCap, ClipboardCheck, ExternalLink, Github, Palette, School,
+  Calendar, GraduationCap, ExternalLink, Github, Palette, School,
   MessageCircle, FolderOpen, Sparkles, BookMarked, HelpCircle, Dices,
 } from 'lucide-react'
 import type { ElementType } from 'react'
@@ -37,8 +37,7 @@ const ACCESOS_INTERNOS = [
   { label: 'Docs',          desc: 'Documentación', Icon: BookMarked,     to: '/docs',                        color: '#fbbf24' },
   { label: 'Chat',          desc: 'General',       Icon: MessageCircle,  to: '/chat',                        color: 'rgb(var(--c-primary))' },
   { label: 'Apuntes',       desc: 'Archivos',      Icon: FolderOpen,     to: '/apuntes',                     color: '#fb923c' },
-  { label: 'Actividades',   desc: 'Tareas',        Icon: ClipboardCheck, to: '/calendar?vista=actividades',  color: '#818cf8' },
-  { label: 'Calendario',    desc: 'Eventos',       Icon: Calendar,       to: '/calendar',                    color: '#22d3ee' },
+  { label: 'Calendario',    desc: 'Eventos y tareas', Icon: Calendar,       to: '/calendar',                    color: '#22d3ee' },
   { label: 'Foro de dudas', desc: 'Preguntas',     Icon: HelpCircle,     to: '/foro',                        color: '#60a5fa' },
   { label: 'Prompts IA',    desc: 'Para la IA',    Icon: Sparkles,       to: '/prompts',                     color: '#a78bfa' },
 ]
@@ -55,7 +54,7 @@ function IconoColor({ Icon, className }: { Icon: ElementType; className?: string
 export function AccesosInternos({ onNavigate }: { onNavigate: (to: string) => void }) {
   return (
     <Seccion titulo="Tu espacio">
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 lg:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 lg:gap-3">
         {ACCESOS_INTERNOS.map(({ label, desc, Icon, to, color }) => (
           <button
             key={to}
@@ -63,7 +62,6 @@ export function AccesosInternos({ onNavigate }: { onNavigate: (to: string) => vo
             style={varsColor(color)}
             className={cn(
               'group flex items-center gap-3 p-3 text-left lg:flex-col lg:gap-2.5 lg:py-5 lg:text-center',
-              'last:col-span-2 sm:last:col-span-1',
               SUPERFICIE_PULSABLE,
             )}
           >

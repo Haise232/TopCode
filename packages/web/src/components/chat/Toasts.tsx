@@ -13,7 +13,7 @@ function Marco({ lado, visible, children }: { lado: 'izquierda' | 'derecha'; vis
       role="status"
       aria-live="polite"
       className={cn(
-        'fixed bottom-[76px] z-[9998] md:bottom-5 motion-safe:transition-[opacity,transform] motion-safe:duration-300',
+        'fixed bottom-[calc(76px+env(safe-area-inset-bottom))] z-[9998] md:bottom-5 motion-safe:transition-[opacity,transform] motion-safe:duration-300',
         izq ? 'left-4' : 'right-4',
         visible
           ? 'opacity-100 translate-x-0'
