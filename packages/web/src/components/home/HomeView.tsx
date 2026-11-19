@@ -10,6 +10,7 @@ import { Modal } from '../ui/Modal'
 import { cn } from '../ui/cn'
 import { AccesosInternos, EnlacesExternos } from './Accesos'
 import { FOCO, mez } from '../ui/estilos'
+import { Faltas } from './Faltas'
 import { HorarioHoy, HorarioSemana } from './Horario'
 import { Dudas, Proximamente, type DudaInicio } from './Lateral'
 
@@ -144,6 +145,9 @@ export default function HomeView({
             <Dudas dudas={dudasRecientes} onNavigate={onNavigate} />
           </div>
         </div>
+
+        {/* ── Faltas: horas máximas por módulo ─────────────────────────── */}
+        <Faltas />
 
         {/* ── Accesos ──────────────────────────────────────────────────── */}
         <AccesosInternos onNavigate={onNavigate} />
