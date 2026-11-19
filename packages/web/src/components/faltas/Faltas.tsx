@@ -23,7 +23,7 @@ type Estado = 'ok' | 'cuidado' | 'critico' | 'perdida'
 /** Códigos de la plataforma del instituto que no coinciden con la sigla del horario. */
 const ALIAS: Record<string, string> = { D5H: 'DPL' }
 
-/** ≥10 % cuidado, ≥15 % a punto, ≥20 % evaluación continua perdida. */
+/** ≥10 % apercibimiento, ≥15 % a punto, ≥20 % evaluación continua perdida. */
 function estadoDe(faltadas: number, horas: number): Estado {
   const p = faltadas / horas
   if (p >= 0.2) return 'perdida'
@@ -34,10 +34,12 @@ function estadoDe(faltadas: number, horas: number): Estado {
 
 const ESTADOS: Record<Estado, { texto: string; color: string; Icon: typeof Check }> = {
   ok:      { texto: 'Bien',               color: '#10b981', Icon: ShieldCheck },
-  cuidado: { texto: 'Cuidado',            color: '#f59e0b', Icon: AlertTriangle },
+  cuidado: { texto: 'Apercibimiento',     color: '#f59e0b', Icon: AlertTriangle },
   critico: { texto: 'A punto',            color: '#f97316', Icon: AlertTriangle },
   perdida: { texto: 'Evaluación perdida', color: '#f43f5e', Icon: Skull },
 }
+
+const ROJO = '#f43f5e'
 
 const fmt = (h: number) => h.toLocaleString('es', { maximumFractionDigits: 1 })
 const hoyISO = () => {
@@ -115,7 +117,7 @@ function Resumen({ porModulo }: { porModulo: { m: Modulo; h: number; estado: Est
       : total === 0 ? 'Sin faltas. ¡Sigue así!' : 'Todo bajo control'
   const sub = perdidas.length || riesgo.length
     ? [...perdidas, ...riesgo].map(x => x.m.nombre).join(' · ')
-    : 'Ningún módulo pasa del 10 % de faltas.'
+    : 'Ningún módulo llega al apercibimiento (10 %).'
 
   return (
     <div className="flex items-center gap-4 rounded-2xl p-4 md:p-5" style={{ ...varsColor(color), background: 'var(--c-suave)' }}>
@@ -391,7 +393,7 @@ function TarjetaModulo({
           <span className="absolute -top-[3px] left-1/2 w-0.5 h-4 rounded-full bg-text-faint/50" aria-hidden="true" />
           <div className="mt-1 flex justify-between text-2xs font-mono text-text-faint">
             <span>0</span>
-            <span>10 % · {fmt(aviso)} h</span>
+            <span>Apercibimiento · {fmt(aviso)} h</span>
             <span>20 %</span>
           </div>
         </div>
@@ -439,17 +441,28 @@ function TarjetaModulo({
 /** Fila compacta de solo lectura (modal de Inicio): faltadas, lo que queda y una barra fina. */
 function FilaSimple({ m, h, estado }: { m: Modulo; h: number; estado: Estado }) {
   const limite = m.horas * 0.2
+  const aviso = m.horas * 0.1
   const quedan = Math.max(0, limite - h)
-  const color = ESTADOS[estado].color
+  // En rojo desde el 75 % del apercibimiento (7,5 % de las horas): te estás acercando al 10 %
+  const alerta = h > 0 && h >= aviso * 0.75
+  const color = alerta ? ROJO : ESTADOS[estado].color
   return (
-    <li className="px-4 py-3" style={varsColor(materiaColor(m.nombre))}>
+    <li className={cn('px-4 py-3', alerta && 'bg-rose-subtle')} style={varsColor(materiaColor(m.nombre))}>
       <div className="flex items-center gap-3">
         <span className="shrink-0 w-1 self-stretch rounded-full bg-[var(--c)]" aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-text-primary truncate" title={m.nombre}>{m.nombre}</p>
-          <div className="mt-1.5 h-1.5 rounded-full bg-ov/[0.07] overflow-hidden" aria-hidden="true">
+          <div className={cn('mt-1.5 rounded-full bg-ov/[0.07] overflow-hidden', alerta ? 'h-2' : 'h-1.5')} aria-hidden="true">
             <div className="h-full rounded-full" style={{ width: `${Math.min(100, (h / limite) * 100)}%`, background: color }} />
           </div>
+          {alerta && (
+            <p className="mt-1 flex items-center gap-1 text-2xs font-bold" style={{ color: ROJO }}>
+              <AlertTriangle size={11} aria-hidden="true" />
+              {h < aviso
+                ? `Te acercas al apercibimiento: ${fmt(aviso - h)} h más y llega`
+                : estado === 'perdida' ? 'Has perdido la evaluación continua' : 'Ya tienes apercibimiento (10 %)'}
+            </p>
+          )}
         </div>
         <div className="shrink-0 grid grid-cols-2 gap-3 text-right">
           <div>
@@ -457,7 +470,7 @@ function FilaSimple({ m, h, estado }: { m: Modulo; h: number; estado: Estado }) 
             <p className="mt-0.5 text-2xs text-text-muted">faltadas</p>
           </div>
           <div className="min-w-[3.5rem]">
-            <p className="text-lg font-extrabold font-mono leading-none" style={{ color: estado === 'ok' ? undefined : color }}>
+            <p className="text-lg font-extrabold font-mono leading-none" style={{ color: alerta || estado !== 'ok' ? color : undefined }}>
               {estado === 'perdida' ? '0' : fmt(quedan)}
             </p>
             <p className="mt-0.5 text-2xs text-text-muted">te quedan</p>
@@ -559,7 +572,7 @@ export function Faltas({
       )}
 
       <p className="text-2xs text-text-faint text-center">
-        Cada sesión cuenta como 1 hora · Al 10 % te avisa, al 15 % estás a punto y al 20 % pierdes la evaluación continua.
+        Cada sesión cuenta como 1 hora · Al 10 % hay apercibimiento, al 15 % estás a punto y al 20 % pierdes la evaluación continua.
       </p>
     </div>
   )
