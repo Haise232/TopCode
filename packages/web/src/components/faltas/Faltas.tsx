@@ -436,6 +436,38 @@ function TarjetaModulo({
   )
 }
 
+/** Fila compacta de solo lectura (modal de Inicio): faltadas, lo que queda y una barra fina. */
+function FilaSimple({ m, h, estado }: { m: Modulo; h: number; estado: Estado }) {
+  const limite = m.horas * 0.2
+  const quedan = Math.max(0, limite - h)
+  const color = ESTADOS[estado].color
+  return (
+    <li className="px-4 py-3" style={varsColor(materiaColor(m.nombre))}>
+      <div className="flex items-center gap-3">
+        <span className="shrink-0 w-1 self-stretch rounded-full bg-[var(--c)]" aria-hidden="true" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-text-primary truncate" title={m.nombre}>{m.nombre}</p>
+          <div className="mt-1.5 h-1.5 rounded-full bg-ov/[0.07] overflow-hidden" aria-hidden="true">
+            <div className="h-full rounded-full" style={{ width: `${Math.min(100, (h / limite) * 100)}%`, background: color }} />
+          </div>
+        </div>
+        <div className="shrink-0 grid grid-cols-2 gap-3 text-right">
+          <div>
+            <p className="text-lg font-extrabold font-mono leading-none text-text-primary">{h}</p>
+            <p className="mt-0.5 text-2xs text-text-muted">faltadas</p>
+          </div>
+          <div className="min-w-[3.5rem]">
+            <p className="text-lg font-extrabold font-mono leading-none" style={{ color: estado === 'ok' ? undefined : color }}>
+              {estado === 'perdida' ? '0' : fmt(quedan)}
+            </p>
+            <p className="mt-0.5 text-2xs text-text-muted">te quedan</p>
+          </div>
+        </div>
+      </div>
+    </li>
+  )
+}
+
 /**
  * Faltas por módulo frente a los límites del 10 % y 20 %.
  * Con `editable` (página /faltas) añade el panel para apuntar y los botones de cada tarjeta;
@@ -492,32 +524,39 @@ export function Faltas({
 
       {editable && <Apuntar porDia={porDia} faltas={faltas} onAnadir={apuntar} />}
 
+
+      {editable ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {porModulo.map(({ m, propias, estado }) => (
+            <TarjetaModulo
+              key={m.sigla}
+              m={m}
+              propias={propias}
+              estado={estado}
+              acciones={{
+                onMas: () => void apuntar([{ modulo: m.sigla, fecha: hoyISO(), hora_inicio: null }]),
+                onMenos: () => { if (propias[0]) void quitar([propias[0].id]) },
+                onBorrar: id => void quitar([id]),
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <ul className="rounded-2xl border border-ov/[0.07] divide-y divide-ov/[0.06] overflow-hidden">
+          {porModulo.map(({ m, h, estado }) => <FilaSimple key={m.sigla} m={m} h={h} estado={estado} />)}
+        </ul>
+      )}
+
       {onGestionar && (
         <button
           onClick={onGestionar}
           className={cn('flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-bold bg-primary text-white hover:opacity-90 transition-opacity', FOCO)}
         >
           <CalendarPlus size={16} aria-hidden="true" />
-          Apuntar o editar faltas
+          Añadir faltas
           <ChevronRight size={16} aria-hidden="true" />
         </button>
       )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {porModulo.map(({ m, propias, estado }) => (
-          <TarjetaModulo
-            key={m.sigla}
-            m={m}
-            propias={propias}
-            estado={estado}
-            acciones={editable ? {
-              onMas: () => void apuntar([{ modulo: m.sigla, fecha: hoyISO(), hora_inicio: null }]),
-              onMenos: () => { if (propias[0]) void quitar([propias[0].id]) },
-              onBorrar: id => void quitar([id]),
-            } : undefined}
-          />
-        ))}
-      </div>
 
       <p className="text-2xs text-text-faint text-center">
         Cada sesión cuenta como 1 hora · Al 10 % te avisa, al 15 % estás a punto y al 20 % pierdes la evaluación continua.
