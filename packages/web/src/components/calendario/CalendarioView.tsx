@@ -1,5 +1,5 @@
 import { useState, type MutableRefObject } from 'react'
-import { CalendarDays, ChevronDown, ChevronUp, Plus, RefreshCw, Zap } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronUp, FileUp, Plus, RefreshCw, Zap } from 'lucide-react'
 import type { EventoCalendario, TipoEvento } from '@topcode/shared'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Copo } from '../Navidad'
@@ -26,6 +26,8 @@ export interface CalendarioViewProps {
   canManage: boolean
   claseUsuario: string | null | undefined
   onNuevo: () => void
+  /** Abre el importador de .ics (Moodle). */
+  onImportar: () => void
   onEditar: (ev: EventoCalendario) => void
   onEliminar: (ev: EventoCalendario) => void
   estadoDe: (ev: EventoCalendario) => EstadoActividad | undefined
@@ -158,6 +160,13 @@ export default function CalendarioView(p: CalendarioViewProps) {
               className={cn('w-10 h-10 flex items-center justify-center rounded-xl transition-colors hover:bg-ov/5 bg-ov/[0.03] text-text-secondary', FOCO)}>
               <RefreshCw size={15} className={p.refreshing ? 'animate-spin' : ''} aria-hidden="true" />
             </button>
+            {p.canManage && (
+              <button onClick={p.onImportar} aria-label="Importar calendario (.ics)" title="Importar calendario (.ics)"
+                className={cn('h-10 px-3 flex items-center gap-1.5 rounded-xl transition-colors hover:bg-ov/5 bg-ov/[0.03] text-text-secondary text-sm font-semibold', FOCO)}>
+                <FileUp size={15} aria-hidden="true" />
+                <span className="hidden sm:inline">Importar</span>
+              </button>
+            )}
             {botonNuevo}
           </div>
         </header>

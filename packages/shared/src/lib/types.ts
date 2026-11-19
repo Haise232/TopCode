@@ -83,6 +83,8 @@ export interface EventoCalendario {
   hora: string | null
   created_by: string
   created_at: string
+  /** UID del .ics del que se importó (Moodle); evita repetirlo. */
+  uid_externo?: string | null
 }
 
 export interface Actividad {

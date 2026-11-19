@@ -10,6 +10,8 @@ import AlertModal from '../components/AlertModal'
 import CalendarioEsqueleto from '../components/calendario/Esqueleto'
 import CalendarioView from '../components/calendario/CalendarioView'
 import Formulario from '../components/calendario/Formulario'
+import ImportarIcs, { type FilaImportar } from '../components/calendario/ImportarIcs'
+import { supabase } from '../lib/supabase'
 import type { EstadoActividad, FiltroEstado, FormState, Vista } from '../components/calendario/tipos'
 
 // ─── Vista (Exámenes / Actividades) ───────────────────────────────────────────
@@ -99,6 +101,7 @@ export default function CalendarPage() {
   const [editandoEvento, setEditandoEvento] = useState<EventoCalendario | null>(null)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [importando, setImportando] = useState(false)
 
   const viewYear = viewDate.getFullYear()
   const viewMonth = viewDate.getMonth()
@@ -187,6 +190,25 @@ export default function CalendarPage() {
     cerrarModal()
   }
 
+  /** Inserta los eventos del .ics; los que ya existen (mismo UID) se ignoran en la base de datos. */
+  async function handleImportar(filas: FilaImportar[]): Promise<{ error: string | null; nuevas: number }> {
+    if (!usuario?.clase) return { error: 'Configura tu clase en el perfil.', nuevas: 0 }
+    try {
+      const { data, error } = await supabase
+        .from('eventos')
+        .upsert(
+          filas.map(({ uid, ...f }) => ({ ...f, uid_externo: uid, created_by: usuario.id, clase: usuario.clase })),
+          { onConflict: 'uid_externo', ignoreDuplicates: true },
+        )
+        .select('id')
+      if (error) return { error: error.message, nuevas: 0 }
+      await refresh()
+      return { error: null, nuevas: data?.length ?? 0 }
+    } catch {
+      return { error: 'Error de conexión. Inténtalo de nuevo.', nuevas: 0 }
+    }
+  }
+
   function handleEliminar(ev: EventoCalendario) {
     setAlert({
       title: 'Eliminar evento',
@@ -273,6 +295,7 @@ export default function CalendarPage() {
         canManage={canManage}
         claseUsuario={usuario?.clase}
         onNuevo={abrirNuevo}
+        onImportar={() => setImportando(true)}
         onEditar={abrirEditar}
         onEliminar={handleEliminar}
         estadoDe={estadoDe}
@@ -308,6 +331,10 @@ export default function CalendarPage() {
           onSubmit={handleGuardar}
           onClose={cerrarModal}
         />
+      )}
+
+      {importando && (
+        <ImportarIcs existentes={todosEventos} onImportar={handleImportar} onClose={() => setImportando(false)} />
       )}
 
       <AlertModal

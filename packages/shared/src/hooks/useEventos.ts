@@ -44,9 +44,9 @@ export function useEventos(): UseEventosReturn {
     try {
       const { data, error: fetchError } = await supabase
         .from('eventos')
-        .select('id, clase, titulo, descripcion, materia, tipo, fecha, hora, created_by, created_at')
+        .select('id, clase, titulo, descripcion, materia, tipo, fecha, hora, created_by, created_at, uid_externo')
         .order('fecha', { ascending: true })
-        .limit(200)
+        .limit(500)
         .abortSignal(controller.signal)
 
       if (!mountedRef.current) return
