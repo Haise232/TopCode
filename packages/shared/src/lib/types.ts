@@ -172,5 +172,6 @@ export interface Falta {
   modulo: string // sigla del horario: 'AED', 'DAD'…
   fecha: string // 'YYYY-MM-DD'
   hora_inicio: string | null // 'HH:MM' si viene del horario; null si se añadió a mano
+  justificada: boolean // las justificadas cuentan un 25 % menos (ver PESO_JUSTIFICADA)
   created_at: string
 }

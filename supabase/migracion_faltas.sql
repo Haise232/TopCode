@@ -35,3 +35,16 @@ CREATE POLICY "faltas_delete_own" ON public.faltas
   FOR DELETE TO authenticated USING ((SELECT auth.uid()) = usuario_id);
 
 GRANT SELECT, INSERT, DELETE ON public.faltas TO authenticated;
+
+-- ────────────────────────────────────────────────────────────
+-- Faltas justificadas: cuentan un 25 % menos (0,75 h por sesión).
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE public.faltas ADD COLUMN IF NOT EXISTS justificada BOOLEAN NOT NULL DEFAULT false;
+
+DROP POLICY IF EXISTS "faltas_update_own" ON public.faltas;
+CREATE POLICY "faltas_update_own" ON public.faltas
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = usuario_id)
+  WITH CHECK ((SELECT auth.uid()) = usuario_id);
+
+GRANT UPDATE ON public.faltas TO authenticated;
