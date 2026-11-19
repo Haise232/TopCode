@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarDays, Check, CalendarOff } from 'lucide-react'
+import { CalendarDays, CalendarX2, Check, CalendarOff } from 'lucide-react'
 import type { HorarioClase } from '@topcode/shared'
 import { cn } from '../ui/cn'
 import { EnlaceAccion, Seccion } from '../ui/Seccion'
@@ -101,11 +101,12 @@ function ClasesTerminadas() {
 
 /** Horario del día (o del próximo lunes en fin de semana) con la clase en curso destacada. */
 export function HorarioHoy({
-  porDia, tieneClase, onVerSemana,
+  porDia, tieneClase, onVerSemana, onVerFaltas,
 }: {
   porDia: Record<number, HorarioClase[]>
   tieneClase: boolean
   onVerSemana: () => void
+  onVerFaltas: () => void
 }) {
   const ahora = useAhora(5_000)
   const diaSemana = ahora.getDay() // 0=Dom, 1=Lun ... 6=Sáb
@@ -123,7 +124,12 @@ export function HorarioHoy({
     <Seccion
       titulo={esFinDeSemana ? 'Próximo lunes' : `Horario — ${DIAS_NOMBRE[diaSemana]}`}
       subtitulo={`${clases.length} clases`}
-      extra={tieneClase ? <EnlaceAccion onClick={onVerSemana} Icon={CalendarDays}>Ver semana</EnlaceAccion> : undefined}
+      extra={
+        <>
+          <EnlaceAccion onClick={onVerFaltas} Icon={CalendarX2}>Faltas</EnlaceAccion>
+          {tieneClase && <EnlaceAccion onClick={onVerSemana} Icon={CalendarDays}>Ver semana</EnlaceAccion>}
+        </>
+      }
     >
       <div className={cn(SUPERFICIE, 'overflow-hidden')}>
         {clases.length === 0 && (

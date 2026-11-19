@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, GraduationCap, RefreshCw, Shield, Users, X } from 'lucide-react'
+import { CalendarDays, CalendarX2, GraduationCap, RefreshCw, Shield, Users, X } from 'lucide-react'
 import { claseInfo, type EventoCalendario, type HorarioClase, type Usuario } from '@topcode/shared'
 import { useTheme } from '../../contexts/ThemeContext'
 import { cuentaAtrasNavidad } from '../../lib/temporada'
@@ -55,6 +55,7 @@ export default function HomeView({
 }: HomeViewProps) {
   const { navidad } = useTheme()
   const [semanaAbierta, setSemanaAbierta] = useState(false)
+  const [faltasAbierto, setFaltasAbierto] = useState(false)
 
   const initial = (usuario?.nombre?.[0] ?? 'U').toUpperCase()
   const { texto: saludo, emoji } = saludoEmoji()
@@ -132,7 +133,7 @@ export default function HomeView({
         {/* ── Bento: horario a la izquierda; entregas y dudas a la derecha ── */}
         <div className="grid gap-8 lg:gap-6 lg:grid-cols-12 items-start">
           <div className="lg:col-span-7 min-w-0">
-            <HorarioHoy porDia={horarioPorDia} tieneClase={!!usuario?.clase} onVerSemana={() => setSemanaAbierta(true)} />
+            <HorarioHoy porDia={horarioPorDia} tieneClase={!!usuario?.clase} onVerSemana={() => setSemanaAbierta(true)} onVerFaltas={() => setFaltasAbierto(true)} />
           </div>
           <div className="lg:col-span-5 min-w-0 flex flex-col gap-8">
             <Proximamente
@@ -145,9 +146,6 @@ export default function HomeView({
             <Dudas dudas={dudasRecientes} onNavigate={onNavigate} />
           </div>
         </div>
-
-        {/* ── Faltas: horas máximas por módulo ─────────────────────────── */}
-        <Faltas />
 
         {/* ── Accesos ──────────────────────────────────────────────────── */}
         <AccesosInternos onNavigate={onNavigate} />
@@ -170,6 +168,26 @@ export default function HomeView({
           </div>
           <div className="p-4 md:p-5 max-h-[80vh] overflow-y-auto">
             <HorarioSemana porDia={horarioPorDia} />
+          </div>
+        </Modal>
+
+        <Modal open={faltasAbierto} onClose={() => setFaltasAbierto(false)} maxWidthClassName="max-w-3xl">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-overlay-6">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CalendarX2 size={16} className="shrink-0 text-primary-light" />
+              <h2 className="text-sm font-bold text-text-primary">Faltas</h2>
+              <span className="text-xs text-text-muted truncate">Horas máximas por módulo · 2º DAM</span>
+            </div>
+            <button
+              onClick={() => setFaltasAbierto(false)}
+              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-text-secondary hover:bg-ov/5 transition-colors"
+              aria-label="Cerrar"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-4 md:p-5 max-h-[80vh] overflow-y-auto">
+            <Faltas />
           </div>
         </Modal>
 

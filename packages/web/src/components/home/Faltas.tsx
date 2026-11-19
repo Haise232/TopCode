@@ -1,6 +1,5 @@
 import { cn } from '../ui/cn'
-import { Seccion } from '../ui/Seccion'
-import { SUPERFICIE, materiaColor, varsColor } from '../ui/estilos'
+import { materiaColor, varsColor } from '../ui/estilos'
 
 /** Módulos de 2º DAM con sus horas totales (currículo oficial, segundo curso: 1000 h). */
 const MODULOS: { codigo: string; nombre: string; horas: number }[] = [
@@ -40,8 +39,7 @@ function Limite({ etiqueta, horas, tono }: { etiqueta: string; horas: number; to
 /** Tabla de horas máximas de faltas por módulo (10 % y 20 % de las horas totales). */
 export function Faltas() {
   return (
-    <Seccion titulo="Faltas — 2º DAM" subtitulo="Horas máximas de ausencia por módulo (10 % y 20 % del total)">
-      <div className={cn(SUPERFICIE, 'overflow-hidden')}>
+    <div className="rounded-xl border border-ov/[0.07] overflow-hidden">
         <ul>
           {MODULOS.map((m, idx) => (
             <li key={m.codigo + m.nombre} style={varsColor(materiaColor(m.nombre))}>
@@ -78,7 +76,6 @@ export function Faltas() {
             <Limite etiqueta="20 %" horas={TOTAL * 0.2} tono="peligro" />
           </div>
         </div>
-      </div>
-    </Seccion>
+    </div>
   )
 }
