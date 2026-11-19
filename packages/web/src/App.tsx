@@ -21,6 +21,7 @@ const CalendarPage = lazy(() => import('./pages/Calendar'))
 const Admin       = lazy(() => import('./pages/Admin'))
 const Profile     = lazy(() => import('./pages/Profile'))
 const Prompts     = lazy(() => import('./pages/Prompts'))
+const Faltas      = lazy(() => import('./pages/Faltas'))
 const Foro        = lazy(() => import('./pages/Foro'))
 const ForoPost    = lazy(() => import('./pages/ForoPost'))
 
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="/calendar"    element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
         <Route path="/actividades" element={<Navigate to="/calendar?vista=actividades" replace />} />
         <Route path="/prompts"     element={<ProtectedRoute><Prompts /></ProtectedRoute>} />
+        <Route path="/faltas"      element={<ProtectedRoute><Faltas /></ProtectedRoute>} />
         <Route path="/recursos"    element={<Navigate to="/prompts" replace />} />
         <Route path="/foro"        element={<ProtectedRoute><Foro /></ProtectedRoute>} />
         <Route path="/foro/:id"    element={<ProtectedRoute><ForoPost /></ProtectedRoute>} />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, CalendarPlus, Check, ChevronDown, ClipboardPaste, Minus, Plus, ShieldCheck, Skull, X } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, Check, ChevronDown, ChevronRight, ClipboardPaste, Minus, Plus, ShieldCheck, Skull, X } from 'lucide-react'
 import { useFaltas, type Falta, type FaltaInput, type HorarioClase } from '@topcode/shared'
 import { cn } from '../ui/cn'
 import { FOCO, materiaColor, varsColor } from '../ui/estilos'
@@ -321,14 +321,13 @@ function Importar({ faltas, onAnadir }: { faltas: Falta[]; onAnadir: (filas: Fal
 
 /** Tarjeta de un módulo: barra hasta el 20 %, lo que queda y botones +/−. */
 function TarjetaModulo({
-  m, propias, estado, onMas, onMenos, onBorrar,
+  m, propias, estado, acciones,
 }: {
   m: Modulo
   propias: Falta[]
   estado: Estado
-  onMas: () => void
-  onMenos: () => void
-  onBorrar: (id: string) => void
+  /** Sin acciones la tarjeta es solo de lectura (modal de Inicio). */
+  acciones?: { onMas: () => void; onMenos: () => void; onBorrar: (id: string) => void }
 }) {
   const [abierta, setAbierta] = useState(false)
   const h = propias.length
@@ -358,9 +357,9 @@ function TarjetaModulo({
             <span className="text-3xl font-extrabold font-mono text-text-primary">{h}</span>
             <span className="text-sm font-mono text-text-muted"> / {fmt(limite)} h</span>
           </p>
-          <div className="flex items-center gap-1">
+          {acciones && <div className="flex items-center gap-1">
             <button
-              onClick={onMenos}
+              onClick={acciones.onMenos}
               disabled={h === 0}
               aria-label={`Quitar la última falta de ${m.nombre}`}
               className={cn('w-9 h-9 rounded-xl flex items-center justify-center bg-ov/[0.05] text-text-secondary hover:bg-ov/[0.09] disabled:opacity-30 transition-colors', FOCO)}
@@ -368,13 +367,13 @@ function TarjetaModulo({
               <Minus size={16} />
             </button>
             <button
-              onClick={onMas}
+              onClick={acciones.onMas}
               aria-label={`Añadir una hora de falta hoy en ${m.nombre}`}
               className={cn('w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--c)] text-white hover:opacity-90 transition-opacity', FOCO)}
             >
               <Plus size={16} />
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* Barra hasta el 20 %: la marca central es el 10 % */}
@@ -403,7 +402,7 @@ function TarjetaModulo({
             : <>Te quedan <b className="font-bold">{fmt(quedan)} h</b> para perder la evaluación continua</>}
         </p>
 
-        {h > 0 && (
+        {acciones && h > 0 && (
           <button
             onClick={() => setAbierta(a => !a)}
             aria-expanded={abierta}
@@ -413,7 +412,7 @@ function TarjetaModulo({
             {abierta ? 'Ocultar días' : `Ver días (${h})`}
           </button>
         )}
-        {abierta && (
+        {acciones && abierta && (
           <ul className="mt-2 flex flex-col gap-1">
             {propias.map(f => (
               <li key={f.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-ov/[0.035] text-xs">
@@ -421,7 +420,7 @@ function TarjetaModulo({
                 <span className="flex items-center gap-2">
                   <span className="font-mono text-text-muted">{f.hora_inicio ?? 'manual'}</span>
                   <button
-                    onClick={() => onBorrar(f.id)}
+                    onClick={() => acciones.onBorrar(f.id)}
                     aria-label="Borrar esta falta"
                     className={cn('w-6 h-6 rounded-md flex items-center justify-center text-text-faint hover:text-rose hover:bg-rose-subtle', FOCO)}
                   >
@@ -437,8 +436,19 @@ function TarjetaModulo({
   )
 }
 
-/** Contador de faltas por módulo con límites del 10 % y 20 %, alta por día e importación. */
-export function Faltas({ usuarioId, porDia }: { usuarioId: string | undefined; porDia: Record<number, HorarioClase[]> }) {
+/**
+ * Faltas por módulo frente a los límites del 10 % y 20 %.
+ * Con `editable` (página /faltas) añade el panel para apuntar y los botones de cada tarjeta;
+ * sin él (modal de Inicio) solo muestra cómo vas y un botón para ir a apuntarlas.
+ */
+export function Faltas({
+  usuarioId, porDia = {}, editable = false, onGestionar,
+}: {
+  usuarioId: string | undefined
+  porDia?: Record<number, HorarioClase[]>
+  editable?: boolean
+  onGestionar?: () => void
+}) {
   const { faltas, loading, error, anadir, borrar } = useFaltas(usuarioId)
   const [aviso, setAviso] = useState<{ texto: string; error: boolean } | null>(null)
 
@@ -480,7 +490,18 @@ export function Faltas({ usuarioId, porDia }: { usuarioId: string | undefined; p
         </p>
       )}
 
-      <Apuntar porDia={porDia} faltas={faltas} onAnadir={apuntar} />
+      {editable && <Apuntar porDia={porDia} faltas={faltas} onAnadir={apuntar} />}
+
+      {onGestionar && (
+        <button
+          onClick={onGestionar}
+          className={cn('flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-bold bg-primary text-white hover:opacity-90 transition-opacity', FOCO)}
+        >
+          <CalendarPlus size={16} aria-hidden="true" />
+          Apuntar o editar faltas
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {porModulo.map(({ m, propias, estado }) => (
@@ -489,9 +510,11 @@ export function Faltas({ usuarioId, porDia }: { usuarioId: string | undefined; p
             m={m}
             propias={propias}
             estado={estado}
-            onMas={() => void apuntar([{ modulo: m.sigla, fecha: hoyISO(), hora_inicio: null }])}
-            onMenos={() => { if (propias[0]) void quitar([propias[0].id]) }}
-            onBorrar={id => void quitar([id])}
+            acciones={editable ? {
+              onMas: () => void apuntar([{ modulo: m.sigla, fecha: hoyISO(), hora_inicio: null }]),
+              onMenos: () => { if (propias[0]) void quitar([propias[0].id]) },
+              onBorrar: id => void quitar([id]),
+            } : undefined}
           />
         ))}
       </div>

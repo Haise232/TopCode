@@ -10,7 +10,7 @@ import { Modal } from '../ui/Modal'
 import { cn } from '../ui/cn'
 import { AccesosInternos, EnlacesExternos } from './Accesos'
 import { FOCO, mez } from '../ui/estilos'
-import { Faltas } from './Faltas'
+import { Faltas } from '../faltas/Faltas'
 import { HorarioHoy, HorarioSemana } from './Horario'
 import { Dudas, Proximamente, type DudaInicio } from './Lateral'
 
@@ -187,7 +187,7 @@ export default function HomeView({
             </button>
           </div>
           <div className="p-4 md:p-5 max-h-[80vh] overflow-y-auto">
-            <Faltas usuarioId={usuario?.id} porDia={horarioPorDia} />
+            <Faltas usuarioId={usuario?.id} onGestionar={() => { setFaltasAbierto(false); onNavigate('/faltas') }} />
           </div>
         </Modal>
 
