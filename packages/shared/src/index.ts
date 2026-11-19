@@ -15,6 +15,7 @@ export type {
   ActividadEstado,
   Anuncio,
   HorarioClase,
+  Falta,
   Prompt,
   PromptCategoria,
   PromptModelo,
@@ -43,6 +44,8 @@ export type { CodigoTelegram } from './hooks/useTelegramVinculo'
 export { useActividades } from './hooks/useActividades'
 export { useHomeDatos } from './hooks/useHomeDatos'
 export { useHorario } from './hooks/useHorario'
+export { useFaltas } from './hooks/useFaltas'
+export type { FaltaInput } from './hooks/useFaltas'
 export { usePublicMensajes, usePrivateMensajes } from './hooks/useMensajes'
 export { useNotas } from './hooks/useNotas'
 export { usePrompts } from './hooks/usePrompts'

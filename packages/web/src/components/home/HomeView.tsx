@@ -39,7 +39,7 @@ function Chip({ children, color, style }: { children: React.ReactNode; color?: s
 }
 
 interface HomeViewProps {
-  usuario: Pick<Usuario, 'nombre' | 'rol' | 'clase' | 'avatar_url'> | null
+  usuario: Pick<Usuario, 'id' | 'nombre' | 'rol' | 'clase' | 'avatar_url'> | null
   horarioPorDia: Record<number, HorarioClase[]>
   proximoEvento: EventoCalendario | null
   proximaActividad: EventoCalendario | null
@@ -176,7 +176,7 @@ export default function HomeView({
             <div className="flex items-center gap-2.5 min-w-0">
               <CalendarX2 size={16} className="shrink-0 text-primary-light" />
               <h2 className="text-sm font-bold text-text-primary">Faltas</h2>
-              <span className="text-xs text-text-muted truncate">Horas máximas por módulo · 2º DAM</span>
+              <span className="text-xs text-text-muted truncate">Tus faltas por módulo · 2º DAM</span>
             </div>
             <button
               onClick={() => setFaltasAbierto(false)}
@@ -187,7 +187,7 @@ export default function HomeView({
             </button>
           </div>
           <div className="p-4 md:p-5 max-h-[80vh] overflow-y-auto">
-            <Faltas />
+            <Faltas usuarioId={usuario?.id} porDia={horarioPorDia} />
           </div>
         </Modal>
 

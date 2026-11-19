@@ -162,3 +162,13 @@ export interface ForoRespuesta {
   es_solucion: boolean
   created_at: string
 }
+
+/** Una hora (sesión) faltada en un módulo. */
+export interface Falta {
+  id: string
+  usuario_id: string
+  modulo: string // sigla del horario: 'AED', 'DAD'…
+  fecha: string // 'YYYY-MM-DD'
+  hora_inicio: string | null // 'HH:MM' si viene del horario; null si se añadió a mano
+  created_at: string
+}
