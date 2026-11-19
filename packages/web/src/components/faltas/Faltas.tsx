@@ -452,8 +452,16 @@ function FilaSimple({ m, h, estado }: { m: Modulo; h: number; estado: Estado }) 
         <span className="shrink-0 w-1 self-stretch rounded-full bg-[var(--c)]" aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-text-primary truncate" title={m.nombre}>{m.nombre}</p>
-          <div className={cn('mt-1.5 rounded-full bg-ov/[0.07] overflow-hidden', alerta ? 'h-2' : 'h-1.5')} aria-hidden="true">
-            <div className="h-full rounded-full" style={{ width: `${Math.min(100, (h / limite) * 100)}%`, background: color }} />
+          {/* La barra llega al 20 %; la marca | es el tope del apercibimiento (10 %), justo a la mitad */}
+          <div className="relative mt-1.5" aria-hidden="true">
+            <div className={cn('rounded-full bg-ov/[0.07] overflow-hidden', alerta ? 'h-2' : 'h-1.5')}>
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, (h / limite) * 100)}%`, background: color }} />
+            </div>
+            <span
+              className="absolute -top-1 -bottom-1 w-0.5 -translate-x-1/2 rounded-full bg-text-primary/70"
+              style={{ left: `${(aviso / limite) * 100}%` }}
+              title={`Apercibimiento: ${fmt(aviso)} h`}
+            />
           </div>
           {alerta && (
             <p className="mt-1 flex items-center gap-1 text-2xs font-bold" style={{ color: ROJO }}>
